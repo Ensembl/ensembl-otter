@@ -375,11 +375,34 @@ sub describe_slice {
 Like C<< $obj->author->email >> but returns text for invalid authors
 instead of throwing.
 
+=head2 describe_freed_author()
+
+Like C<< $obj->freed_author->email >> but returns text for invalid
+authors instead of throwing.
+
 =cut
 
 sub describe_author {
     my ($self) = @_;
     return try { $self->author->email } catch { "<???>" };
+}
+
+sub describe_freed_author {
+    my ($self) = @_;
+    my $fa = $self->freed_author;
+    return undef unless defined $fa;
+    return try { $self->freed_author->email } catch { "<???>" };
+}
+
+sub _author_id { # internal shortcut
+    my ($self) = @_;
+    return $self->author->dbID;
+}
+
+sub _freed_author_id { # internal shortcut
+    my ($self) = @_;
+    my $fa = $self->freed_author;
+    return defined $fa ? $fa->dbID : undef;
 }
 
 

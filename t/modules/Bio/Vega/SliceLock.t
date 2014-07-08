@@ -421,22 +421,27 @@ sub exercise_tt {
 }
 
 
+sub _arbitrary_slice {
+    my ($ds) = @_;
+    my $slice = $ds->get_cached_DBAdaptor->get_SliceAdaptor->fetch_by_region
+      (chromosome => 'chr1-14', 30_000, 230_000)
+        or die "Can't get slice";
+    return $slice;
+}
+
 sub describe_tt {
     my ($ds) = @_;
-    plan tests => 13;
+    plan tests => 21;
 
     my $SLdba = $ds->get_cached_DBAdaptor->get_SliceLockAdaptor;
     my $dbh = $SLdba->dbc->db_handle;
     my ($auth_des, $auth_bob) = _test_author($SLdba, qw( Desmond Bob ));
     my $slice_re = qr{chromosome:Otter(?:Archive)?:chr1-14:30000:230000:1};
-    my $slice = $ds->get_cached_DBAdaptor->get_SliceAdaptor->fetch_by_region
-      (chromosome => 'chr1-14', 30_000, 230_000) # arbitrary
-        or die "Can't get slice";
 
     my @L;
     foreach my $i (0..3) {
         my $l = Bio::Vega::SliceLock->new
-          (-SLICE => $slice,
+          (-SLICE => _arbitrary_slice($ds),
            -AUTHOR => $auth_des,
            -INTENT => "demonstrate describe method($i)",
            -HOSTNAME => $TESTHOST);
@@ -468,6 +473,9 @@ sub describe_tt {
     like($L->describe, $LAST_ACT_2011_RE, 'pre ts_activity');
     like($L->describe_slice, $slice_re, 'pre describe_slice');
     like($L->describe_author, qr{^\S*desmond$MAILDOM_RE$}, 'pre describe_author');
+
+    is($L_int->_author_id, $auth_des->dbID, '_author_id');
+    is($L_int->_freed_author_id, undef, '_freed_author_id (pre)');
 
     $SLdba->unlock($L_expire, $auth_bob, 'expired');
     $SLdba->unlock($L_int,    $auth_bob, 'interrupted');
@@ -503,6 +511,9 @@ sub describe_tt {
     like($L_int->describe,
          qr{$BASE 'free\(interrupted\)' by \S*bob$MAILDOM_RE since ($now_re)\n  The lock was broken\.\Z},
          'free(interrupted)');
+    like($L_int->describe_freed_author, qr{^\S*bob$MAILDOM_RE$}, 'describe_freed_author (post)');
+    is($L_int->_author_id, $auth_des->dbID, '_author_id');
+    is($L_int->_freed_author_id, $auth_bob->dbID, '_freed_author_id (post)');
 
     # Test with non-stored, and bad slice
     my $bad = Bio::Vega::SliceLock->new
@@ -517,6 +528,13 @@ sub describe_tt {
             \Q was created Tundef by \E\S*desmond$MAILDOM_RE
             \Q on host $TESTHOST to "weird describe", last active Tundef\E
             \Q and now 'pre(new)'}x, 'unsaved, bad slice');
+
+    # Test with bogus author
+    my $worse = bless { }, 'Bio::Vega::SliceLock';
+    is($worse->describe_author, '<???>', 'invalid:describe_author');
+    is($worse->describe_freed_author, undef, 'undef:describe_freed_author');
+    $worse->{freed_author} = [];
+    is($worse->describe_freed_author, '<???>', 'invalid:describe_freed_author');
 
     return;
 }
