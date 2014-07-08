@@ -3,6 +3,7 @@
 use strict;
 use warnings;
 use Test::More;
+use Test::Differences;
 use Try::Tiny;
 use List::Util 'shuffle';
 use List::MoreUtils 'uniq';
@@ -125,8 +126,9 @@ sub supported_tt {
     my ($dataset_name, $expect) = @_;
     my ($ds) = get_BOLDatasets($dataset_name);
 
-    plan tests => 3;
-    is_deeply(_support_which($ds), $expect, "BOLD:$dataset_name: support [@$expect]");
+    plan tests => 4;
+    my $supported = _support_which($ds);
+    is_deeply($supported, $expect, "BOLD:$dataset_name: support [@$expect]");
 
     # Test with a $dbh, and on non-locking schema
     my $p_dba = $ds->get_pipeline_DBAdaptor; # no sequence-locking of any sort
@@ -137,6 +139,14 @@ sub supported_tt {
     # Test with B:O:S:Dataset
     my ($ds2) = get_BOSDatasets($dataset_name);
     is_deeply(_support_which($ds2), $expect, "BOSD:$dataset_name: support [@$expect]");
+
+  SKIP: {
+        skip 'no slice_lock table', 1 unless grep { $_ eq 'new' } @$supported;
+        my $SLdba = $ds->get_cached_DBAdaptor->get_SliceLockAdaptor;
+        eq_or_diff($SLdba->db_CREATE_TABLE(1),
+                   $SLdba->pod_CREATE_TABLE(1),
+                   'slice_lock schema check');
+    };
 
     return;
 }

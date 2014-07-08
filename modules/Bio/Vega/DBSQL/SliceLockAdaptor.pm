@@ -604,6 +604,84 @@ sub unlock {
   }
 }
 
+sub pod_CREATE_TABLE {
+    my ($called, $strip_readables) = @_;
+    my $fn = __FILE__;
+    open my $fh, '<', $fn or die "Read $fn: $!";
+    my @txt = grep { /^=begin sql/ .. /=end sql/ } <$fh>;
+    shift @txt; # =begin
+    pop @txt; # =end
+    my $txt = join '', @txt;
+    __sql_regularise(\$txt) if $strip_readables;
+    return $txt;
+}
+
+sub db_CREATE_TABLE {
+    my ($self, $strip_dull) = @_;
+    my $dbh = $self->dbc->db_handle;
+    my (undef, $txt) = $dbh->selectrow_array(q{ SHOW CREATE TABLE slice_lock });
+    __sql_regularise(\$txt) if $strip_dull;
+    return $txt;
+}
+
+sub __sql_regularise {
+    my ($txtref) = @_;
+    for ($$txtref) {
+        # Human readableness
+        s{(^| )-- .*$}{}mg;
+        s{ +\n}{\n}g;
+        s{[ \t]+}{ }g;
+        s{\n+\Z}{};
+        s{int unsigned}{int(10) unsigned}g;
+        s{int }{int(11) }g;
+
+        # Database output
+        s{`}{}g;
+        s{ AUTO_INCREMENT=\d+ }{ };
+        s{\b(CREATE TABLE|(NOT|DEFAULT) NULL|AUTO_INCREMENT|PRIMARY|KEY)\b}{\L$1}g;
+
+        s{,[ \t]*}{, }g;
+        s{^[ \t\n]+}{}mg;
+    }
+    return;
+}
+
+
+
+=begin sql
+
+-- adaptor like a feature?  a simple_feature or a new thing?
+
+create table slice_lock (
+ -- feature-like aspect
+ slice_lock_id    int unsigned not null auto_increment,
+ seq_region_id    int unsigned not null,
+ seq_region_start int unsigned not null,
+ seq_region_end   int unsigned not null,
+ author_id        int not null,      -- whose it is
+
+ ts_begin         datetime not null, -- when row is INSERTed
+ ts_activity      datetime not null, -- when the owner last touched it
+
+ -- Transitions allowed: INSERT -> pre -> free(too_late),
+ --   pre -> held -> free(finished | expired | interrupted)
+ active           enum('pre', 'held', 'free') not null,
+ freed            enum('too_late', 'finished', 'expired', 'interrupted'),
+ freed_author_id  int,               -- who ( did / will ) free it
+
+ -- FYI fields
+ intent		  varchar(100) not null, -- human readable, some conventions or defaults?
+ hostname         varchar(100) not null, -- machine readable
+ otter_version    varchar(16),       -- machine readable, where relevant
+ ts_free          datetime,          -- when freed was set
+
+ primary key            (slice_lock_id),
+ key seq_region_idx     (seq_region_id, seq_region_start),
+ key active_author_idx  (active, author_id)
+) ENGINE=InnoDB;
+
+=end sql
+
 
 =head1 AUTHOR
 
