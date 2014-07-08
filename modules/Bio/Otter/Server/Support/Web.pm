@@ -265,9 +265,10 @@ sub send_json_response {
     my $sub = pop @args;
     my $self = $called->new(@args); # may send a text/plain 403 Unauthorised
     $self->content_type('application/json');
+    local $self->{_json} = JSON->new->pretty;
     try {
         my $obj = $sub->($self);
-        my $out = JSON->new->pretty->encode($obj);
+        my $out = $self->json->pretty->encode($obj);
         $self->_send_response($out);
     } catch {
         my $error = $_;
@@ -275,9 +276,16 @@ sub send_json_response {
         chomp $error;
         warn "ERROR: $error\n";
         print $self->header(-status => 417, -type => $self->content_type);
-        print JSON->new->pretty->encode({ error => $error });
+        print $self->json->encode({ error => $error });
     };
     return;
+}
+
+sub json {
+    my ($self) = @_;
+    my $json = $self->{_json};
+    die "Not in send_json_response" unless $json;
+    return $json;
 }
 
 
