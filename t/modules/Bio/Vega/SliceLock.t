@@ -38,7 +38,7 @@ sub noise {
 
 
 sub main {
-    plan tests => 38;
+    plan tests => 39;
 
     # Test supportedness with B:O:L:Dataset + raw $dbh
     #
@@ -78,8 +78,8 @@ sub main {
     }
 
     subtest broker_tt => \&broker_tt;
-
     subtest fetch_by => sub { fetchby_tt($ds) };
+    subtest json_tt  => sub { json_tt($ds) };
 
     _tidy_database($ds) if Test::Builder->new->is_passing; # leave evidence of fail
 
@@ -1467,6 +1467,74 @@ sub fetchby_tt {
     is($n{held} + 2, $old_n{held}, 'freed: two held');
     is($n{pre}  + 1, $old_n{pre}, 'freed: one pre');
     is($n{free} - 3, $old_n{free}, 'freed: three more');
+
+    return;
+}
+
+
+sub json_tt {
+    my ($ds) = @_;
+    plan tests => 10;
+
+    my $SLdba = $ds->get_cached_DBAdaptor->get_SliceLockAdaptor;
+    my ($auth) = _test_author($SLdba, qw( Jason ));
+    my $Lreal = Bio::Vega::SliceLock->new
+      (-SLICE => _arbitrary_slice($ds),
+       -AUTHOR => $auth,
+       -INTENT => 'cereal',
+       -HOSTNAME => $TESTHOST);
+
+    like(try_err { $Lreal->TO_JSON }, qr{unstored .* not supported}, 'unstored');
+    $SLdba->store($Lreal);
+    my $t0  = $Lreal->ts_activity;
+    my $t0i = $Lreal->iso8601_ts_activity;
+
+    my %Jreal_exp =
+      (dbID => $Lreal->dbID,
+       seq_region_id    => $Lreal->seq_region_id,
+       seq_region_start => $Lreal->seq_region_start,
+       seq_region_end   => $Lreal->seq_region_end,
+       ts_begin    => $t0,
+       ts_activity => $t0,
+       ts_free     => undef,
+       active        => 'pre',
+       freed         => undef,
+       intent        => 'cereal',
+       hostname      => $TESTHOST,
+       otter_version => undef,
+       author_id       => $auth->dbID,
+       freed_author_id => undef,
+       # FYI fields
+       iso8601_ts_begin    => $t0i,
+       iso8601_ts_activity => $t0i,
+       iso8601_ts_free     => 'Tundef',
+       author_email        => $auth->email,
+       freed_author_email  => undef,
+      );
+    is_deeply($Lreal->TO_JSON, \%Jreal_exp, 'Jreal (stored)');
+
+    my $Lview1 = Bio::Vega::SliceLock->new_from_json(%Jreal_exp);
+    my $Lview2 = Bio::Vega::SliceLock->new_from_json($Lreal->TO_JSON);
+    is_deeply($Lview1, $Lview2, 'lock, restored 1st==2nd');
+
+    is_deeply($Lview1->TO_JSON, $Lreal->TO_JSON, 'restored == serialised');
+
+    like(try_err { $Lview1->adaptor($SLdba) }, qr{^ERR:.*adaptor is immutable}s,
+         "dbop: adaptor");
+    like(try_err { $Lview1->is_held_sync },
+         qr{^ERR:.*unblessed reference}, "dbop: is_held_sync");
+    like(try_err { $SLdba->bump_activity($Lview1) },
+         qr{^ERR:.*stored with different adaptor ARRAY}s, "dbop: bump");
+    like(try_err { $SLdba->freshen($Lview1) },
+         qr{^ERR:.*stored with different adaptor ARRAY}s, "dbop: freshen");
+
+    $Jreal_exp{freed} = { here => 'yes', there => 'no' };
+    like(try_err { Bio::Vega::SliceLock->new_from_json(%Jreal_exp) },
+         qr{Non-scalar}, "bad non-flat input");
+    delete $Jreal_exp{freed};
+    $Jreal_exp{spork} = "munch";
+    like(try_err { Bio::Vega::SliceLock->new_from_json(%Jreal_exp) },
+         qr{Unrecognised}, "bad non-flat input");
 
     return;
 }
