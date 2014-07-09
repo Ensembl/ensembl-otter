@@ -83,6 +83,7 @@ sub populate {
         INSERT INTO otter_full_accession(name, accession_sv) VALUES (?,?)
     });
 
+    my %taxon_id_map;
     $dbh->begin_work;
     try {
         foreach my $entry (values %$results) {
@@ -100,6 +101,7 @@ sub populate {
             unless ($have_full) {
                 # It is new, so save it
                 $self->save_accession_info($entry);
+                $taxon_id_map{$tax_id} = 1;
             }
             if ($name ne $acc_sv) {
                 $save_alias->execute($name, $acc_sv);
@@ -112,6 +114,8 @@ sub populate {
     };
 
     $dbh->commit;
+
+    $self->populate_taxonomy([keys %taxon_id_map]) if keys %taxon_id_map;
 
     return;
 }

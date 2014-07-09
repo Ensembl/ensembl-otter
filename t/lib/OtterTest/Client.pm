@@ -33,6 +33,13 @@ sub get_accession_types {
     return $response;
 }
 
+sub get_taxonomy_info {
+    my ($self, @taxon_ids) = @_;
+    $self->local_server->set_params(id => \@taxon_ids);
+    my $response = $self->sa_accession_info->get_taxonomy_info;
+    return $response;
+}
+
 sub sa_accession_info {
     my $self = shift;
     return $self->{_sa_accession_info} ||= Bio::Otter::ServerAction::AccessionInfo->new($self->local_server);
