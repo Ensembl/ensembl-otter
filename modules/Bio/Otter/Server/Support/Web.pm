@@ -258,6 +258,37 @@ sub show_restricted_datasets {
 
 ############## I/O: ################################
 
+sub send_json_response {
+    my ($called, @args) = @_;
+    require JSON;
+
+    my $sub = pop @args;
+    my $self = $called->new(@args); # may send a text/plain 403 Unauthorised
+    $self->content_type('application/json');
+    local $self->{_json} = JSON->new->pretty;
+    try {
+        my $obj = $sub->($self);
+        my $out = $self->json->pretty->encode($obj);
+        $self->_send_response($out);
+    } catch {
+        my $error = $_;
+        die $error unless $ERROR_WRAPPING_ENABLED;
+        chomp $error;
+        warn "ERROR: $error\n";
+        print $self->header(-status => 417, -type => $self->content_type);
+        print $self->json->encode({ error => $error });
+    };
+    return;
+}
+
+sub json {
+    my ($self) = @_;
+    my $json = $self->{_json};
+    die "Not in send_json_response" unless $json;
+    return $json;
+}
+
+
 sub send_response {
     my ($self, @args) = @_;
 
@@ -286,9 +317,8 @@ sub send_response {
 }
 
 sub _send_response {
-
     my ($self, $response) = @_;
-
+    my $len = length($response);
     my $content_type = $self->content_type;
 
     if ($COMPRESSION_ENABLED && $self->compression) {
@@ -298,6 +328,8 @@ sub _send_response {
             $self->header(
                 -status           => 200,
                 -type             => $content_type,
+                -content_length   => length($gzipped),
+                -x_plain_length   => $len, # to assist debug on client
                 -content_encoding => 'gzip',
             ),
             $gzipped,
@@ -307,6 +339,7 @@ sub _send_response {
         print
             $self->header(
                 -status => 200,
+                -content_length => $len,
                 -type   => $content_type,
             ),
             $response,

@@ -290,7 +290,8 @@ else {
 }
 
 my $seq_regions = join "\n", @{$chr_names_wanted};
-if (! $support->user_proceed("Data on the following assemblies will be retained in the pipeline database dump, proceed ?\n\n$seq_regions\n")) {
+my $c = scalar(@{$chr_names_wanted});
+if (! $support->user_proceed("Data on the following $c seq regions will be retained in the pipeline database dump, proceed ?\n\n$seq_regions\n")) {
   exit;
 }
 $support->log("Will retain data on the following assemblies\n$seq_regions\n\n");

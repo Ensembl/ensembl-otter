@@ -984,6 +984,14 @@ TODO: {
     fail 'Must test phase and end_phase.';
 }
 
+my $v_header = 'BC018923.fwd 0 2538 + EMBOSS_001 55274 35000 - 12574';
+my $with_5_3 = "$v_header M 974 974 5 0 2 I 0 2242 3 0 2 M 33 33 G 0 1 M 159 159 5 0 2 I 0 1308 3 0 2 M 55 55 G 2 0 M 110 110 5 0 2 I 0 8897 3 0 2 M 230 230 5 0 2 I 0 3909 3 0 2 M 156 156 5 0 2 I 0 758 3 0 2 M 80 80 5 0 2 I 0 599 3 0 2 M 739 739";
+my $cons_exp = "$v_header M 974 974 I 0 2246 M 33 33 G 0 1 M 159 159 I 0 1312 M 55 55 G 2 0 M 110 110 I 0 8901 M 230 230 I 0 3913 M 156 156 I 0 762 M 80 80 I 0 603 M 739 739";
+my $with_5_3_ga = $ga_module->from_vulgar($with_5_3);
+my $consolidated = $with_5_3_ga->consolidate_introns;
+isa_ok($consolidated, $ga_module, 'consolidate_introns produces GappedAlignment');
+is($consolidated->vulgar_string, $cons_exp, 'consolidate_introns');
+
 done_testing;
 
 sub adjust_start_coords {

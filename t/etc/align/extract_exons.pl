@@ -27,13 +27,21 @@ while (my $line = <$spec_file>) {
 
     my ($name, $q_start, $q_end, $t_start, $t_end) = split "\t", $line;
     my ($n) = $name =~ /(\d+)/;
-    my $e_db   = sprintf('%s.%d', $exon_base, $n);
-    my $e_name = sprintf('%s.fa', $e_db);
-    print "$name:\t$q_start\t-\t$q_end\t$t_start\t-\t$t_end => $e_name\n";
 
-    my $e_spec = join('..', $q_start, $q_end);
+    my $ext = '';
+    my ($e_db, $e_name, $e_spec);
+    if ($exon_base) {
+        $e_db   = sprintf('%s.%d', $exon_base, $n);
+        $e_name = sprintf('%s.fa', $e_db);
+        $e_spec = join('..', $q_start, $q_end);
+        $ext = " => $e_name";
+    }
 
-    system 'extractseq', '-auto', $query_fn, $e_name, '-regions', $e_spec, '-osdbname', $e_db;
+    print "$name:\t$q_start\t-\t$q_end\t$t_start\t-\t$t_end$ext\n";
+
+    if ($e_db) {
+        system 'extractseq', '-auto', $query_fn, $e_name, '-regions', $e_spec, '-osdbname', $e_db;
+    }
 
     push @coords, [$t_start, $t_end];
 }

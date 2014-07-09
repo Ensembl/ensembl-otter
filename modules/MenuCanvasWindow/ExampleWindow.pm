@@ -8,7 +8,7 @@ use warnings;
 use base 'MenuCanvasWindow';
 
 
-sub initialize {
+sub initialise {
     my ($self) = @_;
 
     my $file_menu = $self->make_menu('File');

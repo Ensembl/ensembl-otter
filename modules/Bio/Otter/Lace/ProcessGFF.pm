@@ -182,8 +182,14 @@ sub make_ace_transcripts_from_gff_fh {
                 }
                 $sub->Locus($locus);
             }
+            if ($start < 1 || $end > $seq_region_length) {
+                # any part of the transcript protrudes beyond our region.  RT#403236
+                $sub->truncated_from([ $start, $end ]);
+            }
         }
         ### HACK: Should truncate to Slice on server
+        # (but whatever it does, the start/end we send to ZMap via
+        # Zircon must match the start/end in the GFF we feed it)
         elsif ($feat_type eq 'exon') {
             # Truncate exons to slice
             next if $end < 1;

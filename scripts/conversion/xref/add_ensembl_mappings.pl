@@ -175,7 +175,7 @@ elsif ($support->param('prune')){
 #retrieve mappings from disc or parse database
 my $ens_ids = {};
 my $xref_file    = $support->param('logpath').'/'.$support->param('ensembldbname')."-ensembl-mappings.file";
-if (-e $xref_file) {
+if (-e $xref_file && $support->param('interactive')) {
   if ($support->user_proceed("Read xref records from a previously saved file ?\n")) {
     $ens_ids = retrieve($xref_file);
   }
@@ -219,7 +219,7 @@ if (! %$ens_ids) {
       next PXREF unless($x->type =~ /MISC/);
       next PXREF unless($vname =~ /OTT/);
       next PXREF unless($dbname =~ /OTTP/);
-      $ens_ids->{'translations'}{$vname}{$psi}{$dbname}++;   
+      $ens_ids->{'translations'}{$vname}{$psi}{$dbname}++;
     }
   }
       }
@@ -267,7 +267,7 @@ foreach my $type (qw(genes transcripts translations)) {
           next XREF;
         }
         my $vdb = $vega_xref_names{$dbtype};
-        warn "dbtype=$dbtype vdb=$vdb\n";
+#        warn "dbtype=$dbtype vdb=$vdb\n";
         my $dbentry = Bio::EnsEMBL::DBEntry->new(
           -primary_id => $e_id,
           -display_id => $e_id,

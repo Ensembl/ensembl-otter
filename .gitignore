@@ -7,7 +7,5 @@
 # Mac OS X
 .DS_Store
 
-t/modules/Bio/Otter/Auth/.auth-credentials
-
 # OtterTest::Client
 t/.OTC.*_response.*.txt

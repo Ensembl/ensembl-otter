@@ -356,6 +356,11 @@ sub _edit { ## no critic (Subroutines::ProhibitUnusedPrivateSubroutines)
         # (No UI error if it fails)
     } else {
         { exec(@cmd); }
+        try {
+            warn "Failed to exec '@cmd': $!";
+            close STDERR;
+            close STDOUT;
+        }; # no catch, just be sure to _exit
         POSIX::_exit(127); # avoid triggering DESTROY
     }
     $self->_close;

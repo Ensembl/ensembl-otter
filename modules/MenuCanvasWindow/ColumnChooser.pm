@@ -98,7 +98,7 @@ sub row_height {
     return int 1.5 * $self->font_size;
 }
 
-sub initialize {
+sub initialise {
     my ($self) = @_;
 
     my $search_menu = $self->make_menu('Search');
@@ -251,7 +251,10 @@ sub initialize {
     # Set window to full screen height, y=0.  RT#355409
     my $w = $top->screenwidth;
     $w = 800 if $w > 800;
-    my $h = $top->screenheight;
+    my $h = int($top->screenheight * 0.85); # hack off a bit for MacOS dock (RT#402139)
+    $h = 700 if $h > 700; # arbitrary capping
+    # Xinerama may stack multiple screens vertically, but Tk doesn't
+    # understand them
 
     my $x = $top->x;
     my $new_x = $top->screenwidth - $w;
@@ -706,18 +709,17 @@ sub load_filters {
         # we need to set up and show a SessionWindow
         my $zmap = $self->zmap_select;
         my $zircon_context = $self->SpeciesListWindow->zircon_context;
-        my $SessionWindow =
-            MenuCanvasWindow::SessionWindow->new(
-                $self->top_window->Toplevel,
-                '-zmap'           => $zmap,
-                '-zircon_context' => $zircon_context,
-            );
+
+        my $SessionWindow = MenuCanvasWindow::SessionWindow->in_Toplevel
+          (# no Tk opts, because SessionWindow sets its own -title
+           { init => { existing_zmap_select => $zmap,
+                       zircon_context => $zircon_context,
+                       AceDatabase => $self->AceDatabase,
+                       SequenceNotes => $self->SequenceNotes,
+                       ColumnChooser => $self },
+             from => $self->top_window });
 
         $self->SessionWindow($SessionWindow);
-        $SessionWindow->AceDatabase($self->AceDatabase);
-        $SessionWindow->SequenceNotes($self->SequenceNotes);
-        $SessionWindow->ColumnChooser($self);
-        $SessionWindow->initialize;
     }
 
     if (@to_fetch) {
