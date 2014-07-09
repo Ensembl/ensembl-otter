@@ -104,6 +104,32 @@ use Bio::EnsEMBL::Exon;
 
 $| = 1;
 
+my %insdc_names = (  # Should be in database, but may not have been added by anacode
+  mouse => {
+    1 =>  'CM000994.2',
+    2 =>  'CM000995.2',
+    3 =>  'CM000996.2',
+    4 =>  'CM000997.2',
+    5 =>  'CM000998.2',
+    6 =>  'CM000999.2',
+    7 =>  'CM001000.2',
+    8 =>  'CM001001.2',
+    9 =>  'CM001002.2',
+    10 => 'CM001003.2',
+    11 => 'CM001004.2',
+    12 => 'CM001005.2',
+    13 => 'CM001006.2',
+    14 => 'CM001007.2',
+    15 => 'CM001008.2',
+    16 => 'CM001009.2',
+    17 => 'CM001010.2',
+    18 => 'CM001011.2',
+    19 => 'CM001012.2',
+    X =>  'CM001013.2',
+    Y =>  'CM001014.2',
+  }
+);
+
 my $support = new Bio::EnsEMBL::Utils::ConversionSupport($SERVERROOT);
 
 # parse options
@@ -240,7 +266,7 @@ my ($alt_offset,$alt_coord_system_id,$sec_offset,$second_coord_system_id);
 #     1. Shift everything with rank > 1 to increase rank by 1, ie 1,2,3,4,5,6 -> 1,3,4,5,6,7 (the UPDATE)
 #     2. Insert alt_assembly with rank 2 1,3,4,5,6,7 -> 1,*2*,3,4,5,6,7 (the INSERT)
 my $cs_rank_sth   = $vdbh->prepare(qq(UPDATE coord_system SET rank = rank + 1 WHERE rank > 1 ORDER BY rank desc));
-my $cs_update_sth = $vdbh->prepare(qq(INSERT into coord_system VALUES (?,'','chromosome',?,2,'')));
+my $cs_update_sth = $vdbh->prepare(qq(INSERT into coord_system VALUES (?,1,'chromosome',?,2,'')));
 
 if ($alt_assembly) {
   $support->log("Adding coord_system for alternative assembly ($alt_assembly)\n");
@@ -256,7 +282,7 @@ if ($alt_assembly) {
     #store offset used for Ensembl seq|_regions IDs in the DB so that is can be called upon
     #when making ensembl-vega
     $sql = qq(INSERT into meta values ('','','sri_adjust',$alt_offset));
-    $dbh->{'evega'}->do($sql) unless ($support->param('dry_run'));
+    $vdbh->do($sql) unless ($support->param('dry_run'));
   }
 }
 
@@ -281,6 +307,10 @@ my %chrom_dets;
 # Extract INSDC accessions from description fields and add to seq_region_synonym table#
 #######################################################################################
 
+my ($species) = $vdbh->selectrow_array(qq(select meta_value from meta where meta_key = 'species.display_name'));
+$species = lc($species);
+my $insdc_map = $insdc_names{$species} || {};
+
 # Log if there's no entry and warn if the seq_region is a patch
 my $chrom_dets;
 my ($insdc_edb) = $edbh->selectrow_array(qq(SELECT external_db_id FROM external_db WHERE db_name = 'INSDC'));
@@ -295,6 +325,9 @@ foreach my $chrom (@{$vsa->fetch_all('chromosome','Otter')}) {
            AND at.code = 'description'
            AND sra.seq_region_id = $v_sr_id));
   my ($insdc) = $desc =~ /\((\w{2}\d{6}\.\d)\)$/;
+  if(!$insdc) {
+    $insdc = $insdc_map->{$v_name};
+  }
   if (! $insdc) {
     if ($support->is_patch($chrom)) {
       $support->log_warning("No INSDC accession identified from chromosome description for this PATCH\n",2);
@@ -381,7 +414,7 @@ foreach my $chrom (@{$vsa->fetch_all('chromosome','Otter')}) {
     #Take mappings from loutre
     my $l_sr_id  = $l_chrom->get_seq_region_id;
     my $e_sr_id  = $esa->fetch_by_region('chromosome',$e_name,'','','',$alt_assembly)->get_seq_region_id;
-    my $el_sr_id = $lsa->fetch_by_region('chromosome',$v_name,'','','',$alt_assembly)->get_seq_region_id;
+    my $el_sr_id = $lsa->fetch_by_region('chromosome',$v_name,'','','','')->get_seq_region_id;
     if ($e_sr_id && $el_sr_id) {
       $chrom_dets{$v_name}{'do_mapping_using'} = { ename => $e_name, esr_id => $e_sr_id, type => 'loutre_mapping', vsr_id => $v_sr_id, 'lsr_id' => $l_sr_id, 'lesr_id' => $el_sr_id };
     }
@@ -656,10 +689,10 @@ sub misc_fixes {
 
   #add entries for assembly mappings
   if ($alt_assembly) {
-    push @sql_fixes, "INSERT into meta (species,meta_key,meta_value) VALUES (1,\'assembly.mapping\',\'chromosome:VEGA$release_no#chromosome:$alt_assembly\');\n";
+    push @sql_fixes, "INSERT into meta (species_id,meta_key,meta_value) VALUES (1,\'assembly.mapping\',\'chromosome:VEGA$release_no#chromosome:$alt_assembly\');\n";
   }
   if ($second_assembly) {
-    push @sql_fixes, "INSERT into meta (species,meta_key,meta_value) VALUES (1,\'assembly.mapping\',\'chromosome:VEGA$release_no#chromosome:$second_assembly\');\n";
+    push @sql_fixes, "INSERT into meta (species_id,meta_key,meta_value) VALUES (1,\'assembly.mapping\',\'chromosome:VEGA$release_no#chromosome:$second_assembly\');\n";
   }
 
   #zfish fixes

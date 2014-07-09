@@ -45,7 +45,7 @@ sub _fetch_new_by_type {
   my $sql = "insert into $table () values()";
   my $sth = $self->prepare($sql);
   $sth->execute;
-  my $num = $sth->{'mysql_insertid'};
+  my $num = $self->last_insert_id($poolid, undef, $table) or throw("Failed to get autoincremented '$poolid'");
 
   my $meta_container = $self->db->get_MetaContainer();
   my $prefix = $meta_container->get_primary_prefix() || "OTT";

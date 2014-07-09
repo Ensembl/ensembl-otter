@@ -106,8 +106,8 @@ sub store {
         VALUES (NULL, ?, ?, NOW(), ?)
         });
   $sth->execute($contig_id, $author_id, $contig_lock->hostname);
-  my $contig_lock_id = $sth->{'mysql_insertid'}
-  or throw('Failed to get new autoincremented ID for lock');
+  my $contig_lock_id = $self->last_insert_id('contig_lock_id', undef, 'contig_lock')
+      or throw('Failed to get new autoincremented ID for lock');
   $contig_lock->dbID($contig_lock_id);
 
   return;

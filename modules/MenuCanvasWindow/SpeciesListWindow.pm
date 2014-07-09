@@ -38,6 +38,7 @@ sub new {
     # on, we won't need the south.
 
     my $self = $pkg->SUPER::new(@args);
+    my $top = $self->top_window;
 
     my $canvas = $self->canvas;
     $canvas->Tk::bind('<Button-1>', sub{
@@ -56,25 +57,22 @@ sub new {
     $canvas->Tk::bind('<Control-O>',        $open_command);
     $canvas->Tk::bind('<Escape>', sub{ $self->deselect_all });
 
-    my $recover_command = sub{ $self->recover_some_sessions; };
-    $canvas->Tk::bind('<Control-r>',    $recover_command);
-    $canvas->Tk::bind('<Control-R>',    $recover_command);
+    my $recover_command = sub{ $self->recover_some_sessions('explicit'); };
+    $top->Tk::bind('<Control-r>',    $recover_command);
+    $top->Tk::bind('<Control-R>',    $recover_command);
 
     my $prefs_command = [ $self, 'show_preferences' ];
-    $canvas->Tk::bind('<Control-p>', $prefs_command);
-    $canvas->Tk::bind('<Control-P>', $prefs_command);
+    $top->Tk::bind('<Control-p>', $prefs_command);
+    $top->Tk::bind('<Control-P>', $prefs_command);
 
     my $quit_command = sub{
         $self->zircon_delete; # we *must* do this explicitly before the next line
         $self->canvas->toplevel->destroy;
         $self = undef;  # $self gets nicely DESTROY'd with this
     };
-    $canvas->Tk::bind('<Control-q>',    $quit_command);
-    $canvas->Tk::bind('<Control-Q>',    $quit_command);
-    $canvas->toplevel
-        ->protocol('WM_DELETE_WINDOW',  $quit_command);
-
-    my $top = $canvas->toplevel;
+    $top->Tk::bind('<Control-q>',    $quit_command);
+    $top->Tk::bind('<Control-Q>',    $quit_command);
+    $top->protocol('WM_DELETE_WINDOW',  $quit_command);
 
 
     # FILE MENU
@@ -200,12 +198,14 @@ sub show_about {
 
 sub show_preferences {
     my ($self, %opt) = @_;
-    EditWindow::Preferences->show_for_parent
-        (\$self->{_prefs_win},
-         from => $self->top_window,
-         linkage => { Client => $self->Client },
-         title => 'Preferences',
-         %opt);
+
+    EditWindow::Preferences->in_Toplevel
+        (-title => 'Preferences',
+         { reuse_ref => \$self->{_prefs_win},
+           from => $self->top_window,
+           init => { Client => $self->Client },
+           raise => 1,
+           %opt });
     return ();
 }
 
@@ -256,7 +256,7 @@ sub select_dataset {
 sub open_dataset {
     my ($self) = @_;
 
-    return 1 if $self->recover_some_sessions;
+    return 1 if $self->recover_some_sessions('implicit');
 
     my ($obj) = $self->list_selected;
     return 0 unless $obj;
@@ -326,10 +326,12 @@ sub draw {
 }
 
 sub recover_some_sessions {
-    my ($self) = @_;
+    my ($self, $cause) = @_;
 
     my $client = $self->Client();
     my $recoverable_sessions = $client->sessions_needing_recovery();
+    my $n = @$recoverable_sessions;
+    $self->logger->info("recover_some_sessions($cause), $n available");
 
     if (@$recoverable_sessions) {
         my %session_wanted = map { $_->[0] => 1 } @$recoverable_sessions;
@@ -373,7 +375,8 @@ sub recover_some_sessions {
             )->pack(-side=>'top', -fill=>'x', -expand=>1);
         }
 
-        my $answer = $rss_dialog->Show();
+        # Shortcut the dialog if we're running due to @ARGV
+        my $answer = ($cause eq 'no_wait') ? 'recover' : $rss_dialog->Show();
 
         my @selected_recs = grep { $session_wanted{$_->[0]} } @$recoverable_sessions;
 
@@ -384,19 +387,21 @@ sub recover_some_sessions {
                 foreach my $rec (@selected_recs) {
                     my ($session_dir, $date, $title) = @$rec;
 
+                    # We carry an extra event loop on the stack until
+                    # recovery is complete, to queue actions after it.
+                    local $Zircon::Tk::Context::TANGLE_ACK{'MCW:SLW:recover_some_sessions'} = 1;
+
                     # Bring up GUI
                     my $adb = $client->recover_session($session_dir);
 
-                    my $top = $canvas->Toplevel
-                      (-title  => $Bio::Otter::Lace::Client::PFX.
-                       'Select Column Data to Load');
+                    my $cc = MenuCanvasWindow::ColumnChooser->in_Toplevel
+                      (-title  => 'Select Column Data to Load',
+                       { init => { AceDatabase => $adb,
+                                   SpeciesListWindow => $self },
+                         from => $canvas });
 
-                    my $cc = MenuCanvasWindow::ColumnChooser->new($top);
-                    $cc->AceDatabase($adb);
-                    $cc->SpeciesListWindow($self);
-                    $cc->initialize;
                     $cc->load_filters(is_recover => 1);
-                    $top->withdraw;
+                    $cc->top_window->withdraw;
                 }
             }
             catch {

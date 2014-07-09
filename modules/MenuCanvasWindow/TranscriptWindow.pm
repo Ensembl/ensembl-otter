@@ -27,7 +27,7 @@ use base qw( MenuCanvasWindow );
 
 # "new" is in MenuCanvasWindow
 
-sub initialize {
+sub initialise {
     my ($self) = @_;
 
     my $canvas = $self->canvas;
@@ -878,52 +878,54 @@ sub search_pfam {
         return;
     }
 
-    my $ok =
-        try { $sub->validate; return 1; }
+    return unless
+      try { $sub->validate; return 1; }
         catch { $self->exception_message($_, 'Invalid transcript'); return 0; };
 
-    if ($ok) {
-        my $pep = $sub->translator->translate($sub->translatable_Sequence);
-        my $name = $pep->name;
-        my $str = $pep->sequence_string;
-        my $pfam;
+    # We will run the query
 
-        if($self->{'_pfam'} && Tk::Exists($self->{'_pfam'}->top)) {
-            $pfam = $self->{'_pfam'};
-            if($pfam->query() ne $str) {
-                $pfam->top->destroy;
-                $pfam = $self->_new_window($name);
-            } else {
-                $pfam->top->deiconify;
-                $pfam->top->raise;
-                $pfam->top->focus;
+    my $pep = $sub->translator->translate($sub->translatable_Sequence);
+    my $name = $pep->name;
+    my $str = $pep->sequence_string;
+    my $pfam;
 
-                return 1;
-            }
-        } elsif($self->{'_pfam'} && !Tk::Exists($self->{'_pfam'}->top)) {
+    if($self->{'_pfam'}) {
+        if ($self->{'_pfam'}->restore($str)) {
+            # Keeping old results window
             $pfam = $self->{'_pfam'};
-            my $result_url = $pfam->result_url;
-            my $prev_query = $pfam->query();
-            $pfam = $self->_new_window($name);
-            $pfam->result_url($result_url) unless $prev_query ne $str;
+            return 1;
         } else {
+            # Maybe keep old results URL
+            my $old = $self->{'_pfam'};
+            my $result_url = $old->result_url;
+            my $prev_query = $old->query();
             $pfam = $self->_new_window($name);
+            $pfam->result_url($result_url) if $prev_query eq $str;
         }
-
-        $pfam->query($str);
-        $pfam->name($name);
-        $self->{'_pfam'} = $pfam;
-        $pfam->initialize();
+    } else {
+        $pfam = $self->_new_window($name);
     }
+
+    $pfam->query($str);
+    $pfam->name($name);
+    $self->{'_pfam'} = $pfam;
+    try {
+        my $session_dir = $self->SessionWindow->AceDatabase->home;
+        $pfam->initialise("$session_dir/pfam");
+    } catch {
+        my $err = $_;
+        $self->exception_message($_, "Failed to request Pfam search");
+        $pfam->top->destroy;
+    };
 
     return;
 }
 
 sub _new_window {
     my ($self, $name) = @_;
-    my $tl = $self->canvas->Toplevel
-      (-title => $Bio::Otter::Lace::Client::PFX."Pfam $name");
-    return EditWindow::PfamWindow->new($tl);
+    return EditWindow::PfamWindow->in_Toplevel
+      (-title => "Pfam $name",
+       { from => $self->top_window });
 }
 
 sub update_translation {
@@ -2908,7 +2910,7 @@ sub launch_dotter {
     $dotter->query_type('d');
     $dotter->subject_name($hit_name);
 
-    return $dotter->fork_dotter($self->SessionWindow->session_colour);
+    return $dotter->fork_dotter($self->SessionWindow);
 }
 
 sub max_exon_number {

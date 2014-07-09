@@ -762,14 +762,14 @@ sub _open_SequenceSet {
 
     warn "Making ColumnChooser";
 
-    my $top = $self->canvas->Toplevel
-      (-title  => $Bio::Otter::Lace::Client::PFX.'Select column data to load');
-    my $cc = MenuCanvasWindow::ColumnChooser->new($top);
-    $cc->init_flag(1);
-    $cc->AceDatabase($adb);
-    $cc->SequenceNotes($self);
-    $cc->SpeciesListWindow($self->SequenceSetChooser->SpeciesListWindow);
-    $cc->initialize;
+    my $specieslist = $self->SequenceSetChooser->SpeciesListWindow;
+    my $cc = MenuCanvasWindow::ColumnChooser->in_Toplevel
+      (-title  => 'Select column data to load',
+       { init => { init_flag => 1,
+                   AceDatabase => $adb,
+                   SequenceNotes => $self,
+                   SpeciesListWindow => $specieslist },
+         from => $self->canvas });
 
     return;
 }

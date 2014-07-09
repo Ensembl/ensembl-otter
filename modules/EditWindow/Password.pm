@@ -73,6 +73,9 @@ sub get_password {
         $grab_window->grabRelease;
     }
 
+    $self->top->deiconify;
+    $self->top->raise;
+
     $self->top->Popup;
     $self->top->toplevel->Busy;
     $self->password_field->focus;

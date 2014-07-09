@@ -38,6 +38,24 @@ sub PRINTF {
     return;
 }
 
+# "close STDERR" is a standard child-shutdown idiom.
+# When STDERR is tied, that call comes here and the real STDERR
+# remains open, so untie and then do a real close.
+sub CLOSE {
+    my ($self, @arg) = @_;
+
+#    warn "CLOSE for @{[ %$self ]}\n";
+
+    my $fh = $self->{orig};
+    undef $self; # should be the last reference to it
+    untie *$fh;
+
+    die "recursive close because untie failed" # for safety
+      if defined caller(500); # arbitrary limit
+
+    return close($fh);
+}
+
 1;
 
 __END__

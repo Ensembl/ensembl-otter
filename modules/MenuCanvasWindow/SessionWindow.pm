@@ -8,6 +8,7 @@ use Carp;
 use Scalar::Util 'weaken';
 
 use Try::Tiny;
+use File::Path (); # for make_path;
 
 require Tk::Dialog;
 require Tk::Balloon;
@@ -52,7 +53,7 @@ my $DNA_SCORE  = 100;
 my $DNAHSP     = 120;
 
 sub new {
-    my ($pkg, $tk, %arg_hash) = @_;
+    my ($pkg, $tk) = @_;
 
     my $self = $pkg->SUPER::new($tk);
 
@@ -64,10 +65,15 @@ sub new {
     $self->minimum_scroll_bbox(0,0, 380,200);
     $self->flag_db_edits(1);
 
-    @{$self}{qw( _zmap _zircon_context )} =
-        @arg_hash{qw( -zmap -zircon_context )};
-
     return $self;
+}
+
+# Populated from ColumnChooser before initialise,
+# avoiding method name zmap_select (which is mixed in)
+sub existing_zmap_select {
+    my ($self, $zmap_select) = @_;
+    $self->{_zmap} = $zmap_select;
+    return;
 }
 
 sub AceDatabase {
@@ -96,7 +102,7 @@ sub RequestQueuer {
     return $RequestQueuer;
 }
 
-sub initialize {
+sub initialise {
     my ($self) = @_;
 
     $self->set_window_title;
@@ -773,31 +779,19 @@ sub highlight {
 }
 
 sub GenomicFeaturesWindow {
-    my ($self, $gfs) = @_;
-
-    if(defined($gfs)){
-        $self->{'_gfs'} = $gfs;
-        weaken($self->{'_gfs'});
-    }
-    return $self->{'_gfs'};
+    my ($self) = @_;
+    return $self->{'_gfs'}; # set in launch_GenomicFeaturesWindow
 }
 
 sub launch_GenomicFeaturesWindow {
     my ($self) = @_;
     try {
-        if(my $gfs = $self->GenomicFeaturesWindow()) {
-
-            my $gfw = $gfs->top_window();
-            $gfw->deiconify;
-            $gfw->raise;
-        } else {
-            my $gfw = $self->canvas->Toplevel;
-
-            $gfs = MenuCanvasWindow::GenomicFeaturesWindow->new($gfw);
-            $self->GenomicFeaturesWindow($gfs);
-            $gfs->SessionWindow($self);
-            $gfs->initialize;
-        }
+        my $gfs = MenuCanvasWindow::GenomicFeaturesWindow->in_Toplevel
+          (# -title is set during initialise
+           { reuse_ref => \$self->{'_gfs'},
+             raise => 1,
+             init => { SessionWindow => $self },
+             from => $self->canvas });
     }
     catch {
         my $msg = 'Error creating Genomic Features window';
@@ -1043,7 +1037,7 @@ sub save_data {
     my $adb = $self->AceDatabase;
 
     unless ($adb->write_access) {
-        $self->log->info("Read only session - not saving");
+        $self->logger->info("Read only session - not saving");
         return 1;   # Can't save - but is OK
     }
     my $top = $self->top_window();
@@ -1692,12 +1686,12 @@ sub make_transcript_window {
     # Make a new window
     my $top = $canvas->Toplevel;
 
-    # Make new MenuCanvasWindow::TranscriptWindow object and initialize
+    # Make new MenuCanvasWindow::TranscriptWindow object and initialise
     my $transcript_window = MenuCanvasWindow::TranscriptWindow->new($top, 345, 50);
     $transcript_window->name($sub_name);
     $transcript_window->SessionWindow($self);
     $transcript_window->SubSeq($sub);
-    $transcript_window->initialize;
+    $transcript_window->initialise;
 
     $self->save_transcript_window($sub_name, $transcript_window);
 
@@ -1847,22 +1841,13 @@ sub edit_Clone {
     my $name = $clone->name;
 
     # show Clone EditWindow
-    my $cew;
-    unless ($cew = $self->{'_clone_edit_window'}{$name}) {
-        $cew = EditWindow::Clone->new($self->top_window->Toplevel(
-            -title => sprintf('%sClone %s',
-                              $Bio::Otter::Lace::Client::PFX,
-                              $clone->clone_name),
-            ));
-        $cew->SessionWindow($self);
-        $cew->Clone($clone);
-        $cew->initialise;
-        $self->{'_clone_edit_window'}{$name} = $cew;
-        weaken($self->{'_clone_edit_window'}{$name});
-    }
-    my $top = $cew->top;
-    $top->deiconify;
-    $top->raise;
+    my $cew = EditWindow::Clone->in_Toplevel
+      (-title => "Clone ".$clone->clone_name,
+       { from => $self->top_window,
+         reuse_ref => \$self->{'_clone_edit_window'}{$name},
+         init => { SessionWindow => $self,
+                   Clone => $clone },
+         raise => 1 });
 
     return;
 }
@@ -2395,15 +2380,16 @@ sub rename_locus {
     if (my $ren_window = $self->{'_locus_rename_window'}) {
         $ren_window->top->destroy;
     }
-    my $parent = $self->top_window;
-    my $top = $parent->Toplevel(-title => $Bio::Otter::Lace::Client::PFX.'Rename Locus');
-    $top->transient($parent);
-    my $lr = EditWindow::LocusName->new($top);
-    $lr->SessionWindow($self);
-    $lr->locus_name_arg($locus_name);
-    $lr->initialise;
-    $self->{'_locus_rename_window'} = $lr;
-    weaken($self->{'_locus_rename_window'});
+
+    my $lr = EditWindow::LocusName->in_Toplevel
+      (-title => 'Rename Locus',
+       {
+        reuse_ref => \$self->{'_locus_rename_window'},
+        # actually we don't re-use it, but destroy the old one
+        transient => 1,
+        init => { SessionWindow => $self,
+                  locus_name_arg => $locus_name },
+        from => $self->top_window });
 
     return 1;
 }
@@ -2411,17 +2397,13 @@ sub rename_locus {
 sub run_dotter {
     my ($self) = @_;
 
-    my $dw = $self->{'_dotter_window'};
-    unless ($dw) {
-        my $parent = $self->top_window();
-        my $top = $parent->Toplevel(-title => $Bio::Otter::Lace::Client::PFX.'Run Dotter');
-        $top->transient($parent);
-        $dw = EditWindow::Dotter->new($top);
-        $dw->SessionWindow($self);
-        $dw->initialise;
-        $self->{'_dotter_window'} = $dw;
-        weaken($self->{'_dotter_window'});
-    }
+    my $dw = EditWindow::Dotter->in_Toplevel
+      (-title => 'Run Dotter',
+       { reuse_ref => \$self->{'_dotter_window'},
+         transient => 1,
+         init => { SessionWindow => $self },
+         from => $self->top_window });
+
     $dw->update_from_SessionWindow($self);
 
     return 1;
@@ -2430,19 +2412,13 @@ sub run_dotter {
 sub run_exonerate {
     my ($self) = @_;
 
-    my $ew = $self->{'_exonerate_window'};
-    unless ($ew) {
-        my $parent = $self->top_window();
-        my $top = $parent->Toplevel
-          (-title => $Bio::Otter::Lace::Client::PFX.
-           'On The Fly (OTF) Alignment');
-        $top->transient($parent);
-        $ew = EditWindow::Exonerate->new($top);
-        $ew->SessionWindow($self);
-        $ew->initialise();
-        $self->{'_exonerate_window'} = $ew;
-        weaken($self->{'_exonerate_window'});
-    }
+    my $ew = EditWindow::Exonerate->in_Toplevel
+      (-title => 'On The Fly (OTF) Alignment',
+       { reuse_ref => \$self->{'_exonerate_window'},
+         transient => 1,
+         init => { SessionWindow => $self },
+         from => $self->top_window });
+
     $ew->update_from_SessionWindow;
 
     return 1;
@@ -2533,24 +2509,36 @@ sub _make_config {
 
 sub _make_zmap_config_dir {
     my ($self) = @_;
-    my $config_dir = q(/var/tmp);
-    my $user = getpwuid($<);
-    my $dir_name = "otter_${user}";
-    my $key = sprintf "%09d", int(rand(1_000_000_000));
-    for ($dir_name, 'ZMap', $key) {
-        $config_dir .= "/$_";
-        -d $config_dir
-            or mkdir $config_dir
-            or $self->logger->logdie(sprintf "mkdir('%s') failed: $!", $config_dir);
-    }
+
+    my $config_dir = $self->zmap_configs_dir;
+    my $key;
+    do {
+        $key = sprintf "%09d", int(rand(1_000_000_000));
+    } while (-d "$config_dir/$key");
+    $config_dir = "$config_dir/$key";
+
+    my $err;
+    File::Path::make_path($config_dir, { error => \$err });
+    $self->logger->logdie
+      (join "\n  ",
+       "make_path for zmap_config_dir $config_dir failed",
+       map {( (%$_)[0] || '(general error)' ).': '.(%$_)[1] } @$err)
+        if @$err;
+
     return $config_dir;
 }
 
+sub zmap_configs_dir {
+    my ($called) = @_;
+    my $user = getpwuid($<);
+    return "/var/tmp/otter_${user}/ZMap";
+}
 
 ### BEGIN: ZMap control interface
 
 sub zircon_context {
-    my ($self) = @_;
+    my ($self, @arg) = @_;
+    ($self->{'_zircon_context'}) = @arg if @arg;
     my $zircon_context =
         $self->{'_zircon_context'} ||=
         Zircon::Tk::Context->new(
@@ -2746,7 +2734,10 @@ sub _feature_accession_info_xml {
 
     my $info = $self->AceDatabase->AccessionTypeCache->feature_accession_info($feat_name);
     return unless $info;
-    my ($source, $taxon_id, $desc) = @{$info}{qw(source taxon_id description)};
+    my ($source, $taxon_id, $desc, $common_name, $scientific_name) =
+        @{$info}{qw(source taxon_id description taxon_scientific_name taxon_common_name)};
+    my $taxon_name = join ', ', grep { $_ } $common_name, $scientific_name;
+    my $taxon = sprintf '%s (Taxon ID = %d)', $taxon_name, $taxon_id;
 
     # Put this on the "Details" page which already exists.
     my $xml = Hum::XmlWriter->new(5);
@@ -2754,7 +2745,7 @@ sub _feature_accession_info_xml {
     $xml->open_tag('subsection', { name => 'Feature' });
     $xml->open_tag('paragraph',  { type => 'tagvalue_table' });
     $xml->full_tag('tagvalue', { name => 'Source database', type => 'simple' }, $source);
-    $xml->full_tag('tagvalue', { name => 'Taxon ID',        type => 'simple' }, $taxon_id);
+    $xml->full_tag('tagvalue', { name => 'Taxon',           type => 'simple' }, $taxon);
     $xml->full_tag('tagvalue', { name => 'Description', type => 'scrolled_text' }, $desc);
     $xml->close_all_open_tags;
 

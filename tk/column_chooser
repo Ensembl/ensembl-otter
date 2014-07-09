@@ -65,7 +65,7 @@ my $dataset_name = 'human';
     $mw->title('Column Chooser');
     my $cc = MenuCanvasWindow::ColumnChooser->new($mw);
     $cc->AceDatabase($ace);
-    $cc->initialize;
+    $cc->initialise;
     $cc->redraw;
 
     Tk::MainLoop();

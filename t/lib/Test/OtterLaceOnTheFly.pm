@@ -16,13 +16,13 @@ use Bio::Otter::Lace::OnTheFly::TargetSeq;
 use Bio::Otter::Utils::FeatureSort qw( feature_sort );
 use Hum::FastaFileIO;
 
-our @EXPORT_OK = qw( fixed_tests build_target run_otf_test );
+our @EXPORT_OK = qw( fixed_genomic_tests fixed_transcript_tests build_target run_otf_genomic_test run_otf_test );
 
 # .../t/lib/Test/
 # need to go up two levels to get into .../t/
 my $path = abs_path(dirname(__FILE__) . "/../../etc/align");
 
-my @tests = (
+my @genomic_tests = (
     {
         name        => 'test_clone vs. test_query',
         target_path => "${path}/test_clone.fa",
@@ -84,8 +84,61 @@ my @tests = (
     },
     );
 
-sub fixed_tests {
-    return @tests;
+sub fixed_genomic_tests {
+    return @genomic_tests;
+}
+
+my @transcript_tests = (
+    {
+        name        => 'test_ts vs. test_query, fwd exons',
+        target_path => "${path}/test_ts.fa",
+        query_path  => "${path}/BC018923.fwd.fa",
+        query_ids   => [qw(BC018923.fwd)],
+        ts_spec     => "${path}/exons.fwd.txt",
+        ts_strand   => 1,
+        vulgar      => {
+            'BC018923.fwd' => 'BC018923.fwd 0 2538 + EMBOSS_001 120388 140662 + 12574 M 974 974 5 0 2 I 0 2242 3 0 2 M 33 33 G 0 1 M 159 159 5 0 2 I 0 1308 3 0 2 M 55 55 G 2 0 M 110 110 5 0 2 I 0 8897 3 0 2 M 230 230 5 0 2 I 0 3909 3 0 2 M 156 156 5 0 2 I 0 758 3 0 2 M 80 80 5 0 2 I 0 599 3 0 2 M 739 739',
+        },
+    },
+    {
+        name        => 'test_ts vs. test_query, rev exons',
+        target_path => "${path}/test_ts.fa",
+        query_path  => "${path}/BC018923.fwd.fa",
+        query_ids   => [qw(BC018923.fwd)],
+        ts_spec     => "${path}/exons.rev.txt",
+        ts_strand   => -1,
+        vulgar      => {
+            'BC018923.fwd' => 'BC018923.fwd 0 2538 + EMBOSS_001 55274 35000 - 12574 M 974 974 5 0 2 I 0 2242 3 0 2 M 33 33 G 0 1 M 159 159 5 0 2 I 0 1308 3 0 2 M 55 55 G 2 0 M 110 110 5 0 2 I 0 8897 3 0 2 M 230 230 5 0 2 I 0 3909 3 0 2 M 156 156 5 0 2 I 0 758 3 0 2 M 80 80 5 0 2 I 0 599 3 0 2 M 739 739',
+        },
+    },
+    {
+        name        => 'test_ts vs. protein Q96S55, fwd exons',
+        target_path => "${path}/test_ts_b.fa",
+        query_path  => "${path}/Q96S55.fasta",
+        query_ids   => [qw(sp|Q96S55|WRIP1_HUMAN)],
+        ts_spec     => "${path}/exons_b.fwd.txt",
+        ts_strand   => 1,
+        vulgar      => {
+            'sp|Q96S55|WRIP1_HUMAN' => 'sp|Q96S55|WRIP1_HUMAN 0 665 . EMBOSS_001 120540 140196 + 3329 M 274 822 5 0 2 I 0 2242 3 0 2 M 11 33 F 0 1 M 53 159 5 0 2 I 0 1233 3 0 2 M 43 129 F 0 1 G 1 0 M 36 108 S 0 2 5 0 2 I 0 8897 3 0 2 S 1 1 M 76 228 S 0 1 5 0 2 I 0 3909 3 0 2 S 1 2 M 51 153 S 0 1 5 0 2 I 0 758 3 0 2 S 1 2 M 26 78 5 0 2 I 0 599 3 0 2 M 91 273',
+        },
+        type        => 'Test_Protein',
+    },
+    {
+        name        => 'test_ts vs. protein Q96S55, rev exons',
+        target_path => "${path}/test_ts_b.fa",
+        query_path  => "${path}/Q96S55.fasta",
+        query_ids   => [qw(sp|Q96S55|WRIP1_HUMAN)],
+        ts_spec     => "${path}/exons_b.rev.txt",
+        ts_strand   => -1,
+        vulgar      => {
+            'sp|Q96S55|WRIP1_HUMAN' => 'sp|Q96S55|WRIP1_HUMAN 0 665 . EMBOSS_001 55122 35466 - 3329 M 274 822 5 0 2 I 0 2242 3 0 2 M 11 33 F 0 1 M 53 159 5 0 2 I 0 1233 3 0 2 M 43 129 F 0 1 G 1 0 M 36 108 S 0 2 5 0 2 I 0 8897 3 0 2 S 1 1 M 76 228 S 0 1 5 0 2 I 0 3909 3 0 2 S 1 2 M 51 153 S 0 1 5 0 2 I 0 758 3 0 2 S 1 2 M 26 78 5 0 2 I 0 599 3 0 2 M 91 273',
+        },
+        type        => 'Test_Protein',
+    },
+    );
+
+sub fixed_transcript_tests {
+    return @transcript_tests;
 }
 
 sub build_target {
@@ -101,25 +154,34 @@ sub build_target {
     return $target;
 }
 
+sub run_otf_genomic_test {
+    my ($test, $target) = @_;
+    $test->{builder_class} = 'Bio::Otter::Lace::OnTheFly::Builder::Genomic';
+    return run_otf_test($test, $target);
+}
+
 sub run_otf_test {
     my ($test, $target) = @_;
 
     note 'Test: ', $test->{name};
 
+    $test->{runner_class} ||= 'Bio::Otter::Lace::OnTheFly::Runner';
+
     if ($test->{query_path}) {
         $test->{query_seqs} = [ Hum::FastaFileIO->new_DNA_IO($test->{query_path})->read_all_sequences ];
     }
 
-    my $builder = new_ok( 'Bio::Otter::Lace::OnTheFly::Builder::Genomic' => [{
+    my $builder = new_ok( $test->{builder_class} => [{
         type       => $test->{type},
         query_seqs => $test->{query_seqs},
         target     => $target,
                                                                              }]);
     my $request = $builder->prepare_run;
 
-    my $runner = new_ok( 'Bio::Otter::Lace::OnTheFly::Runner' => [
+    my $runner = new_ok( $test->{runner_class} => [
                              request         => $request,
                              resultset_class => 'Bio::Otter::Lace::OnTheFly::ResultSet::Test',
+                             %{ $test->{runner_args} || {} },
                                                                   ]);
     my $result_set = $runner->run;
     isa_ok($result_set, 'Bio::Otter::Lace::OnTheFly::ResultSet');

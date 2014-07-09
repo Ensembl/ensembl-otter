@@ -22,7 +22,8 @@ use EditWindow::Password;
     # Become leader of process group so that "kill -$$" at end works
     setpgrp();
 
-    Bio::Otter::Lace::Defaults::do_getopt();
+    my $do_recover;
+    Bio::Otter::Lace::Defaults::do_getopt('recover!' => \$do_recover);
     if (@ARGV) {
         my $name = $ENV{OTTERLACE_RAN_AS};
         if (defined $name) {
@@ -32,17 +33,17 @@ use EditWindow::Password;
         }
         die "$name: options (@ARGV) were not understood"; # RT#334602
     }
+
     my $client = Bio::Otter::Lace::Defaults::make_Client();
     $client->make_log_file('otterlace');
     # After this, we are writing logfile
     my $logger = Log::Log4perl->get_logger('otter.main');
 
-    $client->cleanup_sessions;
-    $client->cleanup_log_dir('otterlace');
-
     Bio::Otter::Git->dump($logger);
 
     $client->ua_tell_hostinfo;
+
+    $client->cleanup(20); # do it soon, and in a child process, so we don't block
 
     my $main_window = CanvasWindow::MainWindow->new
       ($Bio::Otter::Lace::Client::PFX."Species List");
@@ -61,6 +62,9 @@ use EditWindow::Password;
         }
     );
 
+    $main_window->repeat(8 * 3600 * 1000, # 8 hours; RT#317950
+                         [ $logger, 'warn', 'Logfile keepalive (8h)' ]);
+
     # When we wake up late, log it
     my $rvw_ticker = Bio::Otter::Utils::RipVanWinkle->new($main_window, 1000, 3);
 
@@ -72,9 +76,9 @@ use EditWindow::Password;
         my $user = $self->author;
 
         my $pass = '';
-        my $toplevel = $main_window->Toplevel
-          (-title => $Bio::Otter::Lace::Client::PFX.'Enter Password');
-        my $pass_win = EditWindow::Password->new($toplevel);
+        my $pass_win = EditWindow::Password->in_Toplevel
+          (-title => 'Enter Password',
+           { from => $main_window });
         $pass_win->prompt_string("Enter web password for '$user'");
         $pass_win->passref(\$pass);
         $pass_win->initialise;
@@ -112,6 +116,11 @@ use EditWindow::Password;
 
     # postpone slow checks, for improved responsiveness
     $main_window->after(750, [ $SpeciesListWindow, 'ensure_tools' ]);
+
+    if ($do_recover) { # otterlace --recover
+        $main_window->iconify;
+        $main_window->afterIdle([ $SpeciesListWindow, 'recover_some_sessions', 'no_wait']);
+    }
 
     Tk::MainLoop();
 

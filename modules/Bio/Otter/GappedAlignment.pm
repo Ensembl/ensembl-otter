@@ -736,6 +736,34 @@ sub end_phase {
     return $elements[-1]->target_length;
 }
 
+sub consolidate_introns {
+    my ($self) = @_;
+
+    my $copy = $self->_new_copy_basics;
+
+    my $prev_intronic;
+    foreach my $ele ( @{$self->elements}, undef ) { # undef ele at end to force addition of trailing prev_intronic
+        if ($ele and $ele->is_intronic) {
+            my ($query_length, $target_length) = (0, 0);
+            if ($prev_intronic) {
+                $query_length  = $prev_intronic->query_length;
+                $target_length = $prev_intronic->target_length;
+            }
+            $query_length  += $ele->query_length;
+            $target_length += $ele->target_length;
+            $prev_intronic = Bio::Otter::GappedAlignment::Element::Intron->new($query_length, $target_length);
+        } else {
+            if ($prev_intronic) {
+                $copy->add_element($prev_intronic);
+                $prev_intronic = undef;
+            }
+            $copy->add_element($ele) if $ele;
+        }
+    }
+
+    return $copy;
+}
+
 sub logger {
     return Log::Log4perl->get_logger;
 }
