@@ -658,27 +658,27 @@ create table slice_lock (
  seq_region_id    int unsigned not null,
  seq_region_start int unsigned not null,
  seq_region_end   int unsigned not null,
- author_id        int not null,      -- whose it is
+ author_id        int          not null,      -- whose it is
 
- ts_begin         datetime not null, -- when row is INSERTed
- ts_activity      datetime not null, -- when the owner last touched it
+ ts_begin         datetime     not null,      -- when row is INSERTed
+ ts_activity      datetime      not null,     -- when the owner last touched it
 
  -- Transitions allowed: INSERT -> pre -> free(too_late),
  --   pre -> held -> free(finished | expired | interrupted)
- active           enum('pre', 'held', 'free') not null,
- freed            enum('too_late', 'finished', 'expired', 'interrupted'),
- freed_author_id  int,               -- who ( did / will ) free it
+ active           enum('pre', 'held', 'free')                            not null,
+ freed            enum('too_late', 'finished', 'expired', 'interrupted') default null,
+ freed_author_id  int default null,           -- who ( did / will ) free it
 
  -- FYI fields
  intent		  varchar(100) not null, -- human readable, some conventions or defaults?
- hostname         varchar(100) not null, -- machine readable
- otter_version    varchar(16),       -- machine readable, where relevant
- ts_free          datetime,          -- when freed was set
+ hostname         varchar(100) not null,          -- machine readable
+ otter_version    varchar(16) default null,       -- machine readable, where relevant
+ ts_free          datetime default null,          -- when freed was set
 
  primary key            (slice_lock_id),
  key seq_region_idx     (seq_region_id, seq_region_start),
  key active_author_idx  (active, author_id)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1
 
 =end sql
 

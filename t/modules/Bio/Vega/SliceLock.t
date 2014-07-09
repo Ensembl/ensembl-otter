@@ -1560,6 +1560,7 @@ sub broker_tt {
         my $l = Bio::Vega::SliceLock->new
           (-SEQ_REGION_ID => _notlocked_seq_region_id($SLdba),
            -SEQ_REGION_START => 500, -SEQ_REGION_END => 1000,
+           -INTENT => 'props_from_lock',
            -HOSTNAME => $TESTHOST, -AUTHOR => $auth);
         like(try_err { $br->locks($l) },
              qr{MSG: adaptor not yet available}, 'no database linkage');
