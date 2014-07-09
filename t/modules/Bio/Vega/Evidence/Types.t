@@ -14,7 +14,8 @@ use Bio::EnsEMBL::DBSQL::BaseAdaptor;
 my $module;
 BEGIN {
     $module = 'Bio::Vega::Evidence::Types';
-    use_ok($module, qw(new_evidence_type_valid evidence_type_valid_all evidence_is_sra_sample_accession));
+    use_ok($module,
+           qw( new_evidence_type_valid evidence_type_valid_all evidence_is_sra_sample_accession seq_is_protein ));
 }
 
 use Bio::Vega::Evidence;
@@ -38,6 +39,12 @@ ok(not($evi_types->valid_all('Garbage')),         'Garbage is NOT valid_all (OO)
 ok($evi_types->is_sra_sample_accession('DRS000234'), 'SRA sample accession (OO)');
 ok(not($evi_types->is_sra_sample_accession('DRA000234')), 'SRA submission accession NOT a sample (OO)');
 
+my $protein = 'MDGSRKEEEEDSTFTNISLADDIDHSSRILYPRPKSLLPKMMNADMDAVDAENQVELEEKTRLINQVLEL';
+my $dna     = 'acttccggttaagaatgcaacactcaggtctgaaaattgaacaagatggacgggtccaggaaagaggagg';
+
+ok($evi_types->is_protein($protein),  'is_protein');
+ok(not($evi_types->is_protein($dna)), 'NOT is_protein for DNA');
+
 # Function
 
 ok(new_evidence_type_valid('ncRNA'), 'ncRNA valid_for_new_evi (func)');
@@ -51,6 +58,9 @@ ok(not(evidence_type_valid_all('Garbage')), 'Garbage is NOT valid_all (func)');
 
 ok(evidence_is_sra_sample_accession('SRS000012'), 'SRA sample accession (func)');
 ok(not(evidence_is_sra_sample_accession('AC123456.7')), 'Not an SRA sample accession (func)');
+
+ok(seq_is_protein($protein),  'seq_is_protein');
+ok(not(seq_is_protein($dna)), 'NOT seq_is_protein for DNA');
 
 # Check it works in a client module
 
