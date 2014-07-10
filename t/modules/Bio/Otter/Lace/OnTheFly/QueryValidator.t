@@ -39,6 +39,7 @@ my @acc_names =    $ta_factory->accession_names;
 my $seq = Hum::Sequence->new;
 $seq->name('TESTSEQ');
 $seq->sequence_string('GATTACCAAA');
+$seq->type('OTF_AdHoc_DNA');
 
 my @exp_names =
     uniq
