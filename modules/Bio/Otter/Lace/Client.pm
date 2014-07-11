@@ -490,6 +490,10 @@ sub create_UserAgent {
     push @{ $ua->requests_redirectable }, 'POST';
     $ua->cookie_jar($self->get_CookieJar);
 
+    my $json_impl = JSON->backend;
+    $self->client_logger->warn("Slow JSON decoder '$json_impl' in use?")
+      unless $json_impl->is_xs;
+
     return $ua;
 }
 
