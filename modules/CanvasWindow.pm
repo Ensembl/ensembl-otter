@@ -15,6 +15,9 @@ use Tk::HeadedCanvas;
 use Hum::Sort 'ace_sort';
 use Hum::ClipboardUtils 'integers_from_text';
 
+use parent 'BaseWindow';
+
+
 sub new {
     my ($pkg, $tk, $x, $y, $where_scrollbars, $canvas_class) = @_;
 
@@ -68,6 +71,12 @@ sub new {
     }
 
     return $self;
+}
+
+# for compatibility with code written for EditWindow
+sub top {
+    my ($self) = @_;
+    return $self->top_window;
 }
 
 sub top_window {

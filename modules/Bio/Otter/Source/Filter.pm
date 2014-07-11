@@ -57,7 +57,6 @@ my @server_params = (
     # Gene
     qw(
     transcript_analyses
-    translation_xref_dbs
     ),
 
     # Alignment
@@ -263,12 +262,6 @@ sub transcript_analyses {
     my ($self, $transcript_analyses) = @_;
     $self->{_transcript_analyses} = $transcript_analyses if $transcript_analyses;
     return $self->{_transcript_analyses};
-}
-
-sub translation_xref_dbs {
-    my ($self, $translation_xref_dbs) = @_;
-    $self->{_translation_xref_dbs} = $translation_xref_dbs if $translation_xref_dbs;
-    return $self->{_translation_xref_dbs};
 }
 
 sub sequence_db {

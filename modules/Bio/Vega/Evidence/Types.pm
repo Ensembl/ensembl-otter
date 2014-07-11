@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use Exporter qw(import);
-our @EXPORT_OK = qw(new_evidence_type_valid evidence_type_valid_all evidence_is_sra_sample_accession);
+our @EXPORT_OK = qw(new_evidence_type_valid evidence_type_valid_all evidence_is_sra_sample_accession seq_is_protein);
 
 use Readonly;
 
@@ -59,6 +59,11 @@ sub is_sra_sample_accession {
     return ($acc =~ /^[ESD]RS\d{6}$/);
 }
 
+sub is_protein {
+    my ($self, $seq) = @_;
+    return ($seq =~ /[^acgtrymkswhbvdnACGTRYMKSWHBVDN]/);
+}
+
 # Non-member-function wrappers
 
 {
@@ -81,6 +86,13 @@ sub is_sra_sample_accession {
         $evi_type ||= __PACKAGE__->new;
         return $evi_type->is_sra_sample_accession($acc);
     }
+
+    sub seq_is_protein {
+        my ($seq) = @_;
+        $evi_type ||= __PACKAGE__->new;
+        return $evi_type->is_protein($seq);
+    }
+
 }
 
 1;

@@ -54,17 +54,18 @@ sub make_log {
     STDOUT->autoflush(1);
 
     if (my $pid = open(STDOUT, "|-")) {
-
         # Send parent's STDERR to the same place as STDOUT, for subprocesses.
         open STDERR, '>&', \*STDOUT or confess "Can't redirect STDERR to STDOUT";
 
         # Now for us in perl land, tie STDERR and STDOUT to Log4perl.
 
         tie *STDERR, 'Bio::Otter::Log::TieHandle',
-            level => $WARN, category => "otter.stderr" or die "tie failed ($!)";
+            level => $WARN, category => "otter.stderr", orig => \*STDERR
+              or die "tie failed ($!)";
 
         tie *STDOUT, 'Bio::Otter::Log::TieHandle',
-            level => $INFO, category => "otter.stdout" or die "tie failed ($!)";
+            level => $INFO, category => "otter.stdout", orig => \*STDOUT
+              or die "tie failed ($!)";
 
         return $pid; ### Could write a rotate_logfile sub if we record the pid.
 

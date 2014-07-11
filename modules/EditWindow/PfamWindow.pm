@@ -81,7 +81,7 @@ sub widg {
     return $self->{_widg}->{$name} or die "No widg($name)";
 }
 
-sub initialize {
+sub initialise {
     my ($self, $tmpdir) = @_;
 
     my $pfam = Bio::Otter::Lace::Pfam->new($tmpdir);
@@ -353,11 +353,6 @@ sub have_result {
     return $self->mark_completed;
 }
 
-sub balloon {
-    my ($self) = @_;
-    return $self->{_balloon} ||= $self->top->Balloon;
-}
-
 sub mark_completed {
     my ($self) = @_;
     my $top = $self->top;
@@ -438,14 +433,18 @@ sub _launch_belvu {
     } elsif (defined $pid) {
         $ENV{BELVU_FETCH} = 'pfetch'; # will be on PATH, won't work outside firewall
         my @command = ("belvu", $alignment);
-        # DUP: Bio::Otter::ZMap::_launchZMap()
+        # DUP: Zircon::ZMap::Core::launch_zmap()
         { exec(@command) };
-        warn "Failed to exec '@command': $!";
-        close STDERR; # _exit does not flush
-        close STDOUT;
+        try {
+            warn "Failed to exec '@command': $!";
+            close STDERR; # _exit does not flush
+            close STDOUT;
+        }; # no catch, just be sure to _exit
         POSIX::_exit(127); # avoid triggering DESTROY
+        return 0; # quieten perlcritic
     } else {
         $self->logger->warn("fork for belvu failed: $!");
+        return 0;
     }
 }
 

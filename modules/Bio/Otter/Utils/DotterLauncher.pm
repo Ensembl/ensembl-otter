@@ -85,17 +85,36 @@ sub revcomp_subject {
     return $self->{'_revcomp_subject'} || 0;
 }
 
+{
+    my $query_serial = 0;
+    sub _session_info {
+        my ($self, $session_window) = @_;
+        my $colour = $session_window->session_colour;
+        my $session_dir = $session_window->AceDatabase->home;
+        my $tmpdir = "$session_dir/dotter";
+        unless (-d $tmpdir) {
+            mkdir $tmpdir, 0755
+              or die "Cannot mkdir $tmpdir: $!";
+        }
+        $query_serial ++;
+        return ($colour, "$tmpdir/dotter.$query_serial");
+    }
+}
+
 sub fork_dotter {
-    my ($self, $colour) = @_;
+    my ($self, $session_window) = @_;
+    my ($colour, $prefix) = $self->_session_info($session_window);
 
     my $start           = $self->query_start    or confess "query_start not set";
     my $end             = $self->query_end      or confess "query_end not set";
     my $seq             = $self->query_Sequence or confess "query_Sequence not set";
     my $subject_name    = $self->subject_name   or confess "subject_name not set";
 
-    my $prefix = "/tmp/dotter.$$";
     my $query_file   = "$prefix.query";
     my $subject_file = "$prefix.subject";
+    # In SeqTools 4.27, Dotter reads these files promptly on start,
+    # and then doesn't look at them again.
+
     try {
         my $query_seq = $seq->sub_sequence($start, $end);
         $query_seq->name($seq->name);
@@ -148,13 +167,15 @@ sub fork_dotter {
         return 1;
     }
     elsif (defined $pid) {
-        exec($dotter_command) or warn "Failed to exec '$dotter_command' : $!";
-        # Exec'ing rm here, which replaces the perl process
-        # with rm, ensures that the perl DESTROY methods
-        # don't get called by this child.
-        unlink $query_file, $subject_file
-            or warn "Some input file(s) not tidied up: $!\n";
-        warn "dotter launch aborted\n";
+        { exec($dotter_command) }
+        try {
+            warn "Failed to exec '$dotter_command': $!";
+            unlink $query_file, $subject_file
+              or warn "Some input file(s) not tidied up: $!\n";
+            warn "dotter launch aborted\n";
+            close STDERR;
+            close STDOUT;
+        }; # no catch, just be sure to _exit
         POSIX::_exit(127); # avoid triggering DESTROY
     }
     else {

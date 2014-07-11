@@ -42,7 +42,7 @@ use MenuCanvasWindow::SessionWindow;
     my $SessionWindow = MenuCanvasWindow::SessionWindow->new($mw);
     $SessionWindow->write_access(0);
     $SessionWindow->AceDatabase($db);
-    $SessionWindow->initialize;
+    $SessionWindow->initialise;
 
     Tk::MainLoop();
 }

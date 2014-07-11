@@ -33,6 +33,8 @@ sub about_text {
       try { $pkg->tools_versions() }
         catch { "some parts broken: $_" };
 
+    my (undef, undef, $desig_info) = $pkg->version_diagnosis();
+
     my ($vsn_zircon, $vsn_perlmod, $vsn_cliens) = map
       { Bio::Otter::Git->dist_conf($_) }
         qw( zircon PerlModules client_ensembl_version );
@@ -46,7 +48,7 @@ sub about_text {
     # Extra info (beyond $anno) below can be found from log output or
     # the ensembl-otter commitid, so we only need to show it in GUI
     return <<"TEXT";
-This is Otterlace version $vsn
+This is Otterlace version $vsn, $desig_info
 $dev_server
 Otterlace web page
   http://www.sanger.ac.uk/resources/software/otterlace/
@@ -55,6 +57,43 @@ Contains\n${anno}Client Ensembl from $vsn_cliens
 PerlModules from $vsn_perlmod
 Zircon from $vsn_zircon
 TEXT
+}
+
+
+=head2 version_diagnosis()
+
+Returns a list C<(do_warn, colour, description)>
+describing status of this software version.
+
+=cut
+
+sub version_diagnosis {
+    my ($pkg) = @_;
+
+    my $vsn = Bio::Otter::Git->as_text;
+    my ($desig, $desig_latest, $live) = Bio::Otter::Lace::Client->the->designate_this;
+
+    # Ugly trick to direct tickets, for dev/otterlace_this and testers on MacOS
+    $ENV{OTTERLACE_RAN_AS} = "inferred/otterlace_$desig"
+      unless defined $ENV{OTTERLACE_RAN_AS};
+
+    my $colour = { live => 'white',
+                   test => '#a1e3c9', # slightly minty
+                   dev => '#f4cb9f',
+                   old => 'pink' }->{$desig};
+    if ($desig eq 'dev') {
+        return (0, $colour, 'an unstable developer-edition Otterlace');
+    } elsif ($colour && $vsn eq $desig_latest) {
+        return (0, $colour, "the latest $desig Otterlace");
+    } elsif ($colour) {
+        my $txt = "is not the current $desig Otterlace\nIt is $vsn, latest is $desig_latest";
+        return (1, $colour, $txt);
+    } elsif (defined $desig && $desig !~ /^\d+(_|$)/) {
+        # some designation we didn't recognise e.g. (rt324508 ancient zircon)
+        return (0, 'pink', "a special $desig Otterlace");
+    } else {
+        return (1, 'red', "an obsolete Otterlace.  The latest is $live");
+    }
 }
 
 

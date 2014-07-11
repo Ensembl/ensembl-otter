@@ -7,10 +7,14 @@ use Log::Log4perl qw(:easy);
 use URI::Escape qw(uri_unescape);
 
 use Bio::DB::Sam;
+use Bio::DB::Sam::Constants qw(RFLAGS);
+
 use Bio::Otter::Lace::Defaults;
 use Bio::Otter::Fetch::BAM;
 use Bio::Otter::Mapping;
 use Bio::Vega::Utils::GFF;
+
+my $paired_flag = RFLAGS->{'PAIRED'};
 
 # parse the command line
 
@@ -121,6 +125,9 @@ sub _print_feature {
         Target     => \ @target_fields,
         sequence   => $query->seq->seq,
     };
+    if ($feature->flag & $paired_flag) {
+       $attribute_hash->{'ID'} = $feature->display_name;
+    }
 
     my $phase = $feature->phase;
 

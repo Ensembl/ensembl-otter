@@ -24,7 +24,7 @@ sub zmap_select_window {
     my $window = $self->ZMapSelectWindow;
     $window->destroy if $window;
 
-    $window = $self->zmap_select_widget->Toplevel;
+    $window = $self->top->Toplevel;
     $window->title("Select ZMap");
     $self->ZMapSelectWindow($window);
 
@@ -104,26 +104,6 @@ sub ZMapSelectWindow {
     return $ZMapSelectWindow;
 }
 
-# and now a kludge to work around the lack of a single method name
-# that accesses the top level widget across all our window classes 
-
-## no critic (Modules::ProhibitMultiplePackages)
-
-package EditWindow;
-
-sub zmap_select_widget {
-    my ($self) = @_;
-    my $zmap_select_widget = $self->top;
-    return $zmap_select_widget;
-}
-
-package CanvasWindow;
-
-sub zmap_select_widget {
-    my ($self) = @_;
-    my $zmap_select_widget = $self->top_window;
-    return $zmap_select_widget;
-}
 
 1;
 

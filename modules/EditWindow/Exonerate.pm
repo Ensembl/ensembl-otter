@@ -10,7 +10,7 @@ use Log::Log4perl;
 use Try::Tiny;
 
 use Bio::Otter::Lace::OnTheFly::Genomic;
-use Bio::Vega::Evidence::Types qw(evidence_is_sra_sample_accession);
+use Bio::Vega::Evidence::Types qw( evidence_is_sra_sample_accession seq_is_protein );
 use Bio::Otter::Lace::Client;
 use Hum::Pfetch;
 use Hum::FastaFileIO;
@@ -586,9 +586,10 @@ sub entered_seqs {
     # (We could try to lookup and compare, as a future feature.)
     foreach my $seq (@seqs) {
         my $name = $seq->name;
-        unless ($name =~ /^otf[_:]/) {
+        unless ($name =~ /^otf[_:]/i) {
             $seq->name('OTF:' . $name);
         }
+        $seq->type(seq_is_protein($seq->sequence_string) ? 'OTF_AdHoc_Protein' : 'OTF_AdHoc_DNA');
     }
     return \@seqs;
 }

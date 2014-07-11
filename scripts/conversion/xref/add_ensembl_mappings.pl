@@ -219,7 +219,7 @@ if (! %$ens_ids) {
       next PXREF unless($x->type =~ /MISC/);
       next PXREF unless($vname =~ /OTT/);
       next PXREF unless($dbname =~ /OTTP/);
-      $ens_ids->{'translations'}{$vname}{$psi}{$dbname}++;   
+      $ens_ids->{'translations'}{$vname}{$psi}{$dbname}++;
     }
   }
       }
@@ -267,6 +267,7 @@ foreach my $type (qw(genes transcripts translations)) {
           next XREF;
         }
         my $vdb = $vega_xref_names{$dbtype};
+#        warn "dbtype=$dbtype vdb=$vdb\n";
         my $dbentry = Bio::EnsEMBL::DBEntry->new(
           -primary_id => $e_id,
           -display_id => $e_id,
