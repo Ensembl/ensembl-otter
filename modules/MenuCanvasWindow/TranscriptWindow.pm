@@ -27,7 +27,7 @@ use base qw( MenuCanvasWindow );
 
 # "new" is in MenuCanvasWindow
 
-sub initialize {
+sub initialise {
     my ($self) = @_;
 
     my $canvas = $self->canvas;
@@ -911,7 +911,7 @@ sub search_pfam {
     $self->{'_pfam'} = $pfam;
     try {
         my $session_dir = $self->SessionWindow->AceDatabase->home;
-        $pfam->initialize("$session_dir/pfam");
+        $pfam->initialise("$session_dir/pfam");
     } catch {
         my $err = $_;
         $self->exception_message($_, "Failed to request Pfam search");
@@ -923,9 +923,9 @@ sub search_pfam {
 
 sub _new_window {
     my ($self, $name) = @_;
-    my $tl = $self->canvas->Toplevel
-      (-title => $Bio::Otter::Lace::Client::PFX."Pfam $name");
-    return EditWindow::PfamWindow->new($tl);
+    return EditWindow::PfamWindow->in_Toplevel
+      (-title => "Pfam $name",
+       { from => $self->top_window });
 }
 
 sub update_translation {
@@ -2910,7 +2910,7 @@ sub launch_dotter {
     $dotter->query_type('d');
     $dotter->subject_name($hit_name);
 
-    return $dotter->fork_dotter($self->SessionWindow->session_colour);
+    return $dotter->fork_dotter($self->SessionWindow);
 }
 
 sub max_exon_number {

@@ -98,7 +98,7 @@ sub row_height {
     return int 1.5 * $self->font_size;
 }
 
-sub initialize {
+sub initialise {
     my ($self) = @_;
 
     my $search_menu = $self->make_menu('Search');
@@ -708,17 +708,16 @@ sub load_filters {
     } else {
         # we need to set up and show a SessionWindow
         my $zmap = $self->zmap_select;
-        my $SessionWindow =
-            MenuCanvasWindow::SessionWindow->new(
-                $self->top_window->Toplevel,
-                '-zmap'           => $zmap,
-            );
+
+        my $SessionWindow = MenuCanvasWindow::SessionWindow->in_Toplevel
+          (# no Tk opts, because SessionWindow sets its own -title
+           { init => { existing_zmap_select => $zmap,
+                       AceDatabase => $self->AceDatabase,
+                       SequenceNotes => $self->SequenceNotes,
+                       ColumnChooser => $self },
+             from => $self->top_window });
 
         $self->SessionWindow($SessionWindow);
-        $SessionWindow->AceDatabase($self->AceDatabase);
-        $SessionWindow->SequenceNotes($self->SequenceNotes);
-        $SessionWindow->ColumnChooser($self);
-        $SessionWindow->initialize;
     }
 
     if (@to_fetch) {

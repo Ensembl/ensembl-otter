@@ -11,7 +11,7 @@ use List::MoreUtils qw{ uniq };
 use Bio::Otter::Lace::OnTheFly::Utils::SeqList;
 use Bio::Otter::Lace::OnTheFly::Utils::Types;
 
-use Bio::Vega::Evidence::Types qw{ new_evidence_type_valid };
+use Bio::Vega::Evidence::Types qw{ new_evidence_type_valid seq_is_protein };
 use Hum::Pfetch;
 
 has accession_type_cache => ( is => 'ro', isa => 'Bio::Otter::Lace::AccessionTypeCache', required => 1 );
@@ -125,8 +125,9 @@ sub _build_seqs_by_type {       ## no critic (Subroutines::ProhibitUnusedPrivate
         my $type = $seq->type;
         unless ($type && new_evidence_type_valid($type))
         {
-            $type = $seq->sequence_string =~ /[^acgtrymkswhbvdnACGTRYMKSWHBVDN]/
-                ? 'OTF_AdHoc_Protein' : 'OTF_AdHoc_DNA';
+            unless ($type =~ /^OTF_AdHoc_/) { # may be already set by EditWindow::Exonerate->entered_seqs()
+                $type = seq_is_protein($seq->sequence_string) ? 'OTF_AdHoc_Protein' : 'OTF_AdHoc_DNA';
+            }
         }
         push @{ $seqs_by_type{ $type } }, $seq;
     }
@@ -163,6 +164,8 @@ sub _augment_supplied_sequences {
             if ($name ne $full_acc) {
                 $self->_add_remap_warning( $name => $full_acc );
             }
+        } else {
+            $self->_save_seq_to_acc_info($seq);
         }
     }
     return;
@@ -267,6 +270,31 @@ sub _acc_type_full {
     my $new_entry;
     $new_entry = [ $type, $full ] if ($type and $full);
     return $local_cache->{$acc} = $new_entry;
+}
+
+sub _save_seq_to_acc_info {
+    my ($self, $seq) = @_;
+
+    my $local_cache = $self->_acc_type_full_cache;
+    my $name = $seq->name;
+    my $type = $seq->type;
+
+    if ($local_cache->{$name}) {
+        $self->logger->warn("_save_seq_to_acc_info: replacing entry for '$name'");
+    }
+
+    my $entry = {
+        acc_sv          => $name,
+        # taxon_id
+        evi_type        => $type,
+        description     => $seq->description || 'User-supplied sequence for on-the-fly alignment',
+        source          => $type,
+        # currency
+        sequence_length => $seq->sequence_length,
+        sequence        => $seq->sequence_string,
+    };
+    $self->accession_type_cache->save_accession_info($entry);
+    return $local_cache->{$name} = [ $type, $name ];
 }
 
 # warnings

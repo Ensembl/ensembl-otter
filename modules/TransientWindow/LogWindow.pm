@@ -13,9 +13,6 @@ use Net::Domain qw{ hostfqdn };
 
 use base qw( TransientWindow );
 
-my @mailto; # file global, init-once
-__mailto_init();
-
 
 sub show_for {
     my ($pkg, $w) = @_;
@@ -46,6 +43,7 @@ sub initialise {
     my ($self, @args) = @_;
 
     $self->SUPER::initialise(@args);
+    my @mailto = $self->_mailto_init;
 
     my $lw        = $self->window;
     my $top_frame = $lw->Frame->pack(
@@ -240,27 +238,29 @@ sub get_log_contents {
     return $txt->get('end - 250 lines', 'end');
 }
 
-sub __mailto_init {
+sub _mailto_init {
+    my ($self) = @_;
+
     my $domain    = '@sanger.ac.uk';
-    @mailto =
+    my @mailto =
       ([ 'The Otterlace application, pipeline and data' =>  "anacode$domain" ],
        [ 'The ZMap application'                         =>     "zmap$domain" ],
        [ 'Blixem, Dotter and Belvu applications'        => "seqtools$domain" ],
        [ 'All bugs found during testing'                => "annotest$domain" ]);
 
     # We may get clues that tickets should go to annotest or developer.
-    # May only work for internal Linux.  RT#267390 may bring improvement.
+    # Set for internal Linux by wrapper script, and perhaps otherwise by version_diagnosis
     my $clue = $ENV{OTTERLACE_RAN_AS} || '';
     $clue =~ s{otterlace}{otter}g;
 
     @mailto[0,3] = @mailto[3,0]
-      if $clue =~ m{\botter_test|test_otter\b|zircon};
+      if $clue =~ m{\botter_test|test_otter\b};
 
     my $me = getpwuid($<);
     unshift @mailto, [ 'Myself' => "$me$domain" ]
       if $clue =~ m{\botter_dev|dev_otter\b};
 
-    return ();
+    return @mailto;
 }
 
 sub _mailto {

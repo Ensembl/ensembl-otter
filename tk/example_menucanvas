@@ -11,7 +11,7 @@ use MenuCanvasWindow::ExampleWindow;
 {
     my $cw = CanvasWindow::MainWindow->new('menu example');
     my $mw = MenuCanvasWindow::ExampleWindow->new($cw);
-    $mw->initialize;
+    $mw->initialise;
     
     Tk::MainLoop();
 }

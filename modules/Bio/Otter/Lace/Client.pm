@@ -8,7 +8,6 @@ use Carp;
 
 use Try::Tiny;
 
-use File::Path qw{ remove_tree };
 use Net::Domain qw{ hostname hostfqdn };
 use Proc::ProcessTable;
 
@@ -20,6 +19,7 @@ use HTTP::Cookies::Netscape;
 use Term::ReadKey qw{ ReadMode ReadLine };
 
 use XML::Simple;
+use JSON;
 
 use Bio::Vega::Author;
 use Bio::Vega::ContigLock;
@@ -192,6 +192,7 @@ sub get_log_dir {
     my $log_dir = "$home/.otter";
     if (mkdir($log_dir)) {
         warn "Made logging directory '$log_dir'\n"; # logging not set up, so this must use 'warn'
+        return;
     }
     return $log_dir;
 }
@@ -236,59 +237,30 @@ sub make_log_file {
     return;
 }
 
-sub cleanup_log_dir {
-    my ($self, $file_root, $days) = @_;
+sub cleanup {
+    my ($self, $delayed) = @_;
+    require Bio::Otter::Utils::Cleanup;
+    my $cleaner = Bio::Otter::Utils::Cleanup->new($self);
+    return $delayed ? $cleaner->fork_and_clean($delayed) : $cleaner->clean;
+}
 
-    # Files older than this number of days are deleted.
-    $days ||= 14;
+{
+    my $session_number = 0;
+    sub _new_session_path {
+        my ($self) = @_;
 
-    $file_root ||= 'client';
+        my $user = (getpwuid($<))[0];
 
-    my $log_dir = $self->get_log_dir or return;
-
-    opendir my $LOG, $log_dir or $self->logger->logconfess("Can't open directory '$log_dir': $!");
-    foreach my $file (grep { /^$file_root\./ } readdir $LOG) {
-        my $full = "$log_dir/$file"; #" comment solely for eclipses buggy parsing!
-        if (-M $full > $days) {
-            unlink $full
-                or $self->logger->warn("Couldn't delete file '$full' : $!");
-        }
+        ++$session_number;
+        return sprintf("%s.%s.%d.%d",
+                       $self->_session_root, $user, $$, $session_number);
     }
-    closedir $LOG or $self->logger->logconfess("Error reading directory '$log_dir' : $!");
-    return;
 }
 
-my $session_root = '/var/tmp/lace';
-my $session_number = 0;
-my $session_dir_expire_days = 14;
-
-sub cleanup_sessions {
-    my ($self) = @_;
-
-    foreach ( $self->all_session_dirs ) {
-        next unless /\.done$/;
-        if ( -M > $session_dir_expire_days ) {
-            remove_tree($_)
-                or $self->logger->error("Error removing expired session directory '$_'");
-        }
-    }
-
-    return;
-}
-
-sub new_session {
-    my ($self) = @_;
-    return ++$session_number;
-}
-
-sub session_path {
-    my ($self) = @_;
-
-    my $user = (getpwuid($<))[0];
-
-    return
-        sprintf "%s_%d.%s.%d.%d",
-        $session_root, Bio::Otter::Version->version, $user, $$, $session_number;
+sub _session_root {
+    my ($called, $version) = @_;
+    $version ||= Bio::Otter::Version->version;
+    return '/var/tmp/lace_'.$version;
 }
 
 sub all_sessions {
@@ -310,19 +282,20 @@ sub _session_from_dir {
     my ($pid) = $dir =~ m{lace[^/]+\.(\d+)\.\d+$};
     return unless $pid;
 
-    # Skip if directory is not ours
-    my ($owner, $mtime) = (stat($dir))[4,9];
-    return unless $< == $owner;
-
+    my $mtime = (stat($dir))[9];
     return [ $dir, $pid, $mtime ];
 }
 
 sub all_session_dirs {
-    my ($self) = @_;
+    my ($self, $version_glob) = @_;
 
-    my $session_dir_pattern =
-        sprintf "%s_%s.*", $session_root, Bio::Otter::Version->version;
+    my $session_dir_pattern = $self->_session_root($version_glob) . ".*";
     my @session_dirs = glob($session_dir_pattern);
+
+    # Skip if directory is not ours
+    my $uid = $<;
+    @session_dirs = grep { (stat($_))[4] == $uid } @session_dirs;
+
     return @session_dirs;
 }
 
@@ -332,11 +305,9 @@ sub all_session_dirs {
 sub new_AceDatabase {
     my ($self) = @_;
 
-    $self->new_session;
-
     my $adb = Bio::Otter::Lace::AceDatabase->new;
     $adb->Client($self);
-    $adb->home($self->session_path);
+    $adb->home($self->_new_session_path);
 
     return $adb;
 }
@@ -668,12 +639,15 @@ sub setup_pfetch_env {
 }
 
 # Returns the content string from the http response object
-# with the <otter> tags removed.
+# with the <otter> tags or JSON encoding removed.
 # "perlcritic --stern" refuses to learn that $logger->logconfess is fatal
 sub otter_response_content { ## no critic (Subroutines::RequireFinalReturn)
     my ($self, $method, $scriptname, $params) = @_;
 
     my $response = $self->general_http_dialog($method, $scriptname, $params);
+
+    return $self->_json_content($response)
+      if $response->content_type =~ m{^application/json($|;)}; # charset ignored
 
     my $xml = $response->decoded_content();
 
@@ -684,6 +658,11 @@ sub otter_response_content { ## no critic (Subroutines::RequireFinalReturn)
     } else {
         $self->logger->logconfess("No <otter> tags in response content: [$xml]");
     }
+}
+
+sub _json_content {
+    my ($self, $response) = @_;
+    return JSON->new->decode($response->decoded_content);
 }
 
 # Returns the full content string from the http response object
@@ -714,6 +693,7 @@ sub general_http_dialog {
 
     $params->{'log'} = 1 if $self->debug_server;
     $params->{'client'} = $self->client_name;
+    my $clogger = $self->client_logger;
 
     my $password_attempts = $self->password_attempts;
     my ($response, $content);
@@ -736,34 +716,58 @@ sub general_http_dialog {
                     next REQUEST;
                 }
             }
-            $self->logger->logdie("Authorization failed");
+            $clogger->logdie("Authorization failed");
         } elsif ($code == 410) {
             # 410 = Gone.  Not coming back; probably concise.  RT#234724
             # Actually, maybe not so concise.  RT#382740 returns "410 Gone" plus large HTML.
-            $self->logger->warn(__truncdent_for_log($content, 10240, '* '));
-            $self->logger->logdie(sprintf("Otter Server v%s is gone, please download an up-to-date Otterlace.",
-                                  Bio::Otter::Version->version));
+            $clogger->warn(__truncdent_for_log($content, 10240, '* '));
+            $clogger->logdie(sprintf("Otter Server v%s is gone, please download an up-to-date Otterlace.",
+                                     Bio::Otter::Version->version));
         } else {
-            $self->logger->error("Got error $code");
-            $self->logger->error(__truncdent_for_log($content, 10240, '| '));
-            $self->logger->logdie(sprintf "%d (%s)", $response->code, $content);
+            # Some error.  Content-length: protection is not yet applied,
+            # just hope the error is informative.
+            my $json_error = try {
+                ($response->content_type =~ m{^application/json($|;)}) &&
+                  JSON->new->decode($content); # charset ignored
+            };
+            if ($json_error && defined(my $error = $json_error->{error})) {
+                # clear JSON-encoded error
+                $clogger->info($content) if keys %$json_error > 1;
+                $clogger->logdie("Server returned error $code: $error");
+            } else {
+                $clogger->info(join "\n", $response->status_line, $response->headers_as_string,
+                               __truncdent_for_log($content, 10240));
+
+                my $err;
+                if ($content =~ m{<title>500 Internal Server Error</title>.*The server encountered an internal error or\s+misconfiguration and was unable to complete\s+your request}s) {
+                    # standard Apache, uninformative
+                    $err = 'details are in server error_log';
+                } elsif ($content =~m{\A<\?xml.*\?>\n\s*<otter>\s*<response>\s*ERROR: (.*?)\s+</response>\s*</otter>\s*\z}s) {
+                    # otter_wrap_response error
+                    $err = $1;
+                    $err =~ s{[.\n]*\z}{,}; # "... at /www/.../foo line 30,"
+                } else {
+                    # else some raw and probably large failure, hide it
+                    $err = 'error text not recognised, details in Otterlace log';
+                }
+                $clogger->logdie(sprintf "Error %d: %s", $response->code, $err);
+            }
         }
     }
 
     if ($content =~ /The Sanger Institute Web service you requested is temporarily unavailable/) {
-        $self->logger->logdie("Problem with the web server");
+        $clogger->logdie("Problem with the web server");
     }
 
     # for RT#401537 HTTP response truncation
-    my $cl = $self->client_logger;
-    $cl->debug(join "\n", $response->status_line, $response->headers_as_string)
-      if $cl->is_debug;
+    $clogger->debug(join "\n", $response->status_line, $response->headers_as_string)
+      if $clogger->is_debug;
 
     # Check (possibly gzipped) lengths.  LWP truncates any excess
     # bytes, but does nothing if there are too few.
     my $got_len = length(${ $response->content_ref });
     my $exp_len = $response->content_length; # from headers
-    $self->logger->logdie
+    $clogger->logdie
       ("Content length mismatch (before content-decode, if any).\n  Got $got_len bytes, headers promised $exp_len")
       if defined $exp_len # it was not provided, until recently
         && $exp_len != $got_len;
@@ -775,7 +779,7 @@ sub __truncdent_for_log {
     my ($txt, $maxlen, $dent) = @_;
     my $len = length($txt);
     substr($txt, $maxlen, $len, "[...truncated from $len bytes]\n") if $len > $maxlen;
-    $txt =~ s/^/$dent/mg;
+    $txt =~ s/^/$dent/mg if defined $dent;
     $txt =~ s/\n*\z/\n/;
     return $txt;
 }
@@ -963,9 +967,9 @@ sub lock_refresh_for_DataSet_SequenceSet {
     my %lock_hash = ();
     my %author_hash = ();
 
-    for my $line (split(/\n/,$response)) {
+    foreach my $clone_lock (@{ $response->{CloneLock} || [] }) {
         my ($intl_name, $embl_name, $ctg_name, $hostname, $timestamp, $aut_name, $aut_email)
-            = split(/\t/, $line);
+          = @{$clone_lock}{qw{ acc_sv name hostname timestamp author_name author_email }};
 
         $author_hash{$aut_name} ||= Bio::Vega::Author->new(
             -name  => $aut_name,
@@ -1191,6 +1195,28 @@ sub get_loutre_schema {
 sub get_server_ensembl_version {
     my ($self) = @_;
     return $self->_get_cache_config_file('ensembl_version');
+}
+
+# same as Bio::Otter::Server::Config->designations (fresh every time)
+sub get_designations {
+    my ($self) = @_;
+    my $hashref = $self->otter_response_content(GET => 'get_config', { key => 'designations' });
+    return $hashref;
+}
+
+# Return (designation_of_this_major, latest_this_major, live_major_minor)
+sub designate_this {
+    my ($self) = @_;
+    my $desig = $self->get_designations;
+    my $major = Bio::Otter::Version->version;
+    my $major_re = qr{^$major(\.|$|_)};
+    my ($key) =
+      # There would have been multiple hits for v75, but now we have
+      # feature branches.  Sort just in case.
+      sort grep { $desig->{$_} =~ $major_re } keys %$desig;
+    my $live = $desig->{live};
+    my $exact = $desig->{$key};
+    return ($key, $exact, $live);
 }
 
 sub do_authentication {

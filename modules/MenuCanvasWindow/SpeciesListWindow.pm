@@ -139,6 +139,9 @@ sub ensure_tools {
         ();
     };
 
+    # Check we are running a sensible Otterlace version
+    $self->uptodate_check;
+
     if (@v) {
         local $" = "\n  ";
         $self->logger->info("Tools are\n  @v");
@@ -148,6 +151,25 @@ sub ensure_tools {
     }
 
     return ();
+}
+
+sub uptodate_check {
+    my ($self) = @_;
+
+    my ($do_warn, $colour, $description) = try {
+        Bio::Otter::Utils::About->version_diagnosis;
+    } catch {
+        $self->logger->error("_ensure_tools: $_");
+        (1, 'grey', 'broken in some way');
+    };
+
+    $self->canvas->configure(-background => $colour);
+    if ($do_warn) {
+        $self->message("This is $description");
+    } else {
+        $self->logger->info("This is $description");
+    }
+    return;
 }
 
 sub show_about {
@@ -197,12 +219,14 @@ sub show_about {
 
 sub show_preferences {
     my ($self, %opt) = @_;
-    EditWindow::Preferences->show_for_parent
-        (\$self->{_prefs_win},
-         from => $self->top_window,
-         linkage => { Client => $self->Client },
-         title => 'Preferences',
-         %opt);
+
+    EditWindow::Preferences->in_Toplevel
+        (-title => 'Preferences',
+         { reuse_ref => \$self->{_prefs_win},
+           from => $self->top_window,
+           init => { Client => $self->Client },
+           raise => 1,
+           %opt });
     return ();
 }
 
@@ -384,19 +408,21 @@ sub recover_some_sessions {
                 foreach my $rec (@selected_recs) {
                     my ($session_dir, $date, $title) = @$rec;
 
+                    # We carry an extra event loop on the stack until
+                    # recovery is complete, to queue actions after it.
+                    local $Zircon::Tk::Context::TANGLE_ACK{'MCW:SLW:recover_some_sessions'} = 1;
+
                     # Bring up GUI
                     my $adb = $client->recover_session($session_dir);
 
-                    my $top = $canvas->Toplevel
-                      (-title  => $Bio::Otter::Lace::Client::PFX.
-                       'Select Column Data to Load');
+                    my $cc = MenuCanvasWindow::ColumnChooser->in_Toplevel
+                      (-title  => 'Select Column Data to Load',
+                       { init => { AceDatabase => $adb,
+                                   SpeciesListWindow => $self },
+                         from => $canvas });
 
-                    my $cc = MenuCanvasWindow::ColumnChooser->new($top);
-                    $cc->AceDatabase($adb);
-                    $cc->SpeciesListWindow($self);
-                    $cc->initialize;
                     $cc->load_filters(is_recover => 1);
-                    $top->withdraw;
+                    $cc->top_window->withdraw;
                 }
             }
             catch {

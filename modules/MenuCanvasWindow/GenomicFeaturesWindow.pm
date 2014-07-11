@@ -600,7 +600,7 @@ sub try2save_and_quit {
 
 # -------------[fill it in]------------------------------------
 
-sub initialize {
+sub initialise {
     my ($self) = @_;
 
     my $top_window = $self->top_window();
