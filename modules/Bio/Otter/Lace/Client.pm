@@ -576,7 +576,7 @@ sub cookie_expiry_time {
     $jar->scan(sub{
         my ($key, $expiry) = @_[1,8];
 
-        if ($key eq 'WTSISignOn') {
+        if ($key eq 'WTSISignOn') { # nb. Bio::Otter::Auth::SSO
             $expiry_time = $expiry;
         }
         return;
