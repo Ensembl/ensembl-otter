@@ -41,7 +41,7 @@ use EditWindow::Password;
 
     Bio::Otter::Git->dump($logger);
 
-    $client->ua_tell_hostinfo;
+    $client->env_config;
 
     $client->cleanup(20); # do it soon, and in a child process, so we don't block
 

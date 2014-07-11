@@ -93,8 +93,7 @@ sub new {
     my $debug_show = defined $debug ? "'$debug'" : '<undefined>';
     warn "Debug from config: $debug_show\n";
     Bio::Otter::Debug->set($debug) if defined $debug;
-
-    $new->setup_pfetch_env;
+    # nb. no loggers yet, because this object configures them
 
     return $new;
 }
@@ -497,6 +496,14 @@ sub create_UserAgent {
     return $ua;
 }
 
+# Call it early, but after loggers are ready
+sub env_config {
+    my ($self) = @_;
+    $self->ua_tell_hostinfo;
+    $self->setup_pfetch_env;
+    return;
+}
+
 sub ua_tell_hostinfo {
     my ($self) = @_;
     my $ua = $self->get_UserAgent;
@@ -515,8 +522,8 @@ sub ua_tell_hostinfo {
           map {( $_, uc($_) )}
             qw( http_proxy https_proxy no_proxy );
 
-    $self->logger->info('Hostname: ', hostfqdn());
-    $self->logger->info('Proxy: ', (join ' ', map {"$_=$info{$_}"} sort keys %info));
+    $self->client_logger->info('Hostname: ', hostfqdn());
+    $self->client_logger->info('Proxy:', map {" $_=$info{$_}"} sort keys %info);
     return;
 }
 
@@ -636,8 +643,7 @@ sub setup_pfetch_env {
     my $new_PW = defined $ENV{'PFETCH_WWW'} ? "'$ENV{'PFETCH_WWW'}'" : "undef";
     my $blix_cfg = __user_home()."/.blixemrc";
     my $blix_cfg_exist = -f $blix_cfg ? "exists" : "not present";
-    # Called before logger is set up
-    warn "setup_pfetch_env: hostname=$hostname; PFETCH_WWW was $old_PW, now $new_PW; $blix_cfg $blix_cfg_exist\n";
+    $self->client_logger->info("setup_pfetch_env: PFETCH_WWW was $old_PW, now $new_PW; $blix_cfg $blix_cfg_exist");
 
     return;
 }
