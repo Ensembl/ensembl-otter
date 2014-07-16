@@ -44,7 +44,7 @@ sub main {
     }
 
   SKIP: {
-        skip 1, 'not internal' unless -d '/nfs';
+        skip 1, 'not internal' unless -d '/nfs/anacode';
         subtest fallback_tt => \&fallback_tt;
     }
 
