@@ -9,6 +9,9 @@ use Bio::Otter::Git qw{ :server_ensembl :match };
 
 use Bio::Otter::Server::Support::Web;
 
+use Bio::Vega::ContigLockBroker;
+use Bio::Vega::SliceLockBroker;
+
 my $select_locks_sql = <<'SQL'
 SELECT DISTINCT cl.name
   , concat(embl_acc.value, '.', embl_version.value)
@@ -72,12 +75,33 @@ sub get_CloneLocks {
     return \@out;
 }
 
+sub get_SliceLocks {
+    my ($server) = @_;
+
+    my $SLdba = $server->otter_dba->get_SliceLockAdaptor;
+    my $S_dba = $server->otter_dba->get_SliceAdaptor;
+    my $chr = $server->require_argument('chr');
+    my $chr_slice = $S_dba->fetch_by_region
+      ('chromosome', $chr, undef, undef, undef, 'Otter', 1);
+    die "Cannot find chromosome:Otter:$chr" unless $chr_slice;
+    my $srid = $chr_slice->get_seq_region_id;
+
+    my $slocks = $SLdba->fetch_by_seq_region_id($srid, 1); # extant
+
+    return $slocks;
+}
+
 sub get_locks {
     my ($server) = @_;
     my $ds = $server->dataset;
     my %out;
 
-    $out{CloneLock} = get_CloneLocks($server);
+    $out{CloneLock} = get_CloneLocks($server)
+      if Bio::Vega::ContigLockBroker->supported($ds);
+
+    $out{SliceLock} = get_SliceLocks($server)
+      if Bio::Vega::SliceLockBroker->supported($ds);
+    $server->json->convert_blessed;
 
     return \%out;
 }
