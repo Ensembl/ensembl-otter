@@ -41,10 +41,6 @@ my $meta_tsv = $ldb_tsv->get_meta;
 ok($meta_tsv, 'get_meta - TSV');
 note("Got:\n", $meta_tsv);
 
-my $db_info_tsv = $ldb_tsv->get_db_info;
-ok($db_info_tsv, 'get_db_info - TSV');
-note("Got:\n", $db_info_tsv);
-
 done_testing;
 
 # Local Variables:

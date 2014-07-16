@@ -23,18 +23,6 @@ sub serialise_meta {
     return $tsv_string;
 }
 
-sub serialise_db_info {
-    my ($self, $results) = @_;
-
-    my $tsv_string = '';
-
-    foreach my $key ( keys %$results ) {
-        $tsv_string .= join("\t", $key, @{$results->{$key}}) . "\n";
-    }
-
-    return $tsv_string;
-}
-
 =head1 AUTHOR
 
 Ana Code B<email> anacode@sanger.ac.uk

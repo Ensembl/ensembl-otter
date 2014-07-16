@@ -941,30 +941,8 @@ sub _build_meta_hash {
 
 sub get_db_info {
     my ($self, $dsname) = @_;
-
-    my $response = $self->otter_response_content(
-        'GET',
-        'get_db_info',
-        {
-            'dataset'  => $dsname,
-        },
-    );
-
-    return $self->_build_db_info_hash($response);
-}
-
-# Factored out for use in OtterTest::Client
-#
-sub _build_db_info_hash {
-    my ($self, $response) = @_;
-
-    my $db_info_hash = {};
-    for my $line (split(/\n/,$response)) {
-        my($key, @values) = split(/\t/,$line);
-        $db_info_hash->{$key} = [ @values ];
-    }
-
-    return $db_info_hash;
+    my $hashref = $self->otter_response_content(GET => 'get_db_info', { dataset => $dsname });
+    return $hashref;
 }
 
 sub lock_refresh_for_DataSet_SequenceSet {
