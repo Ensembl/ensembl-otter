@@ -1,0 +1,86 @@
+#!/usr/bin/env perl
+
+package Bio::Otter::Script::LockSet;
+use strict;
+use warnings;
+use parent 'Bio::Otter::Utils::Script';
+
+use Net::Domain qw{ hostfqdn };
+use Moose;
+has regions => (is => 'ro', lazy => 1, default => sub { [] });
+has pre => (is => 'rw');
+
+has [qw[ intent hostname ]] => (is => 'rw');
+
+use Bio::Vega::SliceLockBroker;
+
+
+sub ottscript_options {
+    return (dataset_mode => 'only_one', sequence_set => 'optional');
+}
+
+sub ottscript_opt_spec {
+    return
+      ([ 'pre!', 'Leave new locks in "pre" state' ],
+       # [ 'unlock!', 'Do unlock' ],
+       [ 'hostname=s', 'Supply "hostname" field (default is here)' ],
+       [ 'intent=s', 'Supply "intent" field' ]);
+}
+
+sub ottscript_validate_args {
+    my ($self, $opt, $args) = @_;
+    my @bad;
+
+    for my $optname (qw( pre hostname intent )) {
+        $self->$optname($opt->{$optname});
+    }
+
+    my $regions = $self->regions;
+    while (@$args) {
+        my $arg = shift @$args;
+        $arg =~ s{(\d+)_(\d+)}{$1$2}g; # deal with 150_000
+        if (my ($start, $end) = $arg =~ m{^(\d+):(\d+)$}) {
+            if ($end < $start) {
+                push @bad, "$arg: need start >= end";
+            } else {
+                push @$regions, [ $start, $end ];
+            }
+        } else {
+            push @bad, "$arg: bad region, need start:end coords";
+        }
+    }
+    $self->usage_error(join "\n", "Bad regions", @bad) if @bad;
+    return;
+}
+
+sub process_dataset {
+    my ($self, $ds, $ss) = @_;
+    my $dba = $ds->otter_dba;
+    my $slb = Bio::Vega::SliceLockBroker->new
+      (-adaptor => $dba,
+       -hostname => $self->hostname || hostfqdn(),
+       -author => 'for_uid');
+    my $dry = $self->dry_run;
+    die "dry run not implemented" if $dry;
+
+    foreach my $r (@{ $self->regions }) {
+        my ($start, $end) = @$r;
+        my $slice = $ss->sub_Slice($start, $end);
+        my $L = $slb->lock_create_for_Slice
+          (-slice => $slice,
+           -intent => $self->intent);
+        # $L is stashed in $slb
+    }
+    if ($self->pre) {
+        $dba->dbc->db_handle->commit;
+    } else {
+        $slb->exclusive_work(sub { print "Locked\n" });
+    }
+
+    use YAML 'Dump';
+    print Dump([ map { $_->TO_JSON } $slb->locks ]);
+    return;
+}
+
+package main;
+Bio::Otter::Script::LockSet->import->run;
