@@ -60,13 +60,13 @@ sub get_loutre_schema {
 
 sub get_meta {
     my ($self, $dsname) = @_;
-    my $response = $self->_cached_response('get_meta', $dsname);
+    my $response = $self->_cached_response_tsv('get_meta', $dsname);
     return $self->Bio::Otter::Lace::Client::_build_meta_hash($response);
 }
 
 sub get_db_info {
     my ($self, $dsname) = @_;
-    my $response = $self->_cached_response('get_db_info', $dsname);
+    my $response = $self->_cached_response_tsv('get_db_info', $dsname);
     return $self->Bio::Otter::Lace::Client::_build_db_info_hash($response);
 }
 
@@ -86,21 +86,32 @@ sub get_db_info {
     }
 }
 
-sub _cached_response {
+sub _cached_response_tsv {
     my ($self, $what, $dsname) = @_;
+    return $self->_cached_response($what, $dsname, \&_get_fresh_tsv);
+}
+
+sub _cached_response_json {
+    my ($self, $what, $dsname) = @_;
+    return $self->_cached_response($what, $dsname, \&_get_fresh_json, \&_decode_json);
+}
+
+sub _cached_response {
+    my ($self, $what, $dsname, $get_fresh_sub, $decode_sub) = @_;
 
     my $tb = Test::Builder->new;
 
     my $fn = $self->_response_cache_fn($what, $dsname);
     my $cache_age = 1; # days
 
+    my $response;
     if (-f $fn && (-M _) < $cache_age) {
         # got it, and it's recent
-        my $response = slurp($fn);
-        return $response;
+        $response = slurp($fn);
     } else {
         # probably need to fetch it
-        my ($error, $response) = $self->_get_fresh($what, $dsname, $fn);
+        my $error;
+        ($error, $response) = $self->$get_fresh_sub($what, $dsname, $fn);
         if ($error && -f $fn) {
             my $age = -M $fn;
             $tb->diag("Proceeding with $age-day stale $fn because cannot fetch fresh ($error)");
@@ -108,25 +119,39 @@ sub _cached_response {
         } elsif ($error) {
             die "No cached data at $fn ($error)";
         }
-        return $response;
     }
+
+    return $response unless $decode_sub;
+    return $self->$decode_sub($response);
+}
+
+sub _get_fresh_tsv {
+    my ($self, $what, $dsname, $fn) = @_;
+    return $self->_get_fresh($what, $dsname, $fn, 'Bio::Otter::ServerAction::TSV::LoutreDB');
+}
+
+sub _get_fresh_json {
+    my ($self, $what, $dsname, $fn) = @_;
+    return $self->_get_fresh($what, $dsname, $fn, 'Bio::Otter::ServerAction::LoutreDB', \&_encode_json);
 }
 
 sub _get_fresh {
-    my ($self, $what, $dsname, $fn) = @_;
+    my ($self, $what, $dsname, $fn, $ldb_class, $encode_sub) = @_;
 
-    my ($error, $tsv);
+    my ($error, $response);
     try {
         my $tb = Test::Builder->new;
 
         my $local_server = $self->local_server;
         $local_server->set_params(dataset => $dsname);
 
-        my $ldb_tsv = Bio::Otter::ServerAction::TSV::LoutreDB->new($local_server);
-        $tsv = $ldb_tsv->$what;
+        my $ldb_tsv = $ldb_class->new($local_server);
+        $response = $ldb_tsv->$what;
         $tb->note("OtterTest::Client::$what: fetched fresh copy");
 
-        write_file($fn, \$tsv);
+        $response = $self->$encode_sub($response) if $encode_sub;
+
+        write_file($fn, \$response);
         $tb->note("OtterTest::Client::$what: cached in '$fn'");
 
         1;
@@ -134,7 +159,7 @@ sub _get_fresh {
     catch {
         $error = $_;
     };
-    return ($error, $tsv);
+    return ($error, $response);
 }
 
 sub _response_cache_fn {
@@ -146,6 +171,25 @@ sub _response_cache_fn {
     $fn =~ s{(/t/)lib/\Q${pkgfn}.pm\E$}{$1.OTC.${what}_response.${vsn}.${dsname}.txt}
       or die "Can't make filename from $fn";
     return $fn;
+}
+
+{
+    my $json;
+
+    sub _json {
+        my ($self) = @_;
+        return $json ||= JSON->new->pretty;
+    }
+
+    sub _encode_json {
+        my ($self, $raw) = @_;
+        return $self->_json->encode($raw);
+    }
+
+    sub _decode_json {
+        my ($self, $encoded) = @_;
+        return $self->_json->decode($encoded);
+    }
 }
 
 1;
