@@ -15,13 +15,10 @@ my ($saldb_module, $saldb_tsv_module);
 
 BEGIN {
     $saldb_module = qw( Bio::Otter::ServerAction::LoutreDB );
-    $saldb_tsv_module = qw( Bio::Otter::ServerAction::TSV::LoutreDB );
     use_ok($saldb_module);
-    use_ok($saldb_tsv_module);
 }
 
 critic_module_ok($saldb_module);
-critic_module_ok($saldb_tsv_module);
 
 my $server = Bio::Otter::Server::Support::Local->new;
 $server->set_params( dataset => 'human_test' );
