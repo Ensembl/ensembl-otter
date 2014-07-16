@@ -43,29 +43,23 @@ sub get_meta {
     $sth->execute;
 
     my $counter = 0;
-    my @results;
+    my %meta_hash;
 
     while (my ($species_id, $meta_key, $meta_value) = $sth->fetchrow) {
 
         my ($key_prefix) = $meta_key =~ /^(\w+)\.?/;
         next unless $white_list{$key_prefix};
 
-        $meta_value=~s/\s+/ /g; # get rid of newlines and tabs
-
-        push @results, { meta_key => $meta_key, meta_value => $meta_value, species_id => $species_id };
+        $meta_hash{$meta_key}->{species_id} = $species_id;
+        push @{$meta_hash{$meta_key}->{values}}, $meta_value; # as there can be multiple values for one key
         $counter++;
     }
 
     warn "Total of $counter meta table pairs whitelisted\n";
 
-    return $self->serialise_meta(\@results);
+    return \%meta_hash;
 }
 
-# Null serialiser, overridden in B:O:SA:TSV::LoutreDB
-sub serialise_meta {
-    my ($self, $results) = @_;
-    return $results;
-}
 
 =head2 get_db_info
 =cut

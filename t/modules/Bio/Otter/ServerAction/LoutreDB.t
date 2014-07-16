@@ -30,16 +30,11 @@ my $ldb_plain = new_ok($saldb_module => [ $server ]);
 
 my $meta = $ldb_plain->get_meta;
 ok($meta, 'get_meta');
-note('Got ', scalar @$meta, ' entries');
+note('Got ', scalar keys %$meta, ' keys');
 
 my $db_info = $ldb_plain->get_db_info;
 ok($db_info, 'get_db_info');
 note('Got ', scalar keys %$db_info, ' entries');
-
-my $ldb_tsv = new_ok($saldb_tsv_module => [ $server ]);
-my $meta_tsv = $ldb_tsv->get_meta;
-ok($meta_tsv, 'get_meta - TSV');
-note("Got:\n", $meta_tsv);
 
 done_testing;
 

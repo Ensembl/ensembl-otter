@@ -912,31 +912,8 @@ sub _find_clone_result {
 
 sub get_meta {
     my ($self, $dsname) = @_;
-
-    my $response = $self->otter_response_content(
-        'GET',
-        'get_meta',
-        {
-            'dataset'  => $dsname,
-        },
-    );
-
-    return $self->_build_meta_hash($response);
-}
-
-# Factored out for use in OtterTest::Client
-#
-sub _build_meta_hash {
-    my ($self, $response) = @_;
-
-    my $meta_hash = {};
-    for my $line (split(/\n/,$response)) {
-        my($meta_key, $meta_value, $species_id) = split(/\t/,$line);
-        $species_id = undef if $species_id eq '';
-        $meta_hash->{$meta_key}->{species_id} = $species_id;
-        push @{$meta_hash->{$meta_key}->{values}}, $meta_value; # as there can be multiple values for one key
-    }
-    return $meta_hash;
+    my $hashref = $self->otter_response_content(GET => 'get_meta', { dataset => $dsname });
+    return $hashref;
 }
 
 sub get_db_info {
