@@ -5,7 +5,6 @@ package OtterTest::Client;
 use strict;
 use warnings;
 
-use Bio::Otter::Lace::Client;   # _build_meta_hash
 use Bio::Otter::Server::Config;
 use Bio::Otter::Server::Support::Local;
 use Bio::Otter::ServerAction::AccessionInfo;
@@ -13,6 +12,7 @@ use Bio::Otter::ServerAction::TSV::LoutreDB;
 use Bio::Otter::Version;
 
 use File::Slurp qw( slurp write_file );
+use JSON;
 use Test::Builder;
 use Try::Tiny;
 
@@ -60,8 +60,7 @@ sub get_loutre_schema {
 
 sub get_meta {
     my ($self, $dsname) = @_;
-    my $response = $self->_cached_response_tsv('get_meta', $dsname);
-    return $self->Bio::Otter::Lace::Client::_build_meta_hash($response);
+    return $self->_cached_response_json('get_meta', $dsname);
 }
 
 sub get_db_info {
