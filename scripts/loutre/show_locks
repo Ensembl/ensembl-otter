@@ -3,6 +3,7 @@
 ### show_locks
 
 use strict;
+use warnings;
 
 use List::Util 'max';
 use Try::Tiny;
@@ -125,7 +126,7 @@ sub process_slice_locks {
                 $L->describe_slice, $L->iso8601_ts_activity);
     };
     my $row_pattern = "%6s %-4s  %-${len_host}s  %-${len_auth}s  %-40s  %-23s\n";
-    printf STDERR $row_pattern, qw( # actv host author slice activity );
+    printf STDERR $row_pattern, '#', qw( actv host author slice activity );
     printf STDERR $row_pattern, map { "-" x $_ } (4, 4, $len_host, $len_auth, 40, 23);
     foreach my $L (sort { $a->ts_activity <=> $b->ts_activity || $a->dbID <=> $b->dbID }
                    @$locks) {
