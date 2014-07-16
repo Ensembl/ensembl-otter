@@ -83,17 +83,11 @@ sub get_db_info {
 
     my $sth = $self->server->otter_dba()->dbc()->prepare($select_cs_sql);
     $sth->execute;
-    my @cs_chromosome = $sth->fetchrow;
+    my $cs_chromosome = $sth->fetchrow_hashref;
 
-    $results{'coord_system.chromosome'} = \@cs_chromosome;
+    $results{'coord_system.chromosome'} = $cs_chromosome;
 
-    return $self->serialise_db_info(\%results);
-}
-
-# Null serialiser, overridden in B:O:SA:TSV::LoutreDB
-sub serialise_db_info {
-    my ($self, $results) = @_;
-    return $results;
+    return \%results;
 }
 
 ### Accessors

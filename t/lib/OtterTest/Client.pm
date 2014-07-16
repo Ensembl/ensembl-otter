@@ -66,8 +66,7 @@ sub get_meta {
 
 sub get_db_info {
     my ($self, $dsname) = @_;
-    my $response = $self->_cached_response_tsv('get_db_info', $dsname);
-    return $self->Bio::Otter::Lace::Client::_build_db_info_hash($response);
+    return $self->_cached_response_json('get_db_info', $dsname);
 }
 
 {
