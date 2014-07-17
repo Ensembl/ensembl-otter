@@ -4,6 +4,8 @@ package Bio::Otter::Server::Support::Web;
 use strict;
 use warnings;
 
+use feature 'switch';
+
 use Try::Tiny;
 
 use Bio::Vega::Author;
@@ -13,6 +15,7 @@ use Bio::Otter::Auth::SSO;
 use IO::Compress::Gzip qw(gzip);
 
 use CGI;
+use JSON;
 use SangerWeb;
 
 use base ('Bio::Otter::MappingFetcher');
@@ -258,62 +261,83 @@ sub show_restricted_datasets {
 
 ############## I/O: ################################
 
-sub send_json_response {
-    my ($called, @args) = @_;
-    require JSON;
-
-    my $sub = pop @args;
-    my $self = $called->new(@args); # may send a text/plain 403 Unauthorised
-    $self->content_type('application/json');
-    local $self->{_json} = JSON->new->pretty;
-    try {
-        my $obj = $sub->($self);
-        my $out = $self->json->pretty->encode($obj);
-        $self->_send_response($out);
-    } catch {
-        my $error = $_;
-        die $error unless $ERROR_WRAPPING_ENABLED;
-        chomp $error;
-        warn "ERROR: $error\n";
-        print $self->header(-status => 417, -type => $self->content_type);
-        print $self->json->encode({ error => $error });
-    };
-    return;
-}
-
-sub json {
-    my ($self) = @_;
-    my $json = $self->{_json};
-    die "Not in send_json_response" unless $json;
-    return $json;
-}
-
-
 sub send_response {
-    my ($self, @args) = @_;
+    my ($called, @args) = @_;
 
     my $sub = pop @args;
-    my $server = $self->new(@args);
+    my $self = $called->new(@args);
 
+    my ($encode_response, $encode_error);
+    local $self->{_json};
+
+    my ($response, $ok, $error);
     try {
-        my $response = $sub->($server);
-        $server->_send_response($response);
+        $response = $sub->($self);
+        $ok = 1;
     }
     catch {
-        my $error = $_;
-        die $error unless $ERROR_WRAPPING_ENABLED;
-        chomp($error);
-        print
-            $server->header(
-                -status => 417,
-                -type   => 'text/plain',
-            ),
-            $server->otter_wrap_response(" <response>\n    ERROR: $error\n </response>\n"),
-            ;
-        warn "ERROR: $error\n";
+        $error = $_;
     };
 
+    # content_type may be set by $sub, so we don't choose encoding until here:
+    for ($self->content_type) {
+        when ($_ eq 'application/json') {
+            $encode_response = \&_encode_json;
+            $encode_error    = \&_encode_error_json;
+            $self->_init_json;
+        }
+        default {
+            $encode_error = \&_encode_error_xml;
+        }
+    }
+
+    if ($ok) {
+        try {
+            $ok = undef;
+            $response = $self->$encode_response($response) if $encode_response;
+            $self->_send_response($response);
+            $ok = 1;
+        }
+        catch {
+            $error = $_;
+        };
+    }
+    return if $ok;
+
+    die $error unless $ERROR_WRAPPING_ENABLED;
+    chomp($error);
+    warn "ERROR: $error\n";
+    print $self->header( -status => 417, -type   => $self->content_type );
+    print $self->$encode_error($error);
+
     return;
+}
+
+sub _encode_error_xml {
+    my ($self, $error) = @_;
+    return $self->otter_wrap_response(" <response>\n    ERROR: $error\n </response>\n");
+}
+
+sub _init_json {
+    my ($self) = @_;
+    return $self->{_json} = JSON->new->pretty;
+}
+
+sub _encode_json {
+    my ($self, $obj) = @_;
+    return $self->_json->pretty->encode($obj);
+}
+
+sub _encode_error_json {
+    my ($self, $error) = @_;
+    return $self->_encode_json({ error => $error });
+}
+
+sub _json {
+    my ($self) = @_;
+    my $_json = $self->{_json};
+    die "Not encoding to JSON" unless $_json;
+    return $_json;
 }
 
 sub _send_response {

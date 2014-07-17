@@ -15,7 +15,7 @@ sub get_meta {
     return Bio::Otter::ServerAction::LoutreDB->new($server)->get_meta;
 }
 
-Bio::Otter::Server::Support::Web->send_json_response(\&get_meta);
+Bio::Otter::Server::Support::Web->send_response(-content_type => 'application/json', \&get_meta);
 
 __END__
 
