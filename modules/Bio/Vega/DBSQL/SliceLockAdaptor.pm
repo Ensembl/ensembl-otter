@@ -176,7 +176,8 @@ Return one SliceLock.
 
 =head2 fetch_by_seq_region_id($sr_id, $extant)
 
-If provided, $extant must be true.  Then freed locks are ignored.
+If provided, $extant must be true.
+Then freed locks are ignored; pre locks are still returned.
 
 Returns arrayref of SliceLock.
 
