@@ -82,4 +82,4 @@ sub get_locks {
     return \%out;
 }
 
-Bio::Otter::Server::Support::Web->send_json_response(\&get_locks);
+Bio::Otter::Server::Support::Web->send_response(-content_type => 'application/json', \&get_locks);
