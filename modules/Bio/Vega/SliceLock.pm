@@ -361,11 +361,16 @@ sub describe_slice {
     return try {
         $self->slice->display_id;
     } catch {
-        # most likely the slice is invalid
-        sprintf("BAD:srID=%s:start=%s:end=%s",
-                $self->seq_region_id,
-                $self->seq_region_start,
-                $self->seq_region_end);
+        if (my $canned = $self->{_clientside_describe_slice}) {
+            # on the client, the adaptor is explicitly bogus
+            $canned;
+        } else {
+            # most likely the slice is invalid
+            sprintf("BAD:srID=%s:start=%s:end=%s",
+                    $self->seq_region_id,
+                    $self->seq_region_start,
+                    $self->seq_region_end);
+        }
     };
 }
 
@@ -417,6 +422,7 @@ sub TO_JSON { # for JSON->new->convert_blessed->encode or direct call
     my @prop = (# Reconstruction fields
                 qw( dbID ),
                 qw( seq_region_id seq_region_start seq_region_end ),
+                [ slice_name => 'describe_slice' ],
                 qw( ts_begin ts_activity ts_free ), # unixtimes
                 qw( active freed ),                 # enums
                 qw( intent hostname otter_version ), # text
@@ -463,6 +469,7 @@ sub new_from_json {
                 qw( intent hostname otter_version ), # text
                 qw( author freed_author ));
     @obj{@prop} = delete @info{@prop};
+    $obj{_clientside_describe_slice} = delete $info{slice_name};
 
     $obj{_unweaken_adaptor} = # 'adaptor' will be weakened, take an extra ref
       $obj{adaptor} = ['BOGUS'];
