@@ -70,16 +70,27 @@ my $select_cs_sql = <<'SQL';
      WHERE name = 'chromosome' AND version = 'Otter'
 SQL
 
+my $select_at_sql = <<'SQL';
+    SELECT attrib_type_id, code, name, description
+      FROM attrib_type
+SQL
+
 sub get_db_info {
     my ($self) = @_;
 
     my %results;
 
-    my $sth = $self->server->otter_dba()->dbc()->prepare($select_cs_sql);
-    $sth->execute;
-    my $cs_chromosome = $sth->fetchrow_hashref;
+    my $dbc = $self->server->otter_dba()->dbc();
 
+    my $cs_sth = $dbc->prepare($select_cs_sql);
+    $cs_sth->execute;
+    my $cs_chromosome = $cs_sth->fetchrow_hashref;
     $results{'coord_system.chromosome'} = $cs_chromosome;
+
+    my $at_sth = $dbc->prepare($select_at_sql);
+    $at_sth->execute;
+    my $at_rows = $at_sth->fetchall_arrayref({});
+    $results{'attrib_type'} = $at_rows;
 
     return \%results;
 }

@@ -192,6 +192,11 @@ sub load_dataset_info {
                                                      VALUES (?, ?, ?, ?, ?, ?) });
     my $cs_chr  = $dataset->get_db_info_item('coord_system.chromosome');
 
+    my @at_cols = qw(                                       attrib_type_id  code  name  description );
+    my $at_sth  = $dbh->prepare(q{ INSERT INTO attrib_type (attrib_type_id, code, name, description)
+                                                    VALUES (?, ?, ?, ?) });
+    my $at_list = $dataset->get_db_info_item('attrib_type');
+
     $dbh->begin_work;
 
     while (my ($key, $details) = each %{$meta_hash}) {
@@ -204,6 +209,10 @@ sub load_dataset_info {
     }
 
     $cs_sth->execute(@$cs_chr{@cs_cols});
+
+    foreach my $row (@$at_list) {
+        $at_sth->execute(@$row{@at_cols});
+    }
 
     $dbh->commit;
 
