@@ -1494,6 +1494,7 @@ sub json_tt {
        seq_region_id    => $Lreal->seq_region_id,
        seq_region_start => $Lreal->seq_region_start,
        seq_region_end   => $Lreal->seq_region_end,
+       slice_name       => $Lreal->slice->name,
        ts_begin    => $t0,
        ts_activity => $t0,
        ts_free     => undef,
