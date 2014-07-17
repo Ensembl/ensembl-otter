@@ -1559,10 +1559,12 @@ sub _column_padlock_icon {
 sub _column_who_locked {
     my ($cs) = @_;
 
-    if (my $lock = $cs->get_lock_as_CloneLock) {
+    if (my @lockers = $cs->get_lock_users) {
         # Remove domain from full email addresses
-        my ($name) = $lock->author->name =~ /^([^@]+)/;
-        return { -text => $name };
+        foreach (@lockers) { s{@.*}{} }
+        my $names = join ',', @lockers;
+        substr($names, 9) = '...' if length($names) > 12;
+        return { -text => $names };
     } else {
         # Put in empty spaces to keep column padded
         return { -text => ' ' x 12 };

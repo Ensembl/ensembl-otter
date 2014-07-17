@@ -21,8 +21,7 @@ use Term::ReadKey qw{ ReadMode ReadLine };
 use XML::Simple;
 use JSON;
 
-use Bio::Vega::Author;
-use Bio::Vega::ContigLock;
+use Bio::Vega::SliceLock;
 
 use Bio::Otter::Git; # for feature branch detection
 use Bio::Otter::Debug;
@@ -924,36 +923,19 @@ sub get_db_info {
 
 sub lock_refresh_for_DataSet_SequenceSet {
     my ($self, $ds, $ss) = @_;
-
-   my $response =
+    my $response =
        $self->_DataSet_SequenceSet_response_content(
            $ds, $ss, 'GET', 'get_locks');
 
-    my %lock_hash = ();
-    my %author_hash = ();
+    my @slice_lock = map { Bio::Vega::SliceLock->new_from_json($_) }
+      @{ $response->{SliceLock} || [] };
 
-    foreach my $clone_lock (@{ $response->{CloneLock} || [] }) {
-        my ($ctg_name, $hostname, $timestamp, $aut_name, $aut_email)
-          = @{$clone_lock}{qw{ ctg_name hostname timestamp author_name author_email }};
-
-        $author_hash{$aut_name} ||= Bio::Vega::Author->new(
-            -name  => $aut_name,
-            -email => $aut_email,
-        );
-
-        $lock_hash{$ctg_name} ||= Bio::Vega::ContigLock->new(
-            -author    => $author_hash{$aut_name},
-            -hostname  => $hostname,
-            -timestamp => $timestamp,
-        );
-    }
-
+    # O(N^2) in (clones*locks) but should still be plenty fast
     foreach my $cs (@{$ss->CloneSequence_list()}) {
-        if (my $lock = $lock_hash{$cs->contig_name}) {
-            $cs->set_lock_status($lock);
-        } else {
-            $cs->set_lock_status(undef);
-        }
+        my ($chr, $start, $end) = $ss->region_coordinates([ $cs ]);
+        my @overlap = grep { $_->seq_region_start <= $end &&
+                               $_->seq_region_end >= $start } @slice_lock;
+        $cs->set_SliceLocks(@overlap);
     }
 
     return;
