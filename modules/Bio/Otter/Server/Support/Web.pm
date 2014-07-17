@@ -268,7 +268,7 @@ sub send_response {
     my $self = $called->new(@args);
 
     my ($encode_response, $encode_error);
-    local $self->{_json};
+    local $self->{_json} = undef;
 
     my ($response, $ok, $error);
     try {
@@ -325,7 +325,7 @@ sub _init_json {
 
 sub _encode_json {
     my ($self, $obj) = @_;
-    return $self->_json->pretty->encode($obj);
+    return $self->json->encode($obj);
 }
 
 sub _encode_error_json {
@@ -333,7 +333,7 @@ sub _encode_error_json {
     return $self->_encode_json({ error => $error });
 }
 
-sub _json {
+sub json {
     my ($self) = @_;
     my $_json = $self->{_json};
     die "Not encoding to JSON" unless $_json;
