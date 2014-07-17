@@ -143,7 +143,8 @@ sub get_SliceLocks {
     die "Cannot find chromosome:Otter:$chr" unless $chr_slice;
     my $srid = $chr_slice->get_seq_region_id;
 
-    my $slocks = $SLdba->fetch_by_seq_region_id($srid, 1); # extant
+    my $slocks = $SLdba->fetch_by_seq_region_id($srid, 1); # extant = not freed
+    @$slocks = grep { $_->active eq 'held' } @$slocks; # exclude 'pre'
 
     return $slocks;
 }
