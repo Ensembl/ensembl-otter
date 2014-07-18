@@ -44,16 +44,13 @@ my @taxon_ids = ( 9606, 10090, 90988, 12345678 );
 $server->set_params( id => \@taxon_ids );
 $results = $ai_plain->get_taxonomy_info;
 ok($results, 'get_taxonomy_info');
-SKIP: {
-# FIXME: serialisation in the wrong place to match deserialisation, so...
-skip 'serialisation in wrong place for now', 1;
 is(scalar @$results, 3, 'n(results)');
-}
 
+# TSV is now a misnomer as it's used only to deserialise the list of incoming accessions.
 $server->set_params( id => join(',', @taxon_ids) );
 $results = $ai_tsv->get_taxonomy_info;
 ok($results, 'get_taxonomy_info - TSV');
-note("Got:\n", $results);
+is(scalar @$results, 3, 'n(results)');
 
 done_testing;
 
