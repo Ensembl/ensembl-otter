@@ -1373,7 +1373,7 @@ sub get_accession_types {
 sub get_taxonomy_info {
     my ($self, @ids) = @_;
 
-    my $response = $self->http_response_content(
+    my $response = $self->otter_response_content(
         'POST',
         'get_taxonomy_info',
         {id => join ',', @ids},
