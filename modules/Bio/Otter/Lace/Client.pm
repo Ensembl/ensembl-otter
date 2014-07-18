@@ -93,8 +93,7 @@ sub new {
     my $debug_show = defined $debug ? "'$debug'" : '<undefined>';
     warn "Debug from config: $debug_show\n";
     Bio::Otter::Debug->set($debug) if defined $debug;
-
-    $new->setup_pfetch_env;
+    # nb. no loggers yet, because this object configures them
 
     return $new;
 }
@@ -490,7 +489,19 @@ sub create_UserAgent {
     push @{ $ua->requests_redirectable }, 'POST';
     $ua->cookie_jar($self->get_CookieJar);
 
+    my $json_impl = JSON->backend;
+    $self->client_logger->warn("Slow JSON decoder '$json_impl' in use?")
+      unless $json_impl->is_xs;
+
     return $ua;
+}
+
+# Call it early, but after loggers are ready
+sub env_config {
+    my ($self) = @_;
+    $self->ua_tell_hostinfo;
+    $self->setup_pfetch_env;
+    return;
 }
 
 sub ua_tell_hostinfo {
@@ -511,8 +522,8 @@ sub ua_tell_hostinfo {
           map {( $_, uc($_) )}
             qw( http_proxy https_proxy no_proxy );
 
-    $self->logger->info('Hostname: ', hostfqdn());
-    $self->logger->info('Proxy: ', (join ' ', map {"$_=$info{$_}"} sort keys %info));
+    $self->client_logger->info('Hostname: ', hostfqdn());
+    $self->client_logger->info('Proxy:', map {" $_=$info{$_}"} sort keys %info);
     return;
 }
 
@@ -565,7 +576,7 @@ sub cookie_expiry_time {
     $jar->scan(sub{
         my ($key, $expiry) = @_[1,8];
 
-        if ($key eq 'WTSISignOn') {
+        if ($key eq 'WTSISignOn') { # nb. Bio::Otter::Auth::SSO
             $expiry_time = $expiry;
         }
         return;
@@ -632,14 +643,13 @@ sub setup_pfetch_env {
     my $new_PW = defined $ENV{'PFETCH_WWW'} ? "'$ENV{'PFETCH_WWW'}'" : "undef";
     my $blix_cfg = __user_home()."/.blixemrc";
     my $blix_cfg_exist = -f $blix_cfg ? "exists" : "not present";
-    # Called before logger is set up
-    warn "setup_pfetch_env: hostname=$hostname; PFETCH_WWW was $old_PW, now $new_PW; $blix_cfg $blix_cfg_exist\n";
+    $self->client_logger->info("setup_pfetch_env: PFETCH_WWW was $old_PW, now $new_PW; $blix_cfg $blix_cfg_exist");
 
     return;
 }
 
 # Returns the content string from the http response object
-# with the <otter> tags removed.
+# with the <otter> tags or JSON encoding removed.
 # "perlcritic --stern" refuses to learn that $logger->logconfess is fatal
 sub otter_response_content { ## no critic (Subroutines::RequireFinalReturn)
     my ($self, $method, $scriptname, $params) = @_;
@@ -662,7 +672,6 @@ sub otter_response_content { ## no critic (Subroutines::RequireFinalReturn)
 
 sub _json_content {
     my ($self, $response) = @_;
-    require JSON;
     return JSON->new->decode($response->decoded_content);
 }
 
@@ -903,59 +912,14 @@ sub _find_clone_result {
 
 sub get_meta {
     my ($self, $dsname) = @_;
-
-    my $response = $self->otter_response_content(
-        'GET',
-        'get_meta',
-        {
-            'dataset'  => $dsname,
-        },
-    );
-
-    return $self->_build_meta_hash($response);
-}
-
-# Factored out for use in OtterTest::Client
-#
-sub _build_meta_hash {
-    my ($self, $response) = @_;
-
-    my $meta_hash = {};
-    for my $line (split(/\n/,$response)) {
-        my($meta_key, $meta_value, $species_id) = split(/\t/,$line);
-        $species_id = undef if $species_id eq '';
-        $meta_hash->{$meta_key}->{species_id} = $species_id;
-        push @{$meta_hash->{$meta_key}->{values}}, $meta_value; # as there can be multiple values for one key
-    }
-    return $meta_hash;
+    my $hashref = $self->otter_response_content(GET => 'get_meta', { dataset => $dsname });
+    return $hashref;
 }
 
 sub get_db_info {
     my ($self, $dsname) = @_;
-
-    my $response = $self->otter_response_content(
-        'GET',
-        'get_db_info',
-        {
-            'dataset'  => $dsname,
-        },
-    );
-
-    return $self->_build_db_info_hash($response);
-}
-
-# Factored out for use in OtterTest::Client
-#
-sub _build_db_info_hash {
-    my ($self, $response) = @_;
-
-    my $db_info_hash = {};
-    for my $line (split(/\n/,$response)) {
-        my($key, @values) = split(/\t/,$line);
-        $db_info_hash->{$key} = [ @values ];
-    }
-
-    return $db_info_hash;
+    my $hashref = $self->otter_response_content(GET => 'get_db_info', { dataset => $dsname });
+    return $hashref;
 }
 
 sub lock_refresh_for_DataSet_SequenceSet {
@@ -969,8 +933,8 @@ sub lock_refresh_for_DataSet_SequenceSet {
     my %author_hash = ();
 
     foreach my $clone_lock (@{ $response->{CloneLock} || [] }) {
-        my ($intl_name, $embl_name, $ctg_name, $hostname, $timestamp, $aut_name, $aut_email)
-          = @{$clone_lock}{qw{ acc_sv name hostname timestamp author_name author_email }};
+        my ($ctg_name, $hostname, $timestamp, $aut_name, $aut_email)
+          = @{$clone_lock}{qw{ ctg_name hostname timestamp author_name author_email }};
 
         $author_hash{$aut_name} ||= Bio::Vega::Author->new(
             -name  => $aut_name,
@@ -1196,6 +1160,42 @@ sub get_loutre_schema {
 sub get_server_ensembl_version {
     my ($self) = @_;
     return $self->_get_cache_config_file('ensembl_version');
+}
+
+# same as Bio::Otter::Server::Config->designations (fresh every time)
+sub get_designations {
+    my ($self) = @_;
+    my $hashref = $self->otter_response_content(GET => 'get_config', { key => 'designations' });
+    return $hashref;
+}
+
+# Return (designation_of_this_major, latest_this_major, live_major_minor)
+sub designate_this {
+    my ($self) = @_;
+    my $desig = $self->get_designations;
+    my $major = Bio::Otter::Version->version;
+    my $feat = Bio::Otter::Git->param('feature');
+
+    my $major_re = ($feat
+                    ? qr{^$major(\.\d+)?_$feat$}
+                    : qr{^$major(\.|$)});
+
+    my ($key) =
+      # There would have been multiple hits for v75, but now we have
+      # feature branches.  Sort just in case.
+      sort grep { $desig->{$_} =~ $major_re } keys %$desig;
+
+    my $live = $desig->{live};
+    my $exact_key = $key;
+
+    if (!defined $key) {
+        my @v = sort values %$desig;
+        $self->logger->warn("No match for $major_re against designations.txt values (@v)");
+        $exact_key = 'live';
+    }
+
+    my $exact = $desig->{$exact_key};
+    return ($key, $exact, $live);
 }
 
 sub do_authentication {

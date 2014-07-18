@@ -86,10 +86,17 @@ sub get_taxonomy_info {
     return $self->serialise_taxonomy_info($info);
 }
 
-# Null serialiser, overridden in B:O:SA:TSV::AccessionInfo
+# FIXME: deserialisation is in the wrong place at the moment (in AccessionTypeCache.pm)
+# # Null serialiser, overridden in B:O:SA:TSV::AccessionInfo
+# sub serialise_taxonomy_info {
+#     my ($self, $results) = @_;
+#     return $results;
+# }
+
+use Bio::Otter::ServerAction::TSV::AccessionInfo;
 sub serialise_taxonomy_info {
     my ($self, $results) = @_;
-    return $results;
+    return Bio::Otter::ServerAction::TSV::AccessionInfo->serialise_taxonomy_info($results);
 }
 
 ### Accessors
