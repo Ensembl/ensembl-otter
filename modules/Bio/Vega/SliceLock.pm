@@ -339,12 +339,11 @@ sub describe {
     my $auth = $self->describe_author;
 
     return sprintf
-      ('SliceLock(%s%s) on %s '.
-       'was created %s by %s on host %s to "%s"%s '.
-       "last active %s and now %s\n  %s.",
+      (qq{SliceLock(%s%s) on %s was created %s\n  by %s on host %s\n}.
+       qq{  to "%s".\n  %s was last active %s and now %s\n  %s.},
        $dbID ? ('dbID=', $dbID) : ('', 'not stored'), $slice,
        $self->iso8601_ts_begin, $auth, $self->hostname, $self->intent,
-       ($rolledback ? ".  Before $rolledback, it was" : ','),
+       ($rolledback ? "Before $rolledback, it" : 'It'),
        $self->iso8601_ts_activity, $state, $detail);
 }
 
