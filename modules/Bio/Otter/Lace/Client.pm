@@ -37,7 +37,6 @@ use Bio::Otter::Lace::AceDatabase;
 use Bio::Otter::Lace::DB;
 use Bio::Otter::LogFile;
 use Bio::Otter::Auth::SSO;
-use Bio::Otter::Utils::AccessionInfo::Serialise qw( accession_info_column_order );
 
 use 5.009001; # for stacked -f -r which returns false under 5.8.8
 
@@ -1362,25 +1361,13 @@ sub get_methods_ace {
 sub get_accession_types {
     my ($self, @accessions) = @_;
 
-    my $response = $self->http_response_content(
+    my $hashref = $self->otter_response_content(
         'POST',
         'get_accession_types',
         {accessions => join ',', @accessions},
         );
 
-    return unless $response;
-
-    my %results;
-    foreach my $line (split /\n/, $response) {
-        my @row = split /\t/, $line;
-        my %entry;
-        @entry{accession_info_column_order()} = @row;
-        my $name = $entry{name};
-        $self->logger->warn("Duplicate result for '$name'") if $results{$name};
-        $results{$name} = \%entry;
-    }
-
-    return \%results;
+    return $hashref;
 }
 
 sub get_taxonomy_info {

@@ -11,10 +11,12 @@ use Bio::Otter::Server::Support::Web;
 use Bio::Otter::ServerAction::TSV::AccessionInfo;
 
 Bio::Otter::Server::Support::Web->send_response(
+    -content_type => 'application/json',
     sub {
         my ($server) = @_;
-        my $tsv = Bio::Otter::ServerAction::TSV::AccessionInfo->new($server)->get_accession_types;
-        return $tsv;
+        # TSV is now a misnomer as it's used only to deserialise the list of incoming accessions.
+        my $encoded = Bio::Otter::ServerAction::TSV::AccessionInfo->new($server)->get_accession_types;
+        return $encoded;
     });
 
 __END__

@@ -3,8 +3,6 @@ package Bio::Otter::ServerAction::TSV::AccessionInfo;
 use strict;
 use warnings;
 
-use Bio::Otter::Utils::AccessionInfo::Serialise qw(accession_info_column_order);
-
 use base 'Bio::Otter::ServerAction::AccessionInfo';
 
 =head1 NAME
@@ -12,18 +10,6 @@ use base 'Bio::Otter::ServerAction::AccessionInfo';
 Bio::Otter::ServerAction::TSV::AccessionInfo - serve requests for accession info, serialised via TSV
 
 =cut
-
-sub serialise_accession_types {
-    my ($self, $results) = @_;
-
-    my $tsv_string = '';
-
-    foreach my $acc (keys %$results) {
-        $tsv_string .= join("\t", @{$results->{$acc}}{accession_info_column_order()}) . "\n";
-    }
-
-    return $tsv_string;
-}
 
 # id_list is CSV for apache scripts.
 #
