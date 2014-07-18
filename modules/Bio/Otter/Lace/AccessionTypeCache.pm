@@ -83,6 +83,7 @@ sub populate {
         INSERT INTO otter_full_accession(name, accession_sv) VALUES (?,?)
     });
 
+    my %taxon_id_map;
     $dbh->begin_work;
     try {
         foreach my $entry (values %$results) {
@@ -92,14 +93,15 @@ sub populate {
             if (@other_tax) {
                 # Some SwissProt entries contain the same protein and multiple species.
                 warn "Discarding taxon info from '$taxon_list' for '$acc_sv'; keeping only '$tax_id'";
-                $entry->{taxon_id} = $tax_id;
             }
+            $entry->{taxon_id} = $tax_id;
             # Don't overwrite existing info
             $check_full->execute($acc_sv);
             my ($have_full) = $check_full->fetchrow;
             unless ($have_full) {
                 # It is new, so save it
                 $self->save_accession_info($entry);
+                $taxon_id_map{$tax_id} = 1;
             }
             if ($name ne $acc_sv) {
                 $save_alias->execute($name, $acc_sv);
@@ -112,6 +114,8 @@ sub populate {
     };
 
     $dbh->commit;
+
+    $self->populate_taxonomy([keys %taxon_id_map]) if keys %taxon_id_map;
 
     return;
 }
@@ -299,6 +303,7 @@ sub evidence_type_and_name_from_accession_list {
 {
     my @fai_cols = qw( taxon_id evi_type description source currency length sequence );
     my $cols_spec = join(', ', map { "oai.$_" } @fai_cols);
+    # should this be a LEFT JOIN??
     my $feature_accession_info_sql = qq{
         SELECT $cols_spec, osi.scientific_name, osi.common_name
         FROM otter_accession_info oai

@@ -43,29 +43,23 @@ sub get_meta {
     $sth->execute;
 
     my $counter = 0;
-    my @results;
+    my %meta_hash;
 
     while (my ($species_id, $meta_key, $meta_value) = $sth->fetchrow) {
 
         my ($key_prefix) = $meta_key =~ /^(\w+)\.?/;
         next unless $white_list{$key_prefix};
 
-        $meta_value=~s/\s+/ /g; # get rid of newlines and tabs
-
-        push @results, { meta_key => $meta_key, meta_value => $meta_value, species_id => $species_id };
+        $meta_hash{$meta_key}->{species_id} = $species_id;
+        push @{$meta_hash{$meta_key}->{values}}, $meta_value; # as there can be multiple values for one key
         $counter++;
     }
 
     warn "Total of $counter meta table pairs whitelisted\n";
 
-    return $self->serialise_meta(\@results);
+    return \%meta_hash;
 }
 
-# Null serialiser, overridden in B:O:SA:TSV::LoutreDB
-sub serialise_meta {
-    my ($self, $results) = @_;
-    return $results;
-}
 
 =head2 get_db_info
 =cut
@@ -76,24 +70,29 @@ my $select_cs_sql = <<'SQL';
      WHERE name = 'chromosome' AND version = 'Otter'
 SQL
 
+my $select_at_sql = <<'SQL';
+    SELECT attrib_type_id, code, name, description
+      FROM attrib_type
+SQL
+
 sub get_db_info {
     my ($self) = @_;
 
     my %results;
 
-    my $sth = $self->server->otter_dba()->dbc()->prepare($select_cs_sql);
-    $sth->execute;
-    my @cs_chromosome = $sth->fetchrow;
+    my $dbc = $self->server->otter_dba()->dbc();
 
-    $results{'coord_system.chromosome'} = \@cs_chromosome;
+    my $cs_sth = $dbc->prepare($select_cs_sql);
+    $cs_sth->execute;
+    my $cs_chromosome = $cs_sth->fetchrow_hashref;
+    $results{'coord_system.chromosome'} = $cs_chromosome;
 
-    return $self->serialise_db_info(\%results);
-}
+    my $at_sth = $dbc->prepare($select_at_sql);
+    $at_sth->execute;
+    my $at_rows = $at_sth->fetchall_arrayref({});
+    $results{'attrib_type'} = $at_rows;
 
-# Null serialiser, overridden in B:O:SA:TSV::LoutreDB
-sub serialise_db_info {
-    my ($self, $results) = @_;
-    return $results;
+    return \%results;
 }
 
 ### Accessors
