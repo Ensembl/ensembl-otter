@@ -7,7 +7,6 @@ use Readonly;
 
 use base qw( Exporter );
 our @EXPORT_OK = qw(
-    accession_info_column_order
     fasta_header_column_order
     escape_fasta_description
     unescape_fasta_description
@@ -18,21 +17,6 @@ our @EXPORT_OK = qw(
 Bio::Otter::Utils::AccessionInfo::Serialise - definitions and subroutines for serialising AccessionInfo results
 
 =cut
-
-Readonly my @ACCESSION_INFO_COLUMN_ORDER => qw(
-    name
-    evi_type
-    acc_sv
-    source
-    sequence_length
-    taxon_list
-    description
-    currency
-    sequence
-);
-
-sub accession_info_column_order { return @ACCESSION_INFO_COLUMN_ORDER; }
-
 
 Readonly my @FASTA_HEADER_COLUMN_ORDER => qw(
     acc_sv

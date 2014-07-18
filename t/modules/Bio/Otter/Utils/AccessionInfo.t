@@ -3,13 +3,12 @@
 use strict;
 use warnings;
 
-use Bio::Otter::Utils::AccessionInfo::Serialise qw(accession_info_column_order);
-
 use lib "${ENV{ANACODE_TEAM_TOOLS}}/t/tlib";
 use Test::CriticModule;
 
 use Test::Otter::Accessions;
 
+use Data::Dumper;
 use Test::More;
 
 my ($module, $driver_module);
@@ -54,7 +53,7 @@ my $s_acc = $valid_accs[0];
 my $seq_results = $ai->get_accession_info([$s_acc]);
 is(ref($seq_results), 'HASH', 'seq_results hash');
 ok($seq_results->{$s_acc}, 'result is for singleton acc');
-note('seq_result: ', join(',', @{$seq_results->{$s_acc}}{accession_info_column_order()}));
+note('seq_result: ', Dumper($seq_results->{$s_acc}));
 
 # Empty
 my $e_results = $ai->get_accession_types([]);

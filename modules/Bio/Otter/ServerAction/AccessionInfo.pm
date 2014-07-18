@@ -59,13 +59,7 @@ sub get_accession_types {
     };
 
     my $combined  = { %$ai_types, %$ena_types };
-    return $self->serialise_accession_types($combined);
-}
-
-# Null serialiser, overridden in B:O:SA:TSV::AccessionInfo
-sub serialise_accession_types {
-    my ($self, $results) = @_;
-    return $results;
+    return $combined;
 }
 
 # Null deserialiser, overridden in B:O:SA:TSV::AccessionInfo
