@@ -267,9 +267,6 @@ sub send_response {
     my $sub = pop @args;
     my $self = $called->new(@args);
 
-    my ($encode_response, $encode_error);
-    local $self->{_json} = undef;
-
     my ($response, $ok, $error);
     try {
         $response = $sub->($self);
@@ -280,14 +277,16 @@ sub send_response {
     };
 
     # content_type may be set by $sub, so we don't choose encoding until here:
+    my ($encode_response, $encode_error);
     for ($self->content_type) {
         when ($_ eq 'application/json') {
             $encode_response = \&_encode_json;
             $encode_error    = \&_encode_error_json;
-            $self->_init_json;
         }
         default {
             $encode_error = \&_encode_error_xml;
+            die "After the action, JSON used but content_type=$_"
+              if $self->json(1); # code didn't fix its content_type - 500 error
         }
     }
 
@@ -295,7 +294,7 @@ sub send_response {
         try {
             $ok = undef;
             $response = $self->$encode_response($response) if $encode_response;
-            $self->_send_response($response);
+            $self->_send_response($response, 200);
             $ok = 1;
         }
         catch {
@@ -307,8 +306,8 @@ sub send_response {
     die $error unless $ERROR_WRAPPING_ENABLED;
     chomp($error);
     warn "ERROR: $error\n";
-    print $self->header( -status => 417, -type   => $self->content_type );
-    print $self->$encode_error($error);
+    $self->compression(0);
+    $self->_send_response($self->$encode_error($error), 417);
 
     return;
 }
@@ -316,11 +315,6 @@ sub send_response {
 sub _encode_error_xml {
     my ($self, $error) = @_;
     return $self->otter_wrap_response(" <response>\n    ERROR: $error\n </response>\n");
-}
-
-sub _init_json {
-    my ($self) = @_;
-    return $self->{_json} = JSON->new->pretty;
 }
 
 sub _encode_json {
@@ -334,14 +328,13 @@ sub _encode_error_json {
 }
 
 sub json {
-    my ($self) = @_;
-    my $_json = $self->{_json};
-    die "Not encoding to JSON" unless $_json;
-    return $_json;
+    my ($self, $no_init) = @_;
+    $self->{_json} ||= JSON->new->pretty unless $no_init;
+    return $self->{_json};
 }
 
 sub _send_response {
-    my ($self, $response) = @_;
+    my ($self, $response, $status) = @_;
     my $len = length($response);
     my $content_type = $self->content_type;
 
@@ -350,7 +343,7 @@ sub _send_response {
         gzip \$response => \$gzipped;
         print
             $self->header(
-                -status           => 200,
+                -status           => $status,
                 -type             => $content_type,
                 -content_length   => length($gzipped),
                 -x_plain_length   => $len, # to assist debug on client
@@ -362,7 +355,7 @@ sub _send_response {
     else {
         print
             $self->header(
-                -status => 200,
+                -status => $status,
                 -content_length => $len,
                 -type   => $content_type,
             ),
