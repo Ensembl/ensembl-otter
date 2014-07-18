@@ -1,4 +1,4 @@
-package Bio::Otter::ServerAction::TSV::AccessionInfo;
+package Bio::Otter::ServerAction::Apache::AccessionInfo;
 
 use strict;
 use warnings;
@@ -7,7 +7,7 @@ use base 'Bio::Otter::ServerAction::AccessionInfo';
 
 =head1 NAME
 
-Bio::Otter::ServerAction::TSV::AccessionInfo - serve requests for accession info, serialised via TSV
+Bio::Otter::ServerAction::Apache::AccessionInfo - serve requests for accession info, serialised for Apache
 
 =cut
 
