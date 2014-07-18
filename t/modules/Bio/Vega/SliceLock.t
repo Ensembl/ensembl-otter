@@ -463,10 +463,10 @@ sub describe_tt {
     my $MAILDOM_RE = qr{\x40\Q$TESTHOST\E};
     my $BASE =
       qr{\ASliceLock\(dbID=\d+\)\ on\ $slice_re
-         \Q was created 2008-08-08 08:08:08 GMT by\E
-         \ \S*desmond$MAILDOM_RE\Q on host $TESTHOST to\E
-         \Q "demonstrate describe method(\E\d+\Q)", last active \E$ANYTIME_RE
-         \Q and now}x;
+         \Q was created 2008-08-08 08:08:08 GMT\E\n\Q  by\E
+         \ \S*desmond$MAILDOM_RE\Q on host $TESTHOST\E\n\Q  to\E
+         \Q "demonstrate describe method\E\(\d+\)"\.\n\Q  It\E
+         \Q was last active \E$ANYTIME_RE\Q and now}x;
     my $LAST_ACT_2011_RE = qr{last active 2011-11-11 11:11:11 };
 
     like($L->describe, qr{$BASE 'pre'\n  The region is not yet locked\.\Z}, 'pre');
@@ -495,8 +495,7 @@ sub describe_tt {
          'free');
 
     like($L->describe('rollBACK'),
-         qr{\Qto "demonstrate describe method(0)".  Before\E
-            \Q rollBACK, it was last active \E}x,
+         qr{to "demonstrate describe method\(0\)"\.\n  Before rollBACK, it was last active },
          'free before rollback');
     $dbh->commit;
     is(try { $SLdba->freshen($L); 'present' }, 'present',
@@ -525,9 +524,11 @@ sub describe_tt {
        -HOSTNAME => $TESTHOST);
     like(try_err { $bad->describe },
          qr{\A\QSliceLock(not stored) on \EBAD:srID=\d+:start=10:end=100
-            \Q was created Tundef by \E\S*desmond$MAILDOM_RE
-            \Q on host $TESTHOST to "weird describe", last active Tundef\E
-            \Q and now 'pre(new)'}x, 'unsaved, bad slice');
+            \Q was created Tundef\E\n
+            \Q  by \E\S*desmond$MAILDOM_RE\Q on host $TESTHOST\E\n
+            \Q  to "weird describe".\E\n
+            \Q  It was last active Tundef and now 'pre(new)'}x,
+         'unsaved, bad slice');
 
     # Test with bogus author
     my $worse = bless { }, 'Bio::Vega::SliceLock';
@@ -590,9 +591,9 @@ sub exclwork_tt {
 
         $SLdba->store($L_late);
         like(try_err { $BVSLB->new(-locks => $L_late)->exclusive_work($fail_work) },
-             qr{\QCannot proceed, do_lock failed <lost the race\E.*
+             qr{\QCannot proceed, do_lock failed <lost the race\E[^>]*
                 \Q> leaving SliceLock\E\(dbID=\d+\).*
-                \Qand now 'free(too_late)'}x,
+                \Qand now 'free(too_late)'}sx,
              'cannot: lock attempt found to be too late');
         is($L_late->active, 'pre', 'L_late:pre (rolled back)');
 
