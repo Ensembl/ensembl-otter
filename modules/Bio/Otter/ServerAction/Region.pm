@@ -17,9 +17,9 @@ use base 'Bio::Otter::ServerAction';
 
 Bio::Otter::ServerAction::Region - server requests on a region
 
-=cut
+=head1 CONSTRUCTOR
 
-### Constructors
+=cut
 
 Readonly my @SLICE_REQUIRED_PARAMS => qw(
     dataset
@@ -30,7 +30,9 @@ Readonly my @SLICE_REQUIRED_PARAMS => qw(
     end
 );
 
+
 =head2 new_with_slice
+
 =cut
 
 sub new_with_slice {
@@ -60,9 +62,11 @@ sub _get_requested_slice {
         );
 }
 
-### Methods
+
+=head1 METHODS
 
 =head2 get_assembly_data
+
 =cut
 
 sub get_assembly_dna {
@@ -106,7 +110,9 @@ sub get_assembly_dna {
     return $output_string;
 }
 
+
 =head2 get_region
+
 =cut
 
 sub get_region {
@@ -125,7 +131,9 @@ sub get_region {
     return $serialised_region;
 }
 
+
 =head2 write_region
+
 =cut
 
 sub write_region {
@@ -405,6 +413,7 @@ sub _strip_incomplete_genes {
 }
 
 =head2 lock_region
+
 =cut
 
 sub lock_region {
@@ -447,6 +456,7 @@ sub lock_region {
 }
 
 =head2 unlock_region
+
 =cut
 
 sub unlock_region {
