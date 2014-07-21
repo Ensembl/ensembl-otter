@@ -27,7 +27,8 @@ sub build_runner {
     my ($self, @params) = @_;
     return Bio::Otter::Lace::OnTheFly::Runner::Transcript->new(
         @params,
-        transcript => $self->transcript,
+        resultset_class => 'Bio::Otter::Lace::OnTheFly::ResultSet::GetScript',
+        transcript      => $self->transcript,
         );
 }
 

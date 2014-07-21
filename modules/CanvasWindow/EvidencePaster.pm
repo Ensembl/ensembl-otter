@@ -445,6 +445,12 @@ sub align_to_transcript {
     my $ts_file = $otf->target_fasta_file;
     $logger->info("Wrote transcript sequence to ${ts_file}");
 
+    # FIXME: code duplication with SessionWindow
+    my $ace_db = $self->SessionWindow->AceDatabase;
+    my $db_slice = $ace_db->DB->session_slice;
+
+    my @method_names;
+
     foreach my $builder ( $otf->builders_for_each_type ) {
 
         $logger->info("Running exonerate for sequence(s) of type: ", $builder->type);
@@ -456,9 +462,19 @@ sub align_to_transcript {
         my $runner = $otf->build_runner(request => $request);
         my $result_set = $runner->run;
 
+        # Proof-of-concept. All OTF running will move into get-script eventually.
+        $result_set->db_store($db_slice);
+
+        my $analysis_name = $builder->analysis_name;
+        push @method_names, $analysis_name;
+
+        # Ensure new-style columns are selected if used
+        $ace_db->select_column_by_name($analysis_name);
+
         $self->alignment_window($result_set, $builder->type);
     }
 
+    $self->SessionWindow->RequestQueuer->request_features(@method_names) if @method_names;
     return;
 }
 
