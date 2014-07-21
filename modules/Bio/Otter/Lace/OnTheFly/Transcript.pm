@@ -10,13 +10,18 @@ use Bio::Otter::Lace::OnTheFly::Runner::Transcript;
 with 'Bio::Otter::Lace::OnTheFly';
 
 has 'vega_transcript' => ( is => 'ro', isa => 'Bio::Vega::Transcript', required => 1 );
-has 'transcript'      => ( is => 'ro', isa => 'Hum::Ace::SubSeq', required => 1 );
 
 sub build_target_seq {
     my $self = shift;
-    return Bio::Otter::Lace::OnTheFly::TargetSeq->new(
-        full_seq => $self->transcript->mRNA_Sequence
-        );
+
+    my $vts = $self->vega_transcript;
+    my @names = @{$vts->get_all_Attributes('name')};
+
+    my $hum_seq = Hum::Sequence->new;
+    $hum_seq->name($names[0]->value);
+    $hum_seq->sequence_string($vts->spliced_seq);
+
+    return Bio::Otter::Lace::OnTheFly::TargetSeq->new( full_seq => $hum_seq );
 }
 
 sub build_builder {
@@ -32,7 +37,7 @@ sub build_runner {
     return Bio::Otter::Lace::OnTheFly::Runner::Transcript->new(
         @params,
         resultset_class => 'Bio::Otter::Lace::OnTheFly::ResultSet::GetScript',
-        transcript      => $self->transcript,
+        vega_transcript => $self->vega_transcript,
         );
 }
 
