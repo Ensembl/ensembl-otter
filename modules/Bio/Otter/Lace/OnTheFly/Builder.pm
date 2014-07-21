@@ -19,6 +19,9 @@ has target     => ( is => 'ro', isa => 'Bio::Otter::Lace::OnTheFly::TargetSeq', 
 
 has softmask_target => ( is => 'ro', isa => 'Bool' );
 
+has analysis_prefix => ( is => 'ro', isa => 'Str', builder => '_build_analysis_prefix' );
+sub _build_analysis_prefix { return 'OTF_' }
+
 has options => ( is => 'ro', isa => 'HashRef', default => sub { {} } );
 has query_type_options => ( is => 'ro', isa => 'HashRef[HashRef]',
                             default => sub { { dna => {}, protein => {} } } );
@@ -107,10 +110,11 @@ sub prepare_run {
 sub analysis_name {
     my $self = shift;
 
-    my $type = $self->type;
+    my $type   = $self->type;
+    my $prefix = $self->analysis_prefix;
     if    ($type =~ /^OTF_AdHoc_/) { return $type;       }
-    elsif ($type eq 'cDNA')        { return "OTF_mRNA";  }
-    else                           { return "OTF_$type"; }
+    elsif ($type eq 'cDNA')        { return "${prefix}mRNA";  }
+    else                           { return "${prefix}${type}"; }
 }
 
 1;
