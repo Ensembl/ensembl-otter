@@ -467,6 +467,8 @@ sub align_to_transcript {
     return unless $cdna;
 
     my $vega_transcript = $ts_win->ensEMBL_Transcript_from_tk;
+
+    # ensure vega transcript has a DBid and slice
     $ts_win->store_Transcript($vega_transcript);
 
     my $top = $self->canvas->toplevel;
@@ -475,7 +477,6 @@ sub align_to_transcript {
 
         accessions => \@accessions,
 
-        transcript      => $ts_win->current_SubSeq,
         vega_transcript => $vega_transcript,
 
         problem_report_cb => sub { $top->Tk::Utils::OnTheFly::problem_box('Evidence Selected', @_) },
@@ -502,6 +503,8 @@ sub align_to_transcript {
         $self->SessionWindow->delete_featuresets(@{$otf->logic_names});
     }
 
+    my $request_adaptor = $ace_db->DB->OTFRequestAdaptor;
+
     my @method_names;
 
     foreach my $builder ( $otf->builders_for_each_type ) {
@@ -512,6 +515,8 @@ sub align_to_transcript {
         $logger->info("Wrote sequences to ${seq_file}");
 
         my $request = $builder->prepare_run;
+        $request_adaptor->store($request);
+
         my $runner = $otf->build_runner(request => $request);
         my $result_set = $runner->run;
 
