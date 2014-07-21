@@ -8,7 +8,7 @@ use Try::Tiny;
 
 use Bio::Otter::Lace::CloneSequence;
 use Bio::Vega::ContigInfo;
-use Bio::Vega::ContigLockBroker;
+use Bio::Vega::SliceLockBroker;
 use Bio::Vega::Region;
 
 use base 'Bio::Otter::ServerAction';
@@ -134,6 +134,10 @@ sub get_region {
 
 =head2 write_region
 
+Input: region data, author, locknums.
+
+Output: updated region, or error.
+
 =cut
 
 sub write_region {
@@ -143,11 +147,17 @@ sub write_region {
 
     # These all require parameters, get them out of the way before trying anything else.
     my $odba       = $server->otter_dba();
-    my $author_obj = $server->make_Author_obj;
     my $xml_string = $server->require_argument('data');
 
+    my $slb;
     my ($new_region, $db_region, $ci_hash, $action);
     try {
+        $action = 'init';
+        $server->require_method('POST');
+        $slb = $self->_slice_lock_broker(1);
+        # author is checked against the locks by the broker.
+        # we don't check source hostname: sessions do sometimes move around.
+
         $action = 'converting XML to otter';
         $new_region = $self->deserialise_region($xml_string);
 
@@ -156,20 +166,20 @@ sub write_region {
         $ci_hash   = $self->_compare_region_create_ci_hash($new_region, $db_region);
 
         $action = 'checking locks';
-        my $cb = Bio::Vega::ContigLockBroker->new;
-        warn "Checking region is locked...\n";
-        $cb->check_locks_exist_by_slice($db_region->slice, $author_obj, $odba);
-        warn "Done checking region is locked.\n";
+        $slb->exclusive_work(sub { $slb->assert_bumped($db_region->slice) });
 
     } catch {
         die "Writing region failed whilst $action [$_]";
     };
 
-    # everything that needs saving should use this timestamp:
-    my $time_now = time;
-
     my $serialised_output;
 
+    die "don't do it yet, we are out of exclusive_work";
+
+    # everything that needs saving should use this timestamp:
+    my $time_now = $serialised_output->wibble; # $lock->ts_activity during exclusive_work
+
+    my $author_obj = $slb->author;
     $odba->begin_work;
     try {
         # update all contig_info and contig_info_attrib
@@ -290,9 +300,30 @@ sub write_region {
         $odba->clear_caches;
     } catch {
         $odba->rollback;
+        chomp;
         die "Writing region failed writing annotations [$_]";
     };
     return $serialised_output;
+}
+
+sub _slice_lock_broker {
+    my ($self, $add_locknums) = @_;
+    die unless defined $add_locknums;
+    my $server = $self->server;
+
+    my @lockp;
+    if ($add_locknums) {
+        my $locknums   = $server->require_argument('locknums');
+        my @locknum = split ',', $locknums;
+        @lockp = (-lockid => \@locknum);
+    }
+
+    my $slb = Bio::Vega::SliceLockBroker->new
+      (-author => $server->make_Author_obj,
+       -adaptor => $server->otter_dba,
+       @lockp);
+
+    return $slb;
 }
 
 sub _fetch_db_region {
@@ -412,7 +443,12 @@ sub _strip_incomplete_genes {
     return;
 }
 
+
 =head2 lock_region
+
+Input: region, author, hostname, client.
+
+Output (JSON): error or { locknums => $txt }.
 
 =cut
 
@@ -420,94 +456,86 @@ sub lock_region {
     my ($self) = @_;
 
     my $server = $self->server;
-    my $odba = $server->otter_dba();
-    $odba->begin_work;
+    $server->content_type('application/json');
+
+    my $client = $server->param('client') || $server->cgi->user_agent;
+    substr($client, 35) = '...' if length($client) > 38; # keep -intent short
 
     my $cl_host = $server->param('hostname') || $ENV{REMOTE_ADDR};
-    my $cb = Bio::Vega::ContigLockBroker->new;
-    $cb->client_hostname($cl_host);
-
-    my $slice = $self->slice;
-    my $author_obj = $server->make_Author_obj();
 
     my ($lock_token, $action);
     try {
-        $action = 'locking';
-        $cb->lock_clones_by_slice($slice, $author_obj, $odba);
+        $action = 'init';
+        $server->require_method('POST');
+        my $slb = $self->_slice_lock_broker(0);
+        $slb->client_hostname($cl_host);
 
-        $action = 'result setup';
-        my $region = Bio::Vega::Region->new(
-            otter_dba     => $odba,
-            slice         => $slice,
-            server_action => $self,
-            );
-        $region->fetch_species;
-        $region->fetch_CloneSequences;
+        $action = 'pre-lock';
+        $slb->lock_create_for_Slice
+          (-slice => $self->slice,
+           -intent => "lock_region for $client");
+
+        $action = 'locking';
+        $slb->exclusive_work(sub {}); # do lock and commit, or rollback
 
         $action = 'output';
-        $lock_token = $self->serialise_region($region);
-        $odba->commit;
+        my @dbID = map { $_->dbID } $slb->locks;
+        $lock_token = { locknums => join ',', @dbID };
     } catch {
-        $odba->rollback;
+        chomp;
         die "Locking clones failed during $action \[$_]";
     };
 
     return $lock_token;
 }
 
+
 =head2 unlock_region
+
+Input: locknum.
+
+Output: error, or { unlocked => $locknums1, already => $locknums2 }
+
+When the C<locknums> contains multiple locks, they must be compatible
+within the SliceLockBroker together i.e. have the same author and
+host.
 
 =cut
 
 sub unlock_region {
     my ($self) = @_;
-
     my $server = $self->server;
-    my $odba   = $server->otter_dba();
+    $server->content_type('application/json');
 
-    $odba->begin_work;
-    my $author_obj = $server->make_Author_obj();
-    my $slice;
-
-    # the original string lives here:
-    my $lock_token = $server->require_argument('data');
-
-    my $action;
+    my (%out, $action);
     try {
-        $action = 'converting XML to otter';
-
-        my $chr_slice = $self->deserialise_lock_token($lock_token);
-
-        my $seq_reg_name = $chr_slice->seq_region_name;
-        my $start        = $chr_slice->start;
-        my $end          = $chr_slice->end;
-        my $strand       = $chr_slice->strand;
-        my $cs           = $chr_slice->coord_system->name;
-        my $cs_version   = $chr_slice->coord_system->version;
-
-        $action = 'retrieving database slice';
-        $slice = $odba->get_SliceAdaptor()->fetch_by_region(
-            $cs, $seq_reg_name, $start, $end, $strand, $cs_version);
-        warn "Processed incoming xml file with slice: [$seq_reg_name] [$start] [$end]\n";
+        $action = 'init';
+        $server->require_method('POST');
+        my $slb_all = $self->_slice_lock_broker(1);
 
         $action = 'checking locks';
-        warn "Checking region is locked...\n";
-        my $cb=Bio::Vega::ContigLockBroker->new;
-        $cb->check_locks_exist_by_slice($slice,$author_obj,$odba);
-        warn "Done checking region is locked.\n";
+        my @already = grep { ! $_->is_held } $slb_all->locks;
+        my @locked  = grep {   $_->is_held } $slb_all->locks;
 
         $action = 'to unlock clones';
-        warn "Unlocking clones...\n";
-        $cb->remove_by_slice($slice,$author_obj,$odba);
-        warn "Done unlocking clones.\n";
+        if (@locked) {
+            my $slb_locked = $self->_slice_lock_broker(0);
+            $slb_locked->locks(@locked);
+            my $unlock_fail = $slb_locked->exclusive_work(sub {}, 1);
+            die $unlock_fail if $unlock_fail;
+        }
 
-        $odba->commit;
+        $action = 'output';
+        $out{unlocked} = join ',', map { $_->dbID } @locked if @locked;
+        $out{already} = join ',', map { $_->dbID } @already if @already;
+        die "Nothing happened" unless keys %out;
+
     } catch {
-        $odba->rollback;
+        chomp;
         die "Failed $action \[$_]";
     };
 
-    return;
+    return \%out;
 }
 
 ### Null serialisation & deserialisation methods
