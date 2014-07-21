@@ -128,6 +128,14 @@ sub path_info {
     return $self->cgi->path_info();
 }
 
+sub require_method {
+    my ($self, $want) = @_;
+    my $got = $self->cgi->request_method;
+    die "Request should be made with $want method, but was made with $got method"
+      unless lc($got) eq lc($want);
+    return;
+}
+
 sub make_map {
     my ($self) = @_;
     return {
