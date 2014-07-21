@@ -2156,10 +2156,6 @@ sub launch_exonerate {
     my $db_slice = $self->AceDatabase->db_slice;
     $otf->pre_launch_setup(slice => $db_slice);
 
-    # Setup for GFF column control below
-    my $cllctn = $self->AceDatabase->ColumnCollection;
-    my $col_aptr = $self->AceDatabase->DB->ColumnAdaptor;
-
     my $request_adaptor = $self->AceDatabase->DB->OTFRequestAdaptor;
 
     my @method_names;
@@ -2178,12 +2174,7 @@ sub launch_exonerate {
         push @method_names, $builder->analysis_name;
 
         # Ensure new-style columns are selected if used
-        my $column = $cllctn->get_Column_by_name($analysis_name);
-        if ($column and not $column->selected) {
-            $column->selected(1);
-            $col_aptr->store_Column_state($column);
-        }
-
+        $self->AceDatabase->select_column_by_name($analysis_name);
     }
 
     $self->RequestQueuer->request_features(@method_names) if @method_names;

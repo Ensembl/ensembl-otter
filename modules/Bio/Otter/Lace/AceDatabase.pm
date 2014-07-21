@@ -1157,6 +1157,23 @@ sub save_filter_state {
     return;
 }
 
+# returns true if column updated in DB
+#
+sub select_column_by_name {
+    my ($self, $column_name) = @_;
+
+    my $cllctn   = $self->ColumnCollection;
+    my $col_aptr = $self->DB->ColumnAdaptor;
+
+    my $column = $cllctn->get_Column_by_name($column_name);
+    if ($column and not $column->selected) {
+        $column->selected(1);
+        $col_aptr->store_Column_state($column);
+        return 1;
+    }
+    return;
+}
+
 sub ColumnCollection {
     my ($self) = @_;
 
