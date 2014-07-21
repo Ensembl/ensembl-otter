@@ -13,6 +13,8 @@ augment '_build_default_qt_options' => sub {
     };
 };
 
+sub _build_analysis_prefix { return 'OTF_TS_' }
+
 1;
 
 __END__

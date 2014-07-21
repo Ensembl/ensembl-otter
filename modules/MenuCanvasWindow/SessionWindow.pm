@@ -2171,7 +2171,7 @@ sub launch_exonerate {
         $request_adaptor->store($request);
 
         my $analysis_name = $builder->analysis_name;
-        push @method_names, $builder->analysis_name;
+        push @method_names, $analysis_name;
 
         # Ensure new-style columns are selected if used
         $self->AceDatabase->select_column_by_name($analysis_name);
