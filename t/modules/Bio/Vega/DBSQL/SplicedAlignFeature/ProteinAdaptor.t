@@ -22,7 +22,7 @@ BEGIN {
 }
 critic_module_ok($saf_pa_module);
 
-my $test_db = OtterTest::DB->new_with_dataset_info(undef, 'human');
+my $test_db = OtterTest::DB->new_with_dataset_info(dataset_name => 'human');
 $test_db->setup_chromosome_slice;
 
 my $vega_dba = $test_db->vega_dba;

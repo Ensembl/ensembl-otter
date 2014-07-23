@@ -72,7 +72,7 @@ sub DB {
     my ($self) = @_;
 
     my $db = $self->{'_sqlite_database'}
-        ||= Bio::Otter::Lace::DB->new($self->home, $self->Client);
+        ||= Bio::Otter::Lace::DB->new(home => $self->home, client => $self->Client, log_name => $self->log_name);
     return $db;
 }
 
@@ -108,6 +108,7 @@ sub name {
 
     if ($name) {
         $self->DB->set_tag_value('name', $name);
+        $self->DB->log_name($name);
         return $name;
     }
     else {
