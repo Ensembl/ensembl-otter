@@ -109,7 +109,7 @@ sub vega_dba {
 }
 
 sub session_slice {
-    my ($self, $ensembl_slice) = @_;
+    my ($self, $ensembl_slice, $dna) = @_;
 
     my $session_slice = $session_slice{$self};
     return $session_slice if $session_slice;
@@ -142,7 +142,8 @@ sub session_slice {
         };
         $db_seq_region = Bio::EnsEMBL::Slice->new_fast($db_seq_region_parameters);
 
-        $slice_adaptor->store($db_seq_region);
+        my $padded = 'N' x ($ensembl_slice->start - 1) . $dna;
+        $slice_adaptor->store($db_seq_region, \$padded);
     }
 
     $session_slice = $db_seq_region->sub_Slice($ensembl_slice->start, $ensembl_slice->end);
@@ -249,6 +250,9 @@ sub load_dataset_info {
     my $cs_sth  = $dbh->prepare(q{ INSERT INTO coord_system (coord_system_id, species_id, name, version, rank, attrib)
                                                      VALUES (?, ?, ?, ?, ?, ?) });
     my $cs_chr  = $dataset->get_db_info_item('coord_system.chromosome');
+
+    # As this is our only coord system, we need it to hold sequence
+    $cs_chr->{attrib} = join(',', $cs_chr->{attrib}, 'sequence_level');
 
     my @at_cols = qw(                                       attrib_type_id  code  name  description );
     my $at_sth  = $dbh->prepare(q{ INSERT INTO attrib_type (attrib_type_id, code, name, description)

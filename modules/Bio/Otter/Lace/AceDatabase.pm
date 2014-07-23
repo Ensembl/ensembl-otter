@@ -249,11 +249,14 @@ sub init_AceDatabase {
     my $parser = Bio::Vega::Transform::Otter::Ace->new;
     $parser->parse($xml_string);
     $self->write_otter_acefile($parser);
-    $self->write_dna_data;
+
+    my ($raw_dna, @tiles) = $self->get_assembly_dna;
+    $self->write_dna_data($raw_dna, @tiles);
+
     $self->write_methods_acefile;
 
-    $self->save_region_xml($xml_string);
-    $self->DB->session_slice($self->slice->ensembl_slice);
+    $self->save_region_xml($xml_string); # sets up $self->slice
+    $self->DB->session_slice($self->slice->ensembl_slice, $raw_dna);
 
     $self->initialize_database;
 
@@ -1023,23 +1026,29 @@ sub db_initialized {
 }
 
 sub write_dna_data {
-    my ($self) = @_;
+    my ($self, $dna, @tiles) = @_;
 
     my $ace_filename = $self->home . '/rawdata/dna.ace';
     $self->add_acefile($ace_filename);
     open my $ace_fh, '>', $ace_filename
         or $self->logger->logconfess("Can't write to '$ace_filename' : $!");
-    print $ace_fh $self->dna_ace_data;
+    print $ace_fh $self->dna_ace_data($dna, @tiles);
     close $ace_fh;
 
     return;
 }
 
-sub dna_ace_data {
+sub get_assembly_dna {
     my ($self) = @_;
 
     my ($dna, @tiles) = split /\n/
         , $self->http_response_content('GET', 'get_assembly_dna');
+
+    return ($dna, @tiles);
+}
+
+sub dna_ace_data {
+    my ($self, $dna, @tiles) = @_;
 
     $dna = lc $dna;
     $dna =~ s/(.{60})/$1\n/g;
