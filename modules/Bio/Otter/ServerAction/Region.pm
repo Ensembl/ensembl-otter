@@ -461,7 +461,7 @@ sub lock_region {
     my $client = $server->param('client') || $server->cgi->user_agent;
     substr($client, 35) = '...' if length($client) > 38; # keep -intent short
 
-    my $cl_host = $server->param('hostname') || $ENV{REMOTE_ADDR};
+    my $cl_host = $server->best_client_hostname;
 
     my ($lock_token, $action);
     try {
