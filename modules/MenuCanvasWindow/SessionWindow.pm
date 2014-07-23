@@ -2152,11 +2152,13 @@ sub update_SubSeq_locus_level_errors {
 sub launch_exonerate {
     my ($self, $otf) = @_;
 
+    my $db = $self->AceDatabase->DB;
+
     # Clear columns if requested
-    my $db_slice = $self->AceDatabase->db_slice;
+    my $db_slice = $db->session_slice;
     $otf->pre_launch_setup(slice => $db_slice);
 
-    my $request_adaptor = $self->AceDatabase->DB->OTFRequestAdaptor;
+    my $request_adaptor = $db->OTFRequestAdaptor;
 
     my @method_names;
 
