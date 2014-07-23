@@ -16,6 +16,7 @@ my(
     %dbh,
     %file,
     %vega_dba,
+    %session_slice,
     %ColumnAdaptor,
     %OTFRequestAdaptor,
     %log_name,
@@ -27,6 +28,7 @@ sub DESTROY {
     delete($dbh{$self});
     delete($file{$self});
     delete($vega_dba{$self});
+    delete($session_slice{$self});
     delete($ColumnAdaptor{$self});
     delete($OTFRequestAdaptor{$self});
     delete($log_name{$self});
@@ -104,6 +106,47 @@ sub vega_dba {
         );
 
     return $vega_dba{$self} = $dbc;
+}
+
+sub session_slice {
+    my ($self, $ensembl_slice) = @_;
+
+    my $session_slice = $session_slice{$self};
+    return $session_slice if $session_slice;
+
+    $ensembl_slice or
+        $self->logger->logconfess("ensembl_slice must be supplied when creating or recovering session_slice");
+
+    # If this is a recovered session we will already have the seq_region in the local DB
+    my $slice_adaptor = $self->vega_dba->get_SliceAdaptor;
+    my $db_seq_region = $slice_adaptor->fetch_by_region(
+        $ensembl_slice->coord_system->name,
+        $ensembl_slice->seq_region_name,
+        );
+
+    if ($db_seq_region) {
+        $self->logger->debug('slice already in sqlite');
+    } else {
+        $self->logger->debug('creating and storing slice');
+
+        # db_seq_region's coord_system needs to be the one already in the DB.
+        my $cs_adaptor = $self->vega_dba->get_CoordSystemAdaptor;
+        my $cs = $cs_adaptor->fetch_by_name($ensembl_slice->coord_system->name, $ensembl_slice->coord_system->version);
+
+        # db_seq_region must start from 1
+        my $db_seq_region_parameters = {
+            %$ensembl_slice,
+            coord_system      => $cs,
+            start             => 1,
+            seq_region_length => $ensembl_slice->end,
+        };
+        $db_seq_region = Bio::EnsEMBL::Slice->new_fast($db_seq_region_parameters);
+
+        $slice_adaptor->store($db_seq_region);
+    }
+
+    $session_slice = $db_seq_region->sub_Slice($ensembl_slice->start, $ensembl_slice->end);
+    return $session_slice{$self} = $session_slice;
 }
 
 sub get_tag_value {

@@ -253,6 +253,7 @@ sub init_AceDatabase {
     $self->write_methods_acefile;
 
     $self->save_region_xml($xml_string);
+    $self->DB->session_slice($self->slice->ensembl_slice);
 
     $self->initialize_database;
 
@@ -329,6 +330,7 @@ sub recover_slice_from_region_xml {
         $chr_slice->end,
         );
     $self->slice($slice);
+    $self->DB->session_slice($self->slice->ensembl_slice);
 
     return;
 }
@@ -341,45 +343,6 @@ sub slice {
         $self->{'_slice'} = $slice;
     }
     return $self->{'_slice'};
-}
-
-# The seq_region in the local DB is created and stored lazily when first required.
-#
-sub db_slice {
-    my ($self) = @_;
-
-    my $db_slice = $self->{'_db_slice'};
-    return $db_slice if $db_slice;
-
-    my $ensembl_slice = $self->slice->ensembl_slice;
-
-    # If this is a recovered session we will already have the seq_region in the local DB
-    my $slice_adaptor = $self->DB->vega_dba->get_SliceAdaptor;
-    my $db_seq_region = $slice_adaptor->fetch_by_region(
-        $ensembl_slice->coord_system->name,
-        $ensembl_slice->seq_region_name,
-        );
-
-    unless ($db_seq_region) {
-
-        # db_seq_region's coord_system needs to be the one already in the DB.
-        my $cs_adaptor = $self->DB->vega_dba->get_CoordSystemAdaptor;
-        my $cs = $cs_adaptor->fetch_by_name($ensembl_slice->coord_system->name, $ensembl_slice->coord_system->version);
-
-        # db_seq_region must start from 1
-        my $db_seq_region_parameters = {
-            %$ensembl_slice,
-            coord_system      => $cs,
-            start             => 1,
-            seq_region_length => $ensembl_slice->end,
-        };
-        $db_seq_region = Bio::EnsEMBL::Slice->new_fast($db_seq_region_parameters);
-
-        $slice_adaptor->store($db_seq_region);
-    }
-
-    $db_slice = $db_seq_region->sub_Slice($ensembl_slice->start, $ensembl_slice->end);
-    return $self->{'_db_slice'} = $db_slice;
 }
 
 sub slice_name {
