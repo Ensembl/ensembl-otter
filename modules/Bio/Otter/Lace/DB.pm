@@ -10,6 +10,7 @@ use DBI;
 
 use Bio::Otter::Lace::DB::ColumnAdaptor;
 use Bio::Otter::Lace::DB::OTFRequestAdaptor;
+use Bio::Otter::Log::WithContext;
 
 my(
     %dbh,
@@ -17,6 +18,7 @@ my(
     %vega_dba,
     %ColumnAdaptor,
     %OTFRequestAdaptor,
+    %log_name,
     );
 
 sub DESTROY {
@@ -27,20 +29,28 @@ sub DESTROY {
     delete($vega_dba{$self});
     delete($ColumnAdaptor{$self});
     delete($OTFRequestAdaptor{$self});
+    delete($log_name{$self});
 
     return;
 }
 
 sub new {
-    my ($pkg, $home, $client) = @_;
+    my ($pkg, %args) = @_;
 
-    unless ($home) {
-        confess "Cannot create SQLite database without home parameter";
-    }
+    my ($home, $client, $log_name) = @args{qw( home client log_name )};
+
     my $ref = "";
     my $self = bless \$ref, $pkg;
+    $self->log_name($log_name);
+
+    unless ($home) {
+        $self->logger->logconfess("Cannot create SQLite database without home parameter");
+    }
+
     my $file = "$home/otter.sqlite";
     $self->file($file);
+
+    $self->logger->debug("new() connecting to '$file'");
     $self->init_db($client);
 
     return $self;
@@ -85,7 +95,9 @@ sub vega_dba {
     # This pulls in EnsEMBL, so we only do it if required, to reduce the footprint of filter_get &co.
     require Bio::Vega::DBSQL::DBAdaptor;
 
-    confess "Cannot create Vega adaptor until dataset info is loaded" unless $self->_is_loaded('dataset_info');
+    $self->_is_loaded('dataset_info') or
+        $self->logger->logconfess("Cannot create Vega adaptor until dataset info is loaded");
+
     my $dbc = Bio::Vega::DBSQL::DBAdaptor->new(
         -driver => 'SQLite',
         -dbname => $file{$self}
@@ -107,7 +119,7 @@ sub set_tag_value {
     my ($self, $tag, $value) = @_;
 
     unless (defined $value) {
-        confess "No value provided";
+        $self->logger->logconfess("No value provided");
     }
 
     my $sth = $dbh{$self}->prepare(q{ INSERT OR REPLACE INTO otter_tag_value (tag, value) VALUES (?,?) });
@@ -130,7 +142,7 @@ sub _is_loaded {
     my $has_tag_table = $self->_has_table('otter_tag_value');
 
     if (defined $value) {
-        die "No otter_tag_value table when setting '$name' tag." unless $has_tag_table;
+        $self->logger->logdie("No otter_tag_value table when setting '$name' tag.") unless $has_tag_table;
         return $self->set_tag_value($name, $value);
     }
 
@@ -141,12 +153,12 @@ sub _is_loaded {
 sub init_db {
     my ($self, $client) = @_;
 
-    my $file = $self->file or confess "Cannot create SQLite database: file not set";
+    my $file = $self->file or $self->logger->logconfess("Cannot create SQLite database: file not set");
 
     my $done_file = $file;
     $done_file =~ s{/([^/]+)$}{.done/$1};
     if (!-f $file && -f $done_file) {
-        cluck "Running late?\n  Absent: $file\n  Exists: $done_file";
+        $self->logger->logcluck("Running late?\n  Absent: $file\n  Exists: $done_file");
         # Diagnostics because I saw it after RT395938 Zircon 13e593c10ce4cb1ccdfd362a293a1e940e24e26d
     }
 
@@ -166,6 +178,8 @@ sub init_db {
 sub create_tables {
     my ($self, $schema, $name) = @_;
 
+    $self->logger->debug("create_tables for '$name'");
+
     my $dbh = $dbh{$self};
     $dbh->begin_work;
     $dbh->do($schema);
@@ -180,7 +194,8 @@ sub load_dataset_info {
     my ($self, $dataset) = @_;
     return if $self->_is_loaded('dataset_info');
 
-    confess "Cannot load dataset info: loutre schema not loaded" unless $self->_is_loaded('schema_loutre');
+    $self->_is_loaded('schema_loutre') or
+        $self->logger->logconfess("Cannot load dataset info: loutre schema not loaded");
 
     my $dbh = $dbh{$self};
 
@@ -219,6 +234,23 @@ sub load_dataset_info {
     $self->_is_loaded('dataset_info', 1);
 
     return;
+}
+
+sub logger {
+    my ($self, $category) = @_;
+    $category = scalar caller unless defined $category;
+    return Bio::Otter::Log::WithContext->get_logger($category, name => $self->log_name);
+}
+
+sub log_name {
+    my ($self, $arg) = @_;
+
+    if ($arg) {
+        $log_name{$self} = $arg;
+    }
+
+    return $log_name{$self} if $log_name{$self};
+    return '-B-O-L-DB unnamed-';
 }
 
 1;

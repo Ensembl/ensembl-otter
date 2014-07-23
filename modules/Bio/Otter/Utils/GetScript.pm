@@ -238,7 +238,7 @@ sub local_db {
 
     return $getscript_local_db if $getscript_local_db;
 
-    return $getscript_local_db = Bio::Otter::Lace::DB->new($getscript_session_dir);
+    return $getscript_local_db = Bio::Otter::Lace::DB->new(home => $getscript_session_dir);
 }
 
 sub update_local_db {

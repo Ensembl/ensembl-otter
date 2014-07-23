@@ -1522,7 +1522,7 @@ sub move_to_done {
 sub get_name {
     my ($self, $home_dir) = @_;
 
-    my $db = Bio::Otter::Lace::DB->new($home_dir, $self);
+    my $db = Bio::Otter::Lace::DB->new(home => $home_dir, client => $self);
     return $db->get_tag_value('name');
 }
 
