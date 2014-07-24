@@ -15,11 +15,16 @@ use Tk::LabFrame;
 use Tk::ComboBox;
 use Tk::SmartOptionmenu;
 use Tk::Utils::Dotter;
+
 use Hum::Ace::Locus;
 use Hum::Ace::Exon;
+
 use Bio::EnsEMBL::Attribute;
+use Bio::EnsEMBL::Analysis;
+use Bio::Vega::Author;
 use Bio::Vega::Exon;
 use Bio::Vega::Transcript;
+
 use Bio::Otter::Utils::DotterLauncher;
 use CanvasWindow::EvidencePaster;
 use EditWindow::PfamWindow;
@@ -2758,6 +2763,9 @@ sub ensEMBL_Transcript_from_tk {
         $exon->start($pp->[0]);
         $exon->end(  $pp->[1]);
         $exon->strand($strand);
+        $exon->phase(-1);       # FIXME: do better than this?
+        $exon->end_phase(-1);   # FIXME: --"--
+
         $ts->add_Exon($exon);
     }
 
@@ -2777,6 +2785,57 @@ sub add_EnsEMBL_Attribute {
     );
 
     return;
+}
+
+sub store_Transcript {
+    my ($self, $transcript) = @_;
+
+    my $db_slice   = $self->SessionWindow->AceDatabase->DB->session_slice;
+    my $vega_dba   = $db_slice->adaptor->db;
+    my $ts_adaptor = $vega_dba->get_TranscriptAdaptor;
+
+    if ($transcript->is_stored($vega_dba)) {
+        $ts_adaptor->update($transcript);
+    } else {
+        # For now, we blindly store a new copy each time, to ensure up-to-dateness
+
+        $transcript->analysis(         $self->otter_analysis) unless $transcript->analysis;
+        $transcript->transcript_author($self->author_object ) unless $transcript->transcript_author;
+
+        $transcript->slice($db_slice) unless $transcript->slice;
+        foreach my $exon (@{$transcript->get_all_Exons}) {
+            $exon->slice($db_slice) unless $exon->slice;
+        }
+
+        $ts_adaptor->store($transcript);
+    }
+
+    return $transcript->dbID;
+}
+
+# FIXME: this belongs elsewhere, in due course.
+{
+    my $author_object;
+
+    sub author_object {
+        my ($self) = @_;
+        return $author_object if $author_object;
+
+        my $user = getpwuid($<);
+        return $author_object = Bio::Vega::Author->new(-name => $user);
+    }
+}
+
+# FIXME: this belongs elsewhere, in due course.
+{
+    my $otter_analysis;
+
+    sub otter_analysis {
+        my ($self) = @_;
+        return $otter_analysis if $otter_analysis;
+
+        return $otter_analysis = Bio::EnsEMBL::Analysis->new(-logic_name => 'Otter');
+    }
 }
 
 sub save_if_changed {
