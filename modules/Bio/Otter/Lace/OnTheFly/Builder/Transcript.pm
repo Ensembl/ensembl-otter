@@ -5,6 +5,8 @@ use Moose;
 
 extends 'Bio::Otter::Lace::OnTheFly::Builder';
 
+has vega_transcript => ( is => 'ro', isa => 'Bio::Vega::Transcript', required => 1 );
+
 augment '_build_default_options'    => sub { return { } };
 augment '_build_default_qt_options' => sub {
     return {

@@ -470,7 +470,9 @@ sub align_to_transcript {
     my $otf = Bio::Otter::Lace::OnTheFly::Transcript->new({
 
         accessions => \@accessions,
-        transcript => $self->TranscriptWindow->current_SubSeq,
+
+        transcript      => $self->TranscriptWindow->current_SubSeq,
+        vega_transcript => $self->TranscriptWindow->ensEMBL_Transcript_from_tk,
 
         problem_report_cb => sub { $top->Tk::Utils::OnTheFly::problem_box('Evidence Selected', @_) },
         long_query_cb     => sub { $top->Tk::Utils::OnTheFly::long_query_confirm(@_)  },

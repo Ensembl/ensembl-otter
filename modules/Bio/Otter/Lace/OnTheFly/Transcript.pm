@@ -9,7 +9,8 @@ use Bio::Otter::Lace::OnTheFly::Runner::Transcript;
 
 with 'Bio::Otter::Lace::OnTheFly';
 
-has 'transcript' => ( is => 'ro', isa => 'Hum::Ace::SubSeq', required => 1 );
+has 'vega_transcript' => ( is => 'ro', isa => 'Bio::Vega::Transcript', required => 1 );
+has 'transcript'      => ( is => 'ro', isa => 'Hum::Ace::SubSeq', required => 1 );
 
 sub build_target_seq {
     my $self = shift;
@@ -20,7 +21,10 @@ sub build_target_seq {
 
 sub build_builder {
     my ($self, @params) = @_;
-    return Bio::Otter::Lace::OnTheFly::Builder::Transcript->new(@params);
+    return Bio::Otter::Lace::OnTheFly::Builder::Transcript->new(
+        @params,
+        vega_transcript => $self->vega_transcript,
+        );
 }
 
 sub build_runner {

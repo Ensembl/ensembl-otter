@@ -15,6 +15,8 @@ use Test::OtterLaceOnTheFly qw( fixed_transcript_tests build_target run_otf_test
 use Bio::EnsEMBL::CoordSystem;
 use Bio::EnsEMBL::Slice;
 
+use Bio::Vega::Transcript;
+
 use Hum::Ace::SubSeq;
 
 my @modules;
@@ -94,7 +96,7 @@ sub run_otf_transcript_test {
     $test->{runner_class}  = 'Bio::Otter::Lace::OnTheFly::Runner::Transcript';
     $test->{runner_args}   = { transcript => build_transcript($test->{ts_spec}, $test->{ts_strand}) };
 
-    return run_otf_test($test, $target);
+    return run_otf_test($test, $target, { vega_transcript => Bio::Vega::Transcript->new });
 }
 
 sub build_transcript {
