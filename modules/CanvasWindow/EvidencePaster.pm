@@ -462,8 +462,12 @@ sub align_to_transcript {
 
     my @accessions = $self->get_selected_accessions;
 
-    my $cdna = $self->TranscriptWindow->check_get_mRNA_Sequence;
+    my $ts_win = $self->TranscriptWindow;
+    my $cdna   = $ts_win->check_get_mRNA_Sequence;
     return unless $cdna;
+
+    my $vega_transcript = $ts_win->ensEMBL_Transcript_from_tk;
+    $ts_win->store_Transcript($vega_transcript);
 
     my $top = $self->canvas->toplevel;
 
@@ -471,8 +475,8 @@ sub align_to_transcript {
 
         accessions => \@accessions,
 
-        transcript      => $self->TranscriptWindow->current_SubSeq,
-        vega_transcript => $self->TranscriptWindow->ensEMBL_Transcript_from_tk,
+        transcript      => $ts_win->current_SubSeq,
+        vega_transcript => $vega_transcript,
 
         problem_report_cb => sub { $top->Tk::Utils::OnTheFly::problem_box('Evidence Selected', @_) },
         long_query_cb     => sub { $top->Tk::Utils::OnTheFly::long_query_confirm(@_)  },
