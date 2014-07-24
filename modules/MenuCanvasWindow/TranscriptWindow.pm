@@ -17,6 +17,9 @@ use Tk::SmartOptionmenu;
 use Tk::Utils::Dotter;
 use Hum::Ace::Locus;
 use Hum::Ace::Exon;
+use Bio::EnsEMBL::Attribute;
+use Bio::Vega::Exon;
+use Bio::Vega::Transcript;
 use Bio::Otter::Utils::DotterLauncher;
 use CanvasWindow::EvidencePaster;
 use EditWindow::PfamWindow;
@@ -2737,6 +2740,43 @@ sub new_SubSeq_from_tk {
     # warn "Start not found ", $self->start_not_found_from_tk, "\n",
     #      "  End not found ", $self->end_not_found_from_tk,   "\n";
     return $new;
+}
+
+# WARNING: work in progress - do not rely on anything other than the basics without checking!
+#
+sub ensEMBL_Transcript_from_tk {
+    my ($self) = @_;
+
+    my $strand = $self->strand_from_tk;
+
+    my $ts = Bio::Vega::Transcript->new;
+    $ts->strand($strand);
+    $self->add_EnsEMBL_Attribute($ts, 'name', $self->get_subseq_name);
+
+    foreach my $pp ($self->all_position_pair_text) {
+        my $exon = Bio::Vega::Exon->new;
+        $exon->start($pp->[0]);
+        $exon->end(  $pp->[1]);
+        $exon->strand($strand);
+        $ts->add_Exon($exon);
+    }
+
+    return $ts;
+}
+
+# FIXME: duplication with Bio::Vega::AceConverter->create_Attribute()
+#
+sub add_EnsEMBL_Attribute {
+    my ($self, $e_obj, $code, $value) = @_;
+
+    $e_obj->add_Attributes(
+        Bio::EnsEMBL::Attribute->new(
+            -CODE   => $code,
+            -VALUE  => $value,
+        )
+    );
+
+    return;
 }
 
 sub save_if_changed {
