@@ -124,6 +124,7 @@ sub session_slice {
         $ensembl_slice->seq_region_name,
         );
 
+    my $contig_seq_region;
     if ($db_seq_region) {
         $self->logger->debug('slice already in sqlite');
     } else {
@@ -131,22 +132,37 @@ sub session_slice {
 
         # db_seq_region's coord_system needs to be the one already in the DB.
         my $cs_adaptor = $self->vega_dba->get_CoordSystemAdaptor;
-        my $cs = $cs_adaptor->fetch_by_name($ensembl_slice->coord_system->name, $ensembl_slice->coord_system->version);
+        my $cs_chr    = $cs_adaptor->fetch_by_name($ensembl_slice->coord_system->name,
+                                                   $ensembl_slice->coord_system->version);
+        my $cs_contig = $cs_adaptor->fetch_by_name('contig', 'OtterLocal');
 
         # db_seq_region must start from 1
         my $db_seq_region_parameters = {
             %$ensembl_slice,
-            coord_system      => $cs,
+            coord_system      => $cs_chr,
             start             => 1,
             seq_region_length => $ensembl_slice->end,
         };
         $db_seq_region = Bio::EnsEMBL::Slice->new_fast($db_seq_region_parameters);
+        $slice_adaptor->store($db_seq_region);
 
-        my $padded = 'N' x ($ensembl_slice->start - 1) . $dna;
-        $slice_adaptor->store($db_seq_region, \$padded);
+        my $region_length = $ensembl_slice->end - $ensembl_slice->start + 1;
+        my $contig_seq_region_parameters = {
+            seq_region_name   => $ensembl_slice->seq_region_name,
+            strand            => 1,
+            start             => 1,
+            end               => $region_length,
+            seq_region_length => $region_length,
+            coord_system      => $cs_contig,
+        };
+        $contig_seq_region = Bio::EnsEMBL::Slice->new_fast($contig_seq_region_parameters);
+        $slice_adaptor->store($contig_seq_region, \$dna);
     }
 
     $session_slice = $db_seq_region->sub_Slice($ensembl_slice->start, $ensembl_slice->end);
+    if ($contig_seq_region) {
+        $slice_adaptor->store_assembly($session_slice, $contig_seq_region);
+    }
     return $session_slice{$self} = $session_slice;
 }
 
@@ -234,6 +250,24 @@ sub create_tables {
     return;
 }
 
+my @local_coord_system = (
+    {
+        coord_system_id => 101,
+        species_id      => 1,
+        name            => 'contig',
+        version         => 'OtterLocal',
+        rank            => 101,
+        attrib          => 'default_version,sequence_level',
+    },
+);
+
+my %local_meta = (
+    'assembly.mapping.local' => {
+        species_id => 1,
+        values     => [ 'chromosome:Otter#contig:OtterLocal' ],
+    },
+);
+
 sub load_dataset_info {
     my ($self, $dataset) = @_;
     return if $self->_is_loaded('dataset_info');
@@ -251,9 +285,6 @@ sub load_dataset_info {
                                                      VALUES (?, ?, ?, ?, ?, ?) });
     my $cs_chr  = $dataset->get_db_info_item('coord_system.chromosome');
 
-    # As this is our only coord system, we need it to hold sequence
-    $cs_chr->{attrib} = join(',', $cs_chr->{attrib}, 'sequence_level');
-
     my @at_cols = qw(                                       attrib_type_id  code  name  description );
     my $at_sth  = $dbh->prepare(q{ INSERT INTO attrib_type (attrib_type_id, code, name, description)
                                                     VALUES (?, ?, ?, ?) });
@@ -261,16 +292,20 @@ sub load_dataset_info {
 
     $dbh->begin_work;
 
-    while (my ($key, $details) = each %{$meta_hash}) {
+    my %meta = ( %$meta_hash, %local_meta );
+    while (my ($key, $details) = each %meta) {
 
-        next if $key eq 'assembly.mapping'; # we only use chromosome coords on client
+        next if $key eq 'assembly.mapping'; # we do our own mapping...
+        $key = 'assembly.mapping' if $key eq 'assembly.mapping.local';
 
         foreach my $value (@{$details->{values}}) {
             $meta_sth->execute($details->{species_id}, $key, $value);
         }
     }
 
-    $cs_sth->execute(@$cs_chr{@cs_cols});
+    foreach my $row ($cs_chr, @local_coord_system) {
+        $cs_sth->execute(@$row{@cs_cols});
+    }
 
     foreach my $row (@$at_list) {
         $at_sth->execute(@$row{@at_cols});
