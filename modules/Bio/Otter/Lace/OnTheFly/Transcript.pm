@@ -8,6 +8,7 @@ use Bio::Otter::Lace::OnTheFly::Builder::Transcript;
 use Bio::Otter::Lace::OnTheFly::Runner::Transcript;
 
 with 'Bio::Otter::Lace::OnTheFly';
+with 'MooseX::Log::Log4perl';
 
 has 'vega_transcript' => ( is => 'ro', isa => 'Bio::Vega::Transcript', required => 1 );
 
@@ -20,6 +21,7 @@ sub build_target_seq {
     my $hum_seq = Hum::Sequence->new;
     $hum_seq->name($names[0]->value);
     $hum_seq->sequence_string($vts->spliced_seq);
+    $self->log->debug('target_seq: ', $hum_seq->sequence_string);
 
     return Bio::Otter::Lace::OnTheFly::TargetSeq->new( full_seq => $hum_seq );
 }
