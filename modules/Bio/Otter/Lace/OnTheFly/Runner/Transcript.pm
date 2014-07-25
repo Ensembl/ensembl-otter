@@ -28,6 +28,8 @@ sub _split_alignment {
         $self->log->warn(sprintf("More than one gapped alignment for '%s', using first.", $ga->query_id));
     }
 
+    $ga = $ga->reverse_alignment if $ga->target_strand eq '-';
+
     return $ga->intronify_by_transcript_exons($self->vega_transcript);
 }
 
