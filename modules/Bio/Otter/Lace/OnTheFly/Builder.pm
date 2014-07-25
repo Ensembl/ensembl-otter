@@ -26,8 +26,10 @@ has options => ( is => 'ro', isa => 'HashRef', default => sub { {} } );
 has query_type_options => ( is => 'ro', isa => 'HashRef[HashRef]',
                             default => sub { { dna => {}, protein => {} } } );
 
-has default_options    => ( is => 'ro', isa => 'HashRef', init_arg => undef, builder => '_build_default_options' );
-has default_qt_options => ( is => 'ro', isa => 'HashRef', init_arg => undef, builder => '_build_default_qt_options' );
+has default_options    => ( is => 'ro', isa => 'HashRef', init_arg => undef,
+                            lazy => 1, builder => '_build_default_options' );
+has default_qt_options => ( is => 'ro', isa => 'HashRef', init_arg => undef,
+                            lazy => 1, builder => '_build_default_qt_options' );
 
 sub _default_options    { return { '--bestn' => 1 }; };
 sub _default_qt_options { return { dna => {}, protein => {} }; };
@@ -51,7 +53,7 @@ has description_for_fasta => ( is => 'ro', isa => 'Str', lazy => 1, builder => '
 
 sub _build_description_for_fasta {  ## no critic (Subroutines::ProhibitUnusedPrivateSubroutines)
     my $self = shift;
-    return sprintf('query_%s', $self->type);
+    return sprintf('query_%s', $self->analysis_name);
 }
 
 sub seqs_for_fasta {
