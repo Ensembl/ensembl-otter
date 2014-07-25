@@ -507,6 +507,9 @@ sub align_to_transcript {
 
     my @method_names;
 
+    my $key = "$otf";
+    $self->SessionWindow->register_exonerate_callback($key, $self, \&_exonerate_callback);
+
     foreach my $builder ( $otf->builders_for_each_type ) {
 
         $logger->info("Running exonerate for sequence(s) of type: ", $builder->type);
@@ -515,24 +518,34 @@ sub align_to_transcript {
         $logger->info("Wrote sequences to ${seq_file}");
 
         my $request = $builder->prepare_run;
+        $request->caller_ref($key);
         $request_adaptor->store($request);
-
-        my $runner = $otf->build_runner(request => $request);
-        my $result_set = $runner->run;
-
-        # Proof-of-concept. All OTF running will move into get-script eventually.
-        $result_set->db_store($db_slice);
 
         my $analysis_name = $builder->analysis_name;
         push @method_names, $analysis_name;
 
         # Ensure new-style columns are selected if used
         $ace_db->select_column_by_name($analysis_name);
-
-        $self->alignment_window($result_set, $builder->type);
     }
 
     $self->SessionWindow->RequestQueuer->request_features(@method_names) if @method_names;
+    return;
+}
+
+sub _exonerate_callback {
+    my ($self, $request) = @_;
+    if (Tk::Exists($self->top)) {
+        $self->display_request_feedback($request);
+    } else {
+        $self->logger->warn('OTF feedback: window gone.');
+    }
+    return;
+}
+
+sub display_request_feedback {
+    my ($self, $request) = @_;
+    $self->logger->debug(sprintf('OTF result for [%d,%s]', $request->id, $request->logic_name));
+    $self->alignment_window($request->raw_result, $request->logic_name);
     return;
 }
 
@@ -545,7 +558,7 @@ sub dotter_to_transcript {
 }
 
 sub alignment_window {
-    my ($self, $result_set, $type) = @_;
+    my ($self, $raw_result, $type) = @_;
 
     $self->{_alignment_window} ||= {};
     my $window = $self->{_alignment_window}->{$type};
@@ -554,7 +567,7 @@ sub alignment_window {
         $window = Bio::Otter::UI::TextWindow::TranscriptAlign->new($self, $type);
     }
 
-    $window->update_alignment($result_set->raw);
+    $window->update_alignment($raw_result);
     return;
 }
 
