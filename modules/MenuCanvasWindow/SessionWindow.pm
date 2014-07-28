@@ -2660,14 +2660,6 @@ sub zircon_zmap_view_features_loaded {
 
     $self->exonerate_done_callback(@otf_loaded) if @otf_loaded;
 
-    # FIXME 26/02/2014: assuming that commenting this out doesn't cause other problems,
-    # it should be removed along with AceDatabase->zmap_config_update().
-
-    # if ($state_changed) {
-    #     # and update the delayed flags in the zmap config file
-    #     $self->AceDatabase->zmap_config_update;
-    # }
-
     # This will get called by Tk event loop when idle
     $self->top_window->afterIdle(sub{ return $self->RequestQueuer->features_loaded_callback(@featuresets); });
 

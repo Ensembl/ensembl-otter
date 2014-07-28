@@ -795,28 +795,6 @@ sub _value_merge {
     return $v1;
 }
 
-sub zmap_config_update {
-    my ($self) = @_;
-
-    my $cfg_path = sprintf "%s/ZMap", $self->zmap_dir;
-    my $cfg = $self->{_zmap_cfg} ||=
-        Config::IniFiles->new( -file => $cfg_path );
-
-    foreach my $column ($self->ColumnCollection->list_Columns) {
-        my $name = $column->name;
-        if ($column->status eq 'Visible') {
-            $cfg->setval($name,'delayed','false');
-        }
-        else {
-            $cfg->setval($name,'delayed','true');
-        }
-    }
-
-    $cfg->RewriteConfig;
-
-    return;
-}
-
 sub stylesfile {
     my ($self) = @_;
     return sprintf '%s/styles.ini', $self->zmap_dir;
