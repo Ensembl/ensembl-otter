@@ -12,7 +12,7 @@ use Bio::Otter::Lace::DB::OTFRequest;
 
 use base 'Bio::Otter::Lace::DB::Adaptor';
 
-sub columns { return qw( id logic_name target_start command status n_hits transcript_id ); }
+sub columns { return qw( id logic_name target_start command status n_hits transcript_id caller_ref raw_result ); }
 
 sub key_column_name       { return 'id'; }
 sub key_is_auto_increment { return 1;    }
@@ -24,7 +24,7 @@ my $all_columns = __PACKAGE__->all_columns;
 sub SQL {
     return {
     store =>            qq{ INSERT INTO otter_otf_request ( ${all_columns} )
-                                                   VALUES ( ?, ?, ?, ?, ?, ?, ? )
+                                                   VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ? )
                           },
     update =>            q{ UPDATE otter_otf_request
                                SET id           = ?
@@ -34,6 +34,8 @@ sub SQL {
                                  , status       = ?
                                  , n_hits       = ?
                                  , transcript_id = ?
+                                 , caller_ref    = ?
+                                 , raw_result    = ?
                              WHERE id = ?
                           },
     update_status =>     q{ UPDATE otter_otf_request SET status = ? WHERE id = ? },

@@ -83,6 +83,20 @@ sub transcript_id {
     return $transcript_id;
 }
 
+sub caller_ref {
+    my ($self, @args) = @_;
+    ($self->{'caller_ref'}) = @args if @args;
+    my $caller_ref = $self->{'caller_ref'};
+    return $caller_ref;
+}
+
+sub raw_result {
+    my ($self, @args) = @_;
+    ($self->{'raw_result'}) = @args if @args;
+    my $raw_result = $self->{'raw_result'};
+    return $raw_result;
+}
+
 # These two are exonerate-specific
 #
 sub query_file {

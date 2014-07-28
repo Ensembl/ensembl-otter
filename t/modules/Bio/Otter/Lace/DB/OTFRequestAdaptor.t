@@ -32,11 +32,15 @@ $req[0] = $obj_class->new(
     logic_name  => 'OTFRequestAdaptorTest_EST',
     target_start=> 12446,
     command     => 'exonerate',
+    transcript_id=>78088,
+    caller_ref  => "Test:$$:A",
     args        => { '--opt' => 'THIS', '--flag' => undef },
     );
 $req[1] = $obj_class->new(
     logic_name  => 'OTFRequestAdaptorTest_Protein',
     command     => 'crossmatch',
+    transcript_id=>78089,
+    caller_ref  => "Test:$$:B",
     args        => { foo => 1, baa => undef, },
     );
 
@@ -53,7 +57,7 @@ request_ok($rbln, $req[1], 'fetch_by_logic_name_status (matches)');
 $req[0]->n_hits(3);
 $req[0]->status('completed');
 $req[0]->missed_hits(['AB1234.5', 'CDEFG.6']);
-
+$req[0]->raw_result('Loads of detailed match ASCII art');
 ok($ra->update($req[0]), "update");
 
 $rbln = $ra->fetch_by_logic_name_status('OTFRequestAdaptorTest_EST', 'completed');
