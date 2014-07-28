@@ -261,6 +261,7 @@ sub initialise {
                 -message => 'Error running exonerate: ' . $err,
                 -type    => 'OK',
             );
+            $self->logger->error('Error running exonerate: ', $err);
         };
         $doing_launch = 0;
     };
