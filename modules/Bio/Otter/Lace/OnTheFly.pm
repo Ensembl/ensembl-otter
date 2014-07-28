@@ -61,6 +61,12 @@ has 'maxintron'    => (
     trigger => sub { my ($self, $val) = @_; $self->_set_aligner_option('--maxintron', $val) },
 );
 
+has 'logic_names' => (
+    is  => 'ro',
+    isa => 'ArrayRef[Str]',
+    required => 1,
+);
+
 sub BUILD {
     my ($self, $params) = @_;
 
@@ -81,19 +87,13 @@ sub pre_launch_setup {
         my $dna_saf_a  = $vega_dba->get_DnaSplicedAlignFeatureAdaptor;
         my $pro_saf_a  = $vega_dba->get_ProteinSplicedAlignFeatureAdaptor;
 
-        foreach my $logic_name ($self->logic_names) {
+        foreach my $logic_name (@{$self->logic_names}) {
             if (my $analysis = $analysis_a->fetch_by_logic_name($logic_name)) {
                 my $saf_a = $logic_name =~ /protein/i ? $pro_saf_a : $dna_saf_a;
                 $saf_a->remove_by_analysis_id($analysis->dbID);
             }
         }
     }
-    return;
-}
-
-# Override in subclasses
-#
-sub logic_names {
     return;
 }
 

@@ -179,16 +179,31 @@ sub Filter {
     return $self->{'_Filter'};
 }
 
-sub internal_type_is {
-    my ($self, $required) = @_;
+sub internal_type {
+    my ($self) = @_;
 
     my $filter = $self->Filter;
     return unless $filter;
 
-    my $internal = $filter->internal;
-    return unless $internal;
+    return $filter->internal;
+}
 
-    return ($internal eq $required);
+sub internal_type_is {
+    my ($self, $required) = @_;
+
+    my $internal_type = $self->internal_type;
+    return unless $internal_type;
+
+    return ($internal_type eq $required);
+}
+
+sub internal_type_like {
+    my ($self, $regexp) = @_;
+
+    my $internal_type = $self->internal_type;
+    return unless $internal_type;
+
+    return ($internal_type =~ $regexp);
 }
 
 1;

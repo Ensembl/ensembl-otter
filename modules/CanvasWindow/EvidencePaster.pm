@@ -435,6 +435,8 @@ sub align_to_transcript {
         long_query_cb     => sub { $top->Tk::Utils::OnTheFly::long_query_confirm(@_)  },
 
         accession_type_cache => $self->SessionWindow->AceDatabase->AccessionTypeCache,
+
+        logic_names          => $self->SessionWindow->OTF_Transcript_columns,
         });
 
     my $logger = $self->logger;
