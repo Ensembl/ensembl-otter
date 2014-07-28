@@ -484,6 +484,8 @@ sub launch_exonerate {
         long_query_cb     => sub { $self->top->Tk::Utils::OnTheFly::long_query_confirm(@_)  },
 
         accession_type_cache => $SessionWindow->AceDatabase->AccessionTypeCache,
+
+        logic_names          => $SessionWindow->OTF_Genomic_columns,
         );
 
     # get marked region (if requested)
@@ -524,7 +526,7 @@ sub launch_exonerate {
     $self->top->withdraw;
 
     if ($self->{'_clear_existing'}) {
-        $SessionWindow->delete_featuresets($otf->logic_names);
+        $SessionWindow->delete_featuresets(@{$otf->logic_names});
     }
 
     $SessionWindow->launch_exonerate($otf);

@@ -31,17 +31,6 @@ sub build_runner {
         );
 }
 
-# FIXME: it would be good to get these from the config.
-#
-sub logic_names {
-    return qw(
-        OTF_TS_EST
-        OTF_TS_ncRNA
-        OTF_TS_mRNA
-        OTF_TS_Protein
-        );
-}
-
 1;
 
 __END__

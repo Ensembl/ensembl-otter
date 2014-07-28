@@ -46,7 +46,7 @@ my $sfg = Bio::Otter::Utils::SliceFeaturesGFF->new(
 my $otf = Test::MockObject->new;
 $otf->set_true('clear_existing');
 $otf->mock('pre_launch_setup', sub { return shift->Bio::Otter::Lace::OnTheFly::pre_launch_setup(@_); });
-$otf->mock('logic_names',      sub { return qw( OTF_Test_EST OTF_Test_Protein ); });
+$otf->mock('logic_names',      sub { return [qw( OTF_Test_EST OTF_Test_Protein )]; });
 
 foreach my $test ( fixed_genomic_tests() ) {
 

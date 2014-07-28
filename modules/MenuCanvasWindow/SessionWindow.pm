@@ -2184,6 +2184,27 @@ sub launch_exonerate {
     return;
 }
 
+sub _cached_columns_by_internal_type {
+    my ($self, $internal_type, $key) = @_;
+
+    my $_columns = $self->{$key};
+    return $_columns if $_columns;
+
+    my $collection = $self->ColumnChooser->root_Collection;
+    my @columns = map { $_->Filter->name } $collection->list_Columns_with_internal_type($internal_type);
+    return $self->{$key} = [ @columns ];
+}
+
+sub OTF_Genomic_columns {
+    my ($self) = @_;
+    return $self->_cached_columns_by_internal_type('on_the_fly_genomic', 'OTF_Genomic_columns');
+}
+
+sub OTF_Transcript_columns {
+    my ($self) = @_;
+    return $self->_cached_columns_by_internal_type('on_the_fly_transcript', 'OTF_Transcript_columns');
+}
+
 sub ace_DNA {
     my ($self, $name, $seq) = @_;
 
@@ -2646,7 +2667,7 @@ sub zircon_zmap_view_features_loaded {
             $column->status_detail($message);
             $col_aptr->store_Column_state($column);
 
-            push @otf_loaded, $set_name if $column->internal_type_is('on_the_fly');
+            push @otf_loaded, $set_name if $column->internal_type_like(qr/^on_the_fly/);
         }
         # else {
         #     # We see a warning for each acedb featureset
