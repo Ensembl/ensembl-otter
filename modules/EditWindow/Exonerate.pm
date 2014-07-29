@@ -529,7 +529,18 @@ sub launch_exonerate {
         $SessionWindow->delete_featuresets(@{$otf->logic_names});
     }
 
-    $SessionWindow->launch_exonerate($otf);
+    my $key = "$otf";
+    $SessionWindow->register_exonerate_callback(
+        $key,
+        sub {
+            if (Tk::Exists($self->top)) {
+                $self->display_request_feedback(@_);
+            } else {
+                $self->logger->warn('OTF feedback: window gone.');
+            }
+            return;
+        });
+    $SessionWindow->launch_exonerate($otf, $key);
 
     return 1;
 }

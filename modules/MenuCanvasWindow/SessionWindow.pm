@@ -2150,7 +2150,7 @@ sub update_SubSeq_locus_level_errors {
 }
 
 sub launch_exonerate {
-    my ($self, $otf) = @_;
+    my ($self, $otf, $caller) = @_;
 
     my $db = $self->AceDatabase->DB;
 
@@ -2162,9 +2162,6 @@ sub launch_exonerate {
 
     my @method_names;
 
-    my $ew = $self->{_exonerate_window};
-    $self->register_exonerate_callback($ew);
-
     for my $builder ( $otf->builders_for_each_type ) {
 
         my $type = $builder->type;
@@ -2173,7 +2170,7 @@ sub launch_exonerate {
 
         # Set up a request for the filter script
         my $request = $builder->prepare_run;
-        $request->caller_ref($ew);
+        $request->caller_ref($caller);
         $request_adaptor->store($request);
 
         my $analysis_name = $builder->analysis_name;
@@ -2451,18 +2448,20 @@ sub run_exonerate {
     return 1;
 }
 
-{
-    my %exonerate_callback;
+sub _exonerate_callbacks {
+    my ($self) = @_;
+    return $self->{_exonerate_callbacks} ||= {};
+}
 
-    sub register_exonerate_callback {
-        my ($self, $callback) = @_;
-        return $exonerate_callback{$callback} = $callback;
-    }
+sub register_exonerate_callback {
+    my ($self, $key, $callback) = @_;
+    $self->_exonerate_callbacks->{$key} = $callback;
+    return;
+}
 
-    sub _exonerate_callback {
-        my ($self, $key) = @_;
-        return $exonerate_callback{$key};
-    }
+sub remove_exonerate_callback {
+    my ($self, $key) = @_;
+    return delete $self->_exonerate_callbacks->{$key};
 }
 
 sub exonerate_done_callback {
@@ -2476,13 +2475,15 @@ sub exonerate_done_callback {
         my $request = $request_adaptor->fetch_by_logic_name_status($set, 'completed');
         next unless $request;
         push @requests, $request;
-        push @requests_with_feedback, $request if ($request->n_hits == 0 or $request->missed_hits or $request->raw_result);
+        if ($request->n_hits == 0 or $request->missed_hits or $request->raw_result) {
+            push @requests_with_feedback, $request;
+        }
     }
 
     foreach my $request (@requests_with_feedback) {
-        my $callback = $self->_exonerate_callback($request->caller_ref);
+        my $callback = $self->_exonerate_callbacks->{$request->caller_ref};
         if ($callback) {
-            $callback->display_request_feedback($request);
+            $callback->($request);
         } else {
             $self->logger->error(sprintf('OTF results but no callback registered [%d,%s,%d]',
                                          $request->id, $request->logic_name, $request->caller_ref));
