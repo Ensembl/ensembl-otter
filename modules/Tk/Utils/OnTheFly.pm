@@ -29,6 +29,18 @@ sub long_query_confirm {
     return ($response eq 'Yes');
 }
 
+# Caller must supply display_request_feedback() and logger().
+#
+sub exonerate_callback {
+    my ($caller, $request) = @_;
+    if (Tk::Exists($caller->top)) {
+        $caller->display_request_feedback($request);
+    } else {
+        $caller->logger->warn('OTF feedback: window gone.');
+    }
+    return;
+}
+
 1;
 
 __END__

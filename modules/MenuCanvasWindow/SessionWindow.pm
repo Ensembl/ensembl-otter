@@ -2149,42 +2149,6 @@ sub update_SubSeq_locus_level_errors {
     return;
 }
 
-sub launch_exonerate {
-    my ($self, $otf, $caller) = @_;
-
-    my $db = $self->AceDatabase->DB;
-
-    # Clear columns if requested
-    my $db_slice = $db->session_slice;
-    $otf->pre_launch_setup(slice => $db_slice);
-
-    my $request_adaptor = $db->OTFRequestAdaptor;
-
-    my @method_names;
-
-    for my $builder ( $otf->builders_for_each_type ) {
-
-        my $type = $builder->type;
-
-        $self->logger->info("Running exonerate for sequence(s) of type: $type");
-
-        # Set up a request for the filter script
-        my $request = $builder->prepare_run;
-        $request->caller_ref($caller);
-        $request_adaptor->store($request);
-
-        my $analysis_name = $builder->analysis_name;
-        push @method_names, $analysis_name;
-
-        # Ensure new-style columns are selected if used
-        $self->AceDatabase->select_column_by_name($analysis_name);
-    }
-
-    $self->RequestQueuer->request_features(@method_names) if @method_names;
-
-    return;
-}
-
 sub _cached_columns_by_internal_type {
     my ($self, $internal_type, $key) = @_;
 
