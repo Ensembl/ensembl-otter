@@ -2454,8 +2454,18 @@ sub _exonerate_callbacks {
 }
 
 sub register_exonerate_callback {
-    my ($self, $key, $callback) = @_;
-    $self->_exonerate_callbacks->{$key} = $callback;
+    my ($self, $key, $caller, $callback) = @_;
+
+    weaken($caller);
+    my $weakened_callback = sub {
+        unless ($caller) {
+            warn "exonerate_callback caller for '$key' no longer exists\n";
+            return;
+        }
+        return $caller->$callback(@_);
+    };
+
+    $self->_exonerate_callbacks->{$key} = $weakened_callback;
     return;
 }
 
