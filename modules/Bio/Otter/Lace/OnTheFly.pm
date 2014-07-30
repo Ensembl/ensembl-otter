@@ -10,6 +10,8 @@ use Bio::Otter::Lace::OnTheFly::QueryValidator;
 use Bio::Otter::Lace::OnTheFly::Runner;
 use Bio::Otter::Lace::OnTheFly::TargetSeq;
 
+with 'MooseX::Log::Log4perl';
+
 has 'query_validator' => (
     is      => 'ro',
     isa     => 'Bio::Otter::Lace::OnTheFly::QueryValidator',
@@ -119,6 +121,40 @@ sub builders_for_each_type {
 sub build_runner {
     my ($self, @params) = @_;
     return Bio::Otter::Lace::OnTheFly::Runner->new(@params);
+}
+
+sub prep_and_store_request_for_each_type {
+    my ($self, $session_window, $caller_key) = @_;
+
+    my $ace_db = $session_window->AceDatabase;
+    my $sql_db = $ace_db->DB;
+
+    # Clear columns if requested
+    $self->pre_launch_setup(slice => $sql_db->session_slice);
+
+    my $request_adaptor = $sql_db->OTFRequestAdaptor;
+
+    my @method_names;
+
+    foreach my $builder ( $self->builders_for_each_type ) {
+
+        $self->logger->info("Running exonerate for sequence(s) of type: ", $builder->type);
+
+        # Set up a request for the filter script
+        my $request = $builder->prepare_run;
+        $request->caller_ref($caller_key);
+        $request_adaptor->store($request);
+
+        my $analysis_name = $builder->analysis_name;
+        push @method_names, $analysis_name;
+
+        # Ensure new-style columns are selected if used
+        $ace_db->select_column_by_name($analysis_name);
+    }
+
+    $session_window->RequestQueuer->request_features(@method_names) if @method_names;
+
+    return @method_names;
 }
 
 1;

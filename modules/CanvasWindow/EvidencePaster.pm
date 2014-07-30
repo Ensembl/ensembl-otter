@@ -494,51 +494,14 @@ sub align_to_transcript {
     my $ts_file = $otf->target_fasta_file;
     $logger->info("Wrote transcript sequence to ${ts_file}");
 
-    # FIXME: code duplication with SessionWindow
-    my $ace_db = $self->SessionWindow->AceDatabase;
-    my $db_slice = $ace_db->DB->session_slice;
-    $otf->pre_launch_setup(slice => $db_slice);
-
     if ($self->clear_existing) {
         $self->SessionWindow->delete_featuresets(@{$otf->logic_names});
     }
 
-    my $request_adaptor = $ace_db->DB->OTFRequestAdaptor;
-
-    my @method_names;
-
     my $key = "$otf";
-    $self->SessionWindow->register_exonerate_callback($key, $self, \&_exonerate_callback);
+    $self->SessionWindow->register_exonerate_callback($key, $self, \&Tk::Utils::OnTheFly::exonerate_callback);
 
-    foreach my $builder ( $otf->builders_for_each_type ) {
-
-        $logger->info("Running exonerate for sequence(s) of type: ", $builder->type);
-
-        my $seq_file = $builder->fasta_file;
-        $logger->info("Wrote sequences to ${seq_file}");
-
-        my $request = $builder->prepare_run;
-        $request->caller_ref($key);
-        $request_adaptor->store($request);
-
-        my $analysis_name = $builder->analysis_name;
-        push @method_names, $analysis_name;
-
-        # Ensure new-style columns are selected if used
-        $ace_db->select_column_by_name($analysis_name);
-    }
-
-    $self->SessionWindow->RequestQueuer->request_features(@method_names) if @method_names;
-    return;
-}
-
-sub _exonerate_callback {
-    my ($self, $request) = @_;
-    if (Tk::Exists($self->top)) {
-        $self->display_request_feedback($request);
-    } else {
-        $self->logger->warn('OTF feedback: window gone.');
-    }
+    $otf->prep_and_store_request_for_each_type($self->SessionWindow, $key);
     return;
 }
 

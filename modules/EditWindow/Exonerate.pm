@@ -530,20 +530,10 @@ sub launch_exonerate {
     }
 
     my $key = "$otf";
-    $SessionWindow->register_exonerate_callback($key, $self, \&_exonerate_callback);
-    $SessionWindow->launch_exonerate($otf, $key);
+    $SessionWindow->register_exonerate_callback($key, $self, \&Tk::Utils::OnTheFly::exonerate_callback);
+    $otf->prep_and_store_request_for_each_type($SessionWindow, $key);
 
     return 1;
-}
-
-sub _exonerate_callback {
-    my ($self, $request) = @_;
-    if (Tk::Exists($self->top)) {
-        $self->display_request_feedback($request);
-    } else {
-        $self->logger->warn('OTF feedback: window gone.');
-    }
-    return;
 }
 
 sub display_request_feedback {
