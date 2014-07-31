@@ -15,7 +15,8 @@ use Test::OtterLaceOnTheFly qw( fixed_transcript_tests build_target run_otf_test
 use Bio::EnsEMBL::CoordSystem;
 use Bio::EnsEMBL::Slice;
 
-use Hum::Ace::SubSeq;
+use Bio::Vega::Exon;
+use Bio::Vega::Transcript;
 
 my @modules;
 
@@ -90,28 +91,33 @@ sub run_test {
 sub run_otf_transcript_test {
     my ($test, $target) = @_;
 
+    my $transcript = build_vega_transcript($test->{ts_spec}, $test->{ts_strand});
+
     $test->{builder_class} = 'Bio::Otter::Lace::OnTheFly::Builder::Transcript';
     $test->{runner_class}  = 'Bio::Otter::Lace::OnTheFly::Runner::Transcript';
-    $test->{runner_args}   = { transcript => build_transcript($test->{ts_spec}, $test->{ts_strand}) };
+    $test->{runner_args}   = { vega_transcript => $transcript };
 
-    return run_otf_test($test, $target);
+    return run_otf_test($test, $target, { vega_transcript => $transcript });
 }
 
-sub build_transcript {
+sub build_vega_transcript {
     my ($spec_fn, $strand) = @_;
 
     open my $spec_fh, '<', $spec_fn or die "failed to open ${spec_fn}: $!";
 
-    my $ts = Hum::Ace::SubSeq->new;
+    # FIXME: duplication with TranscriptWindow->ensEMBL_Transcript_from_tk()
+    my $ts = Bio::Vega::Transcript->new;
     $ts->strand($strand);
 
     while (my $line = <$spec_fh>) {
         chomp $line;
         next if $line =~ /^#/;
         my ($name, $q_start, $q_end, $t_start, $t_end) = split "\t", $line;
-        my $exon = $ts->new_Exon;
+        my $exon = Bio::Vega::Exon->new;
         $exon->start($t_start);
         $exon->end($t_end);
+        $exon->strand($strand);
+        $ts->add_Exon($exon);
     }
 
     return $ts;

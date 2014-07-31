@@ -45,6 +45,7 @@ sub do_requires {
     my ($self) = @_;
     $self->SUPER::do_requires;
     require Bio::Otter::Lace::OnTheFly::Runner;
+    require Bio::Otter::Lace::OnTheFly::Runner::Transcript;
     return;
 }
 
@@ -52,9 +53,12 @@ sub run_request {
     my ($self, $request) = @_;
     $self->log_message('got a request');
     $self->do_requires;         # in full this time
-    my $runner = Bio::Otter::Lace::OnTheFly::Runner->new(
+    my $transcript   = $self->load_transcript($request);
+    my $runner_class = $self->runner_class_from_request($request);
+    my $runner = $runner_class->new(
         request         => $request,
         resultset_class => 'Bio::Otter::Lace::OnTheFly::ResultSet::GetScript',
+        vega_transcript => $transcript, # ignored unless B:O:L:OTF:Runner::Transcript
         );
     my $result_set = $runner->run;
     $result_set->db_store($self->vega_slice);
@@ -62,12 +66,34 @@ sub run_request {
     my $n_hits = scalar($result_set->hit_query_ids);
     $request->status('completed');
     $request->n_hits($n_hits);
+    $request->raw_result($result_set->raw) if $runner_class eq 'Bio::Otter::Lace::OnTheFly::Runner::Transcript';
 
     my @missed_hits = $result_set->query_ids_not_hit;
     $self->log_message(sprintf('missed: [%s]', join(',', @missed_hits)));
     $request->missed_hits(\@missed_hits);
 
     return;
+}
+
+sub load_transcript {
+    my ($self, $request) = @_;
+    return unless $request->transcript_id;
+
+    my $ts_adaptor = $self->local_db->vega_dba->get_TranscriptAdaptor;
+    my $ts = $ts_adaptor->fetch_by_dbID($request->transcript_id);
+
+    # ts is in chromosome coords, we want it in region coords now.
+    my $slice = $self->vega_slice;
+    return $ts->transfer($slice);
+}
+
+sub runner_class_from_request {
+    my ($self, $request) = @_;
+    my $runner = 'Bio::Otter::Lace::OnTheFly::Runner';
+    my $logic_name = $request->logic_name;
+    return "${runner}::Transcript" if $logic_name =~ /^OTF_TS_/;
+    return "${runner}"             if $logic_name =~ /^OTF_/;
+    die "Unexpected logic_name '$logic_name'";
 }
 
 ## no critic (Modules::ProhibitMultiplePackages)

@@ -19,9 +19,11 @@ use Hum::Sort qw{ ace_sort };
 use Tk::LabFrame;
 use Tk::Checkbutton;
 use Tk::Radiobutton;
-use Tk::Utils::OnTheFly;
 
-use base 'EditWindow';
+use base qw{
+    EditWindow
+    Bio::Otter::UI::OnTheFlyMixin
+    };
 
 my $BEST_N            = 1;
 my $MAX_INTRON_LENGTH = 200000;
@@ -464,6 +466,8 @@ sub launch_exonerate {
     my $bestn     = $self->get_entry('bestn') || 0;
     my $maxintron = $self->get_entry('max_intron_length') || 0;
 
+    my $top = $self->top;
+
     my $otf = Bio::Otter::Lace::OnTheFly::Genomic->new(
 
         seqs       => $self->entered_seqs,
@@ -480,8 +484,8 @@ sub launch_exonerate {
 
         lowercase_poly_a_t_tails => 1, # to avoid spurious exons
 
-        problem_report_cb => sub { $self->top->Tk::Utils::OnTheFly::problem_box('Accessions Supplied', @_) },
-        long_query_cb     => sub { $self->top->Tk::Utils::OnTheFly::long_query_confirm(@_)  },
+        problem_report_cb => sub { $self->problem_box($top, 'Accessions Supplied', @_) },
+        long_query_cb     => sub { $self->long_query_confirm($top, @_)  },
 
         accession_type_cache => $SessionWindow->AceDatabase->AccessionTypeCache,
 
@@ -499,7 +503,7 @@ sub launch_exonerate {
     }
 
     if ($otf->target_all_repeat) {
-        $self->top->messageBox(
+        $top->messageBox(
             -title   => $Bio::Otter::Lace::Client::PFX.'All Repeat',
             -icon    => 'warning',
             -message => 'The genomic sequence is entirely repeat',
@@ -514,7 +518,7 @@ sub launch_exonerate {
     $self->logger->warn("Found ", scalar(@$seqs), " sequences");
 
     unless (@$seqs) {
-        $self->top->messageBox(
+        $top->messageBox(
             -title   => $Bio::Otter::Lace::Client::PFX.'No Sequence',
             -icon    => 'warning',
             -message => 'Did not get any query sequence data',
@@ -523,56 +527,22 @@ sub launch_exonerate {
         return;
     }
 
-    $self->top->withdraw;
+    $top->withdraw;
 
     if ($self->{'_clear_existing'}) {
         $SessionWindow->delete_featuresets(@{$otf->logic_names});
     }
 
     my $key = "$otf";
-    $SessionWindow->register_exonerate_callback($key, $self, \&_exonerate_callback);
-    $SessionWindow->launch_exonerate($otf, $key);
+    $SessionWindow->register_exonerate_callback($key, $self, \&Bio::Otter::UI::OnTheFlyMixin::exonerate_callback);
+    $otf->prep_and_store_request_for_each_type($SessionWindow, $key);
 
     return 1;
 }
 
-sub _exonerate_callback {
-    my ($self, $request) = @_;
-    if (Tk::Exists($self->top)) {
-        $self->display_request_feedback($request);
-    } else {
-        $self->logger->warn('OTF feedback: window gone.');
-    }
-    return;
-}
-
 sub display_request_feedback {
     my ($self, $request) = @_;
-
-    my $top = $self->top;
-    $top->deiconify;
-    $top->raise;
-
-    my $name = $request->logic_name;
-    unless ($request->n_hits) {
-        $top->messageBox(
-            -title   => $Bio::Otter::Lace::Client::PFX.'No Matches',
-            -icon    => 'warning',
-            -message => "Exonerate did not find any '$name' matches on genomic sequence",
-            -type    => 'OK',
-            );
-        return;
-    }
-
-    $top->messageBox(
-        -title   => $Bio::Otter::Lace::Client::PFX.'Missing Matches',
-        -icon    => 'warning',
-        -message => join("\n",
-                         "Exonerate did not find '$name' matches for:",
-                         sort @{$request->missed_hits},
-        ),
-        -type    => 'OK',
-        );
+    $self->report_missed_hits($self->SessionWindow, $request, 'genomic');
     return;
 }
 
