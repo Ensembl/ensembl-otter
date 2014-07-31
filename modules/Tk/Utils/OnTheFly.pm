@@ -41,6 +41,39 @@ sub exonerate_callback {
     return;
 }
 
+# Caller must supply expection_message() and logger().
+#
+sub missed_hits {
+    my ($caller, $request, $flavour) = @_;
+
+    my $top = $caller->top;
+    $top->deiconify;
+    $top->raise;
+
+    my $name = $request->logic_name;
+    my $message = "Exonerate of ${name} queries against ${flavour} sequence: ";
+
+    unless ($request->n_hits) {
+        _record_missed_hits($caller, $message, 'No matches');
+        return;
+    }
+
+    if ($request->missed_hits and @{$request->missed_hits}) {
+        my $details = 'No hits for: ' . join(',', sort @{$request->missed_hits});
+        _record_missed_hits($caller, $message, $details);
+        return;
+    }
+
+    return;
+}
+
+sub _record_missed_hits {
+    my ($caller, $message, $details) = @_;
+    $caller->logger->info($message, $details);
+    $caller->exception_message($details, $message);
+    return;
+}
+
 1;
 
 __END__
