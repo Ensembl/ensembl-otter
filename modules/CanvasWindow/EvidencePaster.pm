@@ -510,7 +510,9 @@ sub align_to_transcript {
 sub display_request_feedback {
     my ($self, $request) = @_;
     $self->logger->debug(sprintf('OTF result for [%d,%s]', $request->id, $request->logic_name));
-    $self->alignment_window($request->raw_result, $request->logic_name);
+    if ($request->n_hits) {
+        $self->alignment_window($request->raw_result, $request->logic_name);
+    }
     $self->report_missed_hits($self, $request, 'spliced transcript');
     return;
 }
