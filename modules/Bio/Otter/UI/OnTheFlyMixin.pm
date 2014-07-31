@@ -1,11 +1,11 @@
 
-package Tk::Utils::OnTheFly;
+package Bio::Otter::UI::OnTheFlyMixin;
 
 use strict;
 use warnings;
 
 sub problem_box {
-    my ($top, $title, $warnings) = @_;
+    my ($self, $top, $title, $warnings) = @_;
     $top->messageBox(
         -title   => $Bio::Otter::Lace::Client::PFX.'Problems With ' . $title,
         -icon    => 'warning',
@@ -16,7 +16,7 @@ sub problem_box {
 }
 
 sub long_query_confirm {
-    my ($top, $details) = @_;
+    my ($self, $top, $details) = @_;
     my $response = $top->messageBox(
         -title   => $Bio::Otter::Lace::Client::PFX.'Unusually Long Query Sequence',
         -icon    => 'warning',
@@ -29,24 +29,20 @@ sub long_query_confirm {
     return ($response eq 'Yes');
 }
 
-# Caller must supply display_request_feedback() and logger().
-#
 sub exonerate_callback {
-    my ($caller, $request) = @_;
-    if (Tk::Exists($caller->top)) {
-        $caller->display_request_feedback($request);
+    my ($self, $request) = @_;
+    if (Tk::Exists($self->top)) {
+        $self->display_request_feedback($request);
     } else {
-        $caller->logger->warn('OTF feedback: window gone.');
+        $self->logger->warn('OTF feedback: window gone.');
     }
     return;
 }
 
-# Caller must supply expection_message() and logger().
-#
-sub missed_hits {
-    my ($caller, $request, $flavour) = @_;
+sub report_missed_hits {
+    my ($self, $where, $request, $flavour) = @_;
 
-    my $top = $caller->top;
+    my $top = $where->top;
     $top->deiconify;
     $top->raise;
 
@@ -54,13 +50,13 @@ sub missed_hits {
     my $message = "Exonerate of ${name} queries against ${flavour} sequence: ";
 
     unless ($request->n_hits) {
-        _record_missed_hits($caller, $message, 'No matches');
+        $self->_record_missed_hits($where, $message, 'No matches');
         return;
     }
 
     if ($request->missed_hits and @{$request->missed_hits}) {
         my $details = 'No hits for: ' . join(',', sort @{$request->missed_hits});
-        _record_missed_hits($caller, $message, $details);
+        $self->_record_missed_hits($where, $message, $details);
         return;
     }
 
@@ -68,9 +64,9 @@ sub missed_hits {
 }
 
 sub _record_missed_hits {
-    my ($caller, $message, $details) = @_;
-    $caller->logger->info($message, $details);
-    $caller->exception_message($details, $message);
+    my ($self, $where, $message, $details) = @_;
+    $self->logger->info($message, $details);
+    $where->exception_message($details, $message);
     return;
 }
 
@@ -78,7 +74,7 @@ sub _record_missed_hits {
 
 __END__
 
-=head1 NAME - Tk::Utils::OnTheFly
+=head1 NAME - Bio::Otter::UI::OnTheFlyMixin
 
 =head1 AUTHOR
 
