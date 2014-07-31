@@ -538,31 +538,7 @@ sub launch_exonerate {
 
 sub display_request_feedback {
     my ($self, $request) = @_;
-
-    my $top = $self->top;
-    $top->deiconify;
-    $top->raise;
-
-    my $name = $request->logic_name;
-    unless ($request->n_hits) {
-        $top->messageBox(
-            -title   => $Bio::Otter::Lace::Client::PFX.'No Matches',
-            -icon    => 'warning',
-            -message => "Exonerate did not find any '$name' matches on genomic sequence",
-            -type    => 'OK',
-            );
-        return;
-    }
-
-    $top->messageBox(
-        -title   => $Bio::Otter::Lace::Client::PFX.'Missing Matches',
-        -icon    => 'warning',
-        -message => join("\n",
-                         "Exonerate did not find '$name' matches for:",
-                         sort @{$request->missed_hits},
-        ),
-        -type    => 'OK',
-        );
+    Tk::Utils::OnTheFly::missed_hits($self->SessionWindow, $request, 'genomic');
     return;
 }
 

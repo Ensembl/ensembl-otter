@@ -509,6 +509,7 @@ sub display_request_feedback {
     my ($self, $request) = @_;
     $self->logger->debug(sprintf('OTF result for [%d,%s]', $request->id, $request->logic_name));
     $self->alignment_window($request->raw_result, $request->logic_name);
+    Tk::Utils::OnTheFly::missed_hits($self, $request, 'spliced transcript');
     return;
 }
 
