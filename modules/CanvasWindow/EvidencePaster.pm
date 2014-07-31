@@ -13,10 +13,12 @@ use Bio::Otter::Lace::Client;
 use Bio::Otter::Lace::OnTheFly::Transcript;
 use Bio::Otter::UI::TextWindow::TranscriptAlign;
 use Bio::Vega::Evidence::Types qw(evidence_is_sra_sample_accession);
-use Tk::Utils::OnTheFly;
 use Tk::ScopedBusy;
 
-use base 'CanvasWindow';
+use base qw{
+    CanvasWindow
+    Bio::Otter::UI::OnTheFlyMixin
+    };
 
 Readonly my $EVI_TAG     => 'IsEvidence';
 Readonly my $CURRENT_EVI => "current&&${EVI_TAG}";
@@ -479,8 +481,8 @@ sub align_to_transcript {
 
         vega_transcript => $vega_transcript,
 
-        problem_report_cb => sub { $top->Tk::Utils::OnTheFly::problem_box('Evidence Selected', @_) },
-        long_query_cb     => sub { $top->Tk::Utils::OnTheFly::long_query_confirm(@_)  },
+        problem_report_cb => sub { $self->problem_box($top, 'Evidence Selected', @_) },
+        long_query_cb     => sub { $self->long_query_confirm($top, @_)  },
 
         accession_type_cache => $self->SessionWindow->AceDatabase->AccessionTypeCache,
 
@@ -499,7 +501,7 @@ sub align_to_transcript {
     }
 
     my $key = "$otf";
-    $self->SessionWindow->register_exonerate_callback($key, $self, \&Tk::Utils::OnTheFly::exonerate_callback);
+    $self->SessionWindow->register_exonerate_callback($key, $self, \&Bio::Otter::UI::OnTheFlyMixin::exonerate_callback);
 
     $otf->prep_and_store_request_for_each_type($self->SessionWindow, $key);
     return;
@@ -509,7 +511,7 @@ sub display_request_feedback {
     my ($self, $request) = @_;
     $self->logger->debug(sprintf('OTF result for [%d,%s]', $request->id, $request->logic_name));
     $self->alignment_window($request->raw_result, $request->logic_name);
-    Tk::Utils::OnTheFly::missed_hits($self, $request, 'spliced transcript');
+    $self->report_missed_hits($self, $request, 'spliced transcript');
     return;
 }
 
