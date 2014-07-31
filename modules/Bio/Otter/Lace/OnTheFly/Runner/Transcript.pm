@@ -5,7 +5,7 @@ use Moose;
 
 extends 'Bio::Otter::Lace::OnTheFly::Runner';
 
-has transcript => ( is => 'ro', isa => 'Hum::Ace::SubSeq', required => 1 );
+has vega_transcript => ( is => 'ro', isa => 'Bio::Vega::Transcript', required => 1 );
 
 around 'parse' => sub {
     my ($orig, $self, @args) = @_;
@@ -28,7 +28,9 @@ sub _split_alignment {
         $self->log->warn(sprintf("More than one gapped alignment for '%s', using first.", $ga->query_id));
     }
 
-    return $ga->intronify_by_transcript_exons($self->transcript);
+    $ga = $ga->reverse_alignment if $ga->target_strand eq '-';
+
+    return $ga->intronify_by_transcript_exons($self->vega_transcript);
 }
 
 1;
