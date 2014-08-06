@@ -461,7 +461,9 @@ sub _repeat_masker {
 
 sub launch_exonerate {
     my ($self) = @_;
+
     my $SessionWindow = $self->SessionWindow;
+    $SessionWindow->AceDatabase->Client->reauthorize_if_cookie_will_expire_soon;
 
     my $bestn     = $self->get_entry('bestn') || 0;
     my $maxintron = $self->get_entry('max_intron_length') || 0;
