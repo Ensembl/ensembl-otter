@@ -562,7 +562,7 @@ sub entered_seqs {
             $string = ">OTF_seq_$seq_tag\n" . $string;
             $seq_tag++;
         }
-        $string = $self->_strip_seq_whitespace($string);
+        $string = $self->_tidy_pasted_sequence($string);
         push @seqs, Hum::FastaFileIO->new(\$string)->read_all_sequences;
     }
     if (my $file_name = $self->get_entry('fasta_file')) {
@@ -596,14 +596,20 @@ sub entered_accessions {
     return \@supplied_accs;
 }
 
-sub _strip_seq_whitespace {
+sub _tidy_pasted_sequence {
     my ($self, $seq) = @_;
     open my $fh, '<', \$seq or $self->logger->logdie('open stringref failed');
     my @stripped;
     while (my $line = <$fh>) {
         chomp $line;
         unless ($line =~ /^>/) {
-            $line =~ s/\s+//gs;
+            $line =~ s{       # strip leading line numbers:
+                          ^   #   start of line
+                          \s* #   optional leading whitespace
+                          \d+ #   line number
+                          \s+ #   at least some whitespace
+                      }{}x;
+            $line =~ s/\s+//g; # strip whitespace
         }
         push @stripped, $line if $line;
     }
