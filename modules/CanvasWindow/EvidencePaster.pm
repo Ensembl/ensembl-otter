@@ -34,93 +34,148 @@ sub initialise {
         -side => 'top',
         -fill => 'x',
         );
-
-    my $otf_frame = $action_frame->LabFrame(
-            Name => 'otf',
-            -label => 'OTF',
-            -border => 3,
-            )->pack(
+    {
+        my $otf_frame = $action_frame->LabFrame(
+                Name => 'otf',
+                -label  => 'On The Fly Alignment',
+                -border => 3,
+            )
+            ->pack(
                 -side => 'top',
                 -fill => 'x',
+            );
+        {
+            my $otf_ts_frame = $otf_frame->LabFrame(
+                    Name    => 'otf_ts',
+                    -label  => 'Spliced Transcript',
+                    -border => 3,
+                )
+                ->pack(
+                    -side   => 'left',
+                    -fill   => 'x',
+                    -expand => 1,
                 );
 
-    my $align = sub { $self->align_to_transcript; };
-    $top->bind('<Control-t>', $align);
-    $top->bind('<Control-T>', $align);
-    my $align_button = $otf_frame->Button(
-        -text =>    'Align to transcript',
-        -command => $align,
-        -state   => 'disabled',
-        )->pack(-side => 'top', -anchor => 'w');
-    $self->align_button($align_button);
+            my $align = sub { $self->align_to_transcript; };
+            $top->bind('<Control-t>', $align);
+            $top->bind('<Control-T>', $align);
+            my $align_button = $otf_ts_frame->Button(
+                    -text    => 'Align',
+                    -command => $align,
+                    -state   => 'disabled',
+                )
+                ->pack(
+                    -side   => 'top',
+                    -anchor => 'w'
+                );
+            $self->align_button($align_button);
 
-    my $clear_otf = $otf_frame->Checkbutton(
-        -variable => \$self->{_clear_existing},
-        -text     => 'Clear existing OTF alignments',
-        -anchor   => 'w',
-        -state    => 'disabled',
-    )->pack(-side => 'top', -anchor => 'w');
-    $self->clear_otf_checkbutton($clear_otf);
+            my $clear_otf = $otf_ts_frame->Checkbutton(
+                    -variable => \$self->{_clear_existing},
+                    -text     => 'Clear existing',
+                    -anchor   => 'w',
+                    -state    => 'disabled',
+                )
+                ->pack(
+                    -side   => 'top',
+                    -anchor => 'w'
+                );
+            $self->clear_otf_checkbutton($clear_otf);
+        }
 
-    my $dotter_frame = $action_frame->LabFrame(
-            Name => 'dotter',
-            -label => 'Dotter',
-            -border => 3,
-            )->pack(
+        {
+            my $otf_gen_frame = $otf_frame->LabFrame(
+                    Name    => 'otf_gen',
+                    -label  => 'Genomic',
+                    -border => 3,
+                )
+                ->pack(
+                    -side   => 'right',
+                    -fill   => 'both',
+                    -expand => 1,
+                );
+
+            my $launch = sub { $self->SessionWindow->run_exonerate; };
+            $top->bind('<Control-g>', $launch);
+            $top->bind('<Control-G>', $launch);
+            my $launch_button = $otf_gen_frame->Button(
+                    -text    => 'Open',
+                    -command => $launch,
+                    -state   => 'disabled',
+                )
+                ->pack(
+                    -side   => 'top',
+                    -anchor => 'w'
+                );
+            $self->genomic_otf_button($launch_button);
+        }
+    } # $otf_frame
+
+    {
+        my $dotter_frame = $action_frame->LabFrame(
+                Name    => 'dotter',
+                -label  => 'Dotter',
+                -border => 3,
+            )
+            ->pack(
                 -side => 'top',
                 -fill => 'x',
-                );
+            );
 
-    my $dotter = sub { $self->dotter_to_transcript; };
-    $top->bind('<Control-period>',  $dotter);
-    $top->bind('<Control-greater>', $dotter);
-    my $dotter_button = $dotter_frame->Button(
-        -text =>    'Dotter',
-        -command => $dotter,
-        -state   => 'disabled',
-        )->pack(-side => 'left');
-    $self->dotter_button($dotter_button);
+        my $dotter = sub { $self->dotter_to_transcript; };
+        $top->bind('<Control-period>',  $dotter);
+        $top->bind('<Control-greater>', $dotter);
+        my $dotter_button = $dotter_frame->Button(
+            -text    => 'Dotter',
+            -command => $dotter,
+            -state   => 'disabled',
+            )
+            ->pack(-side => 'left');
+        $self->dotter_button($dotter_button);
+    }
 
-    my $button_frame = $top->Frame(Name => 'button_frame')->pack(
-        -side => 'top',
-        -fill => 'x',
-        );
+    {
+        my $button_frame = $top->Frame(Name => 'button_frame')->pack(
+            -side => 'top',
+            -fill => 'x',
+            );
 
-    my $draw = sub{ $self->draw_evidence };
-    $top->bind('<Control-u>', $draw);
-    $top->bind('<Control-u>', $draw);
-    #$button_frame->Button(
-    #    -text => 'Update',
-    #    -command => $draw,
-    #    )->pack(-side => 'left');
+        my $draw = sub{ $self->draw_evidence };
+        $top->bind('<Control-u>', $draw);
+        $top->bind('<Control-u>', $draw);
+        #$button_frame->Button(
+        #    -text => 'Update',
+        #    -command => $draw,
+        #    )->pack(-side => 'left');
 
-    my $paste = sub{ $self->paste_type_and_name };
-    $top->bind('<Control-v>', $paste);
-    $top->bind('<Control-V>', $paste);
-    $top->bind('<Button-2>',  $paste);
-    $button_frame->Button(
-        -text => 'Paste',
-        -command => $paste,
-        )->pack(-side => 'left');
+        my $paste = sub{ $self->paste_type_and_name };
+        $top->bind('<Control-v>', $paste);
+        $top->bind('<Control-V>', $paste);
+        $top->bind('<Button-2>',  $paste);
+        $button_frame->Button(
+            -text => 'Paste',
+            -command => $paste,
+            )->pack(-side => 'left');
 
-    my $delete = sub{ $self->remove_selected_from_evidence_list };
-    $top->bind('<BackSpace>', $delete);
-    $top->bind('<Delete>',    $delete);
-    $top->bind('<Control-x>', $delete);
-    $top->bind('<Control-X>', $delete);
-    $button_frame->Button(
-        -text => 'Delete',
-        -command => $delete,
-        )->pack(-side => 'left');
+        my $delete = sub{ $self->remove_selected_from_evidence_list };
+        $top->bind('<BackSpace>', $delete);
+        $top->bind('<Delete>',    $delete);
+        $top->bind('<Control-x>', $delete);
+        $top->bind('<Control-X>', $delete);
+        $button_frame->Button(
+            -text => 'Delete',
+            -command => $delete,
+            )->pack(-side => 'left');
 
-    my $close_window = sub{ $top->withdraw; };
-    $top->bind('<Control-w>',           $close_window);
-    $top->bind('<Control-W>',           $close_window);
-    $top->protocol('WM_DELETE_WINDOW',  $close_window);
-    $button_frame->Button(
-        -text => 'Close',
-        -command => $close_window,
-        )->pack(-side => 'right');
+        my $close_window = sub{ $top->withdraw; };
+        $top->bind('<Control-w>',           $close_window);
+        $top->bind('<Control-W>',           $close_window);
+        $top->protocol('WM_DELETE_WINDOW',  $close_window);
+        $button_frame->Button(
+            -text => 'Close',
+            -command => $close_window,
+            )->pack(-side => 'right');
+    }
 
     my $select_all = sub{ $self->select_all };
     $top->bind('<Control-a>', $select_all);
@@ -165,6 +220,15 @@ sub align_button {
     return $self->{'_align_button'};
 }
 
+sub genomic_otf_button {
+    my ($self, $genomic_otf_button) = @_;
+
+    if ($genomic_otf_button) {
+        $self->{'_genomic_otf_button'} = $genomic_otf_button;
+    }
+    return $self->{'_genomic_otf_button'};
+}
+
 sub clear_existing {
     my ($self) = @_;
     return $self->{'_clear_existing'};
@@ -198,6 +262,7 @@ sub align_enable {
     my ($self, $enable) = @_;
     my $state = $enable ? 'normal' : 'disabled';
     $self->align_button->configure( -state => $state );
+    $self->genomic_otf_button->configure( -state => $state );
     $self->clear_otf_checkbutton->configure( -state => $state );
     return;
 }
