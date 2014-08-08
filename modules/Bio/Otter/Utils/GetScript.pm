@@ -10,6 +10,8 @@ use Scalar::Util qw(weaken);
 use Time::HiRes qw( time gettimeofday );
 use URI::Escape  qw(uri_unescape);
 
+use Bio::Otter::Utils::TimeDiff;
+
 use constant _DEBUG_INCS => $ENV{OTTER_DEBUG_INCS}; ## no critic(ValuesAndExpressions::ProhibitConstantPragma)
 
 BEGIN {
@@ -220,16 +222,17 @@ sub mkdir_tested {
 
 sub time_diff_for {
     my ($self, $log, $code) = @_;
+    Bio::Otter::Utils::TimeDiff::time_diff_for($code, sub { $self->_time_diff_log(@_) }, $log);
+    return;
+}
 
-    $self->log_message("$log: start");
-
-    my $start_time = time;
-    $code->();
-    my $end_time = time;
-
-    my $time = sprintf "time (sec): %.3f", $end_time - $start_time;
-    $self->log_message("$log: finish: $time");
-
+sub _time_diff_log {
+    my ($self, $event, $data, $cb_data) = @_;
+    if ($event eq 'elapsed') {
+        $self->log_message("${cb_data}: ${event} (sec): $data");
+    } else {
+        $self->log_message("${cb_data}: ${event}");
+    }
     return;
 }
 
