@@ -7,6 +7,7 @@ use lib "${ENV{ANACODE_TEAM_TOOLS}}/t/tlib";
 use Test::CriticModule;
 
 use Test::More;
+use Test::Perl::Critic;
 
 my $module;
 BEGIN {
@@ -14,11 +15,12 @@ BEGIN {
     use_ok($module, 'time_diff_for');
 }
 critic_module_ok($module);
+critic_ok(__FILE__);
 
 do {
     local $SIG{__WARN__} = sub { note(@_) };
     time_diff_for( sub { sleep 1; } );
-    ok('defaults');
+    pass('defaults');
 };
 
 {
