@@ -103,6 +103,7 @@ sub _iterate_something {
 
 sub iterate_transcripts {
     my ($self, $ts_method) = @_;
+    ## no critic(Subroutines::ProtectPrivateSubs)
     return $self->_iterate_something($ts_method, $self->_transcript_sth, $self->script->_option('transcript_class'));
 }
 
@@ -172,6 +173,7 @@ sub _build_transcript_adaptor {
 
 sub iterate_genes {
     my ($self, $ts_method) = @_;
+    ## no critic(Subroutines::ProtectPrivateSubs)
     return $self->_iterate_something($ts_method, $self->_gene_sth, $self->script->_option('gene_class'));
 }
 
