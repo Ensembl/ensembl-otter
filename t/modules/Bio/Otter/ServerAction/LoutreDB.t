@@ -11,7 +11,7 @@ use Test::Otter qw( ^db_or_skipall );
 
 use Bio::Otter::Server::Support::Local;
 
-my ($saldb_module, $saldb_tsv_module);
+my ($saldb_module);
 
 BEGIN {
     $saldb_module = qw( Bio::Otter::ServerAction::LoutreDB );
