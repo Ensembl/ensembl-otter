@@ -9,6 +9,7 @@ use Carp;
 
 use Bio::Otter::Log::WithContext;
 use Bio::Otter::Utils::AccessionInfo::Serialise qw(fasta_header_column_order unescape_fasta_description);
+use Bio::Otter::Utils::TimeDiff qw( time_diff_for );
 
 use Hum::Ace::SubSeq;
 use Hum::Ace::Method;
@@ -45,9 +46,10 @@ use Try::Tiny;
 sub new {
     my ($pkg, %args) = @_;
 
-    my ($gff_fh, $log_name) = @args{qw( gff_fh log_name )};
+    my ($gff_fh, $log_name, $column_name) = @args{qw( gff_fh log_name column_name )};
     my $self = bless {}, $pkg;
     $self->log_name($log_name);
+    $self->column_name($column_name);
 
     unless ($gff_fh) {
         $self->logger->logconfess("Cannot create ProcessGFF without gff_fh parameter");
@@ -58,6 +60,15 @@ sub new {
 }
 
 sub store_hit_data_from_gff {
+    my ($self, @args) = @_;
+    return time_diff_for(
+        sub { return $self->_store_hit_data_from_gff(@args); },
+        sub { return $self->_time_diff_log(@_);              },
+        sprintf('store_hit_data_from_gff [%s]', $self->column_name),
+        );
+}
+
+sub _store_hit_data_from_gff {
     my ($self, $accession_type_cache) = @_;
 
     $accession_type_cache->begin_work;
@@ -129,6 +140,15 @@ sub store_hit_data_from_gff {
 
 
 sub make_ace_transcripts_from_gff {
+    my ($self, @args) = @_;
+    return time_diff_for(
+        sub { return ( $self->_make_ace_transcripts_from_gff(@args) ); },
+        sub { return $self->_time_diff_log(@_);                        },
+        sprintf('make_ace_transcripts_from_gff [%s]', $self->column_name),
+        );
+}
+
+sub _make_ace_transcripts_from_gff {
     my ($self, $start, $end) = @_;
 
     my %tsct;
@@ -274,6 +294,13 @@ sub gff_fh {
     return $gff_fh;
 }
 
+sub column_name {
+    my ($self, @args) = @_;
+    ($self->{'column_name'}) = @args if @args;
+    my $column_name = $self->{'column_name'};
+    return $column_name || 'NOT-SET';
+}
+
 # FIXME: duplication. Provide via a mix-in?
 sub logger {
     my ($self, $category) = @_;
@@ -286,6 +313,16 @@ sub log_name {
     ($self->{'log_name'}) = @args if @args;
     my $log_name = $self->{'log_name'};
     return $log_name || '-B-O-L-ProcessGFF unnamed-';
+}
+
+sub _time_diff_log {
+    my ($self, $event, $data, $cb_data) = @_;
+    if ($event eq 'elapsed') {
+        $self->logger->debug("${cb_data}: ${event}: $data");
+    } else {
+        $self->logger->debug("${cb_data}: ${event}");
+    }
+    return;
 }
 
 1;

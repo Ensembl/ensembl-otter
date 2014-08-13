@@ -1239,7 +1239,11 @@ sub _process_Column {
     my @transcripts = ( );
     my $close_error;
     open my $gff_fh, '<', $full_gff_file or $logger->logconfess("Can't read GFF file '$full_gff_file'; $!");
-    my $process_gff = Bio::Otter::Lace::ProcessGFF->new( gff_fh => $gff_fh, log_name => $self->log_name );
+    my $process_gff = Bio::Otter::Lace::ProcessGFF->new(
+        gff_fh      => $gff_fh,
+        column_name => $filter_name,
+        log_name    => $self->log_name,
+        );
 
     try {
         @transcripts = $self->_process_fh($column, $process_gff);
