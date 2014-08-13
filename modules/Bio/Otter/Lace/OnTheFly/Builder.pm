@@ -3,6 +3,8 @@ package Bio::Otter::Lace::OnTheFly::Builder;
 use namespace::autoclean;
 use Moose;
 
+## no critic (Subroutines::ProhibitUnusedPrivateSubroutines)
+
 with 'MooseX::Log::Log4perl';
 
 use Readonly;
