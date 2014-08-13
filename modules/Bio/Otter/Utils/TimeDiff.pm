@@ -21,7 +21,7 @@ sub time_diff_for {
     _log_timestamp('start', $log_cb, $log_cb_data);
 
     my $start_time = time;
-    $timed_code->();
+    my @retval = $timed_code->();
     my $end_time = time;
 
     _log_timestamp('end', $log_cb, $log_cb_data);
@@ -29,7 +29,7 @@ sub time_diff_for {
     my $time = sprintf "%.3f", $end_time - $start_time;
     $log_cb->('elapsed', $time, $log_cb_data);
 
-    return $time;
+    return wantarray ? @retval : $retval[0];
 }
 
 # Also a template for callers:

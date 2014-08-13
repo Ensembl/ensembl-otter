@@ -26,19 +26,18 @@ do {
 {
     my @events;
 
-    my $diff = time_diff_for(\&_test_timed, \&_test_logger, 'testing');
+    my $retval = time_diff_for(\&_test_timed, \&_test_logger, 'testing');
 
     is(scalar(@events), 4, 'n_events');
-    ok($diff, 'have retval');
+    is($retval, 'xyzzy', 'retval');
     is_deeply([map { $_->{event} }   @events], [qw( start in_test_timed end elapsed )], 'events');
     is_deeply([map { $_->{cb_data} } @events], [qw( testing ) x 4 ],                    'cb_data');
-    is($diff, $events[-1]{data}, 'elapsed via logger');
 
     sub _test_timed {
         push @events, { event => 'in_test_timed', cb_data => 'testing' };
         note('in_test_timed');
         sleep 1;
-        return;
+        return 'xyzzy';
     }
 
     sub _test_logger {
