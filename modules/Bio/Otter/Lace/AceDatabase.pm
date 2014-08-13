@@ -1239,9 +1239,10 @@ sub _process_Column {
     my @transcripts = ( );
     my $close_error;
     open my $gff_fh, '<', $full_gff_file or $logger->logconfess("Can't read GFF file '$full_gff_file'; $!");
+    my $process_gff = Bio::Otter::Lace::ProcessGFF->new( gff_fh => $gff_fh, log_name => $self->log_name );
 
     try {
-        @transcripts = $self->_process_fh($column, $gff_fh);
+        @transcripts = $self->_process_fh($column, $process_gff);
     }
     catch { $logger->logdie(sprintf "%s: %s: $_", $filter_name, $full_gff_file); }
     finally {
@@ -1258,16 +1259,15 @@ sub _process_Column {
 
 # "perlcritic --stern" refuses to learn that $logger->logconfess is fatal
 sub _process_fh { ## no critic (Subroutines::RequireFinalReturn)
-    my ($self, $column, $gff_fh) = @_;
+    my ($self, $column, $process_gff) = @_;
 
     my $filter = $column->Filter;
 
     if ($filter->content_type eq 'transcript') {
-        return Bio::Otter::Lace::ProcessGFF::make_ace_transcripts_from_gff(
-            $gff_fh, $self->slice->start, $self->slice->end);
+        return $process_gff->make_ace_transcripts_from_gff($self->slice->start, $self->slice->end);
     }
     elsif ($filter->content_type eq 'alignment_feature') {
-        Bio::Otter::Lace::ProcessGFF::store_hit_data_from_gff($self->AccessionTypeCache, $gff_fh);
+        $process_gff->store_hit_data_from_gff($self->AccessionTypeCache);
         # Unset flag so that we don't reprocess this file if we recover the session.
         $column->process_gff(0);
         $self->DB->ColumnAdaptor->store_Column_state($column);
