@@ -15,6 +15,8 @@ use Bio::Otter::ServerAction::Script::Region;
 
 use Moose;
 
+## no critic (Subroutines::ProhibitUnusedPrivateSubroutines)
+
 has 'otter_sd_ds' => (
     is       => 'ro',
     isa      => 'Bio::Otter::SpeciesDat::DataSet',

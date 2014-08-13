@@ -3,6 +3,8 @@ package Bio::Otter::Lace::OnTheFly::Builder::Transcript;
 use namespace::autoclean;
 use Moose;
 
+## no critic (Subroutines::ProhibitUnusedPrivateSubroutines)
+
 extends 'Bio::Otter::Lace::OnTheFly::Builder';
 
 has vega_transcript => ( is => 'ro', isa => 'Bio::Vega::Transcript', required => 1 );
