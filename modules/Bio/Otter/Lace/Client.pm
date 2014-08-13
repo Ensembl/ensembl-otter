@@ -305,7 +305,23 @@ sub new_AceDatabase {
 
     my $adb = Bio::Otter::Lace::AceDatabase->new;
     $adb->Client($self);
-    $adb->home($self->_new_session_path);
+    my $dir;
+    while(1) {
+        $dir = $self->_new_session_path;
+        my @used = grep { -e $_ } ($dir, "$dir.done");
+        # Latter will be used later in move_to_done.  RT410906
+        #
+        # There is no race (vs. an honest Otterlace) because existing
+        # directories would have been made by a previous run with what
+        # is now our PID, on local machine.
+        last if !@used;
+        foreach my $fn (@used) {
+            $self->logger->warn(sprintf("new_AceDatabase: skip %s, %s exists (%.1fd old)",
+                                        $dir, $fn, -M $fn));
+        }
+    }
+
+    $adb->home($dir);
 
     return $adb;
 }
@@ -1514,8 +1530,9 @@ sub sessions_needing_recovery {
 sub move_to_done {
     my ($self, $lace_dir) = @_;
 
-    my $done = "$lace_dir.done";
-    rename($lace_dir, $done) or $self->logger->logdie("Error renaming '$lace_dir' to '$done'; $!");
+    my $done = "$lace_dir.done"; # also in new_AceDatabase
+    rename($lace_dir, $done) # RT410906: sometimes this would fail
+      or $self->logger->logdie("Error renaming '$lace_dir' to '$done'; $!");
     return $done;
 }
 
