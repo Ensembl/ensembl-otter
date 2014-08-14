@@ -10,6 +10,8 @@ use Bio::Otter::Lace::OnTheFly::QueryValidator;
 use Bio::Otter::Lace::OnTheFly::Runner;
 use Bio::Otter::Lace::OnTheFly::TargetSeq;
 
+with 'MooseX::Log::Log4perl';
+
 has 'query_validator' => (
     is      => 'ro',
     isa     => 'Bio::Otter::Lace::OnTheFly::QueryValidator',
@@ -61,6 +63,12 @@ has 'maxintron'    => (
     trigger => sub { my ($self, $val) = @_; $self->_set_aligner_option('--maxintron', $val) },
 );
 
+has 'logic_names' => (
+    is  => 'ro',
+    isa => 'ArrayRef[Str]',
+    required => 1,
+);
+
 sub BUILD {
     my ($self, $params) = @_;
 
@@ -81,7 +89,7 @@ sub pre_launch_setup {
         my $dna_saf_a  = $vega_dba->get_DnaSplicedAlignFeatureAdaptor;
         my $pro_saf_a  = $vega_dba->get_ProteinSplicedAlignFeatureAdaptor;
 
-        foreach my $logic_name ($self->logic_names) {
+        foreach my $logic_name (@{$self->logic_names}) {
             if (my $analysis = $analysis_a->fetch_by_logic_name($logic_name)) {
                 my $saf_a = $logic_name =~ /protein/i ? $pro_saf_a : $dna_saf_a;
                 $saf_a->remove_by_analysis_id($analysis->dbID);
@@ -89,19 +97,6 @@ sub pre_launch_setup {
         }
     }
     return;
-}
-
-# FIXME: it would be good to get these from the config.
-#
-sub logic_names {
-    return qw(
-        OTF_AdHoc_DNA
-        OTF_AdHoc_Protein
-        OTF_EST
-        OTF_ncRNA
-        OTF_mRNA
-        OTF_Protein
-        );
 }
 
 sub builders_for_each_type {
@@ -126,6 +121,40 @@ sub builders_for_each_type {
 sub build_runner {
     my ($self, @params) = @_;
     return Bio::Otter::Lace::OnTheFly::Runner->new(@params);
+}
+
+sub prep_and_store_request_for_each_type {
+    my ($self, $session_window, $caller_key) = @_;
+
+    my $ace_db = $session_window->AceDatabase;
+    my $sql_db = $ace_db->DB;
+
+    # Clear columns if requested
+    $self->pre_launch_setup(slice => $sql_db->session_slice);
+
+    my $request_adaptor = $sql_db->OTFRequestAdaptor;
+
+    my @method_names;
+
+    foreach my $builder ( $self->builders_for_each_type ) {
+
+        $self->logger->info("Running exonerate for sequence(s) of type: ", $builder->type);
+
+        # Set up a request for the filter script
+        my $request = $builder->prepare_run;
+        $request->caller_ref($caller_key);
+        $request_adaptor->store($request);
+
+        my $analysis_name = $builder->analysis_name;
+        push @method_names, $analysis_name;
+
+        # Ensure new-style columns are selected if used
+        $ace_db->select_column_by_name($analysis_name);
+    }
+
+    $session_window->RequestQueuer->request_features(@method_names) if @method_names;
+
+    return @method_names;
 }
 
 1;

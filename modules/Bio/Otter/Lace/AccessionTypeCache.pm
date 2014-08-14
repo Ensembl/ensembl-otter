@@ -161,17 +161,10 @@ sub populate_taxonomy {
 
     # Query the webserver (mole database) for the information.
     my $response = $self->Client->get_taxonomy_info(@id_list_fetch);
-    my ($header, $body) = split /\n/, $response, 2;
-    my ($key_list) = ($header =~ /^#[[:blank:]]*(.*)$/)
-        or die sprintf "invalid taxonomy header: '%s'", $header;
-    my @key_list = split /\t/, $key_list;
 
     $dbh->begin_work;
     try {
-        while ($body =~ /^(.*)$/mg) {
-            my @value_list = split /\t/, $1;
-            my $info = { };
-            $info->{$_} = shift @value_list for @key_list;
+        foreach my $info ( @$response ) {
             $self->save_taxonomy_info($info);
         }
     }

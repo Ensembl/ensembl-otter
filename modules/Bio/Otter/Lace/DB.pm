@@ -10,13 +10,16 @@ use DBI;
 
 use Bio::Otter::Lace::DB::ColumnAdaptor;
 use Bio::Otter::Lace::DB::OTFRequestAdaptor;
+use Bio::Otter::Log::WithContext;
 
 my(
     %dbh,
     %file,
     %vega_dba,
+    %session_slice,
     %ColumnAdaptor,
     %OTFRequestAdaptor,
+    %log_name,
     );
 
 sub DESTROY {
@@ -25,22 +28,31 @@ sub DESTROY {
     delete($dbh{$self});
     delete($file{$self});
     delete($vega_dba{$self});
+    delete($session_slice{$self});
     delete($ColumnAdaptor{$self});
     delete($OTFRequestAdaptor{$self});
+    delete($log_name{$self});
 
     return;
 }
 
 sub new {
-    my ($pkg, $home, $client) = @_;
+    my ($pkg, %args) = @_;
 
-    unless ($home) {
-        confess "Cannot create SQLite database without home parameter";
-    }
+    my ($home, $client, $log_name) = @args{qw( home client log_name )};
+
     my $ref = "";
     my $self = bless \$ref, $pkg;
+    $self->log_name($log_name);
+
+    unless ($home) {
+        $self->logger->logconfess("Cannot create SQLite database without home parameter");
+    }
+
     my $file = "$home/otter.sqlite";
     $self->file($file);
+
+    $self->logger->debug("new() connecting to '$file'");
     $self->init_db($client);
 
     return $self;
@@ -85,13 +97,73 @@ sub vega_dba {
     # This pulls in EnsEMBL, so we only do it if required, to reduce the footprint of filter_get &co.
     require Bio::Vega::DBSQL::DBAdaptor;
 
-    confess "Cannot create Vega adaptor until dataset info is loaded" unless $self->_is_loaded('dataset_info');
+    $self->_is_loaded('dataset_info') or
+        $self->logger->logconfess("Cannot create Vega adaptor until dataset info is loaded");
+
     my $dbc = Bio::Vega::DBSQL::DBAdaptor->new(
         -driver => 'SQLite',
         -dbname => $file{$self}
         );
 
     return $vega_dba{$self} = $dbc;
+}
+
+sub session_slice {
+    my ($self, $ensembl_slice, $dna) = @_;
+
+    my $session_slice = $session_slice{$self};
+    return $session_slice if $session_slice;
+
+    $ensembl_slice or
+        $self->logger->logconfess("ensembl_slice must be supplied when creating or recovering session_slice");
+
+    # If this is a recovered session we will already have the seq_region in the local DB
+    my $slice_adaptor = $self->vega_dba->get_SliceAdaptor;
+    my $db_seq_region = $slice_adaptor->fetch_by_region(
+        $ensembl_slice->coord_system->name,
+        $ensembl_slice->seq_region_name,
+        );
+
+    my $contig_seq_region;
+    if ($db_seq_region) {
+        $self->logger->debug('slice already in sqlite');
+    } else {
+        $self->logger->debug('creating and storing slice');
+
+        # db_seq_region's coord_system needs to be the one already in the DB.
+        my $cs_adaptor = $self->vega_dba->get_CoordSystemAdaptor;
+        my $cs_chr    = $cs_adaptor->fetch_by_name($ensembl_slice->coord_system->name,
+                                                   $ensembl_slice->coord_system->version);
+        my $cs_contig = $cs_adaptor->fetch_by_name('contig', 'OtterLocal');
+
+        # db_seq_region must start from 1
+        my $db_seq_region_parameters = {
+            %$ensembl_slice,
+            coord_system      => $cs_chr,
+            start             => 1,
+            seq_region_length => $ensembl_slice->end,
+        };
+        $db_seq_region = Bio::EnsEMBL::Slice->new_fast($db_seq_region_parameters);
+        $slice_adaptor->store($db_seq_region);
+
+        my $region_length = $ensembl_slice->end - $ensembl_slice->start + 1;
+        my $contig_seq_region_parameters = {
+            seq_region_name   => $ensembl_slice->seq_region_name,
+            strand            => 1,
+            start             => 1,
+            end               => $region_length,
+            seq_region_length => $region_length,
+            coord_system      => $cs_contig,
+        };
+        $contig_seq_region = Bio::EnsEMBL::Slice->new_fast($contig_seq_region_parameters);
+        $slice_adaptor->store($contig_seq_region, \$dna);
+    }
+
+    $session_slice = $db_seq_region->sub_Slice($ensembl_slice->start, $ensembl_slice->end);
+    if ($contig_seq_region) {
+        $slice_adaptor->store_assembly($session_slice, $contig_seq_region);
+    }
+    return $session_slice{$self} = $session_slice;
 }
 
 sub get_tag_value {
@@ -107,7 +179,7 @@ sub set_tag_value {
     my ($self, $tag, $value) = @_;
 
     unless (defined $value) {
-        confess "No value provided";
+        $self->logger->logconfess("No value provided");
     }
 
     my $sth = $dbh{$self}->prepare(q{ INSERT OR REPLACE INTO otter_tag_value (tag, value) VALUES (?,?) });
@@ -130,7 +202,7 @@ sub _is_loaded {
     my $has_tag_table = $self->_has_table('otter_tag_value');
 
     if (defined $value) {
-        die "No otter_tag_value table when setting '$name' tag." unless $has_tag_table;
+        $self->logger->logdie("No otter_tag_value table when setting '$name' tag.") unless $has_tag_table;
         return $self->set_tag_value($name, $value);
     }
 
@@ -141,12 +213,12 @@ sub _is_loaded {
 sub init_db {
     my ($self, $client) = @_;
 
-    my $file = $self->file or confess "Cannot create SQLite database: file not set";
+    my $file = $self->file or $self->logger->logconfess("Cannot create SQLite database: file not set");
 
     my $done_file = $file;
     $done_file =~ s{/([^/]+)$}{.done/$1};
     if (!-f $file && -f $done_file) {
-        cluck "Running late?\n  Absent: $file\n  Exists: $done_file";
+        $self->logger->logcluck("Running late?\n  Absent: $file\n  Exists: $done_file");
         # Diagnostics because I saw it after RT395938 Zircon 13e593c10ce4cb1ccdfd362a293a1e940e24e26d
     }
 
@@ -166,6 +238,8 @@ sub init_db {
 sub create_tables {
     my ($self, $schema, $name) = @_;
 
+    $self->logger->debug("create_tables for '$name'");
+
     my $dbh = $dbh{$self};
     $dbh->begin_work;
     $dbh->do($schema);
@@ -176,11 +250,30 @@ sub create_tables {
     return;
 }
 
+my @local_coord_system = (
+    {
+        coord_system_id => 101,
+        species_id      => 1,
+        name            => 'contig',
+        version         => 'OtterLocal',
+        rank            => 101,
+        attrib          => 'default_version,sequence_level',
+    },
+);
+
+my %local_meta = (
+    'assembly.mapping.local' => {
+        species_id => 1,
+        values     => [ 'chromosome:Otter#contig:OtterLocal' ],
+    },
+);
+
 sub load_dataset_info {
     my ($self, $dataset) = @_;
     return if $self->_is_loaded('dataset_info');
 
-    confess "Cannot load dataset info: loutre schema not loaded" unless $self->_is_loaded('schema_loutre');
+    $self->_is_loaded('schema_loutre') or
+        $self->logger->logconfess("Cannot load dataset info: loutre schema not loaded");
 
     my $dbh = $dbh{$self};
 
@@ -199,16 +292,20 @@ sub load_dataset_info {
 
     $dbh->begin_work;
 
-    while (my ($key, $details) = each %{$meta_hash}) {
+    my %meta = ( %$meta_hash, %local_meta );
+    while (my ($key, $details) = each %meta) {
 
-        next if $key eq 'assembly.mapping'; # we only use chromosome coords on client
+        next if $key eq 'assembly.mapping'; # we do our own mapping...
+        $key = 'assembly.mapping' if $key eq 'assembly.mapping.local';
 
         foreach my $value (@{$details->{values}}) {
             $meta_sth->execute($details->{species_id}, $key, $value);
         }
     }
 
-    $cs_sth->execute(@$cs_chr{@cs_cols});
+    foreach my $row ($cs_chr, @local_coord_system) {
+        $cs_sth->execute(@$row{@cs_cols});
+    }
 
     foreach my $row (@$at_list) {
         $at_sth->execute(@$row{@at_cols});
@@ -219,6 +316,23 @@ sub load_dataset_info {
     $self->_is_loaded('dataset_info', 1);
 
     return;
+}
+
+sub logger {
+    my ($self, $category) = @_;
+    $category = scalar caller unless defined $category;
+    return Bio::Otter::Log::WithContext->get_logger($category, name => $self->log_name);
+}
+
+sub log_name {
+    my ($self, $arg) = @_;
+
+    if ($arg) {
+        $log_name{$self} = $arg;
+    }
+
+    return $log_name{$self} if $log_name{$self};
+    return '-B-O-L-DB unnamed-';
 }
 
 1;

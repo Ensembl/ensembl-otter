@@ -167,6 +167,18 @@ sub list_Columns_with_status {
     return @columns;
 }
 
+sub list_Columns_with_internal_type {
+    my ($self, @internal_types) = @_;
+
+    my @all_columns = $self->list_Columns;
+    my @columns;
+
+    foreach my $internal_type (@internal_types) {
+        push @columns, grep { my $it = $_->internal_type; $it and $it eq $internal_type } @all_columns;
+    }
+    return @columns;
+}
+
 sub save_Columns_selected_flag_to_Filter_wanted {
     my ($self) = @_;
 
