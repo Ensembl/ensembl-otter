@@ -38,7 +38,7 @@ sub author {
     return $self->{'author'};
 }
 
-### CloneLockBroker should have an Author and a CloneLockAdaptor attached
+### ContigLockBroker should have an Author and a ContigLockAdaptor attached
 ### so it doesn't need to inherit from BaseAdaptor
 
 sub check_slice_argument {
