@@ -1186,10 +1186,13 @@ sub get_designations {
 
 # Return (designation_of_this_major, latest_this_major, live_major_minor)
 sub designate_this {
-    my ($self) = @_;
+    my ($self, %test_input) = @_;
+
     my $desig = $self->get_designations;
-    my $major = Bio::Otter::Version->version;
-    my $feat = Bio::Otter::Git->param('feature');
+    my $major = $test_input{major} || Bio::Otter::Version->version;
+
+    my $BOG = $test_input{BOG} || 'Bio::Otter::Git';
+    my $feat =  $BOG->param('feature');
 
     my $major_re = ($feat
                     ? qr{^$major(\.\d+)?_$feat$}
@@ -1201,16 +1204,23 @@ sub designate_this {
       sort grep { $desig->{$_} =~ $major_re } keys %$desig;
 
     my $live = $desig->{live};
-    my $exact_key = $key;
 
     if (!defined $key) {
         my @v = sort values %$desig;
         $self->logger->warn("No match for $major_re against designations.txt values (@v)");
-        $exact_key = 'live';
     }
 
-    my $exact = $desig->{$exact_key};
-    return ($key, $exact, $live);
+    my %out = (major_designation => $key,
+               latest_this_major => defined $key ? $desig->{$key} : $live,
+               current_live => $live);
+
+    $out{_workings} = # debug output
+      { designations => $desig,
+        major => $major,
+        feat => $feat,
+        major_re => $major_re };
+
+    return \%out;
 }
 
 sub do_authentication {
