@@ -62,7 +62,7 @@ sub zmap_style  { return 'short-read'; }
 
 sub content_type { return; }
 
-sub _url_query_string {
+sub _url_query_string { ## no critic(Subroutines::ProhibitUnusedPrivateSubroutines)
     my ($self, $session) = @_;
     return _query_string($self->url_query($session));
 }
