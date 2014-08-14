@@ -61,7 +61,7 @@ ORDER BY l.timestamp
 SQL
     ;
 
-sub get_CloneLocks {
+sub get_ContigLocks {
     my ($server) = @_;
 
     my $asm_type = $server->require_argument('chr');
@@ -78,8 +78,8 @@ sub get_CloneLocks {
 }
 
 sub map_clone2slice {
-    my ($server, $clonelocks) = @_;
-    return () unless $clonelocks;
+    my ($server, $contiglocks) = @_;
+    return () unless $contiglocks;
 
     my $S_dba = $server->otter_dba->get_SliceAdaptor;
     my $SL_dba = $server->otter_dba->get_SliceLockAdaptor;
@@ -91,13 +91,13 @@ sub map_clone2slice {
     die "Cannot find chromosome:Otter:$chr" unless $chr_slice;
 
     my $map_one = sub {
-        my ($clonelock) = @_;
+        my ($contiglock) = @_;
 
-        my $dbID = $clonelock->{contig_lock_id};
-        my $ctg_name = $clonelock->{ctg_name};
-        my $t = $clonelock->{unix_timestamp};
+        my $dbID = $contiglock->{contig_lock_id};
+        my $ctg_name = $contiglock->{ctg_name};
+        my $t = $contiglock->{unix_timestamp};
 
-        my $author = $A_dba->fetch_by_name($clonelock->{author_name});
+        my $author = $A_dba->fetch_by_name($contiglock->{author_name});
 
         my $clone = $S_dba->fetch_by_region
           (contig => $ctg_name,
@@ -113,7 +113,7 @@ sub map_clone2slice {
                -dbID => - $dbID, # -ve because informational, not a primary key
                -author => $author,
                -active => 'held',
-               -hostname => $clonelock->{hostname},
+               -hostname => $contiglock->{hostname},
                -ts_begin => $t,
                -ts_activity => $t,
                -intent => "ContigLock $dbID ($ctg_name) projected $from_start..$from_end to $chr");
@@ -128,7 +128,7 @@ sub map_clone2slice {
         return @bogolock;
     };
 
-    my @out = map { $map_one->($_) } @$clonelocks;
+    my @out = map { $map_one->($_) } @$contiglocks;
     return @out;
 }
 
@@ -154,15 +154,15 @@ sub get_locks {
     my $ds = $server->dataset;
     my %out;
 
-    $out{CloneLock} = get_CloneLocks($server)
+    $out{ContigLock} = get_ContigLocks($server)
       if Bio::Vega::ContigLockBroker->supported($ds);
 
     $out{SliceLock} = get_SliceLocks($server)
       if Bio::Vega::SliceLockBroker->supported($ds);
     $server->json->convert_blessed;
 
-    # give a slicelock view of legacy clonelocks, if any
-    push @{$out{SliceLock}}, map_clone2slice($server, $out{CloneLock});
+    # give a slicelock view of legacy contiglocks, if any
+    push @{$out{SliceLock}}, map_clone2slice($server, $out{ContigLock});
 
     return \%out;
 }
