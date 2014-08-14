@@ -27,7 +27,7 @@ exit main();
 
 
 sub designations_tt {
-    plan tests => 18;
+    plan tests => 38;
 
     # contents of designations.txt from 536373af == when 84 went live
     my $BOLC_A = _mock_BOLC();
@@ -48,40 +48,68 @@ sub designations_tt {
     # iff we feed it all the necessary %test_input
     my $do = sub {
         my ($BOGparams, @arg) = @_;
-        push @arg, BOG => _mock_BOG(@$BOGparams);
+        $BOGparams->{feature} ||= '';
+        push @arg, BOG => _mock_BOG($BOGparams);
         $BOLC_A->designate_this(@arg);
     };
 
-    my $no_feat = [ feature => '' ];
-
     _check_hash('dev seen from live=84',
-                $do->($no_feat, major => 85),
+                $do->({ head => 'humpub-release-85-dev-66-g9cf15b2' },
+                      major => 85),
                 major_designation => 'dev',
+                descr => 'an unstable developer-edition Otterlace',
+                stale => 0,
                 latest_this_major => 85,
                 current_live => '84.04');
 
+    _check_hash('dev_anyfeat seen from live=84',
+                $do->({ head => 'humpub-release-85-dev-95-g2fc4d37',
+                        feature => 'anyfeat' },
+                      major => 85),
+                major_designation => 'dev',
+                descr => 'an experimental anyfeat Otterlace',
+                stale => 0,
+                latest_this_major => undef,
+                current_live => '84.04');
+    $BOLC_A->logger->ok_pop("was not designated",
+                            qr{^No match for .*_anyfeat\$.* against designations\.txt});
+
     _check_hash('live seen from live=84',
-                $do->($no_feat, major => 84),
+                $do->({ head => 'humpub-release-84-04' }, major => 84),
                 major_designation => 'live',
+                descr => 'the latest live Otterlace',
+                stale => 0,
                 latest_this_major => '84.04',
                 current_live => '84.04');
 
+    _check_hash('live,stale seen from live=84',
+                $do->({ head => 'humpub-release-84-01-7-g96d4f8f' }, major => 84),
+                major_designation => 'live',
+                descr => "not the current live Otterlace\nIt is 84.01+7ci, latest is 84.04",
+                stale => 1);
+
     _check_hash('old seen from live=84',
-                $do->($no_feat, major => 83),
+                $do->({ head => 'humpub-release-83-05' }, major => 83),
                 major_designation => 'old',
+                descr => 'the last old Otterlace',
+                stale => 0,
                 latest_this_major => '83.05',
                 current_live => '84.04');
 
     _check_hash('(prev) seen from live=84',
-                $do->($no_feat, major => 81),
-                major_designation => 81,
+                $do->({ head => 'humpub-release-81-05' }, major => 81),
+                major_designation => '_obsolete',
+                descr => 'an obsolete Otterlace.  We are now on 84.04',
+                stale => 1,
                 latest_this_major => '81.06',
                 current_live => '84.04');
 
     $BOLC_A->logger->ok_pop("no messages");
     _check_hash('(unknown) seen from live=84',
-                $do->($no_feat, major => 77),
-                major_designation => undef,
+                $do->({ head => 'humpub-release-77-01' }, major => 77),
+                major_designation => '_obsolete',
+                descr => 'an obsolete Otterlace.  We are now on 84.04',
+                stale => 1,
                 latest_this_major => '84.04',
                 current_live => '84.04');
     $BOLC_A->logger->ok_pop("undesig list",
@@ -119,6 +147,7 @@ sub _logger {
                       }
                       is(scalar @$self, 0, "$testname: popped all")
                         or diag explain { logged => $self };
+                      @$self = ();
                       return;
                   });
 
@@ -132,7 +161,7 @@ sub _mock_BOLC {
 }
 
 sub _mock_BOG {
-    my %param = @_;
+    my %param = %{ shift() };
     my $obj = bless \%param, 'Bio::Otter::Git';
     return Test::MockObject::Extends->new($obj)->
       mock(param => sub {

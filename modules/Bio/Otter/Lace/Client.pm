@@ -1184,7 +1184,8 @@ sub get_designations {
     return $hashref;
 }
 
-# Return (designation_of_this_major, latest_this_major, live_major_minor)
+# Return hashref of information derived from current code version and
+# central config.
 sub designate_this {
     my ($self, %test_input) = @_;
 
@@ -1193,6 +1194,7 @@ sub designate_this {
 
     my $BOG = $test_input{BOG} || 'Bio::Otter::Git';
     my $feat =  $BOG->param('feature');
+    my $txtvsn = $BOG->taglike;
 
     my $major_re = ($feat
                     ? qr{^$major(\.\d+)?_$feat$}
@@ -1210,14 +1212,53 @@ sub designate_this {
         $self->logger->warn("No match for $major_re against designations.txt values (@v)");
     }
 
-    my %out = (major_designation => $key,
+    my %out = (major_designation => $key, # or undef (obsolete)
                latest_this_major => defined $key ? $desig->{$key} : $live,
+               stale => 0,
                current_live => $live);
+
+    # Give a simple label to what type of version this is
+    my @standard = qw( live test old );
+    if (defined $key && $key eq 'dev') {
+        # dev -> no staleness check
+        $out{descr} = 'an unstable developer-edition Otterlace';
+    } elsif (defined $key && grep { $key eq $_ } @standard) {
+        # a standard designation
+        my ($L, $C) = $key eq 'old'
+          ? qw( last final ) : qw( latest current );
+        if ($txtvsn eq $out{latest_this_major}) {
+            $out{descr} = "the $L $key Otterlace";
+        } else {
+            $out{descr} = "not the $C $key Otterlace\nIt is $txtvsn, $L is $out{latest_this_major}";
+            $out{stale} = 1;
+        }
+    } elsif (defined $key && $key !~ /^\d+(_|$)/) {
+        # a non-standard designation
+        $out{descr} = "a special $feat Otterlace";
+        if ($txtvsn ne $out{latest_this_major}) {
+            $out{descr} .= "\nIt is $txtvsn, latest is $out{latest_this_major}";
+            $out{stale} = 1;
+        }
+    } elsif ($major > int($live)) {
+        # not sure what it is, but not obsolete
+        $out{descr} = "an experimental $feat Otterlace";
+        $out{major_designation} = 'dev'; # a small fib
+        $out{latest_this_major} = undef;
+
+    } else {
+        # not designated, or designated only by number
+        # (the latter probably has an Otter Server)
+        $out{major_designation} = undef;
+        $out{descr} = "an obsolete Otterlace.  We are now on $live";
+        $out{stale} = 1;
+    }
+
 
     $out{_workings} = # debug output
       { designations => $desig,
         major => $major,
         feat => $feat,
+        txtvsn => $txtvsn,
         major_re => $major_re };
 
     return \%out;
