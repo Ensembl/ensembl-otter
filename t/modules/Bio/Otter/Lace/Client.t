@@ -98,7 +98,7 @@ sub designations_tt {
 
     _check_hash('(prev) seen from live=84',
                 $do->({ head => 'humpub-release-81-05' }, major => 81),
-                major_designation => '_obsolete',
+                major_designation => undef,
                 descr => 'an obsolete Otterlace.  We are now on 84.04',
                 stale => 1,
                 latest_this_major => '81.06',
@@ -107,7 +107,7 @@ sub designations_tt {
     $BOLC_A->logger->ok_pop("no messages");
     _check_hash('(unknown) seen from live=84',
                 $do->({ head => 'humpub-release-77-01' }, major => 77),
-                major_designation => '_obsolete',
+                major_designation => undef,
                 descr => 'an obsolete Otterlace.  We are now on 84.04',
                 stale => 1,
                 latest_this_major => '84.04',
