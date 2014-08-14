@@ -19,9 +19,11 @@ use Hum::Sort qw{ ace_sort };
 use Tk::LabFrame;
 use Tk::Checkbutton;
 use Tk::Radiobutton;
-use Tk::Utils::OnTheFly;
 
-use base 'EditWindow';
+use base qw{
+    EditWindow
+    Bio::Otter::UI::OnTheFlyMixin
+    };
 
 my $BEST_N            = 1;
 my $MAX_INTRON_LENGTH = 200000;
@@ -261,6 +263,7 @@ sub initialise {
                 -message => 'Error running exonerate: ' . $err,
                 -type    => 'OK',
             );
+            $self->logger->error('Error running exonerate: ', $err);
         };
         $doing_launch = 0;
     };
@@ -458,10 +461,14 @@ sub _repeat_masker {
 
 sub launch_exonerate {
     my ($self) = @_;
+
     my $SessionWindow = $self->SessionWindow;
+    $SessionWindow->AceDatabase->Client->reauthorize_if_cookie_will_expire_soon;
 
     my $bestn     = $self->get_entry('bestn') || 0;
     my $maxintron = $self->get_entry('max_intron_length') || 0;
+
+    my $top = $self->top;
 
     my $otf = Bio::Otter::Lace::OnTheFly::Genomic->new(
 
@@ -479,10 +486,12 @@ sub launch_exonerate {
 
         lowercase_poly_a_t_tails => 1, # to avoid spurious exons
 
-        problem_report_cb => sub { $self->top->Tk::Utils::OnTheFly::problem_box('Accessions Supplied', @_) },
-        long_query_cb     => sub { $self->top->Tk::Utils::OnTheFly::long_query_confirm(@_)  },
+        problem_report_cb => sub { $self->problem_box($top, 'Accessions Supplied', @_) },
+        long_query_cb     => sub { $self->long_query_confirm($top, @_)  },
 
         accession_type_cache => $SessionWindow->AceDatabase->AccessionTypeCache,
+
+        logic_names          => $SessionWindow->OTF_Genomic_columns,
         );
 
     # get marked region (if requested)
@@ -496,7 +505,7 @@ sub launch_exonerate {
     }
 
     if ($otf->target_all_repeat) {
-        $self->top->messageBox(
+        $top->messageBox(
             -title   => $Bio::Otter::Lace::Client::PFX.'All Repeat',
             -icon    => 'warning',
             -message => 'The genomic sequence is entirely repeat',
@@ -511,7 +520,7 @@ sub launch_exonerate {
     $self->logger->warn("Found ", scalar(@$seqs), " sequences");
 
     unless (@$seqs) {
-        $self->top->messageBox(
+        $top->messageBox(
             -title   => $Bio::Otter::Lace::Client::PFX.'No Sequence',
             -icon    => 'warning',
             -message => 'Did not get any query sequence data',
@@ -520,44 +529,22 @@ sub launch_exonerate {
         return;
     }
 
-    $self->top->withdraw;
+    $top->withdraw;
 
     if ($self->{'_clear_existing'}) {
-        $SessionWindow->delete_featuresets($otf->logic_names);
+        $SessionWindow->delete_featuresets(@{$otf->logic_names});
     }
 
-    $SessionWindow->launch_exonerate($otf);
+    my $key = "$otf";
+    $SessionWindow->register_exonerate_callback($key, $self, \&Bio::Otter::UI::OnTheFlyMixin::exonerate_callback);
+    $otf->prep_and_store_request_for_each_type($SessionWindow, $key);
 
     return 1;
 }
 
 sub display_request_feedback {
     my ($self, $request) = @_;
-
-    my $top = $self->top;
-    $top->deiconify;
-    $top->raise;
-
-    my $name = $request->logic_name;
-    unless ($request->n_hits) {
-        $top->messageBox(
-            -title   => $Bio::Otter::Lace::Client::PFX.'No Matches',
-            -icon    => 'warning',
-            -message => "Exonerate did not find any '$name' matches on genomic sequence",
-            -type    => 'OK',
-            );
-        return;
-    }
-
-    $top->messageBox(
-        -title   => $Bio::Otter::Lace::Client::PFX.'Missing Matches',
-        -icon    => 'warning',
-        -message => join("\n",
-                         "Exonerate did not find '$name' matches for:",
-                         sort @{$request->missed_hits},
-        ),
-        -type    => 'OK',
-        );
+    $self->report_missed_hits($self->SessionWindow, $request, 'genomic');
     return;
 }
 
@@ -575,6 +562,7 @@ sub entered_seqs {
             $string = ">OTF_seq_$seq_tag\n" . $string;
             $seq_tag++;
         }
+        $string = $self->_tidy_pasted_sequence($string);
         push @seqs, Hum::FastaFileIO->new(\$string)->read_all_sequences;
     }
     if (my $file_name = $self->get_entry('fasta_file')) {
@@ -606,6 +594,27 @@ sub entered_accessions {
         @supplied_accs = split(/[,;\|\s]+/, $txt);
     }
     return \@supplied_accs;
+}
+
+sub _tidy_pasted_sequence {
+    my ($self, $seq) = @_;
+    open my $fh, '<', \$seq or $self->logger->logdie('open stringref failed');
+    my @stripped;
+    while (my $line = <$fh>) {
+        chomp $line;
+        unless ($line =~ /^>/) {
+            $line =~ s{       # strip leading line numbers:
+                          ^   #   start of line
+                          \s* #   optional leading whitespace
+                          \d+ #   line number
+                          \s+ #   at least some whitespace
+                      }{}x;
+            $line =~ s/\s+//g; # strip whitespace
+        }
+        push @stripped, $line if $line;
+    }
+    push @stripped, '';         # ensure trailing newline
+    return join("\n", @stripped);
 }
 
 sub logger {
