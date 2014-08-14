@@ -78,7 +78,8 @@ sub version_diagnosis {
         $vsn =~ s{\s+\(feature \w+\)$}{};
     }
 
-    my ($desig, $desig_latest, $live) = Bio::Otter::Lace::Client->the->designate_this;
+    my $desig_info = Bio::Otter::Lace::Client->the->designate_this;
+    my ($desig, $desig_latest, $live) = @{$desig_info}{qw{ major_designation latest_this_major current_live }};
 
     # Ugly trick to direct tickets, for dev/otterlace_this and testers on MacOS
     $ENV{OTTERLACE_RAN_AS} = "inferred/otterlace_$desig"

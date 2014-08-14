@@ -102,6 +102,10 @@ sub _init {
     return 0;
 }
 
+# sub new { bless ... }
+# This is written with class methods and has no constructor,
+# but test cases can call it on mocked out objects to feed it state.
+
 
 =head2 dump()
 
