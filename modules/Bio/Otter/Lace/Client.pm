@@ -1533,9 +1533,11 @@ sub sessions_needing_recovery {
 sub move_to_done {
     my ($self, $lace_dir) = @_;
 
-    my $done = "$lace_dir.done"; # also in new_AceDatabase
+    my $done = "$lace_dir.done"; # string also in new_AceDatabase
     rename($lace_dir, $done) # RT410906: sometimes this would fail
       or $self->logger->logdie("Error renaming '$lace_dir' to '$done'; $!");
+    # DUP: rename also in $adb->DESTROY
+
     return $done;
 }
 
