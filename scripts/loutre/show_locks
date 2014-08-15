@@ -57,10 +57,11 @@ sub main {
 
     my $exit = 0;
 
+    my $emulated_slice = {};
     if (Bio::Vega::ContigLockBroker->supported($ds)) {
         $exit |= process_contig_locks
           ($otter_db, $author, $hostname, $assembly,
-           $do_delete, @lock_id_range)
+           $do_delete, $emulated_slice, @lock_id_range)
             if !$do_interrupt && !$do_expire;
     } else {
         warn "CONTIG_LOCKs not supported in dataset $dataset_name\n";
@@ -70,6 +71,7 @@ sub main {
     if (Bio::Vega::SliceLockBroker->supported($ds)) {
         $exit |= process_slice_locks
           ($otter_db, $author, $hostname, $assembly,
+           $emulated_slice,
            $do_interrupt, $do_expire, @lock_id_range)
             if !$do_delete;
     } else {
@@ -82,10 +84,13 @@ sub main {
 
 sub process_slice_locks {
     my ($otter_db, $author_name, $hostname, $assembly,
+        $emulated_slice,
         $do_interrupt, $do_expire, @lock_id_range) = @_;
 
     warn "Processing SLICE_LOCKs\n";
     my $SLdba = $otter_db->get_SliceLockAdaptor;
+
+    check_stale_contig_lock($SLdba, $emulated_slice);
 
     my $author;
     if (defined $author_name) {
@@ -160,7 +165,7 @@ sub process_slice_locks {
 
 sub process_contig_locks {
     my ($otter_db, $author, $hostname, $assembly,
-        $do_delete, @lock_id_range) = @_;
+        $do_delete, $emulated_slice, @lock_id_range) = @_;
 
     warn "Processing CONTIG_LOCKs\n";
 
@@ -239,6 +244,8 @@ sub process_contig_locks {
             push(@$info, $type);
         } else {
             $lock_id{$lid} = [$host, $author, $acc_sv, $intl, $date, $type, $start, $end];
+            push @{ $emulated_slice->{$1} }, $lid
+              if $host =~ /^SliceLock\.(\d+)$/;
         }
     }
 
@@ -289,6 +296,25 @@ sub process_contig_locks {
         }
     }
     return 0;
+}
+
+sub check_stale_contig_lock {
+    my ($SLdba, $emulated_slice) = @_;
+
+    # First, remove the valid $emulated_slice
+    while (my ($slid, $contig_lock) = each %$emulated_slice) {
+        my $lock = try { $SLdba->fetch_by_dbID($slid) };
+        delete $emulated_slice->{$slid} if $lock && $lock->is_held;
+    }
+
+    foreach my $slid (sort { $a <=> $b } keys %$emulated_slice) {
+        # Warn of stale contig_lock
+        my $contig_lock = $emulated_slice->{$slid};
+        local $" = ', ';
+        warn "\n*** contig_lock_id in (@$contig_lock) emulating slice_lock_id=$slid is stale\n    Try with\n      ... -delete -machine SliceLock.$slid\n";
+    }
+
+    return;
 }
 
 sub q_del {
