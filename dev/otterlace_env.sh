@@ -11,11 +11,20 @@ source "${ANACODE_TEAM_TOOLS}/otterlace/release/scripts/_otterlace.sh" || exit 1
 
 version="dev-from-checkout" # required to be set, but not used?
 
+ENS_PIPE_BASE=$HOME/gitwk-ensembl # for ensembl-pipeline and ensembl-analysis
+
+use_ewhich=server # used to set otter_server_perl5lib
+config_get use_evsn ${use_ewhich}_ensembl_version
+
 # Placeholder for something better, possibly ( built on | similar to )
 # otterlace/release/scripts/anacode_source_repo
+config_get client_ensembl_version
+config_get server_ensembl_version
+printf "    taking e%s (version for %s)\n      client_ensembl_version = %s\n      server_ensembl_version = %s\n" $use_evsn  $use_ewhich $client_ensembl_version $server_ensembl_version
 otter_server_perl5lib="\
-$HOME/gitwk-ensembl/ensembl-pipeline/modules:\
-/nfs/anacode/WEBVM_docs.dev/apps/webvm-deps/ensembl-branch-74/ensembl-variation/modules\
+$ENS_PIPE_BASE/ensembl-pipeline/modules:\
+$ENS_PIPE_BASE/ensembl-analysis/modules:\
+/nfs/anacode/WEBVM_docs.dev/apps/webvm-deps/ensembl-branch-$use_evsn/ensembl-variation/modules\
 "
 
 # Input: $ENSEMBL_OTTER_DEV $OTTER_SWAC optional:$1
