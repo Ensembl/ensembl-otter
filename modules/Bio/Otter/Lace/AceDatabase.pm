@@ -1287,7 +1287,7 @@ sub script_arguments {
 
     my $arguments = {
         client => 'otterlace',
-        %{$self->query_hash},
+        %{$self->_query_hash},
         gff_version => $self->DataSet->gff_version,
         session_dir => $self->home,
         url_root    => $self->Client->url_root,
@@ -1300,17 +1300,15 @@ sub script_arguments {
 sub http_response_content {
     my ($self, $command, $script, $args) = @_;
 
-    my $query = $self->query_hash;
-    $query = { %{$query}, %{$args} } if $args;
-
+    my $query = $self->_query_hash(%{ $args || {} });
     my $response = $self->Client->http_response_content(
         $command, $script, $query);
 
     return $response;
 }
 
-sub query_hash {
-    my ($self) = @_;
+sub _query_hash {
+    my ($self, @args) = @_;
 
     my $slice = $self->slice;
 
@@ -1323,6 +1321,7 @@ sub query_hash {
             'name'    => $slice->seqname(),
             'start'   => $slice->start(),
             'end'     => $slice->end(),
+            @args,
     };
 
     return $hash;
