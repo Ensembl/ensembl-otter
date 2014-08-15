@@ -1367,8 +1367,14 @@ sub DESTROY {
     }
     catch { $logger->error("Error in AceDatabase::DESTROY : $_"); };
 
-    rename($home, "${home}.done")
-        or $logger->logdie("Error renaming the session directory; $!");
+    my $writable = try { $self->write_access } catch { "unknown: $_" };
+    if ($writable eq '0') {
+        # clean, mark it done
+        rename($home, "${home}.done") # DUP: $client->move_to_done
+          or $logger->logdie("Error renaming the session directory; $!");
+    } else {
+        $logger->info("Cleanup '$home' failed, write_access=$writable");
+    }
 
     if ($callback) {
         $callback->();
