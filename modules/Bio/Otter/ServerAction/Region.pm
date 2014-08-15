@@ -483,7 +483,7 @@ sub lock_region {
         $lock_token = { locknums => join ',', @dbID };
     } catch {
         chomp;
-        die "Locking clones failed during $action \[$_]";
+        die "Locking slice failed during $action \[$_]";
     };
 
     return $lock_token;
@@ -492,7 +492,7 @@ sub lock_region {
 
 =head2 unlock_region
 
-Input: locknum.
+Input: locknums.
 
 Output: error, or { unlocked => $locknums1, already => $locknums2 }
 
@@ -517,7 +517,7 @@ sub unlock_region {
         my @already = grep { ! $_->is_held } $slb_all->locks;
         my @locked  = grep {   $_->is_held } $slb_all->locks;
 
-        $action = 'to unlock clones';
+        $action = 'to unlock slice';
         if (@locked) {
             my $slb_locked = $self->_slice_lock_broker(0);
             $slb_locked->locks(@locked);

@@ -1429,19 +1429,7 @@ sub save_otter_xml {
     return $content;
 }
 
-sub unlock_otter_xml {
-    my ($self, $xml, $dsname) = @_;
-
-    $self->general_http_dialog(
-        'POST',
-        'unlock_region',
-        {
-            'dataset'  => $dsname,
-            'data'     => $xml,
-        }
-    );
-    return 1;
-}
+# lock_region, unlock_region : see Bio::Otter::Lace::AceDatabase
 
 sub _DataSet_SequenceSet_response_content {
     my ($self, $ds, $ss, $method, $script) = @_;
