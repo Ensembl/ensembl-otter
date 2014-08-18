@@ -1413,9 +1413,12 @@ sub get_taxonomy_info {
 }
 
 sub save_otter_xml {
-    my ($self, $xml, $dsname) = @_;
+    my ($self, $xml, $dsname, $lock_token) = @_;
 
-    $self->logger->logconfess("Don't have write access") unless $self->write_access;
+    $self->logger->logconfess("Cannot save_otter_xml, write_access configured off")
+      unless $self->write_access;
+    $self->logger->logconfess("Cannot save_otter_xml without a lock_token")
+      unless $lock_token && $lock_token !~ /^unlocked /;
 
     my $content = $self->http_response_content(
         'POST',
@@ -1423,6 +1426,7 @@ sub save_otter_xml {
         {
             'dataset'  => $dsname,
             'data'     => $xml,
+            'locknums' => $lock_token,
         }
     );
 

@@ -43,7 +43,8 @@ isa_ok($region, 'Bio::Vega::Region');
 
 my ($okay, $region_out, $error) = try_write_region($sa_region, $region);
 ok(not($okay), 'attempt to write_region dies as expected');
-like($error, qr/not locked/, 'error message ok');
+like($error, qr/Writing region failed to init \[No 'locknums' argument/,
+     'error message ok');
 
 my $sa_xml_region = $modules{xml_region}->new_with_slice(OtterTest::TestRegion->local_server);
 isa_ok($sa_xml_region, $modules{xml_region});
@@ -53,9 +54,10 @@ ok($xml, 'get_region as XML');
 note('Got ', length $xml, ' chrs');
 check_xml($xml, 'XML is as expected');
 
-($okay, $region_out, $error) = try_write_region($sa_xml_region, $xml);
+($okay, $region_out, $error) = try_write_region($sa_xml_region, $xml, 0);
 ok(not($okay), 'attempt to write_region from XML dies as expected');
-like($error, qr/not locked/, 'error message ok');
+like($error, qr/Writing region failed to init \[slice_lock_id=0 not found/,
+     'error message ok');
 
 my $lock;
 ($okay, $lock, $error) = try_lock_region($sa_region);
@@ -137,10 +139,12 @@ ok($okay, 'unlocked okay');
 done_testing;
 
 sub try_write_region {
-    my ($server_action_region, $data_in) = @_;
+    my ($server_action_region, $data_in, $lock_token) = @_;
     my ($ok, $data_out, $err);
     try {
         $server_action_region->server->set_params( data => $data_in );
+        $server_action_region->server->set_params( locknums => $lock_token )
+          if defined $lock_token;
         $data_out = $server_action_region->write_region;
         $ok = 1;
     } catch {
@@ -176,9 +180,3 @@ sub try_unlock_region {
 }
 
 1;
-
-# Local Variables:
-# mode: perl
-# End:
-
-# EOF
