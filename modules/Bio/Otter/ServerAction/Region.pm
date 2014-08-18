@@ -199,6 +199,7 @@ sub _write_region_exclusive { # runs under $slb->exclusive_work
     # update all contig_info and contig_info_attrib
     while (my ($contig_name, $pair) = each %$ci_hash) {
         my ($db_ctg_slice, $xml_ci_attribs) = @$pair;
+        $self->_assert_contig_locked($db_ctg_slice, $db_region->slice, $slb);
         $self->_insert_ContigInfo_Attributes($author_obj, $db_ctg_slice, $xml_ci_attribs, $time_now);
         warn "Updating contig info-attrib for '$contig_name'\n";
     }
@@ -234,6 +235,8 @@ sub _write_region_exclusive { # runs under $slb->exclusive_work
         }
         # update all gene and its components in db (new/mod)
         $gene->is_current(1);
+
+        $slb->assert_bumped($gene->slice);
         if ($gene_adaptor->store($gene, $time_now)) {
             push(@changed_genes, $gene);
         }
@@ -261,6 +264,7 @@ sub _write_region_exclusive { # runs under $slb->exclusive_work
 
         # Setting is_current to 0 will cause the store method to delete it.
         $dbgene->is_current(0);
+        $slb->assert_bumped($dbgene->slice);
         $gene_adaptor->store($dbgene, $time_now);
         $del_count++;
         "Deleted gene " . $dbgene->stable_id . "\n";
@@ -282,14 +286,16 @@ sub _write_region_exclusive { # runs under $slb->exclusive_work
 
     my ($delete_sf, $save_sf) = $ab->compare_feature_sets($db_simple_features, \@new_simple_features);
     foreach my $del_feat (@$delete_sf) {
+        $slb->assert_bumped($del_feat->slice);
         $sfa->remove($del_feat);
     }
-    warn "Deleted " . scalar(@$delete_sf) . " SimpleFeatures\n" unless $@;
+    warn "Deleted " . scalar(@$delete_sf) . " SimpleFeatures\n";
     foreach my $new_feat (@$save_sf) {
         $new_feat->slice($db_slice);
+        $slb->assert_bumped($new_feat->slice);
         $sfa->store($new_feat);
     }
-    warn "Saved " . scalar(@$save_sf) . " SimpleFeatures\n" unless $@;
+    warn "Saved " . scalar(@$save_sf) . " SimpleFeatures\n";
 
     ##assembly_tags are not taken into account here, as they are not part of annotation nor versioned ,
     ##but may be required in the future
@@ -328,6 +334,26 @@ sub _slice_lock_broker {
        @lockp);
 
     return $slb;
+}
+
+sub _assert_contig_locked {
+    my ($self, $ctg, $chr, $slb) = @_;
+    my $to_cs = $chr->coord_system;
+    my $proj = $ctg->project($to_cs->name, $to_cs->version);
+
+    if (1 != @$proj) {
+        my $ctg_id = $ctg->dbID;
+        my $chr_id = $chr->dbID;
+        my $n = @$proj;
+        die "contig id=$ctg_id doesn't project cleanly (n=$n) to chromosome id=$chr_id";
+        # I expected that it should, so didn't consider $n != 1
+    }
+
+    foreach my $seg (@$proj) {
+        my $ctg_on_chr = $seg->[2]->sub_Slice($seg->[0], $seg->[1]);
+        $slb->assert_bumped($ctg_on_chr);
+    }
+    return;
 }
 
 sub _fetch_db_region {
