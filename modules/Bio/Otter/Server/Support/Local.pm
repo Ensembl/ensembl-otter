@@ -28,6 +28,12 @@ sub authorized_user {
     return $authorized_user;
 }
 
+sub require_method {
+    my ($self, $want) = @_;
+    # Caller would want an HTTP request with '$want' method
+    return;
+}
+
 ### Accessors
 
 sub dataset_name {

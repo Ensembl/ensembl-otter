@@ -340,7 +340,8 @@ sub locks_add_by_dbID {
       if 1==@add && ref($add[0]) eq 'ARRAY';
 
     my $SLdba = $self->adaptor;
-    my @lock = map { $SLdba->fetch_by_dbID($_) } @add;
+    my @lock = map { $SLdba->fetch_by_dbID($_) or
+                       die "slice_lock_id=$_ not found" } @add;
     return $self->locks(@lock);
 }
 

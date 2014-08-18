@@ -145,165 +145,169 @@ sub write_region {
 
     my $server = $self->server;
 
-    # These all require parameters, get them out of the way before trying anything else.
-    my $odba       = $server->otter_dba();
-    my $xml_string = $server->require_argument('data');
-
-    my $slb;
-    my ($new_region, $db_region, $ci_hash, $action);
+    my ($action, $serialised_output);
     try {
         $action = 'init';
         $server->require_method('POST');
-        $slb = $self->_slice_lock_broker(1);
+        my $slb = $self->_slice_lock_broker(1);
         # author is checked against the locks by the broker.
         # we don't check source hostname: sessions do sometimes move around.
 
-        $action = 'converting XML to otter';
-        $new_region = $self->deserialise_region($xml_string);
+        $action = 'lock';
+        my $current_region;
+        $slb->exclusive_work # do lock, write and commit; or rollback
+          (sub {
+               $action = 'locked';
+               $current_region = $self->_write_region_exclusive(\$action, $slb);
+           });
 
-        $action = 'comparing XML assembly with database assembly';
-        $db_region = $self->_fetch_db_region($new_region);
-        $ci_hash   = $self->_compare_region_create_ci_hash($new_region, $db_region);
-
-        $action = 'checking locks';
-        $slb->exclusive_work(sub { $slb->assert_bumped($db_region->slice) });
+        $action = 're-serialise';
+        $serialised_output = $self->serialise_region($current_region);
 
     } catch {
-        die "Writing region failed whilst $action [$_]";
+        chomp;
+        die "Writing region failed to $action \[$_]";
+    };
+    return $serialised_output;
+}
+
+sub _write_region_exclusive { # runs under $slb->exclusive_work
+    my ($self, $action_sref, $slb) = @_;
+    my $server = $self->server;
+
+    $$action_sref = 'convert XML to otter';
+    my $xml_string = $server->require_argument('data');
+    my $new_region = $self->deserialise_region($xml_string);
+
+    $$action_sref = 'compare assemblies'; # compare XML assembly with database assembly
+    my $db_region = $self->_fetch_db_region($new_region);
+    my $ci_hash   = $self->_compare_region_create_ci_hash($new_region, $db_region);
+
+    $$action_sref = 'locks check';
+    $slb->assert_bumped($db_region->slice);
+
+    $$action_sref = 'write';
+    my $time_now = do {
+        my ($first_lock) = $slb->locks;
+        # everything that needs saving should use this timestamp:
+        $first_lock->ts_activity;
     };
 
-    my $serialised_output;
-
-    die "don't do it yet, we are out of exclusive_work";
-
-    # everything that needs saving should use this timestamp:
-    my $time_now = $serialised_output->wibble; # $lock->ts_activity during exclusive_work
-
     my $author_obj = $slb->author;
-    $odba->begin_work;
-    try {
-        # update all contig_info and contig_info_attrib
-        while (my ($contig_name, $pair) = each %$ci_hash) {
-            my ($db_ctg_slice, $xml_ci_attribs) = @$pair;
-            $self->_insert_ContigInfo_Attributes($author_obj, $db_ctg_slice, $xml_ci_attribs, $time_now);
-            warn "Updating contig info-attrib for '$contig_name'\n";
+    my $odba = $self->server->otter_dba();
+
+    # update all contig_info and contig_info_attrib
+    while (my ($contig_name, $pair) = each %$ci_hash) {
+        my ($db_ctg_slice, $xml_ci_attribs) = @$pair;
+        $self->_insert_ContigInfo_Attributes($author_obj, $db_ctg_slice, $xml_ci_attribs, $time_now);
+        warn "Updating contig info-attrib for '$contig_name'\n";
+    }
+
+    ## strip_incomplete_genes for the xml genes
+    my @new_genes = $new_region->genes;
+    $self->_strip_incomplete_genes(\@new_genes);
+
+    my $db_slice = $db_region->slice;
+
+    ##fetch database genes and compare to find the new/modified/deleted genes
+    warn "Fetching database genes for comparison...\n";
+    my $ga =  $db_slice->adaptor->db->get_GeneAdaptor();
+    my $db_genes = $ga->fetch_all_by_Slice($db_slice) || [];
+    $self->_strip_incomplete_genes($db_genes);
+    warn "Comparing " . scalar(@$db_genes) . " old to " . scalar(@new_genes) . " new gene(s)...\n";
+
+    my $gene_adaptor = $odba->get_GeneAdaptor;
+    warn "Attaching gene to slice \n";
+
+    my @changed_genes;
+    foreach my $gene (@new_genes) {
+        # attach gene and its components to the right slice
+        $gene->slice($db_slice);
+        # update author in gene and transcript
+        $gene->gene_author($author_obj);
+        foreach my $tran (@{ $gene->get_all_Transcripts }) {
+            $tran->slice($db_slice);
+            $tran->transcript_author($author_obj);
         }
-
-        ## strip_incomplete_genes for the xml genes
-        my @new_genes = $new_region->genes;
-        $self->_strip_incomplete_genes(\@new_genes);
-
-        my $db_slice = $db_region->slice;
-
-        ##fetch database genes and compare to find the new/modified/deleted genes
-        warn "Fetching database genes for comparison...\n";
-        my $ga =  $db_slice->adaptor->db->get_GeneAdaptor();
-        my $db_genes = $ga->fetch_all_by_Slice($db_slice) || [];
-        $self->_strip_incomplete_genes($db_genes);
-        warn "Comparing " . scalar(@$db_genes) . " old to " . scalar(@new_genes) . " new gene(s)...\n";
-
-        my $gene_adaptor = $odba->get_GeneAdaptor;
-        warn "Attaching gene to slice \n";
-
-
-        my @changed_genes;
-        foreach my $gene (@new_genes) {
-            # attach gene and its components to the right slice
-            $gene->slice($db_slice);
-            # update author in gene and transcript
-            $gene->gene_author($author_obj);
-            foreach my $tran (@{ $gene->get_all_Transcripts }) {
-                $tran->slice($db_slice);
-                $tran->transcript_author($author_obj);
-            }
-            foreach my $exon (@{ $gene->get_all_Exons }) {
-                $exon->slice($db_slice);
-            }
-            # update all gene and its components in db (new/mod)
-            $gene->is_current(1);
-            if ($gene_adaptor->store($gene, $time_now)) {
-                push(@changed_genes, $gene);
-            }
+        foreach my $exon (@{ $gene->get_all_Exons }) {
+            $exon->slice($db_slice);
         }
-        warn "Updated " . scalar(@changed_genes) . " genes\n";
-
-        my %stored_genes_hash = map {$_->stable_id, $_} @new_genes;
-
-        my $del_count = 0;
-        foreach my $dbgene (@$db_genes) {
-            next if $stored_genes_hash{$dbgene->stable_id};
-
-            ##attach gene and its components to the right slice
-            $dbgene->slice($db_slice);
-            ##update author in gene and transcript
-            $dbgene->gene_author($author_obj);
-            foreach my $tran (@{ $dbgene->get_all_Transcripts }) {
-                $tran->slice($db_slice);
-                $tran->transcript_author($author_obj);
-            }
-            foreach my $exon (@{ $dbgene->get_all_Exons }) {
-                $exon->slice($db_slice);
-            }
-            ##update all gene and its components in db (del)
-
-            # Setting is_current to 0 will cause the store method to delete it.
-            $dbgene->is_current(0);
-            $gene_adaptor->store($dbgene, $time_now);
-            $del_count++;
-            "Deleted gene " . $dbgene->stable_id . "\n";
+        # update all gene and its components in db (new/mod)
+        $gene->is_current(1);
+        if ($gene_adaptor->store($gene, $time_now)) {
+            push(@changed_genes, $gene);
         }
-        warn "Deleted $del_count Genes\n" if ($del_count);
+    }
+    warn "Updated " . scalar(@changed_genes) . " genes\n";
 
-        my $ab = $odba->get_AnnotationBroker();
+    my %stored_genes_hash = map {$_->stable_id, $_} @new_genes;
 
-        # Because exons are shared between transcripts, genes and gene versions
-        # setting which are current is not simple
-        #$ab->set_exon_current_flags($db_genes, \@new_genes);
+    my $del_count = 0;
+    foreach my $dbgene (@$db_genes) {
+        next if $stored_genes_hash{$dbgene->stable_id};
 
-        ##update feature_sets
-        ##SimpleFeatures - deletes old features(features not in xml)
-        ##and stores the current featues in databse(features in xml)
-        my @new_simple_features = $new_region->seq_features;
-        my $sfa                 = $odba->get_SimpleFeatureAdaptor;
-        my $db_simple_features  = $sfa->fetch_all_by_Slice($db_slice);
-
-        my ($delete_sf, $save_sf) = $ab->compare_feature_sets($db_simple_features, \@new_simple_features);
-        foreach my $del_feat (@$delete_sf) {
-            $sfa->remove($del_feat);
+        ##attach gene and its components to the right slice
+        $dbgene->slice($db_slice);
+        ##update author in gene and transcript
+        $dbgene->gene_author($author_obj);
+        foreach my $tran (@{ $dbgene->get_all_Transcripts }) {
+            $tran->slice($db_slice);
+            $tran->transcript_author($author_obj);
         }
-        warn "Deleted " . scalar(@$delete_sf) . " SimpleFeatures\n" unless $@;
-        foreach my $new_feat (@$save_sf) {
-            $new_feat->slice($db_slice);
-            $sfa->store($new_feat);
+        foreach my $exon (@{ $dbgene->get_all_Exons }) {
+            $exon->slice($db_slice);
         }
-        warn "Saved " . scalar(@$save_sf) . " SimpleFeatures\n" unless $@;
+        ##update all gene and its components in db (del)
 
-        ##assembly_tags are not taken into account here, as they are not part of annotation nor versioned ,
-        ##but may be required in the future
-        ##fetch a new slice, and convert this new_slice to xml so that
-        ##the response xml has all the above changes done in this session
+        # Setting is_current to 0 will cause the store method to delete it.
+        $dbgene->is_current(0);
+        $gene_adaptor->store($dbgene, $time_now);
+        $del_count++;
+        "Deleted gene " . $dbgene->stable_id . "\n";
+    }
+    warn "Deleted $del_count Genes\n" if ($del_count);
 
-        ##pass on to the xml generator the current set of genes , simple features
-        my $current_region =  Bio::Vega::Region->new(
+    my $ab = $odba->get_AnnotationBroker();
+
+    # Because exons are shared between transcripts, genes and gene versions
+    # setting which are current is not simple
+    #$ab->set_exon_current_flags($db_genes, \@new_genes);
+
+    ##update feature_sets
+    ##SimpleFeatures - deletes old features(features not in xml)
+    ##and stores the current featues in databse(features in xml)
+    my @new_simple_features = $new_region->seq_features;
+    my $sfa                 = $odba->get_SimpleFeatureAdaptor;
+    my $db_simple_features  = $sfa->fetch_all_by_Slice($db_slice);
+
+    my ($delete_sf, $save_sf) = $ab->compare_feature_sets($db_simple_features, \@new_simple_features);
+    foreach my $del_feat (@$delete_sf) {
+        $sfa->remove($del_feat);
+    }
+    warn "Deleted " . scalar(@$delete_sf) . " SimpleFeatures\n" unless $@;
+    foreach my $new_feat (@$save_sf) {
+        $new_feat->slice($db_slice);
+        $sfa->store($new_feat);
+    }
+    warn "Saved " . scalar(@$save_sf) . " SimpleFeatures\n" unless $@;
+
+    ##assembly_tags are not taken into account here, as they are not part of annotation nor versioned ,
+    ##but may be required in the future
+    ##fetch a new slice, and convert this new_slice to xml so that
+    ##the response xml has all the above changes done in this session
+
+    ##pass on to the xml generator the current set of genes , simple features
+    my $current_region =  Bio::Vega::Region->new(
             otter_dba     => $odba,
             slice         => $db_slice,
             server_action => $self,
             );
-        $current_region->genes(@changed_genes);
-        $current_region->seq_features(@new_simple_features);
-        $current_region->fetch_species;
-        $current_region->fetch_CloneSequences;
+    $current_region->genes(@changed_genes);
+    $current_region->seq_features(@new_simple_features);
+    $current_region->fetch_species;
+    $current_region->fetch_CloneSequences;
 
-        $serialised_output = $self->serialise_region($current_region);
-
-        $odba->commit;
-        $odba->clear_caches;
-    } catch {
-        $odba->rollback;
-        chomp;
-        die "Writing region failed writing annotations [$_]";
-    };
-    return $serialised_output;
+    return $current_region;
 }
 
 sub _slice_lock_broker {
@@ -459,7 +463,8 @@ sub lock_region {
     $server->content_type('application/json');
 
     my $client = $server->param('client') || $server->cgi->user_agent;
-    substr($client, 35) = '...' if length($client) > 38; # keep -intent short
+    substr($client, 35) = '...' ## no critic (BuiltinFunctions::ProhibitLvalueSubstr)
+      if length($client) > 38; # keep -intent short
 
     my $cl_host = $server->best_client_hostname;
 

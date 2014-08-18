@@ -1045,8 +1045,10 @@ sub save_data {
     $top->Busy;
 
     return try {
-        my $xml = $adb->Client->save_otter_xml(
-            $adb->generate_XML_from_acedb, $adb->DataSet->name);
+        my $xml = $adb->Client->save_otter_xml
+          ($adb->generate_XML_from_acedb,
+           $adb->DataSet->name,
+           $adb->fetch_lock_token);
         die "save_otter_xml returned no XML" unless $xml;
         my $parser = Bio::Vega::Transform::Otter::Ace->new;
         $parser->parse($xml);
