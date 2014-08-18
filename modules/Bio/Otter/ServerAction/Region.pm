@@ -550,11 +550,6 @@ sub deserialise_region {
     return $region;
 }
 
-sub deserialise_lock_token {
-    my ($self, $region) = @_;
-    return $region->slice;
-}
-
 ### Accessors
 
 sub server {
