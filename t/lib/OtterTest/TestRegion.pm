@@ -239,12 +239,12 @@ sub local_xml_copy {
        <type>TEC</type>
        <known>0</known>
        <truncated>0</truncated>
-       <author>cas</author>
-       <author_email>cas</author_email>
+       <author>mg13</author>
+       <author_email>mg13</author_email>
        <transcript>
          <stable_id>OTTHUMT00000431233</stable_id>
-         <author>cas</author>
-         <author_email>cas</author_email>
+         <author>mg13</author>
+         <author_email>mg13</author_email>
          <transcript_class>TEC</transcript_class>
          <name>RP11-299J5.1-001</name>
          <evidence_set>
@@ -266,6 +266,46 @@ sub local_xml_copy {
        </transcript>
      </locus>
      <locus>
+       <stable_id>OTTHUMG00000189277</stable_id>
+       <description></description>
+       <name>RP11-299J5.2</name>
+       <type>Novel_CDS</type>
+       <known>0</known>
+       <truncated>0</truncated>
+       <author>mg13</author>
+       <author_email>mg13</author_email>
+       <transcript>
+         <stable_id>OTTHUMT00000479124</stable_id>
+         <author>mg13</author>
+         <author_email>mg13</author_email>
+         <transcript_class>Coding</transcript_class>
+         <name>RP11-299J5.2-001</name>
+         <translation_start>2561947</translation_start>
+         <translation_end>2564143</translation_end>
+         <translation_stable_id>OTTHUMP00000277887</translation_stable_id>
+         <evidence_set>
+           <evidence>
+             <name>Tr:B9SW84.1</name>
+             <type>Protein</type>
+           </evidence>
+           <evidence>
+             <name>Em:AK057938.1</name>
+             <type>cDNA</type>
+           </evidence>
+         </evidence_set>
+         <exon_set>
+           <exon>
+             <stable_id>OTTHUME00002328843</stable_id>
+             <start>2561947</start>
+             <end>2564143</end>
+             <strand>1</strand>
+             <phase>0</phase>
+             <end_phase>-1</end_phase>
+           </exon>
+         </exon_set>
+       </transcript>
+     </locus>
+     <locus>
        <stable_id>OTTHUMG00000014122</stable_id>
        <description>chromosome 6 open reading frame 195</description>
        <name>C6orf195</name>
@@ -274,12 +314,12 @@ sub local_xml_copy {
        <truncated>0</truncated>
        <synonym>bA145H9.2</synonym>
        <synonym>RP11-145H9.2</synonym>
-       <author>gs6</author>
-       <author_email>gs6</author_email>
+       <author>mg13</author>
+       <author_email>mg13</author_email>
        <transcript>
          <stable_id>OTTHUMT00000039633</stable_id>
-         <author>gs6</author>
-         <author_email>gs6</author_email>
+         <author>mg13</author>
+         <author_email>mg13</author_email>
          <remark>novel protein (FLJ31934)</remark>
          <transcript_class>Known_CDS</transcript_class>
          <name>RP11-145H9.2-001</name>
@@ -332,12 +372,12 @@ sub local_xml_copy {
        <known>0</known>
        <truncated>0</truncated>
        <synonym>bA145H9.3</synonym>
-       <author>gs6</author>
-       <author_email>gs6</author_email>
+       <author>mg13</author>
+       <author_email>mg13</author_email>
        <transcript>
          <stable_id>OTTHUMT00000039634</stable_id>
-         <author>gs6</author>
-         <author_email>gs6</author_email>
+         <author>mg13</author>
+         <author_email>mg13</author_email>
          <remark>novel transcript</remark>
          <transcript_class>lincRNA</transcript_class>
          <name>RP11-145H9.3-001</name>
