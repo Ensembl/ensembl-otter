@@ -6,6 +6,7 @@ use strict;
 use warnings;
 
 use Test::Builder;
+use Test::Differences qw( eq_or_diff unified_diff );
 
 use Bio::Otter::Server::Support::Local;
 use Bio::Vega::Gene;
@@ -33,8 +34,8 @@ sub local_server {
 sub check_xml {
     my ($xml, $desc) = @_;
     chomp $xml;
-    my $tb = Test::Builder->new;
-    $tb->is_eq($xml, local_xml_copy(), $desc);
+    unified_diff(); # set global default
+    eq_or_diff($xml, local_xml_copy(), $desc);
     return;
 }
 
