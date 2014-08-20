@@ -66,6 +66,7 @@ if (ok($okay, 'locked okay')) {
     note explain $lock;
 } else {
     diag "error: $error";
+    diag "Remove old locks with\n  scripts/loutre/show_locks -dataset human_test -interrupt -machine Bio.Otter.Server.Support.Local";
 }
 
 my $lock2;
@@ -79,17 +80,17 @@ ok(not($okay), 'second lock attempt fails as expected') or diag explain $lock2;
 # To get the authors changed, ensure each gene in the region will need
 # a save.
 if (0) {
-    my @rst = try_write_region($sa_xml_region, local_xml_copy());
-    my @unl = try_unlock_region($sa_region, $lock);
+    my @rst = try_write_region($sa_xml_region, local_xml_copy(), $lock->{locknums});
+    my @unl = try_unlock_region($sa_region, $lock->{locknums});
     die explain { did_reset => \@rst, unlock => \@unl };
 }
 
-($okay, $region_out, $error) = try_write_region($sa_xml_region, $xml);
+($okay, $region_out, $error) = try_write_region($sa_xml_region, $xml, $lock->{locknums});
 ok($okay, 'write_region (unchanged) from XML') or diag "error: $error";
 ok($region_out, 'write_region returns some stuff');
 
 my $new_xml = add_extra_gene_xml($xml);
-($okay, $region_out, $error) = try_write_region($sa_xml_region, $new_xml);
+($okay, $region_out, $error) = try_write_region($sa_xml_region, $new_xml, $lock->{locknums});
 ok($okay, 'write_region (new gene) from XML')
   or diag explain { error => $error, new_xml => $new_xml, region_out => $region_out };
 ok($region_out, 'write_region returns some stuff');
@@ -110,7 +111,7 @@ $post_diffs =~ s/^@@.*$//mg;
 my $gene_diffs = diff(\$pre_diffs, \$post_diffs);
 note("XML diffs:\n", $gene_diffs);
 
-($okay, $region_out, $error) = try_write_region($sa_xml_region, $xml2);
+($okay, $region_out, $error) = try_write_region($sa_xml_region, $xml2, $lock->{locknums});
 ok($okay, 'write_region (unchanged again) from XML');
 ok($region_out, 'write_region returns some stuff');
 
@@ -118,7 +119,7 @@ my $xml3 = $sa_xml_region->get_region;
 ok($xml3, 'get_region as XML yet again');
 is($xml3, $xml2, 'XML unchanged');
 
-($okay, $region_out, $error) = try_write_region($sa_xml_region, $xml);
+($okay, $region_out, $error) = try_write_region($sa_xml_region, $xml, $lock->{locknums});
 ok($okay, 'write_region (back to scratch) from XML');
 ok($region_out, 'write_region returns some stuff');
 
@@ -136,7 +137,7 @@ $region2->clone_sequences($region->clone_sequences);
 my @genes = ( $region->genes, extra_gene($region->slice) );
 $region2->genes(@genes);
 
-($okay, $region_out, $error) = try_write_region($sa_region, $region2);
+($okay, $region_out, $error) = try_write_region($sa_region, $region2, $lock->{locknums});
 ok($okay, 'write_region (new gene) from Bio::Vega::Region object');
 ok($region_out, 'write_region returns some stuff');
 
@@ -144,14 +145,14 @@ my $region3 = $sa_region->get_region;
 ok ($region3, 'get_region as B:V:Region object again');
 region_is($region3, $region2, 'region has extra gene');
 
-($okay, $region_out, $error) = try_write_region($sa_region, $region);
+($okay, $region_out, $error) = try_write_region($sa_region, $region, $lock->{locknums});
 ok($okay, 'write_region (back to scratch) from Bio::Vega::Region object');
 ok($region_out, 'write_region returns some stuff');
 
 my $region4 = $sa_region->get_region;
 region_is($region4, $region, 'region back to starting point');
 
-($okay, $error) = try_unlock_region($sa_region, $lock);
+($okay, $error) = try_unlock_region($sa_region, $lock->{locknums});
 ok($okay, 'unlocked okay');
 
 done_testing;
@@ -161,7 +162,7 @@ sub try_write_region {
     my ($ok, $data_out, $err);
     try {
         $server_action_region->server->set_params( data => $data_in );
-        $server_action_region->server->set_params( locknums => $lock_token )
+        $server_action_region->server->add_param( locknums => $lock_token )
           if defined $lock_token;
         $data_out = $server_action_region->write_region;
         $ok = 1;
@@ -185,10 +186,10 @@ sub try_lock_region {
 }
 
 sub try_unlock_region {
-    my ($server_action_region, $lock_obj) = @_;
+    my ($server_action_region, $lock_token) = @_;
     my ($ok, $err);
     try {
-        $server_action_region->server->set_params( data => $lock_obj );
+        $server_action_region->server->set_params(locknums => $lock_token);
         $server_action_region->unlock_region;
         $ok = 1;
     } catch {
