@@ -36,8 +36,7 @@ sub check_xml {
     my ($xml, $desc) = @_;
     chomp $xml;
     unified_diff(); # set global default
-    eq_or_diff($xml, local_xml_copy(), $desc, { context => 10 });
-    return;
+    return eq_or_diff($xml, local_xml_copy(), $desc, { context => 10 });
 }
 
 sub region_is {
