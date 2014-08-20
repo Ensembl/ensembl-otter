@@ -13,7 +13,7 @@ use Bio::Vega::Gene;
 use Bio::Vega::Transform::Otter;
 
 use Exporter qw( import );
-our @EXPORT_OK = qw( check_xml extra_gene  add_extra_gene_xml region_is %test_region_params );
+our @EXPORT_OK = qw( check_xml extra_gene  add_extra_gene_xml region_is %test_region_params local_xml_copy );
 
 our %test_region_params = (   ## no critic (Variables::ProhibitPackageVars)
     dataset => 'human_test',
