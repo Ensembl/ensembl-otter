@@ -73,6 +73,9 @@ ok(not($okay), 'second lock attempt fails as expected') or diag explain $lock2;
 
 ###  Reset to match the data.
 #    Useful for when test gets out of sync.
+#
+# To get the authors changed, ensure each gene in the region will need
+# a save.
 if (0) {
     my @rst = try_write_region($sa_xml_region, local_xml_copy());
     my @unl = try_unlock_region($sa_region, $lock);
