@@ -310,46 +310,6 @@ foreach my $V_chr (@chrs) {
     $support->log_warning("Can't get an Ensembl chromosome for $E_chr - have you used the right ensembl db as a template ?\n");
   }
 
-  if ($support->is_patch($V_slice)) {
-    my ($v_patch_name,$e_patch_name);
-    my $v_sr_id = $V_slice->get_seq_region_id;
-
-    my ($insdc_edb) = $V_dbh->selectrow_array(qq(SELECT external_db_id FROM external_db WHERE db_name = 'INSDC'));
-
-    my $sql = qq(
-           SELECT srs.synonym
-             FROM seq_region_synonym srs, seq_region sr
-            WHERE srs.seq_region_id = sr.seq_region_id
-              AND srs.external_db_id = $insdc_edb
-              AND sr.name = );
-    #compare accessions for PATCHES from Ensembl and Vega and warn if they're different
-    my @e_patch_names  = $E_dbh->selectrow_array("$sql '$E_chr'");
-    if (scalar(@e_patch_names > 1)) {
-      $support->log_warning("More than one e! seq_region_synonym found for $V_chr, need to alter the code below\n");
-    }
-    elsif (! @e_patch_names ) {
-      $support->log_warning("No accession for PATCH $V_chr in Ensembl so we can't assess if e! and Vega are using the same PATCH. Will attempt to transfer annotation but you should check how it's worked\n");
-    }
-    my @v_patch_names  = $V_dbh->selectrow_array("$sql  '$V_chr'");
-    if (scalar(@v_patch_names > 1)) {
-      $support->log_warning("More than one Vega seq_region_synonym found for $V_chr, need to alter the code below\n");
-    }
-    elsif (! @v_patch_names ) {
-      $support->log_warning("No accession for PATCH $V_chr in Vega so we can't assess if e! and Vega are using the same PATCH. Will attempt to transfer annotation but you should check how it's worked\n");
-    }
-
-    $v_patch_name = $v_patch_names[0];
-    $e_patch_name = $e_patch_names[0];
-
-    if ($e_patch_name ne $v_patch_name) {
-      $support->log_warning("Accession for PATCH $V_chr differs between e! ($e_patch_name) and Vega ($v_patch_name). No annotation being transferred\n");
-      next CHROM;
-    }
-    else {
-      $support->log_verbose("Accessions match: $v_patch_name and ".$e_patch_names[0]."\n",1);
-    }
-  }
-
   my ($genes) = $support->get_unique_genes($V_slice,$V_dba);
   $support->log("Looping over ".scalar(@$genes)." genes...\n", 1);
 
