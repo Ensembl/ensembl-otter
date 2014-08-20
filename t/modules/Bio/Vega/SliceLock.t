@@ -222,7 +222,7 @@ sub _notlocked_seq_region_id {
 # Basic create-store-fetch-lock-unlock cycle
 sub exercise_tt {
     my ($ds) = @_;
-    plan tests => 70;
+    plan tests => 69;
 
     # Collect props
     my $SLdba = $ds->get_cached_DBAdaptor->get_SliceLockAdaptor;
@@ -344,9 +344,7 @@ sub exercise_tt {
 
     # How not to free it
     my @unlock_fail =
-      ([ same_expire => qr{'expired' inappropriate for same-author unlock},
-         $author[0], 'expired' ],
-       [ toolate_int => qr{'too_late' inappropriate}, $author[1], 'too_late' ],
+      ([ toolate_int => qr{'too_late' inappropriate}, $author[1], 'too_late' ],
        [ diff_fin =>
          qr{'finished' inappropriate for .*,bob@.* acting on .*,alice@.* lock},
          $author[1], 'finished' ],
