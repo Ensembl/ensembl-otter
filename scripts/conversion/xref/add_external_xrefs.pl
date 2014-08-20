@@ -48,6 +48,9 @@ Specific options:
                                         add_vega_xrefs.pl)
     --verbose                           dump data structure from parsing of input file
 
+    --namefixesfile=FILENAME            also write namefixes to given file
+    --nolocal                           fail if remote retrieval fails
+
 =head1 DESCRIPTION
 
 This script parses input files from various sources - HGNC, MGI, TCAG (human chr 7 annotation),
@@ -131,10 +134,12 @@ $support->parse_extra_options(
   'mgifile_entrez=s',
   'rgdfile=s',
   'imgt_hlafile=s',
+  'namefixesfile=s',
   'rgdfile=s',
   'onlydb=s',
   'mismatch',
   'prune',
+  'nolocal',
 );
 $support->allowed_params(
   $support->get_common_params,
@@ -147,10 +152,12 @@ $support->allowed_params(
   'mgifile_entrez',
   'rgdfile',
   'imgt_hlafile',
+  'namefixesfile',
   'rgdfile',
   'onlydb',
   'mismatch',
   'prune',
+  'nolocal',
 );
 
 $support->check_required_params('xrefformat');	
@@ -168,6 +175,10 @@ $support->confirm_params;
 
 # get log filehandle and print heading and parameters to logfile
 $support->init_log;
+
+if($support->param('namefixesfile')) {  
+  open(NAMEFIX,">",$support->param('namefixesfile')) or die "Cannot create ".$support->param('namefixesfile')."\n";
+}
 
 # connect to database and get adaptors
 my $dba = $support->get_database('ensembl');
@@ -386,6 +397,9 @@ foreach my $chr (@chr_sorted) {
 	if (my $n = $lcmap->{$lc_name}->[0]) {
 	  my $new_name =  $prefix ? $prefix.':'.$n : $n;
 	  $support->log_warning("Gene $gsi has a name of $gene_name but should be $new_name\n",1);
+    if($support->param('namefixesfile')) {
+      print NAMEFIX "Gene $gsi has a name of $gene_name but should be $new_name\n";
+    }
 	  if (! $support->param('dry_run')) {
 	    #update gene_name and display_xref
 	    $support->log("Fixing case mismatch $gene_name to $new_name...\n", 1);
@@ -611,6 +625,10 @@ foreach my $cat (keys %report_w) {
   $support->log("$cat - $report_w{$cat}\n",1);
 }
 
+if($support->param('namefixesfile')) {
+  close NAMEFIX;
+}
+
 # finish log
 $support->finish_log;
 
@@ -707,6 +725,9 @@ sub parse_hgnc {
     $support->log("File downloaded from HGNC\n",1);
   }
   else {
+    if($support->param('nolocal')) {
+      $support->log_error("Couldn't retrieve file and --nolocal given");
+    }
     # read input file from HGNC
     $support->log("Unable to download from HGNC, trying to read from disc: ".$support->param('hgncfile')."\n",1);
     open (NOM, '<', $support->param('hgncfile')) or $support->throw(
@@ -890,6 +911,9 @@ sub parse_rgd {
     $support->log("File downloaded from RGD\n",1);
   }
   else {
+    if($support->param('nolocal')) {
+      $support->log_error("Couldn't retrieve file and --nolocal given");
+    }
     # read input file
     $support->log("Unable to download from RGD, trying to read from disc: ".$support->param('rgdfile')."\n",1);
     open (NOM, '<', $support->param('rgdfile')) or $support->throw(
@@ -1102,17 +1126,36 @@ sub parse_mgi {
     },
   };
 
+  my %file_urls = (
+    mgifile => "ftp://ftp.informatics.jax.org/pub/reports/MRK_List2.rpt",
+    mgifile_entrez => "ftp://ftp.informatics.jax.org/pub/reports/MGI_Gene_Model_Coord.rpt",
+    mgifile_uni_ref => "ftp://ftp.informatics.jax.org/pub/reports/MRK_Sequence.rpt",
+  );
+
   foreach my $file (sort keys %$wanted_columns) {
 
     # read input file
     $support->log_stamped("$file...\n", 1);
-
-    my $mgifile = $support->param($file);
-    open(MGI, "< $mgifile")
-      or $support->throw("Couldn't open $mgifile for reading: $!\n");
-    my $page = do { local $/; <MGI> };
+  
+    #try and download direct
+    my $ua = LWP::UserAgent->new;
+    $ua->proxy(['http'], 'http://webcache.sanger.ac.uk:3128');
+    my $url = $file_urls{$file};
+    my $resp = $ua->get($url);
+    my $page = $resp->content;
+    if ($page) {
+      $support->log("$url downloaded from MGI\n",1);
+    } else {
+      if($support->param('nolocal')) {
+        $support->log_error("Couldn't retrieve file and --nolocal given");
+      }
+      my $mgifile = $support->param($file);
+      open(MGI, "< $mgifile")
+        or $support->throw("Couldn't open $mgifile for reading: $!\n");
+      my $page = do { local $/; <MGI> };
+      close MGI;
+    }
     my @recs = split "\n", $page;
-    close MGI;
 
     # read header containing column titles and check all wanted columns are there
     my $line = shift @recs;
