@@ -544,7 +544,8 @@ sub bump_activity {
 
 $freed defaults to C<finished>, which is the expected value when
 $unlock_author is the lock owner.  Other authors must set $freed to
-C<interrupted> or C<expired>, and be able to justify doing this.
+C<interrupted> or C<expired>, and be able to justify doing this if
+asked about it later.
 
 Throws an exception if the lock was already free in-memory.
 
@@ -574,9 +575,10 @@ sub unlock {
 
   # the freed type is constrained, depending on freed_author
   if ($freed_author_id == $author_id) {
-      # Original author frees her own lock
+      # Original author frees her own lock; interrupt or expire
+      # suggest unlocking not via original UI.
       throw "unlock type '$freed' inappropriate for same-author unlock"
-        unless $freed eq 'finished';
+        unless grep { $_ eq $freed } qw( expired interrupted finished );
   } else {
       # Somebody else frees her lock (presumably with good reason)
       my $a_email = $slice_lock->author->email;
