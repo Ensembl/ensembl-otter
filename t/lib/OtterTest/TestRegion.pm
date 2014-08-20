@@ -27,6 +27,7 @@ our %test_region_params = (   ## no critic (Variables::ProhibitPackageVars)
 
 sub local_server {
     my $local_server = Bio::Otter::Server::Support::Local->new;
+    $local_server->authorized_user('anacode');
     $local_server->set_params(%test_region_params);
     return $local_server;
 }
@@ -35,7 +36,7 @@ sub check_xml {
     my ($xml, $desc) = @_;
     chomp $xml;
     unified_diff(); # set global default
-    eq_or_diff($xml, local_xml_copy(), $desc);
+    eq_or_diff($xml, local_xml_copy(), $desc, { context => 10 });
     return;
 }
 
@@ -239,12 +240,12 @@ sub local_xml_copy {
        <type>TEC</type>
        <known>0</known>
        <truncated>0</truncated>
-       <author>cas</author>
-       <author_email>cas</author_email>
+       <author>anacode</author>
+       <author_email>anacode</author_email>
        <transcript>
          <stable_id>OTTHUMT00000431233</stable_id>
-         <author>cas</author>
-         <author_email>cas</author_email>
+         <author>anacode</author>
+         <author_email>anacode</author_email>
          <transcript_class>TEC</transcript_class>
          <name>RP11-299J5.1-001</name>
          <evidence_set>
@@ -274,12 +275,12 @@ sub local_xml_copy {
        <truncated>0</truncated>
        <synonym>bA145H9.2</synonym>
        <synonym>RP11-145H9.2</synonym>
-       <author>gs6</author>
-       <author_email>gs6</author_email>
+       <author>anacode</author>
+       <author_email>anacode</author_email>
        <transcript>
          <stable_id>OTTHUMT00000039633</stable_id>
-         <author>gs6</author>
-         <author_email>gs6</author_email>
+         <author>anacode</author>
+         <author_email>anacode</author_email>
          <remark>novel protein (FLJ31934)</remark>
          <transcript_class>Known_CDS</transcript_class>
          <name>RP11-145H9.2-001</name>
@@ -332,12 +333,12 @@ sub local_xml_copy {
        <known>0</known>
        <truncated>0</truncated>
        <synonym>bA145H9.3</synonym>
-       <author>gs6</author>
-       <author_email>gs6</author_email>
+       <author>anacode</author>
+       <author_email>anacode</author_email>
        <transcript>
          <stable_id>OTTHUMT00000039634</stable_id>
-         <author>gs6</author>
-         <author_email>gs6</author_email>
+         <author>anacode</author>
+         <author_email>anacode</author_email>
          <remark>novel transcript</remark>
          <transcript_class>lincRNA</transcript_class>
          <name>RP11-145H9.3-001</name>
