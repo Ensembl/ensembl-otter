@@ -267,7 +267,7 @@ sub _write_region_exclusive { # runs under $slb->exclusive_work
         $slb->assert_bumped($dbgene->slice);
         $gene_adaptor->store($dbgene, $time_now);
         $del_count++;
-        "Deleted gene " . $dbgene->stable_id . "\n";
+        warn "Deleted gene " . $dbgene->stable_id . "\n";
     }
     warn "Deleted $del_count Genes\n" if ($del_count);
 
