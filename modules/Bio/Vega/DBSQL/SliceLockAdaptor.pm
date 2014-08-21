@@ -244,7 +244,8 @@ sub _sane_db {
       WHERE table_schema=database() and table_name='slice_lock'
     });
 
-    throw("_sane_db expected one row, got ".@$row) unless 1 == @$row;
+    throw("_sane_db expected one row for `slice_lock`, got ".@$row)
+      unless 1 == @$row; # happens when the table is missing!
     @info{qw{ tx_isolation engine }} = @{ $row->[0] };
 
     if ($info{engine} eq 'InnoDB' &&
