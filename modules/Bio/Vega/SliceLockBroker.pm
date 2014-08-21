@@ -497,6 +497,8 @@ Rollback is called for you if there is an error.
 
 =item 6. C<COMMIT>
 
+And L<Bio::Vega::DBSQL::DBAdaptor/clear_caches>.
+
 =item 7. If $unlock, then C<unlock> and C<COMMIT> again
 
 =back
@@ -604,6 +606,7 @@ sub exclusive_work {
         # 6.
         undef $self->{_did_bump}; # undef now; delete at end of local's scope
         $commit->(0);
+        $adap->db->clear_caches;
     } catch {
         my $err = $_;
         $rollback->(\$err);
