@@ -97,7 +97,7 @@ sub store_hit_data_from_gff {
 sub _store_hit_data_from_gff {
     my ($self, $accession_type_cache) = @_;
 
-    $accession_type_cache->begin_work;
+    # $accession_type_cache->begin_work;
 
     my %fail;
     my $gff_fh = $self->gff_fh;
@@ -112,14 +112,18 @@ sub _store_hit_data_from_gff {
             $fail{$source} ||= "Cannot convert source=$source to an evidence type:$.:$_";
             next;
         }
-        $accession_type_cache->save_accession_info( {
-            acc_sv          => $attrib->{'Name'},
-            taxon_id        => $attrib->{'taxon_id'},
-            evi_type        => $evi_type,
-            description     => $attrib->{'description'},
-            source          => $attrib->{'db_name'},
-            sequence_length => $attrib->{'length'},
-            } );
+        _save_accession_info(
+            $accession_type_cache,
+            {
+                acc_sv          => $attrib->{'Name'},
+                taxon_id        => $attrib->{'taxon_id'},
+                evi_type        => $evi_type,
+                description     => $attrib->{'description'},
+                source          => $attrib->{'db_name'},
+                sequence_length => $attrib->{'length'},
+            },
+            'gff features',
+            );
     }
 
     foreach my $prob (sort values %fail) {
@@ -138,7 +142,7 @@ sub _store_hit_data_from_gff {
             @acc_info{fasta_header_column_order()} = @value_list;
             $acc_info{description} = unescape_fasta_description($acc_info{description});
             $acc_info{sequence} = $sequence;
-            $accession_type_cache->save_accession_info(\%acc_info);
+            _save_accession_info($accession_type_cache, \%acc_info, 'gff fasta');
             my $taxon_id = $acc_info{taxon_id};
             $taxon_id_hash->{$taxon_id}++;
         }
@@ -158,12 +162,30 @@ sub _store_hit_data_from_gff {
     }
     $save_sub->();
 
-    $accession_type_cache->commit;
+    # $accession_type_cache->commit;
     $accession_type_cache->populate_taxonomy([keys %{$taxon_id_hash}]);
 
     return;
 }
 
+sub _save_accession_info {
+    my ($accession_type_cache, $entry, $debug_context) = @_;
+
+    my $saved;
+    $accession_type_cache->begin_work;
+    try {
+        $accession_type_cache->save_accession_info($entry);
+        $saved = 1;
+        $accession_type_cache->commit;
+    }
+    catch {
+        my $error = $_;
+        $accession_type_cache->rollback;
+        my $where = $saved ? "commiting accession_info" : "in save_accession_info";
+        warn "Error ${where} [${debug_context}]: ${error}\n";
+    };
+    return;
+}
 
 sub make_ace_transcripts_from_gff {
     my ($self, @args) = @_;
