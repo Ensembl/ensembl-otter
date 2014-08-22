@@ -244,11 +244,9 @@ config directory (since v81).
 
 sub databases {
     my ($pkg) = @_;
-    require YAML::Any;
-    my $fn = $pkg->data_filename('/databases.yaml');
-    my ($h) = YAML::Any::LoadFile($fn);
+    my $h = $pkg->_get_yaml('/databases.yaml');
     my $dbs = $h->{dbspec};
-    die "No dbspec in $fn" unless $dbs;
+    die "No dbspec in databases.yaml" unless $dbs;
     return Bio::Otter::SpeciesDat::Database->new_many_from_dbspec($dbs);
 }
 
@@ -337,7 +335,30 @@ Otter Server config directory.
 
 =cut
 
+# Regenerate an "old users.txt style" users_hash from new access.yaml
 sub users_hash {
+    my ($pkg) = @_;
+    my $acc = $pkg->_get_yaml('/access.yaml');
+    my $sp_grp = $acc->{species_groups} or die "need species_groups";
+    my $users = $acc->{users} or die "need users";
+
+    my %out;
+    while (my ($u, $h) = each %$users) {
+        my @ds = @{ $h->{write} || [] }; # ignoring the read-only list
+
+        # for "legacy" users_hash, skip the explicit default staff access
+        my $is_staff = $u !~ /@/;
+        @ds = grep { $_ ne ':main' } @ds if $is_staff;
+        next if !@ds && $is_staff;
+
+        $out{$u} = { map {($_ => 1)}
+                     map { /^:(.*)$/ ? @{ $sp_grp->{$1} } : $_ }
+                     @ds };
+    }
+    return \%out;
+}
+
+sub users_hash__old {
     my ($pkg) = @_;
     my $usr_file = $pkg->data_filename('users.txt');
     return $pkg->_read_user_file($usr_file);
@@ -385,6 +406,15 @@ sub get_file {
     close $fh;
 
     return $content;
+}
+
+sub _get_yaml {
+    my ($pkg, $name) = @_;
+    require YAML::Any;
+    my $fn = $pkg->data_filename($name);
+    my @load = YAML::Any::LoadFile($fn);
+    die "expected one object in $fn" unless 1 == @load;
+    return $load[0];
 }
 
 

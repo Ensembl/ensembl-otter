@@ -1,0 +1,85 @@
+#! /usr/bin/env perl
+use strict;
+use warnings;
+
+use File::Slurp 'write_file';
+use YAML 'Dump';
+use Test::More;
+
+use Bio::Otter::Server::Config;
+
+=head1 DESCRIPTION
+
+=head2 Create new file
+
+Make a new-style C<access.yaml> file in your developer server-config.
+This is blocked if the file exists.
+
+You will need a full checkout of C<dev> or C<live>, but don't commit
+the file on that branch!
+
+=head2 Compare to old file
+
+Self-test to compare backwards compatibility.
+
+=cut
+
+
+sub make_new {
+    my $u_in = Bio::Otter::Server::Config->users_hash__old;
+    my $sp_in = Bio::Otter::Server::Config->SpeciesDat;
+
+    # Build new-format user permissions
+    my %u_out;
+
+    while (my ($user, $allow_h) = each %$u_in) {
+        die Dump({ weird__allow_h => [ $user, $allow_h ] })
+          if grep { $_ ne 1 } values %$allow_h;
+        $u_out{$user} = { write => [ sort keys %$allow_h ] };
+    }
+
+    my $staff = qx{ ypmatch havana aliases };
+    chomp $staff;
+    my @staff = split ',', $staff;
+    die Dump({ weird__staff_list => \@staff })
+      unless @staff > 10 && grep { $_ eq $ENV{USER} } @staff;
+
+    unshift @{ $u_out{$_}{write} }, ':main' foreach @staff;
+
+    # Build species groups
+    my %sp_grp =
+      (dev => [ sort qw[ human_dev human_test cat_dev ]]);
+    foreach my $ds (sort { $a->name cmp $b->name } @{ $sp_in->datasets }) {
+        my $key = $ds->params->{RESTRICTED} ? 'restricted' : 'main';
+        push @{ $sp_grp{$key} }, $ds->name;
+    }
+
+    my %out =
+      (species_groups => \%sp_grp,
+#       _raw => { 'users.txt' => $u_in, 'species.dat' => $sp_in },
+       users => \%u_out);
+
+    return \%out;
+}
+
+
+sub main {
+    $ENV{ANACODE_SERVER_CONFIG} = "$ENV{HOME}/.otter/server-config/";
+
+    # Create
+    my $new_style = make_new();
+    my $fn = Bio::Otter::Server::Config->data_filename('access.yaml');
+    die "File $fn: exists" if -e $fn;
+    write_file($fn, { atomic => 1 }, Dump($new_style));
+
+    # Test
+    plan tests => 1;
+    my $old = Bio::Otter::Server::Config->users_hash__old;
+    my $new = Bio::Otter::Server::Config->users_hash;
+    is_deeply($new, $old, 'users_hash match')
+      or diag explain { old => $old, new => $new };
+
+    return 0;
+}
+
+exit main();
