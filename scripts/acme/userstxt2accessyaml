@@ -2,25 +2,27 @@
 use strict;
 use warnings;
 
-use File::Slurp 'write_file';
+use File::Slurp qw( slurp write_file );
 use YAML 'Dump';
 use Test::More;
+use Test::Differences qw( eq_or_diff unified_diff );
 
 use Bio::Otter::Server::Config;
+our $BOSC = 'Bio::Otter::Server::Config';
 
 =head1 DESCRIPTION
 
-=head2 Create new file
+=head2 Re-create old file
 
-Make a new-style C<access.yaml> file in your developer server-config.
-This is blocked if the file exists.
+Make an old-style C<users.txt+> file in your developer server-config,
+from the new C<access.yaml>.  NB. different filename.
 
 You will need a full checkout of C<dev> or C<live>, but don't commit
 the file on that branch!
 
-=head2 Compare to old file
+=head2 Diff to real old file
 
-Self-test to compare backwards compatibility.
+Self-tests to compare backwards compatibility.
 
 =cut
 
@@ -62,22 +64,95 @@ sub make_new {
     return \%out;
 }
 
+sub make_legacy {
+    # Get user sort order
+    my @old_txt = split "\n", o_slurp('users.txt');
+    my %usr_line; # key = email, value = line number
+    for (my $i=1; $i<=@old_txt; $i++) {
+        my $ln = $old_txt[$i-1];
+        next if $ln =~ /^\s*(#|$)/;
+        die "Bad users.txt:$i $ln" unless $ln =~ m{^(\S+)};
+        my $u = $1;
+        warn "Duplicate user $u: $i vs $usr_line{$u}" if exists $usr_line{$u};
+        $usr_line{$u} = $i;
+    }
+
+    # Create sorters
+    my $sort_u = sub {
+        foreach my $n ($a, $b) {
+            next if defined $usr_line{$n};
+            if (my @got = grep { lc($n) eq lc($_) } keys %usr_line) {
+                warn "Username $n othercased from @got";
+            } else {
+                warn "New username $n: unexpected, put at the end";
+            }
+            $usr_line{$n} = scalar keys %usr_line;
+        }
+        return $usr_line{$a} <=> $usr_line{$b};
+    };
+    my %ds;
+    {
+        my @ds = qw( human mouse zebrafish pig human_test human_dev mouse_test cat_dev alignment_test );
+        @ds{@ds} = (1 .. @ds);
+    }
+    my $sort_ds = sub {
+        ($ds{$a} || 1E6) <=> ($ds{$b} || 1E6) || $a cmp $b;
+    };
+
+    # Build new access.yaml into old format
+    # preserving user order but not comments, blank lines or whitespace
+    my $old_style = $BOSC->users_hash('samecase');
+    my $legacy_txt = join '',
+      map { my @u_species =  keys %{ $old_style->{$_} };
+            if (@u_species) {
+                sprintf "%-39s %s\n", $_,
+                  (join ' ', sort $sort_ds @u_species);
+            } else {
+                "$_\n";
+            }
+        }
+        sort $sort_u keys %$old_style;
+
+    return $legacy_txt;
+}
+
+sub o_slurp {
+    my ($name) = @_;
+    return slurp( $BOSC->data_filename($name) );
+}
+
 
 sub main {
     $ENV{ANACODE_SERVER_CONFIG} = "$ENV{HOME}/.otter/server-config/";
 
     # Create
-    my $new_style = make_new();
-    my $fn = Bio::Otter::Server::Config->data_filename('access.yaml');
-    die "File $fn: exists" if -e $fn;
-    write_file($fn, { atomic => 1 }, Dump($new_style));
+    if (0) {
+        my $new_style = make_new();
+        my $fn = Bio::Otter::Server::Config->data_filename('access.yaml');
+        die "File $fn: exists" if -e $fn;
+        write_file($fn, { atomic => 1 }, Dump($new_style));
+    }
+
+    # Re-create
+    my $legacy_txt = make_legacy();
+    my $fn = $BOSC->data_filename('users.txt');
+    die "File $fn: does not exist" unless -f $fn;
+    $fn .= '+'; # do not tromp (yet)
+    write_file($fn, { atomic => 1 }, $legacy_txt);
 
     # Test
-    plan tests => 1;
+    plan tests => 2;
     my $old = Bio::Otter::Server::Config->users_hash__old;
     my $new = Bio::Otter::Server::Config->users_hash;
-    is_deeply($new, $old, 'users_hash match')
+    unified_diff();
+    eq_or_diff($new, $old, 'users_hash match')
       or diag explain { old => $old, new => $new };
+
+    my $orig_utxt = o_slurp('users.txt');
+    $orig_utxt =~ s{^(#.*)?\s*\n}{}mg; # remove comments, we don't try to keep them
+    eq_or_diff(scalar o_slurp('users.txt+'),
+               $orig_utxt,
+               'users.txt re-generated from new format');
 
     return 0;
 }
