@@ -337,23 +337,48 @@ Otter Server config directory.
 
 # Regenerate an "old users.txt style" users_hash from new access.yaml
 sub users_hash {
-    my ($pkg) = @_;
+    my ($pkg, @opt) = @_;
+    my $preserve_case = ("@opt" eq 'samecase'); # for testing
+
     my $acc = $pkg->_get_yaml('/access.yaml');
     my $sp_grp = $acc->{species_groups} or die "need species_groups";
-    my $users = $acc->{users} or die "need users";
+    my $u_grp = $acc->{user_groups} or die "need user_groups";
 
     my %out;
-    while (my ($u, $h) = each %$users) {
-        my @ds = @{ $h->{write} || [] }; # ignoring the read-only list
+    while (my ($UG, $info) = each %$u_grp) {
+        my %info = %$info;
+        delete $info{comment};
+        my @grp_ds = @{ delete $info{write} || [] }; # ignoring the read-only list
+        my $users = delete $info{users} || [];
+        my @badkey = sort keys %info;
+        die "user_groups{$UG}{qw{@badkey}} not understood" if @badkey;
+        die "user_groups{$UG}{users} is $users" unless ref($users) eq 'ARRAY';
 
-        # for "legacy" users_hash, skip the explicit default staff access
-        my $is_staff = $u !~ /@/;
-        @ds = grep { $_ ne ':main' } @ds if $is_staff;
-        next if !@ds && $is_staff;
+        foreach my $u (@$users) {
+            my ($user, @extra_ds) = try {
+                my ($key) = keys %$u;
+                die if 1 != keys %$u;
+                ($key, @{ $u->{$key}->{write} });
+            } catch {
+                ($u);
+            };
+            my @ds = (@grp_ds, @extra_ds);
 
-        $out{$u} = { map {($_ => 1)}
-                     map { /^:(.*)$/ ? @{ $sp_grp->{$1} } : $_ }
-                     @ds };
+            # for "legacy" users_hash, skip the explicit default staff access
+            my $is_staff = $user !~ /@/;
+            @ds = grep { $_ ne ':main' } @ds if $is_staff;
+            next if !@ds && $is_staff;
+
+            die "User $user: duplicate entry" if $out{$user};
+            # to allow merging, we considered a "multigroup: 1" token.  YAGNI?
+
+            $user = lc($user) unless $preserve_case; # done in old _read_user_file
+
+            $out{$user} =
+              { map {($_ => 1)} # per dataset name
+                map { /^:(.*)$/ ? @{ $sp_grp->{$1} } : $_ } # expand species_groups
+                @ds };
+        }
     }
     return \%out;
 }
