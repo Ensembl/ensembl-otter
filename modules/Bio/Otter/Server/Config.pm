@@ -339,19 +339,38 @@ Otter Server config directory.
 sub users_hash {
     my ($pkg, @opt) = @_;
     my $preserve_case = ("@opt" eq 'samecase'); # for testing
+    my $invalid = 0;
 
     my $acc = $pkg->_get_yaml('/access.yaml');
     my $sp_grp = $acc->{species_groups} or die "need species_groups";
     my $u_grp = $acc->{user_groups} or die "need user_groups";
+
+    my %valid_dataset;
+    {
+        my $ds_list = $pkg->SpeciesDat->datasets;
+        @valid_dataset{ map { $_->name } @$ds_list } = @$ds_list;
+    }
+    my $check_ds = sub {
+        my ($where, @ds) = @_;
+        if (my @bad = grep { ! $valid_dataset{$_} } @ds) {
+            warn "Bad dataset names (@bad) found in $where";
+            $invalid = 1;
+        }
+        return 0;
+    };
+    $check_ds->("species_groups{$_}", @{ $sp_grp->{$_} }) foreach keys %$sp_grp;
 
     my %out;
     while (my ($UG, $info) = each %$u_grp) {
         my %info = %$info;
         delete $info{comment};
         my @grp_ds = @{ delete $info{write} || [] }; # ignoring the read-only list
+        $check_ds->("user_groups{$UG}{write}", grep { !/^:/ } @grp_ds);
         my $users = delete $info{users} || [];
-        my @badkey = sort keys %info;
-        die "user_groups{$UG}{qw{@badkey}} not understood" if @badkey;
+        if (my @badkey = sort keys %info) {
+            warn "user_groups{$UG}{qw{@badkey}} not understood";
+            $invalid = 1;
+        }
         die "user_groups{$UG}{users} is $users" unless ref($users) eq 'ARRAY';
 
         foreach my $u (@$users) {
@@ -362,7 +381,13 @@ sub users_hash {
             } catch {
                 ($u);
             };
+            $check_ds->("user_groups{$UG}{users}{$user}{write}", grep { !/^:/ } @extra_ds);
             my @ds = (@grp_ds, @extra_ds);
+            if (ref($user)) {
+                my $maybe = try { join ' ', ' on', keys %$user } catch {''};
+                warn "In user_groups{$UG}: Bad username '$user' - trailing :$maybe in YAML?";
+                $invalid = 1;
+            }
 
             # for "legacy" users_hash, skip the explicit default staff access
             my $is_staff = $user !~ /@/;
@@ -380,6 +405,7 @@ sub users_hash {
                 @ds };
         }
     }
+    die "access.yaml is invalid" if $invalid; # fail late, see more problems at once
     return \%out;
 }
 
