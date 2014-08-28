@@ -54,8 +54,8 @@ whole process.
 It prepares the initial Ensembl schema database to hold Vega annotation on the
 Ensembl assembly. Major steps are:
 
-    - optionally remove preexisting assembly mappings from Ensembl - if they are left
-      in they will also be in ensembl-vega, probably OK but never tried
+    - optionally remove preexisting assembly mappings from Ensembl (they will be kept in non-ineractive mode)
+        they should be left in ensembl-vega for consistency with other e! dbs
     - create a db with current Ensembl schema
     - transfer Vega chromosomes (with same seq_region_id and name as in
       source db)
@@ -654,7 +654,7 @@ sub delete_mappings{
     if ($assembly->{'version'} ne $assembly_version) {
       my $version_to_delete = $assembly->{'version'};
       my $id_to_delete = $assembly->{'coord_system_id'};
-      if (!$support->param('interactive') and $support->user_proceed("Remove $version_to_delete assembly mappings from this copy of the $db_type database?")) {
+      if ($support->param('interactive') and $support->user_proceed("Remove $version_to_delete assembly mappings from this copy of the $db_type database?")) {
 	$support->log("Removing $version_to_delete assembly mappings from $db_type database\n");
 	
 	# delete old seq_regions and assemblies that contain them
