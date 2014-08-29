@@ -99,6 +99,8 @@ sub _store_hit_data_from_gff {
 
     # $accession_type_cache->begin_work;
 
+    my %batch;
+    my $count = 0;
     my %fail;
     my $gff_fh = $self->gff_fh;
     while (<$gff_fh>) {
@@ -112,19 +114,21 @@ sub _store_hit_data_from_gff {
             $fail{$source} ||= "Cannot convert source=$source to an evidence type:$.:$_";
             next;
         }
-        _save_accession_info(
-            $accession_type_cache,
-            {
-                acc_sv          => $attrib->{'Name'},
-                taxon_id        => $attrib->{'taxon_id'},
-                evi_type        => $evi_type,
-                description     => $attrib->{'description'},
-                source          => $attrib->{'db_name'},
-                sequence_length => $attrib->{'length'},
-            },
-            'gff features',
-            );
+        $batch{$attrib->{'Name'}} = {
+            acc_sv          => $attrib->{'Name'},
+            taxon_id        => $attrib->{'taxon_id'},
+            evi_type        => $evi_type,
+            description     => $attrib->{'description'},
+            source          => $attrib->{'db_name'},
+            sequence_length => $attrib->{'length'},
+        };
+        if (++$count >= 500) {
+            _save_accession_info($accession_type_cache, \%batch, 'gff features');
+            %batch = ();
+            $count = 0;
+        }
     }
+    _save_accession_info($accession_type_cache, \%batch, 'gff features');
 
     foreach my $prob (sort values %fail) {
         $self->logger->warn($prob); # warn because it is only a cache save fail
@@ -134,6 +138,8 @@ sub _store_hit_data_from_gff {
     # none).
 
     my ($header, $sequence, $taxon_id_hash);
+    %batch = ();
+    $count = 0;
     $taxon_id_hash = { };
     my $save_sub = sub {
         if (defined $header) {
@@ -142,7 +148,12 @@ sub _store_hit_data_from_gff {
             @acc_info{fasta_header_column_order()} = @value_list;
             $acc_info{description} = unescape_fasta_description($acc_info{description});
             $acc_info{sequence} = $sequence;
-            _save_accession_info($accession_type_cache, \%acc_info, 'gff fasta');
+            $batch{$acc_info{acc_sv}} = \%acc_info;
+            if (++$count >= 500) {
+                _save_accession_info($accession_type_cache, \%batch, 'gff fasta');
+                %batch = ();
+                $count = 0;
+            }
             my $taxon_id = $acc_info{taxon_id};
             $taxon_id_hash->{$taxon_id}++;
         }
@@ -161,6 +172,7 @@ sub _store_hit_data_from_gff {
         }
     }
     $save_sub->();
+    _save_accession_info($accession_type_cache, \%batch, 'gff fasta');
 
     # $accession_type_cache->commit;
     $accession_type_cache->populate_taxonomy([keys %{$taxon_id_hash}]);
@@ -169,12 +181,14 @@ sub _store_hit_data_from_gff {
 }
 
 sub _save_accession_info {
-    my ($accession_type_cache, $entry, $debug_context) = @_;
+    my ($accession_type_cache, $entries, $debug_context) = @_;
 
     my $saved;
     $accession_type_cache->begin_work;
     try {
-        $accession_type_cache->save_accession_info($entry);
+        foreach my $entry (values %$entries) {
+            $accession_type_cache->save_accession_info($entry);
+        }
         $saved = 1;
         $accession_type_cache->commit;
     }
