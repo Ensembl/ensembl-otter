@@ -7,7 +7,9 @@ use strict;
 use warnings;
 use Carp;
 
+use Bio::Otter::Log::WithContext;
 use Bio::Otter::Utils::AccessionInfo::Serialise qw(fasta_header_column_order unescape_fasta_description);
+use Bio::Otter::Utils::TimeDiff qw( time_diff_for );
 
 use Hum::Ace::SubSeq;
 use Hum::Ace::Method;
@@ -41,12 +43,38 @@ use Try::Tiny;
     }
 }
 
+sub new {
+    my ($pkg, %args) = @_;
+
+    my ($gff_fh, $log_name, $column_name) = @args{qw( gff_fh log_name column_name )};
+    my $self = bless {}, $pkg;
+    $self->log_name($log_name);
+    $self->column_name($column_name);
+
+    unless ($gff_fh) {
+        $self->logger->logconfess("Cannot create ProcessGFF without gff_fh parameter");
+    }
+    $self->gff_fh($gff_fh);
+
+    return $self;
+}
+
 sub store_hit_data_from_gff {
-    my ($accession_type_cache, $gff_fh) = @_;
+    my ($self, @args) = @_;
+    return time_diff_for(
+        sub { return $self->_store_hit_data_from_gff(@args); },
+        sub { return $self->_time_diff_log(@_);              },
+        sprintf('store_hit_data_from_gff [%s]', $self->column_name),
+        );
+}
+
+sub _store_hit_data_from_gff {
+    my ($self, $accession_type_cache) = @_;
 
     $accession_type_cache->begin_work;
 
     my %fail;
+    my $gff_fh = $self->gff_fh;
     while (<$gff_fh>) {
         last if /^\s*##\bFASTA\b/;
         next if /^\s*#/;
@@ -69,7 +97,7 @@ sub store_hit_data_from_gff {
     }
 
     foreach my $prob (sort values %fail) {
-        warn $prob; # warn because it is only a cache save fail
+        $self->logger->warn($prob); # warn because it is only a cache save fail
     }
 
     # Now we are at the start of the FASTA data (or EOF if there is
@@ -112,10 +140,19 @@ sub store_hit_data_from_gff {
 
 
 sub make_ace_transcripts_from_gff {
-    my ($gff_fh, $start, $end) = @_;
+    my ($self, @args) = @_;
+    return time_diff_for(
+        sub { return ( $self->_make_ace_transcripts_from_gff(@args) ); },
+        sub { return $self->_time_diff_log(@_);                        },
+        sprintf('make_ace_transcripts_from_gff [%s]', $self->column_name),
+        );
+}
+
+sub _make_ace_transcripts_from_gff {
+    my ($self, $start, $end) = @_;
 
     my %tsct;
-    make_ace_transcripts_from_gff_fh($gff_fh, $start, $end, \%tsct);
+    $self->make_ace_transcripts_from_gff_fh($start, $end, \%tsct);
 
     my (@ok_tsct);
     while (my ($name, $sub) = each %tsct) {
@@ -126,20 +163,21 @@ sub make_ace_transcripts_from_gff {
         catch {
             # special case for a common error - trim off stack trace - RT#273390
             s{^(Translation coord '\d+' does not lie within any Exon\n) at .*}{$1}s;
-            warn "Skipped SubSeq '$name'.  Error:\n$_";
+            $self->logger->warn("Skipped SubSeq '$name'.  Error:\n$_");
         };
     }
     return @ok_tsct;
 }
 
 sub make_ace_transcripts_from_gff_fh {
-    my ($gff_fh, $seq_region_start, $seq_region_end, $tsct) = @_;
+    my ($self, $seq_region_start, $seq_region_end, $tsct) = @_;
 
     my $seq_region_offset = $seq_region_start - 1;
     my $seq_region_length = $seq_region_end - $seq_region_offset;
 
     my (%locus_by_name, $gene_method, $coding_gene_method);
 
+    my $gff_fh = $self->gff_fh;
     while (<$gff_fh>) {
         last if /^\s*##\bFASTA\b/;
         next if /^\s*#/;
@@ -220,6 +258,7 @@ sub make_ace_transcripts_from_gff_fh {
     return;
 }
 
+# Not a method
 sub parse_gff_line {
     my ($line) = @_;
 
@@ -233,10 +272,12 @@ sub parse_gff_line {
     return ($seq_name, $source, $feat_type, $start, $end, $score, $strand, $frame, $attrib);
 }
 
+# Not a method
 sub _parse_tag_value {
     return map { _gff3_unescape() } split(/=/, $_, 2);
 }
 
+# Not a method
 sub _gff3_unescape {
     s/%([[:xdigit:]]{2})/chr(hex($1))/eg;
     return $_;
@@ -245,6 +286,44 @@ sub _gff3_unescape {
 # $gff->{seqname}, $gff->{source}, $gff->{feature}, $gff->{start},
 # $gff->{end},     $gff->{score},  $gff->{strand},  $gff->{frame},
 
+
+sub gff_fh {
+    my ($self, @args) = @_;
+    ($self->{'gff_fh'}) = @args if @args;
+    my $gff_fh = $self->{'gff_fh'};
+    return $gff_fh;
+}
+
+sub column_name {
+    my ($self, @args) = @_;
+    ($self->{'column_name'}) = @args if @args;
+    my $column_name = $self->{'column_name'};
+    return $column_name || 'NOT-SET';
+}
+
+# FIXME: duplication. Provide via a mix-in?
+sub logger {
+    my ($self, $category) = @_;
+    $category = scalar caller unless defined $category;
+    return Bio::Otter::Log::WithContext->get_logger($category, name => $self->log_name);
+}
+
+sub log_name {
+    my ($self, @args) = @_;
+    ($self->{'log_name'}) = @args if @args;
+    my $log_name = $self->{'log_name'};
+    return $log_name || '-B-O-L-ProcessGFF unnamed-';
+}
+
+sub _time_diff_log {
+    my ($self, $event, $data, $cb_data) = @_;
+    if ($event eq 'elapsed') {
+        $self->logger->debug("${cb_data}: ${event}: $data");
+    } else {
+        $self->logger->debug("${cb_data}: ${event}");
+    }
+    return;
+}
 
 1;
 

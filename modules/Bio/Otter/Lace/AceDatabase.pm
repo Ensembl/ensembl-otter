@@ -72,7 +72,7 @@ sub DB {
     my ($self) = @_;
 
     my $db = $self->{'_sqlite_database'}
-        ||= Bio::Otter::Lace::DB->new($self->home, $self->Client);
+        ||= Bio::Otter::Lace::DB->new(home => $self->home, client => $self->Client, log_name => $self->log_name);
     return $db;
 }
 
@@ -108,6 +108,7 @@ sub name {
 
     if ($name) {
         $self->DB->set_tag_value('name', $name);
+        $self->DB->log_name($name);
         return $name;
     }
     else {
@@ -248,10 +249,14 @@ sub init_AceDatabase {
     my $parser = Bio::Vega::Transform::Otter::Ace->new;
     $parser->parse($xml_string);
     $self->write_otter_acefile($parser);
-    $self->write_dna_data;
+
+    my ($raw_dna, @tiles) = $self->get_assembly_dna;
+    $self->write_dna_data($raw_dna, @tiles);
+
     $self->write_methods_acefile;
 
-    $self->save_region_xml($xml_string);
+    $self->save_region_xml($xml_string); # sets up $self->slice
+    $self->DB->session_slice($self->slice->ensembl_slice, $raw_dna);
 
     $self->initialize_database;
 
@@ -328,6 +333,7 @@ sub recover_slice_from_region_xml {
         $chr_slice->end,
         );
     $self->slice($slice);
+    $self->DB->session_slice($self->slice->ensembl_slice);
 
     return;
 }
@@ -340,45 +346,6 @@ sub slice {
         $self->{'_slice'} = $slice;
     }
     return $self->{'_slice'};
-}
-
-# The seq_region in the local DB is created and stored lazily when first required.
-#
-sub db_slice {
-    my ($self) = @_;
-
-    my $db_slice = $self->{'_db_slice'};
-    return $db_slice if $db_slice;
-
-    my $ensembl_slice = $self->slice->ensembl_slice;
-
-    # If this is a recovered session we will already have the seq_region in the local DB
-    my $slice_adaptor = $self->DB->vega_dba->get_SliceAdaptor;
-    my $db_seq_region = $slice_adaptor->fetch_by_region(
-        $ensembl_slice->coord_system->name,
-        $ensembl_slice->seq_region_name,
-        );
-
-    unless ($db_seq_region) {
-
-        # db_seq_region's coord_system needs to be the one already in the DB.
-        my $cs_adaptor = $self->DB->vega_dba->get_CoordSystemAdaptor;
-        my $cs = $cs_adaptor->fetch_by_name($ensembl_slice->coord_system->name, $ensembl_slice->coord_system->version);
-
-        # db_seq_region must start from 1
-        my $db_seq_region_parameters = {
-            %$ensembl_slice,
-            coord_system      => $cs,
-            start             => 1,
-            seq_region_length => $ensembl_slice->end,
-        };
-        $db_seq_region = Bio::EnsEMBL::Slice->new_fast($db_seq_region_parameters);
-
-        $slice_adaptor->store($db_seq_region);
-    }
-
-    $db_slice = $db_seq_region->sub_Slice($ensembl_slice->start, $ensembl_slice->end);
-    return $self->{'_db_slice'} = $db_slice;
 }
 
 sub slice_name {
@@ -831,28 +798,6 @@ sub _value_merge {
     return $v1;
 }
 
-sub zmap_config_update {
-    my ($self) = @_;
-
-    my $cfg_path = sprintf "%s/ZMap", $self->zmap_dir;
-    my $cfg = $self->{_zmap_cfg} ||=
-        Config::IniFiles->new( -file => $cfg_path );
-
-    foreach my $column ($self->ColumnCollection->list_Columns) {
-        my $name = $column->name;
-        if ($column->status eq 'Visible') {
-            $cfg->setval($name,'delayed','false');
-        }
-        else {
-            $cfg->setval($name,'delayed','true');
-        }
-    }
-
-    $cfg->RewriteConfig;
-
-    return;
-}
-
 sub stylesfile {
     my ($self) = @_;
     return sprintf '%s/styles.ini', $self->zmap_dir;
@@ -1081,23 +1026,29 @@ sub db_initialized {
 }
 
 sub write_dna_data {
-    my ($self) = @_;
+    my ($self, $dna, @tiles) = @_;
 
     my $ace_filename = $self->home . '/rawdata/dna.ace';
     $self->add_acefile($ace_filename);
     open my $ace_fh, '>', $ace_filename
         or $self->logger->logconfess("Can't write to '$ace_filename' : $!");
-    print $ace_fh $self->dna_ace_data;
+    print $ace_fh $self->dna_ace_data($dna, @tiles);
     close $ace_fh;
 
     return;
 }
 
-sub dna_ace_data {
+sub get_assembly_dna {
     my ($self) = @_;
 
     my ($dna, @tiles) = split /\n/
         , $self->http_response_content('GET', 'get_assembly_dna');
+
+    return ($dna, @tiles);
+}
+
+sub dna_ace_data {
+    my ($self, $dna, @tiles) = @_;
 
     $dna = lc $dna;
     $dna =~ s/(.{60})/$1\n/g;
@@ -1154,6 +1105,23 @@ sub save_filter_state {
     my $col_aptr = $self->DB->ColumnAdaptor;
     $col_aptr->store_ColumnCollection_state($self->ColumnCollection);
 
+    return;
+}
+
+# returns true if column updated in DB
+#
+sub select_column_by_name {
+    my ($self, $column_name) = @_;
+
+    my $cllctn   = $self->ColumnCollection;
+    my $col_aptr = $self->DB->ColumnAdaptor;
+
+    my $column = $cllctn->get_Column_by_name($column_name);
+    if ($column and not $column->selected) {
+        $column->selected(1);
+        $col_aptr->store_Column_state($column);
+        return 1;
+    }
     return;
 }
 
@@ -1271,9 +1239,14 @@ sub _process_Column {
     my @transcripts = ( );
     my $close_error;
     open my $gff_fh, '<', $full_gff_file or $logger->logconfess("Can't read GFF file '$full_gff_file'; $!");
+    my $process_gff = Bio::Otter::Lace::ProcessGFF->new(
+        gff_fh      => $gff_fh,
+        column_name => $filter_name,
+        log_name    => $self->log_name,
+        );
 
     try {
-        @transcripts = $self->_process_fh($column, $gff_fh);
+        @transcripts = $self->_process_fh($column, $process_gff);
     }
     catch { $logger->logdie(sprintf "%s: %s: $_", $filter_name, $full_gff_file); }
     finally {
@@ -1290,16 +1263,15 @@ sub _process_Column {
 
 # "perlcritic --stern" refuses to learn that $logger->logconfess is fatal
 sub _process_fh { ## no critic (Subroutines::RequireFinalReturn)
-    my ($self, $column, $gff_fh) = @_;
+    my ($self, $column, $process_gff) = @_;
 
     my $filter = $column->Filter;
 
     if ($filter->content_type eq 'transcript') {
-        return Bio::Otter::Lace::ProcessGFF::make_ace_transcripts_from_gff(
-            $gff_fh, $self->slice->start, $self->slice->end);
+        return $process_gff->make_ace_transcripts_from_gff($self->slice->start, $self->slice->end);
     }
     elsif ($filter->content_type eq 'alignment_feature') {
-        Bio::Otter::Lace::ProcessGFF::store_hit_data_from_gff($self->AccessionTypeCache, $gff_fh);
+        $process_gff->store_hit_data_from_gff($self->AccessionTypeCache);
         # Unset flag so that we don't reprocess this file if we recover the session.
         $column->process_gff(0);
         $self->DB->ColumnAdaptor->store_Column_state($column);

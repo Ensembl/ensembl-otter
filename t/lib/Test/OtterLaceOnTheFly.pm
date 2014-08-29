@@ -161,7 +161,7 @@ sub run_otf_genomic_test {
 }
 
 sub run_otf_test {
-    my ($test, $target) = @_;
+    my ($test, $target, $extra_builder_args) = @_;
 
     note 'Test: ', $test->{name};
 
@@ -171,10 +171,12 @@ sub run_otf_test {
         $test->{query_seqs} = [ Hum::FastaFileIO->new_DNA_IO($test->{query_path})->read_all_sequences ];
     }
 
+    $extra_builder_args ||= {};
     my $builder = new_ok( $test->{builder_class} => [{
         type       => $test->{type},
         query_seqs => $test->{query_seqs},
         target     => $target,
+        %$extra_builder_args,
                                                                              }]);
     my $request = $builder->prepare_run;
 

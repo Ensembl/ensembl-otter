@@ -14,7 +14,7 @@ use Try::Tiny;
 
 use Test::Otter qw( ^db_or_skipall ^data_dir_or_skipall ); # may skip test
 
-use OtterTest::TestRegion qw( check_xml extra_gene add_extra_gene_xml region_is %test_region_params );
+use OtterTest::TestRegion qw( check_xml extra_gene add_extra_gene_xml region_is %test_region_params local_xml_copy );
 
 my %modules;
 
@@ -52,6 +52,7 @@ my $xml = $sa_xml_region->get_region;
 ok($xml, 'get_region as XML');
 note('Got ', length $xml, ' chrs');
 check_xml($xml, 'XML is as expected');
+# if it's not, consider the commented Reset below
 
 ($okay, $region_out, $error) = try_write_region($sa_xml_region, $xml);
 ok(not($okay), 'attempt to write_region from XML dies as expected');
@@ -59,19 +60,36 @@ like($error, qr/not locked/, 'error message ok');
 
 my $lock;
 ($okay, $lock, $error) = try_lock_region($sa_region);
-ok($okay, 'locked okay');
+if (ok($okay, 'locked okay')) {
+    note explain $lock;
+} else {
+    diag "error: $error";
+}
 
 my $lock2;
 ($okay, $lock2, $error) = try_lock_region($sa_region);
-ok(not($okay), 'second lock attempt fails as expected');
+ok(not($okay), 'second lock attempt fails as expected') or diag explain $lock2;
+
+
+###  Reset to match the data.
+#    Useful for when test gets out of sync.
+#
+# To get the authors changed, ensure each gene in the region will need
+# a save.
+if (0) {
+    my @rst = try_write_region($sa_xml_region, local_xml_copy());
+    my @unl = try_unlock_region($sa_region, $lock);
+    die explain { did_reset => \@rst, unlock => \@unl };
+}
 
 ($okay, $region_out, $error) = try_write_region($sa_xml_region, $xml);
-ok($okay, 'write_region (unchanged) from XML');
+ok($okay, 'write_region (unchanged) from XML') or diag "error: $error";
 ok($region_out, 'write_region returns some stuff');
 
 my $new_xml = add_extra_gene_xml($xml);
 ($okay, $region_out, $error) = try_write_region($sa_xml_region, $new_xml);
-ok($okay, 'write_region (new gene) from XML');
+ok($okay, 'write_region (new gene) from XML')
+  or diag explain { error => $error, new_xml => $new_xml, region_out => $region_out };
 ok($region_out, 'write_region returns some stuff');
 
 my $xml2 = $sa_xml_region->get_region;

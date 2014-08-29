@@ -13,10 +13,12 @@ use Bio::Otter::Lace::Client;
 use Bio::Otter::Lace::OnTheFly::Transcript;
 use Bio::Otter::UI::TextWindow::TranscriptAlign;
 use Bio::Vega::Evidence::Types qw(evidence_is_sra_sample_accession);
-use Tk::Utils::OnTheFly;
 use Tk::ScopedBusy;
 
-use base 'CanvasWindow';
+use base qw{
+    CanvasWindow
+    Bio::Otter::UI::OnTheFlyMixin
+    };
 
 Readonly my $EVI_TAG     => 'IsEvidence';
 Readonly my $CURRENT_EVI => "current&&${EVI_TAG}";
@@ -32,67 +34,148 @@ sub initialise {
         -side => 'top',
         -fill => 'x',
         );
+    {
+        my $otf_frame = $action_frame->LabFrame(
+                Name => 'otf',
+                -label  => 'On The Fly Alignment',
+                -border => 3,
+            )
+            ->pack(
+                -side => 'top',
+                -fill => 'x',
+            );
+        {
+            my $otf_ts_frame = $otf_frame->LabFrame(
+                    Name    => 'otf_ts',
+                    -label  => 'Spliced Transcript',
+                    -border => 3,
+                )
+                ->pack(
+                    -side   => 'left',
+                    -fill   => 'x',
+                    -expand => 1,
+                );
 
-    my $align = sub { $self->align_to_transcript; };
-    $top->bind('<Control-t>', $align);
-    $top->bind('<Control-T>', $align);
-    my $align_button = $action_frame->Button(
-        -text =>    'Align to transcript',
-        -command => $align,
-        -state   => 'disabled',
-        )->pack(-side => 'left');
-    $self->align_button($align_button);
+            my $align = sub { $self->align_to_transcript; };
+            $top->bind('<Control-t>', $align);
+            $top->bind('<Control-T>', $align);
+            my $align_button = $otf_ts_frame->Button(
+                    -text    => 'Align',
+                    -command => $align,
+                    -state   => 'disabled',
+                )
+                ->pack(
+                    -side   => 'top',
+                    -anchor => 'w'
+                );
+            $self->align_button($align_button);
 
-    my $dotter = sub { $self->dotter_to_transcript; };
-    $top->bind('<Control-period>',  $dotter);
-    $top->bind('<Control-greater>', $dotter);
-    my $dotter_button = $action_frame->Button(
-        -text =>    'Dotter',
-        -command => $dotter,
-        -state   => 'disabled',
-        )->pack(-side => 'left');
-    $self->dotter_button($dotter_button);
+            my $clear_otf = $otf_ts_frame->Checkbutton(
+                    -variable => \$self->{_clear_existing},
+                    -text     => 'Clear existing',
+                    -anchor   => 'w',
+                    -state    => 'disabled',
+                )
+                ->pack(
+                    -side   => 'top',
+                    -anchor => 'w'
+                );
+            $self->clear_otf_checkbutton($clear_otf);
+        }
 
-    my $button_frame = $top->Frame(Name => 'button_frame')->pack(
-        -side => 'top',
-        -fill => 'x',
-        );
+        {
+            my $otf_gen_frame = $otf_frame->LabFrame(
+                    Name    => 'otf_gen',
+                    -label  => 'Genomic',
+                    -border => 3,
+                )
+                ->pack(
+                    -side   => 'right',
+                    -fill   => 'both',
+                    -expand => 1,
+                );
 
-    my $draw = sub{ $self->draw_evidence };
-    $top->bind('<Control-u>', $draw);
-    $top->bind('<Control-u>', $draw);
-    #$button_frame->Button(
-    #    -text => 'Update',
-    #    -command => $draw,
-    #    )->pack(-side => 'left');
+            my $launch = sub { $self->SessionWindow->run_exonerate; };
+            $top->bind('<Control-g>', $launch);
+            $top->bind('<Control-G>', $launch);
+            my $launch_button = $otf_gen_frame->Button(
+                    -text    => 'Open',
+                    -command => $launch,
+                    -state   => 'disabled',
+                )
+                ->pack(
+                    -side   => 'top',
+                    -anchor => 'w'
+                );
+            $self->genomic_otf_button($launch_button);
+        }
+    } # $otf_frame
 
-    my $paste = sub{ $self->paste_type_and_name };
-    $top->bind('<Control-v>', $paste);
-    $top->bind('<Control-V>', $paste);
-    $top->bind('<Button-2>',  $paste);
-    $button_frame->Button(
-        -text => 'Paste',
-        -command => $paste,
-        )->pack(-side => 'left');
+    {
+        my $dotter_frame = $action_frame->LabFrame(
+                Name    => 'dotter',
+                -label  => 'Dotter',
+                -border => 3,
+            )
+            ->pack(
+                -side => 'top',
+                -fill => 'x',
+            );
 
-    my $delete = sub{ $self->remove_selected_from_evidence_list };
-    $top->bind('<BackSpace>', $delete);
-    $top->bind('<Delete>',    $delete);
-    $top->bind('<Control-x>', $delete);
-    $top->bind('<Control-X>', $delete);
-    $button_frame->Button(
-        -text => 'Delete',
-        -command => $delete,
-        )->pack(-side => 'left');
+        my $dotter = sub { $self->dotter_to_transcript; };
+        $top->bind('<Control-period>',  $dotter);
+        $top->bind('<Control-greater>', $dotter);
+        my $dotter_button = $dotter_frame->Button(
+            -text    => 'Dotter',
+            -command => $dotter,
+            -state   => 'disabled',
+            )
+            ->pack(-side => 'left');
+        $self->dotter_button($dotter_button);
+    }
 
-    my $close_window = sub{ $top->withdraw; };
-    $top->bind('<Control-w>',           $close_window);
-    $top->bind('<Control-W>',           $close_window);
-    $top->protocol('WM_DELETE_WINDOW',  $close_window);
-    $button_frame->Button(
-        -text => 'Close',
-        -command => $close_window,
-        )->pack(-side => 'right');
+    {
+        my $button_frame = $top->Frame(Name => 'button_frame')->pack(
+            -side => 'top',
+            -fill => 'x',
+            );
+
+        my $draw = sub{ $self->draw_evidence };
+        $top->bind('<Control-u>', $draw);
+        $top->bind('<Control-u>', $draw);
+        #$button_frame->Button(
+        #    -text => 'Update',
+        #    -command => $draw,
+        #    )->pack(-side => 'left');
+
+        my $paste = sub{ $self->paste_type_and_name };
+        $top->bind('<Control-v>', $paste);
+        $top->bind('<Control-V>', $paste);
+        $top->bind('<Button-2>',  $paste);
+        $button_frame->Button(
+            -text => 'Paste',
+            -command => $paste,
+            )->pack(-side => 'left');
+
+        my $delete = sub{ $self->remove_selected_from_evidence_list };
+        $top->bind('<BackSpace>', $delete);
+        $top->bind('<Delete>',    $delete);
+        $top->bind('<Control-x>', $delete);
+        $top->bind('<Control-X>', $delete);
+        $button_frame->Button(
+            -text => 'Delete',
+            -command => $delete,
+            )->pack(-side => 'left');
+
+        my $close_window = sub{ $top->withdraw; };
+        $top->bind('<Control-w>',           $close_window);
+        $top->bind('<Control-W>',           $close_window);
+        $top->protocol('WM_DELETE_WINDOW',  $close_window);
+        $button_frame->Button(
+            -text => 'Close',
+            -command => $close_window,
+            )->pack(-side => 'right');
+    }
 
     my $select_all = sub{ $self->select_all };
     $top->bind('<Control-a>', $select_all);
@@ -137,6 +220,29 @@ sub align_button {
     return $self->{'_align_button'};
 }
 
+sub genomic_otf_button {
+    my ($self, $genomic_otf_button) = @_;
+
+    if ($genomic_otf_button) {
+        $self->{'_genomic_otf_button'} = $genomic_otf_button;
+    }
+    return $self->{'_genomic_otf_button'};
+}
+
+sub clear_existing {
+    my ($self) = @_;
+    return $self->{'_clear_existing'};
+}
+
+sub clear_otf_checkbutton {
+    my ($self, $clear_otf_checkbutton) = @_;
+
+    if ($clear_otf_checkbutton) {
+        $self->{'_clear_otf_checkbutton'} = $clear_otf_checkbutton;
+    }
+    return $self->{'_clear_otf_checkbutton'};
+}
+
 sub dotter_button {
     my ($self, $dotter_button) = @_;
 
@@ -156,6 +262,8 @@ sub align_enable {
     my ($self, $enable) = @_;
     my $state = $enable ? 'normal' : 'disabled';
     $self->align_button->configure( -state => $state );
+    $self->genomic_otf_button->configure( -state => $state );
+    $self->clear_otf_checkbutton->configure( -state => $state );
     return;
 }
 
@@ -421,20 +529,30 @@ sub align_to_transcript {
 
     my @accessions = $self->get_selected_accessions;
 
-    my $cdna = $self->TranscriptWindow->check_get_mRNA_Sequence;
+    my $ts_win = $self->TranscriptWindow;
+    my $cdna   = $ts_win->check_get_mRNA_Sequence;
     return unless $cdna;
+
+    my $vega_transcript = $ts_win->ensEMBL_Transcript_from_tk;
+
+    # ensure vega transcript has a DBid and slice
+    $ts_win->store_Transcript($vega_transcript);
 
     my $top = $self->canvas->toplevel;
 
     my $otf = Bio::Otter::Lace::OnTheFly::Transcript->new({
 
         accessions => \@accessions,
-        transcript => $self->TranscriptWindow->current_SubSeq,
 
-        problem_report_cb => sub { $top->Tk::Utils::OnTheFly::problem_box('Evidence Selected', @_) },
-        long_query_cb     => sub { $top->Tk::Utils::OnTheFly::long_query_confirm(@_)  },
+        vega_transcript => $vega_transcript,
+
+        problem_report_cb => sub { $self->problem_box($top, 'Evidence Selected', @_) },
+        long_query_cb     => sub { $self->long_query_confirm($top, @_)  },
 
         accession_type_cache => $self->SessionWindow->AceDatabase->AccessionTypeCache,
+
+        logic_names          => $self->SessionWindow->OTF_Transcript_columns,
+        clear_existing       => $self->clear_existing,
         });
 
     my $logger = $self->logger;
@@ -443,20 +561,24 @@ sub align_to_transcript {
     my $ts_file = $otf->target_fasta_file;
     $logger->info("Wrote transcript sequence to ${ts_file}");
 
-    foreach my $builder ( $otf->builders_for_each_type ) {
-
-        $logger->info("Running exonerate for sequence(s) of type: ", $builder->type);
-
-        my $seq_file = $builder->fasta_file;
-        $logger->info("Wrote sequences to ${seq_file}");
-
-        my $request = $builder->prepare_run;
-        my $runner = $otf->build_runner(request => $request);
-        my $result_set = $runner->run;
-
-        $self->alignment_window($result_set, $builder->type);
+    if ($self->clear_existing) {
+        $self->SessionWindow->delete_featuresets(@{$otf->logic_names});
     }
 
+    my $key = "$otf";
+    $self->SessionWindow->register_exonerate_callback($key, $self, \&Bio::Otter::UI::OnTheFlyMixin::exonerate_callback);
+
+    $otf->prep_and_store_request_for_each_type($self->SessionWindow, $key);
+    return;
+}
+
+sub display_request_feedback {
+    my ($self, $request) = @_;
+    $self->logger->debug(sprintf('OTF result for [%d,%s]', $request->id, $request->logic_name));
+    if ($request->n_hits) {
+        $self->alignment_window($request->raw_result, $request->logic_name);
+    }
+    $self->report_missed_hits($self, $request, 'spliced transcript');
     return;
 }
 
@@ -469,7 +591,7 @@ sub dotter_to_transcript {
 }
 
 sub alignment_window {
-    my ($self, $result_set, $type) = @_;
+    my ($self, $raw_result, $type) = @_;
 
     $self->{_alignment_window} ||= {};
     my $window = $self->{_alignment_window}->{$type};
@@ -478,7 +600,7 @@ sub alignment_window {
         $window = Bio::Otter::UI::TextWindow::TranscriptAlign->new($self, $type);
     }
 
-    $window->update_alignment($result_set->raw);
+    $window->update_alignment($raw_result);
     return;
 }
 

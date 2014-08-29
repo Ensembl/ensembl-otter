@@ -137,7 +137,7 @@ sub _url_query_string {
     confess "_query_string() not implemented in parent ", __PACKAGE__;
 }
 
-sub _param_value {
+sub _param_value { ## no critic(Subroutines::ProhibitUnusedPrivateSubroutines)
     my ($self, $param) = @_;
     my ($method, $key) =
         ref $param ? @{$param} : ($param, $param);

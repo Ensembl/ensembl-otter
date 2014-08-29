@@ -6,6 +6,7 @@ use warnings;
 
 use Bio::Vega::Gene;
 use Bio::Vega::Transcript;
+use Bio::EnsEMBL::Attribute;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::Vega::Utils::Comparator qw(compare);
 use Bio::Vega::AnnotationBroker;

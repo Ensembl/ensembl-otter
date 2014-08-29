@@ -11,22 +11,22 @@ use Test::Otter qw( ^db_or_skipall );
 
 use Bio::Otter::Server::Support::Local;
 
-my ($sa_ai_module, $sa_ai_tsv_module);
+my ($sa_ai_module, $sa_ai_apache_module);
 
 BEGIN {
     $sa_ai_module = qw( Bio::Otter::ServerAction::AccessionInfo );
-    $sa_ai_tsv_module = qw( Bio::Otter::ServerAction::TSV::AccessionInfo );
+    $sa_ai_apache_module = qw( Bio::Otter::ServerAction::Apache::AccessionInfo );
     use_ok($sa_ai_module);
-    use_ok($sa_ai_tsv_module);
+    use_ok($sa_ai_apache_module);
 }
 
 critic_module_ok($sa_ai_module);
-critic_module_ok($sa_ai_tsv_module);
+critic_module_ok($sa_ai_apache_module);
 
 my $server = Bio::Otter::Server::Support::Local->new;
 
 my $ai_plain = new_ok($sa_ai_module => [ $server ]);
-my $ai_tsv = new_ok($sa_ai_tsv_module => [ $server ]);
+my $ai_apache = new_ok($sa_ai_apache_module => [ $server ]);
 
 my @accessions = qw( AK125401.1 Q14031.3 ERS000123 xyzzy );
 $server->set_params( accessions => \@accessions );
@@ -35,9 +35,9 @@ ok($results, 'get_accession_types');
 is(scalar keys %$results, 3, 'n(results)');
 
 $server->set_params( accessions => join(',', @accessions) );
-$results = $ai_tsv->get_accession_types;
-ok($results, 'get_accession_types - TSV');
-note("Got:\n", $results);
+$results = $ai_apache->get_accession_types;
+ok($results, 'get_accession_types - Apache');
+is(scalar keys %$results, 3, 'n(results)');
 
 my @taxon_ids = ( 9606, 10090, 90988, 12345678 );
 $server->set_params( id => \@taxon_ids );
@@ -46,9 +46,9 @@ ok($results, 'get_taxonomy_info');
 is(scalar @$results, 3, 'n(results)');
 
 $server->set_params( id => join(',', @taxon_ids) );
-$results = $ai_tsv->get_taxonomy_info;
-ok($results, 'get_taxonomy_info - TSV');
-note("Got:\n", $results);
+$results = $ai_apache->get_taxonomy_info;
+ok($results, 'get_taxonomy_info - Apache');
+is(scalar @$results, 3, 'n(results)');
 
 done_testing;
 

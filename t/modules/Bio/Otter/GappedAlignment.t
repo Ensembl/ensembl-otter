@@ -11,6 +11,8 @@ use Readonly;
 use Scalar::Util qw(reftype);
 use Test::More;
 
+use Bio::EnsEMBL::Exon;
+use Bio::EnsEMBL::Transcript;
 use Hum::Ace::SubSeq;
 
 Readonly my %ele_expected => {
@@ -890,93 +892,53 @@ Readonly my @split_expected => (
 
 
 foreach my $test (@split_expected) {
-    note("Split tests for '", $test->{name}, "'");
+    subtest $test->{name} => sub {
 
-    my $ga = $ga_module->from_vulgar($test->{vulgar});
-    isa_ok($ga, 'Bio::Otter::GappedAlignment');
+        my $ga = $ga_module->from_vulgar($test->{vulgar});
+        isa_ok($ga, 'Bio::Otter::GappedAlignment');
 
-    is($ga->query_id,      $test->{q_id},     'query_id');
-    is($ga->query_start,   $test->{q_start},  'query_start');
-    is($ga->query_end,     $test->{q_end},    'query_end');
-    is($ga->query_strand,  $test->{q_strand}, 'query_strand');
-    is($ga->target_id,     $test->{t_id},     'target_id');
-    is($ga->target_start,  $test->{t_start},  'target_start');
-    is($ga->target_end,    $test->{t_end},    'target_end');
-    is($ga->target_strand, $test->{t_strand}, 'target_strand');
-    is($ga->score,         $test->{score},    'score');
-    is($ga->n_elements,    $test->{n_ele},    'n_elements');
-    is($ga->vulgar_string, $test->{vulgar},   'vulgar_string');
+        is($ga->query_id,      $test->{q_id},     'query_id');
+        is($ga->query_start,   $test->{q_start},  'query_start');
+        is($ga->query_end,     $test->{q_end},    'query_end');
+        is($ga->query_strand,  $test->{q_strand}, 'query_strand');
+        is($ga->target_id,     $test->{t_id},     'target_id');
+        is($ga->target_start,  $test->{t_start},  'target_start');
+        is($ga->target_end,    $test->{t_end},    'target_end');
+        is($ga->target_strand, $test->{t_strand}, 'target_strand');
+        is($ga->score,         $test->{score},    'score');
+        is($ga->n_elements,    $test->{n_ele},    'n_elements');
+        is($ga->vulgar_string, $test->{vulgar},   'vulgar_string');
 
-    is(scalar($ga->exon_gapped_alignments), 1, 'exon_gapped_alignments for ungapped');
+        is(scalar($ga->exon_gapped_alignments), 1, 'exon_gapped_alignments for ungapped');
 
-    is($ga->exonerate_cigar_string, $test->{cigar_exonerate}, 'cigar_exonerate') if $test->{cigar_exonerate};
-    is($ga->ensembl_cigar_string,   $test->{cigar_ensembl},   'cigar_ensembl')   if $test->{cigar_ensembl};
+        is($ga->exonerate_cigar_string, $test->{cigar_exonerate}, 'cigar_exonerate') if $test->{cigar_exonerate};
+        is($ga->ensembl_cigar_string,   $test->{cigar_ensembl},   'cigar_ensembl')   if $test->{cigar_ensembl};
 
-    my $ts = Hum::Ace::SubSeq->new();
-    $ts->strand($test->{ts_strand});
-    my $offset = $test->{clone_contig_offset} || 0;
-    foreach my $exon (@{$test->{exons}}) {
-        my $e = Hum::Ace::Exon->new();
-        $e->start($exon->[0] + $offset);
-        $e->end(  $exon->[1] + $offset);
-        $ts->add_Exon($e);
-    }
+        my $ss = Hum::Ace::SubSeq->new();
+        $ss->strand($test->{ts_strand});
 
-    my $intron_ga = $ga->intronify_by_transcript_exons($ts);
-    isa_ok($intron_ga, 'Bio::Otter::GappedAlignment');
-    note("Intronified vulgar: ", $intron_ga->vulgar_string);
-    is ($intron_ga->vulgar_comps_string, $test->{intron_vulgar}, 'intronify');
-    is($intron_ga->query_id,      $test->{q_id},     'query_id');
-    is($intron_ga->query_start,   $test->{q_start},  'query_start');
-    is($intron_ga->query_end,     $test->{q_end},    'query_end');
-    is($intron_ga->query_strand,  $test->{q_strand}, 'query_strand');
-    is($intron_ga->target_id,     $test->{t_id},     'target_id');
-    is($intron_ga->target_start,  $test->{intron_t_start}, 'target_start');
-    is($intron_ga->target_end,    $test->{intron_t_end},   'target_end');
-    is($intron_ga->target_strand, $test->{intron_t_strand},'target_strand');
-    is($intron_ga->score,         $test->{score},          'score');
-    is($intron_ga->n_elements,    $test->{intron_n_ele},   'n_elements');
+        my $ts = Bio::EnsEMBL::Transcript->new();
+        $ts->strand($test->{ts_strand});
 
-    is($intron_ga->ensembl_cigar_string, $test->{i_cigar_ensembl}, 'i_ensembl_cigar') if $test->{i_cigar_ensembl};
+        my $offset = $test->{clone_contig_offset} || 0;
+        foreach my $exon (@{$test->{exons}}) {
+            my $se = Hum::Ace::Exon->new();
+            $se->start($exon->[0] + $offset);
+            $se->end(  $exon->[1] + $offset);
+            $ss->add_Exon($se);
 
-    my @split = $intron_ga->exon_gapped_alignments;
-    my $n_splits = scalar(@split);
-
-    my @e_splits;
-    if ($test->{split_components}) {
-        @e_splits = build_splits($test->{split_components});
-    } else {
-        @e_splits = @{$test->{splits}};
-    }
-    is($n_splits, scalar(@e_splits), 'n_splits');
-
-    unless ($test->{skip_split_tests}) {
-        foreach my $n ( 0 .. ($n_splits - 1) ) {
-            isa_ok($split[$n], 'Bio::Otter::GappedAlignment');
-            is ($split[$n]->vulgar_string, $e_splits[$n], "split $n");
+            my $te = Bio::EnsEMBL::Exon->new();
+            $te->start($exon->[0] + $offset);
+            $te->end(  $exon->[1] + $offset);
+            $te->strand($test->{ts_strand});
+            $ts->add_Exon($te);
         }
-    }
 
-    if ($test->{ensembl_features}) {
-        my @ensembl_features = $intron_ga->ensembl_features;
+        intronify_tests($test, $ga, $ss, 'Hum::Ace::SubSeq');
+        intronify_tests($test, $ga, $ts, 'Bio::EnsEMBL::Transcript');
 
-        my $n_features = scalar(@ensembl_features);
-        my @exp_features = @{$test->{ensembl_features}};
-
-        is ($n_features, scalar(@exp_features), 'n ensembl_features');
-
-        foreach my $n ( 0 .. ($n_features - 1) ) {
-            isa_ok($ensembl_features[$n], $test->{ensembl_feature_type}, "feature $n: isa");
-            is ($ensembl_features[$n]->start,        $exp_features[$n]->{start},  "feature $n: start");
-            is ($ensembl_features[$n]->end,          $exp_features[$n]->{end},    "feature $n: end");
-            is ($ensembl_features[$n]->strand,       $exp_features[$n]->{strand}, "feature $n: strand");
-            is ($ensembl_features[$n]->hstart,       $exp_features[$n]->{hstart}, "feature $n: hstart");
-            is ($ensembl_features[$n]->hend,         $exp_features[$n]->{hend},   "feature $n: hend");
-            is ($ensembl_features[$n]->hstrand,      $exp_features[$n]->{hstrand},"feature $n: hstrand")
-                if $exp_features[$n]->{hstrand};
-            is ($ensembl_features[$n]->cigar_string, $exp_features[$n]->{cigar},  "feature $n: cigar_string");
-        }
-    }
+        done_testing;
+    };
 }
 
 TODO: {
@@ -993,6 +955,74 @@ isa_ok($consolidated, $ga_module, 'consolidate_introns produces GappedAlignment'
 is($consolidated->vulgar_string, $cons_exp, 'consolidate_introns');
 
 done_testing;
+
+sub intronify_tests {
+    my ($test, $ga, $ts, $ts_type) = @_;
+
+    subtest "Intronify tests for '$ts_type'" => sub {
+
+        my $intron_ga = $ga->intronify_by_transcript_exons($ts);
+
+        isa_ok($intron_ga, 'Bio::Otter::GappedAlignment');
+        note("Intronified vulgar: ", $intron_ga->vulgar_string);
+        is ($intron_ga->vulgar_comps_string, $test->{intron_vulgar}, 'intronify');
+        is($intron_ga->query_id,      $test->{q_id},     'query_id');
+        is($intron_ga->query_start,   $test->{q_start},  'query_start');
+        is($intron_ga->query_end,     $test->{q_end},    'query_end');
+        is($intron_ga->query_strand,  $test->{q_strand}, 'query_strand');
+        is($intron_ga->target_id,     $test->{t_id},     'target_id');
+        is($intron_ga->target_start,  $test->{intron_t_start}, 'target_start');
+        is($intron_ga->target_end,    $test->{intron_t_end},   'target_end');
+        is($intron_ga->target_strand, $test->{intron_t_strand},'target_strand');
+        is($intron_ga->score,         $test->{score},          'score');
+        is($intron_ga->n_elements,    $test->{intron_n_ele},   'n_elements');
+
+        is($intron_ga->ensembl_cigar_string, $test->{i_cigar_ensembl}, 'i_ensembl_cigar') if $test->{i_cigar_ensembl};
+
+        my @split = $intron_ga->exon_gapped_alignments;
+        my $n_splits = scalar(@split);
+
+        my @e_splits;
+        if ($test->{split_components}) {
+            @e_splits = build_splits($test->{split_components});
+        } else {
+            @e_splits = @{$test->{splits}};
+        }
+        is($n_splits, scalar(@e_splits), 'n_splits');
+
+        unless ($test->{skip_split_tests}) {
+            foreach my $n ( 0 .. ($n_splits - 1) ) {
+                isa_ok($split[$n], 'Bio::Otter::GappedAlignment');
+                is ($split[$n]->vulgar_string, $e_splits[$n], "split $n");
+            }
+        }
+
+        if ($test->{ensembl_features}) {
+            my @ensembl_features = $intron_ga->ensembl_features;
+
+            my $n_features = scalar(@ensembl_features);
+            my @exp_features = @{$test->{ensembl_features}};
+
+            is ($n_features, scalar(@exp_features), 'n ensembl_features');
+
+            foreach my $n ( 0 .. ($n_features - 1) ) {
+                isa_ok($ensembl_features[$n], $test->{ensembl_feature_type}, "feature $n: isa");
+                is ($ensembl_features[$n]->start,        $exp_features[$n]->{start},  "feature $n: start");
+                is ($ensembl_features[$n]->end,          $exp_features[$n]->{end},    "feature $n: end");
+                is ($ensembl_features[$n]->strand,       $exp_features[$n]->{strand}, "feature $n: strand");
+                is ($ensembl_features[$n]->hstart,       $exp_features[$n]->{hstart}, "feature $n: hstart");
+                is ($ensembl_features[$n]->hend,         $exp_features[$n]->{hend},   "feature $n: hend");
+                is ($ensembl_features[$n]->hstrand,      $exp_features[$n]->{hstrand},"feature $n: hstrand")
+                    if $exp_features[$n]->{hstrand};
+                is ($ensembl_features[$n]->cigar_string, $exp_features[$n]->{cigar},  "feature $n: cigar_string");
+            }
+        }
+
+        done_testing;
+    };
+
+    return;
+}
 
 sub adjust_start_coords {
     my ($coords, $offset) = @_;

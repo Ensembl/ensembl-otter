@@ -12,7 +12,7 @@ use OtterTest::DB;
 use Test::More;
 use Test::Requires qw( Bio::EnsEMBL::DBSQL::Driver::SQLite );
 
-my $test_db = OtterTest::DB->new_with_dataset_info(undef, 'human');
+my $test_db = OtterTest::DB->new_with_dataset_info(dataset_name => 'human');
 $test_db->setup_chromosome_slice;
 
 my $vega_dba = $test_db->vega_dba;

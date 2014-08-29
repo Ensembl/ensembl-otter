@@ -15,7 +15,7 @@ sub new {
     my ($pkg) = @_;
 
     my $client = OtterTest::Client->new;
-    my $db = OtterTest::DB->new($client);
+    my $db = OtterTest::DB->new(client => $client);
 
     my $at_cache = $pkg->SUPER::new;
     $at_cache->Client($client);

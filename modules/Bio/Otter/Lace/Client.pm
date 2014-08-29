@@ -37,7 +37,6 @@ use Bio::Otter::Lace::AceDatabase;
 use Bio::Otter::Lace::DB;
 use Bio::Otter::LogFile;
 use Bio::Otter::Auth::SSO;
-use Bio::Otter::Utils::AccessionInfo::Serialise qw( accession_info_column_order );
 
 use 5.009001; # for stacked -f -r which returns false under 5.8.8
 
@@ -306,7 +305,23 @@ sub new_AceDatabase {
 
     my $adb = Bio::Otter::Lace::AceDatabase->new;
     $adb->Client($self);
-    $adb->home($self->_new_session_path);
+    my $dir;
+    while(1) {
+        $dir = $self->_new_session_path;
+        my @used = grep { -e $_ } ($dir, "$dir.done");
+        # Latter will be used later in move_to_done.  RT410906
+        #
+        # There is no race (vs. an honest Otterlace) because existing
+        # directories would have been made by a previous run with what
+        # is now our PID, on local machine.
+        last if !@used;
+        foreach my $fn (@used) {
+            $self->logger->warn(sprintf("new_AceDatabase: skip %s, %s exists (%.1fd old)",
+                                        $dir, $fn, -M $fn));
+        }
+    }
+
+    $adb->home($dir);
 
     return $adb;
 }
@@ -912,59 +927,14 @@ sub _find_clone_result {
 
 sub get_meta {
     my ($self, $dsname) = @_;
-
-    my $response = $self->otter_response_content(
-        'GET',
-        'get_meta',
-        {
-            'dataset'  => $dsname,
-        },
-    );
-
-    return $self->_build_meta_hash($response);
-}
-
-# Factored out for use in OtterTest::Client
-#
-sub _build_meta_hash {
-    my ($self, $response) = @_;
-
-    my $meta_hash = {};
-    for my $line (split(/\n/,$response)) {
-        my($meta_key, $meta_value, $species_id) = split(/\t/,$line);
-        $species_id = undef if $species_id eq '';
-        $meta_hash->{$meta_key}->{species_id} = $species_id;
-        push @{$meta_hash->{$meta_key}->{values}}, $meta_value; # as there can be multiple values for one key
-    }
-    return $meta_hash;
+    my $hashref = $self->otter_response_content(GET => 'get_meta', { dataset => $dsname });
+    return $hashref;
 }
 
 sub get_db_info {
     my ($self, $dsname) = @_;
-
-    my $response = $self->otter_response_content(
-        'GET',
-        'get_db_info',
-        {
-            'dataset'  => $dsname,
-        },
-    );
-
-    return $self->_build_db_info_hash($response);
-}
-
-# Factored out for use in OtterTest::Client
-#
-sub _build_db_info_hash {
-    my ($self, $response) = @_;
-
-    my $db_info_hash = {};
-    for my $line (split(/\n/,$response)) {
-        my($key, @values) = split(/\t/,$line);
-        $db_info_hash->{$key} = [ @values ];
-    }
-
-    return $db_info_hash;
+    my $hashref = $self->otter_response_content(GET => 'get_db_info', { dataset => $dsname });
+    return $hashref;
 }
 
 sub lock_refresh_for_DataSet_SequenceSet {
@@ -978,8 +948,8 @@ sub lock_refresh_for_DataSet_SequenceSet {
     my %author_hash = ();
 
     foreach my $clone_lock (@{ $response->{CloneLock} || [] }) {
-        my ($intl_name, $embl_name, $ctg_name, $hostname, $timestamp, $aut_name, $aut_email)
-          = @{$clone_lock}{qw{ acc_sv name hostname timestamp author_name author_email }};
+        my ($ctg_name, $hostname, $timestamp, $aut_name, $aut_email)
+          = @{$clone_lock}{qw{ ctg_name hostname timestamp author_name author_email }};
 
         $author_hash{$aut_name} ||= Bio::Vega::Author->new(
             -name  => $aut_name,
@@ -1214,19 +1184,84 @@ sub get_designations {
     return $hashref;
 }
 
-# Return (designation_of_this_major, latest_this_major, live_major_minor)
+# Return hashref of information derived from current code version and
+# central config.
 sub designate_this {
-    my ($self) = @_;
+    my ($self, %test_input) = @_;
+
     my $desig = $self->get_designations;
-    my $major = Bio::Otter::Version->version;
-    my $major_re = qr{^$major(\.|$|_)};
+    my $major = $test_input{major} || Bio::Otter::Version->version;
+
+    my $BOG = $test_input{BOG} || 'Bio::Otter::Git';
+    my $feat =  $BOG->param('feature');
+    my $txtvsn = $BOG->taglike;
+
+    my $major_re = ($feat
+                    ? qr{^$major(\.\d+)?_$feat$}
+                    : qr{^$major(\.|$)});
+
     my ($key) =
       # There would have been multiple hits for v75, but now we have
       # feature branches.  Sort just in case.
       sort grep { $desig->{$_} =~ $major_re } keys %$desig;
+
     my $live = $desig->{live};
-    my $exact = $desig->{$key};
-    return ($key, $exact, $live);
+
+    if (!defined $key) {
+        my @v = sort values %$desig;
+        $self->logger->warn("No match for $major_re against designations.txt values (@v)");
+    }
+
+    my %out = (major_designation => $key, # or undef (obsolete)
+               latest_this_major => defined $key ? $desig->{$key} : $live,
+               stale => 0,
+               current_live => $live);
+
+    # Give a simple label to what type of version this is
+    my @standard = qw( live test old );
+    if (defined $key && $key eq 'dev') {
+        # dev -> no staleness check
+        $out{descr} = 'an unstable developer-edition Otterlace';
+    } elsif (defined $key && grep { $key eq $_ } @standard) {
+        # a standard designation
+        my ($L, $C) = $key eq 'old'
+          ? qw( last final ) : qw( latest current );
+        if ($txtvsn eq $out{latest_this_major}) {
+            $out{descr} = "the $L $key Otterlace";
+        } else {
+            $out{descr} = "not the $C $key Otterlace\nIt is $txtvsn, $L is $out{latest_this_major}";
+            $out{stale} = 1;
+        }
+    } elsif (defined $key && $key !~ /^\d+(_|$)/) {
+        # a non-standard designation
+        $out{descr} = "a special $feat Otterlace";
+        if ($txtvsn ne $out{latest_this_major}) {
+            $out{descr} .= "\nIt is $txtvsn, latest is $out{latest_this_major}";
+            $out{stale} = 1;
+        }
+    } elsif ($major > int($live)) {
+        # not sure what it is, but not obsolete
+        $out{descr} = "an experimental $feat Otterlace";
+        $out{major_designation} = 'dev'; # a small fib
+        $out{latest_this_major} = undef;
+
+    } else {
+        # not designated, or designated only by number
+        # (the latter probably has an Otter Server)
+        $out{major_designation} = undef;
+        $out{descr} = "an obsolete Otterlace.  We are now on $live";
+        $out{stale} = 1;
+    }
+
+
+    $out{_workings} = # debug output
+      { designations => $desig,
+        major => $major,
+        feat => $feat,
+        txtvsn => $txtvsn,
+        major_re => $major_re };
+
+    return \%out;
 }
 
 sub do_authentication {
@@ -1393,31 +1428,19 @@ sub get_methods_ace {
 sub get_accession_types {
     my ($self, @accessions) = @_;
 
-    my $response = $self->http_response_content(
+    my $hashref = $self->otter_response_content(
         'POST',
         'get_accession_types',
         {accessions => join ',', @accessions},
         );
 
-    return unless $response;
-
-    my %results;
-    foreach my $line (split /\n/, $response) {
-        my @row = split /\t/, $line;
-        my %entry;
-        @entry{accession_info_column_order()} = @row;
-        my $name = $entry{name};
-        $self->logger->warn("Duplicate result for '$name'") if $results{$name};
-        $results{$name} = \%entry;
-    }
-
-    return \%results;
+    return $hashref;
 }
 
 sub get_taxonomy_info {
     my ($self, @ids) = @_;
 
-    my $response = $self->http_response_content(
+    my $response = $self->otter_response_content(
         'POST',
         'get_taxonomy_info',
         {id => join ',', @ids},
@@ -1558,15 +1581,16 @@ sub sessions_needing_recovery {
 sub move_to_done {
     my ($self, $lace_dir) = @_;
 
-    my $done = "$lace_dir.done";
-    rename($lace_dir, $done) or $self->logger->logdie("Error renaming '$lace_dir' to '$done'; $!");
+    my $done = "$lace_dir.done"; # also in new_AceDatabase
+    rename($lace_dir, $done) # RT410906: sometimes this would fail
+      or $self->logger->logdie("Error renaming '$lace_dir' to '$done'; $!");
     return $done;
 }
 
 sub get_name {
     my ($self, $home_dir) = @_;
 
-    my $db = Bio::Otter::Lace::DB->new($home_dir, $self);
+    my $db = Bio::Otter::Lace::DB->new(home => $home_dir, client => $self);
     return $db->get_tag_value('name');
 }
 

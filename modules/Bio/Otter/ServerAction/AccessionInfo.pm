@@ -59,13 +59,7 @@ sub get_accession_types {
     };
 
     my $combined  = { %$ai_types, %$ena_types };
-    return $self->serialise_accession_types($combined);
-}
-
-# Null serialiser, overridden in B:O:SA:TSV::AccessionInfo
-sub serialise_accession_types {
-    my ($self, $results) = @_;
-    return $results;
+    return $combined;
 }
 
 # Null deserialiser, overridden in B:O:SA:TSV::AccessionInfo
@@ -73,6 +67,7 @@ sub deserialise_id_list {
     my ($self, $id_list) = @_;
     return $id_list;
 }
+
 
 =head2 get_taxonomy_info
 =cut
@@ -83,23 +78,11 @@ sub get_taxonomy_info {
     my $id_list = $self->deserialise_id_list($self->server->require_argument('id'));
     my $info = Bio::Otter::Utils::AccessionInfo->new->get_taxonomy_info($id_list);
 
-    return $self->serialise_taxonomy_info($info);
+    return $info;
 }
 
 # FIXME: deserialisation is in the wrong place at the moment (in AccessionTypeCache.pm)
-# # Null serialiser, overridden in B:O:SA:TSV::AccessionInfo
-# sub serialise_taxonomy_info {
-#     my ($self, $results) = @_;
-#     return $results;
-# }
 
-use Bio::Otter::ServerAction::TSV::AccessionInfo;
-sub serialise_taxonomy_info {
-    my ($self, $results) = @_;
-    return Bio::Otter::ServerAction::TSV::AccessionInfo->serialise_taxonomy_info($results);
-}
-
-### Accessors
 
 =head1 AUTHOR
 

@@ -94,6 +94,7 @@ sub cleanup_sessions {
 sub cleanup_zmap_configs {
     my ($self) = @_;
     my $zconfsdir = MenuCanvasWindow::SessionWindow->zmap_configs_dir;
+    return unless -d $zconfsdir;
     foreach my $leaf (sort $self->_read_dir($zconfsdir)) {
         my $dir = "$zconfsdir/$leaf";
         my $age = int(-M $dir);
