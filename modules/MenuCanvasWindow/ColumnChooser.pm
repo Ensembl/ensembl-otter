@@ -415,6 +415,12 @@ sub current_Collection {
     return $self->SearchHistory->current_Collection;
 }
 
+sub root_Collection {
+    my ($self) = @_;
+
+    return $self->SearchHistory->root_Collection;
+}
+
 sub current_Bracket {
     my ($self, $bkt) = @_;
 
@@ -665,7 +671,7 @@ sub load_filters {
     my $top = $self->top_window;
     my $busy = Tk::ScopedBusy->new($top, -recurse => 1);
 
-    my $cllctn = $self->SearchHistory->root_Collection;
+    my $cllctn = $self->root_Collection;
 
     # So that next session will use current selected filters:
     $cllctn->save_Columns_selected_flag_to_Filter_wanted;
@@ -758,7 +764,7 @@ sub calculate_text_column_sizes {
 
 sub update_statuses_by_name {
     my ($self, $status, @names) = @_;
-    my $cllctn = $self->SearchHistory->root_Collection;
+    my $cllctn = $self->root_Collection;
 
     foreach my $name (@names) {
         my $item = $cllctn->get_Column_by_name($name);

@@ -290,7 +290,7 @@ sub feature_type {
 
 # session handling
 
-sub _url_query_string {
+sub _url_query_string { ## no critic(Subroutines::ProhibitUnusedPrivateSubroutines)
     my ($self, $session) = @_;
     return join '&', @{$self->script_arguments($session)};
 }

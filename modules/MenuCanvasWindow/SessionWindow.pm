@@ -720,7 +720,7 @@ sub populate_clone_menu {
             -label          => $clone->clone_name,
             # Not an accelerator - just for formatting!
             -accelerator    => $clone->accession_version,
-            -command        => sub{ $self->edit_Clone($clone) },
+            -command        => sub{ $self->edit_Clone_by_name($clone->name) },
             );
     }
 
@@ -1852,6 +1852,15 @@ sub edit_Clone {
     return;
 }
 
+sub edit_Clone_by_name {
+    my ($self, $name) = @_;
+
+    my $clone = $self->Assembly->get_Clone($name);
+    $self->edit_Clone($clone);
+
+    return;
+}
+
 sub close_all_clone_edit_windows {
     my ($self) = @_;
 
@@ -2140,46 +2149,25 @@ sub update_SubSeq_locus_level_errors {
     return;
 }
 
-sub launch_exonerate {
-    my ($self, $otf) = @_;
+sub _cached_columns_by_internal_type {
+    my ($self, $internal_type, $key) = @_;
 
-    # Clear columns if requested
-    my $db_slice = $self->AceDatabase->db_slice;
-    $otf->pre_launch_setup(slice => $db_slice);
+    my $_columns = $self->{$key};
+    return $_columns if $_columns;
 
-    # Setup for GFF column control below
-    my $cllctn = $self->AceDatabase->ColumnCollection;
-    my $col_aptr = $self->AceDatabase->DB->ColumnAdaptor;
+    my $collection = $self->ColumnChooser->root_Collection;
+    my @columns = map { $_->Filter->name } $collection->list_Columns_with_internal_type($internal_type);
+    return $self->{$key} = [ @columns ];
+}
 
-    my $request_adaptor = $self->AceDatabase->DB->OTFRequestAdaptor;
+sub OTF_Genomic_columns {
+    my ($self) = @_;
+    return $self->_cached_columns_by_internal_type('on_the_fly_genomic', 'OTF_Genomic_columns');
+}
 
-    my @method_names;
-
-    for my $builder ( $otf->builders_for_each_type ) {
-
-        my $type = $builder->type;
-
-        $self->logger->info("Running exonerate for sequence(s) of type: $type");
-
-        # Set up a request for the filter script
-        my $request = $builder->prepare_run;
-        $request_adaptor->store($request);
-
-        my $analysis_name = $builder->analysis_name;
-        push @method_names, $builder->analysis_name;
-
-        # Ensure new-style columns are selected if used
-        my $column = $cllctn->get_Column_by_name($analysis_name);
-        if ($column and not $column->selected) {
-            $column->selected(1);
-            $col_aptr->store_Column_state($column);
-        }
-
-    }
-
-    $self->RequestQueuer->request_features(@method_names) if @method_names;
-
-    return;
+sub OTF_Transcript_columns {
+    my ($self) = @_;
+    return $self->_cached_columns_by_internal_type('on_the_fly_transcript', 'OTF_Transcript_columns');
 }
 
 sub ace_DNA {
@@ -2424,6 +2412,32 @@ sub run_exonerate {
     return 1;
 }
 
+sub _exonerate_callbacks {
+    my ($self) = @_;
+    return $self->{_exonerate_callbacks} ||= {};
+}
+
+sub register_exonerate_callback {
+    my ($self, $key, $caller, $callback) = @_;
+
+    weaken($caller);
+    my $weakened_callback = sub {
+        unless ($caller) {
+            warn "exonerate_callback caller for '$key' no longer exists\n";
+            return;
+        }
+        return $caller->$callback(@_);
+    };
+
+    $self->_exonerate_callbacks->{$key} = $weakened_callback;
+    return;
+}
+
+sub remove_exonerate_callback {
+    my ($self, $key) = @_;
+    return delete $self->_exonerate_callbacks->{$key};
+}
+
 sub exonerate_done_callback {
     my ($self, @feature_sets) = @_;
 
@@ -2435,17 +2449,18 @@ sub exonerate_done_callback {
         my $request = $request_adaptor->fetch_by_logic_name_status($set, 'completed');
         next unless $request;
         push @requests, $request;
-        push @requests_with_feedback, $request if ($request->n_hits == 0 or $request->missed_hits);
+        if ($request->n_hits == 0 or $request->missed_hits or $request->raw_result) {
+            push @requests_with_feedback, $request;
+        }
     }
 
-    if (@requests_with_feedback) {
-        my $ew = $self->{'_exonerate_window'};
-        if ($ew) {
-            foreach my $request (@requests_with_feedback) {
-                $ew->display_request_feedback($request);
-            }
+    foreach my $request (@requests_with_feedback) {
+        my $callback = $self->_exonerate_callbacks->{$request->caller_ref};
+        if ($callback) {
+            $callback->($request);
         } else {
-            $self->logger->error('OTF results but no exonerate window');
+            $self->logger->error(sprintf('OTF results but no callback registered [%d,%s,%d]',
+                                         $request->id, $request->logic_name, $request->caller_ref));
         }
     }
 
@@ -2669,7 +2684,7 @@ sub zircon_zmap_view_features_loaded {
             $column->status_detail($message);
             $col_aptr->store_Column_state($column);
 
-            push @otf_loaded, $set_name if $column->internal_type_is('on_the_fly');
+            push @otf_loaded, $set_name if $column->internal_type_like(qr/^on_the_fly/);
         }
         # else {
         #     # We see a warning for each acedb featureset
@@ -2682,14 +2697,6 @@ sub zircon_zmap_view_features_loaded {
     $self->update_from_process_result($process_result);
 
     $self->exonerate_done_callback(@otf_loaded) if @otf_loaded;
-
-    # FIXME 26/02/2014: assuming that commenting this out doesn't cause other problems,
-    # it should be removed along with AceDatabase->zmap_config_update().
-
-    # if ($state_changed) {
-    #     # and update the delayed flags in the zmap config file
-    #     $self->AceDatabase->zmap_config_update;
-    # }
 
     # This will get called by Tk event loop when idle
     $self->top_window->afterIdle(sub{ return $self->RequestQueuer->features_loaded_callback(@featuresets); });

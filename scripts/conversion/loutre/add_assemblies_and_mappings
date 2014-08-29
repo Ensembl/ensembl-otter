@@ -143,7 +143,6 @@ $support->parse_extra_options(
   'ensembldbname=s',
   'ensemblassembly=s',
   'secondassembly=s',
-  'currentdbname=s',
   'nobackup',
   'prune',
   'live_update',
@@ -157,7 +156,6 @@ $support->allowed_params(
   'ensembldbname',
   'ensemblassembly',
   'secondassembly',
-  'currentdbname',
   'nobackup',
   'live_update',
   $support->get_common_params,
@@ -401,7 +399,7 @@ foreach my $chrom (@{$vsa->fetch_all('chromosome','Otter')}) {
 
   # MHC / LRC (from human) have mappings in loutre but like PATCHES they are to the wrong seq_region so will need adjusting
   if ($v_name =~ /[LHC|MHC]/) {
-    my ($name_loutre) = $e_name =~ /CHR_(.+)$/;
+    my ($name_loutre) = $e_name; # =~ /CHR_(.+)$/;
     if ($e_sr_id = $esa->fetch_by_region('chromosome',$e_name,'','','',$alt_assembly)->get_seq_region_id) {
       $chrom_dets{$v_name}{'do_mapping_using'} = { ename => $e_name, esr_id => $e_sr_id, type => 'loutre_mapping_adjust', vsr_id => $v_sr_id, loutre_mapping_name => $name_loutre };
     }
@@ -522,7 +520,12 @@ sub munge_loutre_mappings {
          AND asm_seq_region_id = $e_sr_id));
 
   #get mappings from loutre
-  my $lesr_id = $lsa->fetch_by_region('chromosome',$loutre_name,'','','',$alt_assembly,)->get_seq_region_id;
+  my $slice = $lsa->fetch_by_region('chromosome',$loutre_name,'','','',$alt_assembly,);
+  unless($slice) {
+    ( my $alt_loutre_name = $loutre_name ) =~ s/^CHR_//;
+    $slice = $lsa->fetch_by_region('chromosome',$alt_loutre_name,'','','',$alt_assembly,);
+  }
+  my $lesr_id = $slice->get_seq_region_id;
   my $sql = qq(SELECT asm_start, asm_end, cmp_start, cmp_end, ori
               FROM assembly
              WHERE cmp_seq_region_id = $lesr_id);
@@ -647,7 +650,7 @@ sub add_second_assembly {
 sub check_insdc_versions {
   my ($v_name,$dets) = @_;
   my $ename = $dets->{'do_mapping_using'}{'ename'};
-  my ($e_srs_name) = $ename =~ /CHR_(.+)$/;
+  my ($e_srs_name) = $ename; # =~ /CHR_(.+)$/;
   my $e_sr_id = $dets->{'do_mapping_using'}{'esr_id'};
   my $insdc   = $dets->{'insdc'};
   if (! $insdc && (! $support->param('live_update')) ) {

@@ -189,7 +189,11 @@ sub _spool_gff {
 
 package main;
 
-Bio::Otter::GetScript::Filter->new->run;
+use Log::Log4perl::Level;
+
+Bio::Otter::GetScript::Filter
+    ->new(log4perl => $DEBUG)
+    ->run;
 
 exit;
 

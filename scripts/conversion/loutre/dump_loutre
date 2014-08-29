@@ -1000,10 +1000,10 @@ sub transfer_gene {
     @transcripts = @{$lgene->get_all_Transcripts};
     foreach my $transcript (@transcripts){
       if ($transcript->start <  $lgene->start){
-        $lgene->start=$transcript->start;
+        $lgene->start($transcript->start);
       }
       if ($transcript->end >  $lgene->end){
-        $lgene->end=$transcript->end;
+        $lgene->end($transcript->end);
       }
     }
   }

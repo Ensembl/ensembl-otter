@@ -4,6 +4,8 @@ package Bio::Otter::Server::Support::Web;
 use strict;
 use warnings;
 
+use feature 'switch';
+
 use Try::Tiny;
 
 use Bio::Vega::Author;
@@ -13,6 +15,7 @@ use Bio::Otter::Auth::SSO;
 use IO::Compress::Gzip qw(gzip);
 
 use CGI;
+use JSON;
 use SangerWeb;
 
 use base ('Bio::Otter::MappingFetcher');
@@ -258,66 +261,80 @@ sub show_restricted_datasets {
 
 ############## I/O: ################################
 
-sub send_json_response {
+sub send_response {
     my ($called, @args) = @_;
-    require JSON;
 
     my $sub = pop @args;
-    my $self = $called->new(@args); # may send a text/plain 403 Unauthorised
-    $self->content_type('application/json');
-    local $self->{_json} = JSON->new->pretty;
+    my $self = $called->new(@args);
+
+    my ($response, $ok, $error);
     try {
-        my $obj = $sub->($self);
-        my $out = $self->json->pretty->encode($obj);
-        $self->_send_response($out);
-    } catch {
-        my $error = $_;
-        die $error unless $ERROR_WRAPPING_ENABLED;
-        chomp $error;
-        warn "ERROR: $error\n";
-        print $self->header(-status => 417, -type => $self->content_type);
-        print $self->json->encode({ error => $error });
+        $response = $sub->($self);
+        $ok = 1;
+    }
+    catch {
+        $error = $_;
     };
+
+    # content_type may be set by $sub, so we don't choose encoding until here:
+    my ($encode_response, $encode_error);
+    for ($self->content_type) {
+        when ($_ eq 'application/json') {
+            $encode_response = \&_encode_json;
+            $encode_error    = \&_encode_error_json;
+        }
+        default {
+            $encode_error = \&_encode_error_xml;
+            die "After the action, JSON used but content_type=$_"
+              if $self->json(1); # code didn't fix its content_type - 500 error
+        }
+    }
+
+    if ($ok) {
+        try {
+            $ok = undef;
+            $response = $self->$encode_response($response) if $encode_response;
+            $self->_send_response($response, 200);
+            $ok = 1;
+        }
+        catch {
+            $error = $_;
+        };
+    }
+    return if $ok;
+
+    die $error unless $ERROR_WRAPPING_ENABLED;
+    chomp($error);
+    warn "ERROR: $error\n";
+    $self->compression(0);
+    $self->_send_response($self->$encode_error($error), 417);
+
     return;
+}
+
+sub _encode_error_xml {
+    my ($self, $error) = @_;
+    return $self->otter_wrap_response(" <response>\n    ERROR: $error\n </response>\n");
+}
+
+sub _encode_json {
+    my ($self, $obj) = @_;
+    return $self->json->encode($obj);
+}
+
+sub _encode_error_json {
+    my ($self, $error) = @_;
+    return $self->_encode_json({ error => $error });
 }
 
 sub json {
-    my ($self) = @_;
-    my $json = $self->{_json};
-    die "Not in send_json_response" unless $json;
-    return $json;
-}
-
-
-sub send_response {
-    my ($self, @args) = @_;
-
-    my $sub = pop @args;
-    my $server = $self->new(@args);
-
-    try {
-        my $response = $sub->($server);
-        $server->_send_response($response);
-    }
-    catch {
-        my $error = $_;
-        die $error unless $ERROR_WRAPPING_ENABLED;
-        chomp($error);
-        print
-            $server->header(
-                -status => 417,
-                -type   => 'text/plain',
-            ),
-            $server->otter_wrap_response(" <response>\n    ERROR: $error\n </response>\n"),
-            ;
-        warn "ERROR: $error\n";
-    };
-
-    return;
+    my ($self, $no_init) = @_;
+    $self->{_json} ||= JSON->new->pretty unless $no_init;
+    return $self->{_json};
 }
 
 sub _send_response {
-    my ($self, $response) = @_;
+    my ($self, $response, $status) = @_;
     my $len = length($response);
     my $content_type = $self->content_type;
 
@@ -326,7 +343,7 @@ sub _send_response {
         gzip \$response => \$gzipped;
         print
             $self->header(
-                -status           => 200,
+                -status           => $status,
                 -type             => $content_type,
                 -content_length   => length($gzipped),
                 -x_plain_length   => $len, # to assist debug on client
@@ -338,7 +355,7 @@ sub _send_response {
     else {
         print
             $self->header(
-                -status => 200,
+                -status => $status,
                 -content_length => $len,
                 -type   => $content_type,
             ),

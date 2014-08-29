@@ -3,6 +3,8 @@ package Bio::Otter::Lace::OnTheFly::Builder;
 use namespace::autoclean;
 use Moose;
 
+## no critic (Subroutines::ProhibitUnusedPrivateSubroutines)
+
 with 'MooseX::Log::Log4perl';
 
 use Readonly;
@@ -19,12 +21,17 @@ has target     => ( is => 'ro', isa => 'Bio::Otter::Lace::OnTheFly::TargetSeq', 
 
 has softmask_target => ( is => 'ro', isa => 'Bool' );
 
+has analysis_prefix => ( is => 'ro', isa => 'Str', builder => '_build_analysis_prefix' );
+sub _build_analysis_prefix { return 'OTF_' }
+
 has options => ( is => 'ro', isa => 'HashRef', default => sub { {} } );
 has query_type_options => ( is => 'ro', isa => 'HashRef[HashRef]',
                             default => sub { { dna => {}, protein => {} } } );
 
-has default_options    => ( is => 'ro', isa => 'HashRef', init_arg => undef, builder => '_build_default_options' );
-has default_qt_options => ( is => 'ro', isa => 'HashRef', init_arg => undef, builder => '_build_default_qt_options' );
+has default_options    => ( is => 'ro', isa => 'HashRef', init_arg => undef,
+                            lazy => 1, builder => '_build_default_options' );
+has default_qt_options => ( is => 'ro', isa => 'HashRef', init_arg => undef,
+                            lazy => 1, builder => '_build_default_qt_options' );
 
 sub _default_options    { return { '--bestn' => 1 }; };
 sub _default_qt_options { return { dna => {}, protein => {} }; };
@@ -48,7 +55,7 @@ has description_for_fasta => ( is => 'ro', isa => 'Str', lazy => 1, builder => '
 
 sub _build_description_for_fasta {  ## no critic (Subroutines::ProhibitUnusedPrivateSubroutines)
     my $self = shift;
-    return sprintf('query_%s', $self->type);
+    return sprintf('query_%s', $self->analysis_name);
 }
 
 sub seqs_for_fasta {
@@ -107,10 +114,11 @@ sub prepare_run {
 sub analysis_name {
     my $self = shift;
 
-    my $type = $self->type;
+    my $type   = $self->type;
+    my $prefix = $self->analysis_prefix;
     if    ($type =~ /^OTF_AdHoc_/) { return $type;       }
-    elsif ($type eq 'cDNA')        { return "OTF_mRNA";  }
-    else                           { return "OTF_$type"; }
+    elsif ($type eq 'cDNA')        { return "${prefix}mRNA";  }
+    else                           { return "${prefix}${type}"; }
 }
 
 1;

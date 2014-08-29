@@ -167,12 +167,12 @@ foreach my $chrom_name (@ev_names) {
       $support->log_verbose("Examining transcript $tsi\n",1);
       my $ev_seq = $ev_trans->seq->seq;
       my $v_seq  = $v_trans->seq->seq;
+      $ev_seq =~ s/[^CGATcgat]/N/g;
+      $v_seq =~ s/[^CGATcgat]/N/g;
       if ($ev_seq ne $v_seq) {
 	$support->log_warning("$c. Transcript sequence for ".$v_trans->stable_id." (gene $name) varies between Vega and Ensembl-vega:\n",2);
-        if ($support->param('verbose')) {
-          my $cdna_alignment = $support->get_alignment(">Vega\n".$v_seq, ">Ens.\n".$ev_seq, 'DNA');
-          $support->log($cdna_alignment,3);
-        }
+        my $cdna_alignment = $support->get_alignment(">Vega\n".$v_seq, ">Ens.\n".$ev_seq, 'DNA');
+        $support->log($cdna_alignment,3);
 	my $ev_transl = $ev_trans->translation;
 	my $v_transl = $v_trans->translation;
 	if ( $ev_transl && $v_transl ) {

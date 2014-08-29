@@ -4,6 +4,8 @@ use namespace::autoclean;
 
 use Moose;
 
+## no critic (Subroutines::ProhibitUnusedPrivateSubroutines)
+
 extends 'Bio::Otter::Utils::Script::Object';
 
 has 'gene_id' => ( is => 'ro', isa => 'Int', required => 1 );

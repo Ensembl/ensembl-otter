@@ -11,6 +11,9 @@ use File::Temp;
 use FindBin qw($Script);
 use Test::More;
 
+use lib "${ENV{ANACODE_TEAM_TOOLS}}/t/tlib";
+use Test::SetupLog4perl;
+
 use Bio::Otter::Lace::DataSet;
 
 use OtterTest::Client;
@@ -20,28 +23,28 @@ use parent 'Bio::Otter::Lace::DB';
 my %test_client;
 
 sub new {
-    my ($pkg, $client) = @_;
+    my ($pkg, %args) = @_;
 
-    $client ||= OtterTest::Client->new;
+    $args{client} ||= OtterTest::Client->new;
 
     my $_tmp_dir = File::Temp->newdir("${Script}.XXXXXX", TMPDIR => 1, CLEANUP => 0);
     my $test_home = $_tmp_dir->dirname;
     note "SQLite DB is in: '$test_home'";
 
-    my $db = $pkg->SUPER::new($test_home, $client);
+    my $db = $pkg->SUPER::new(home => $test_home, %args);
 
-    $db->test_client($client);
+    $db->test_client($args{client});
 
     return $db;
 }
 
 sub new_with_dataset_info {
-    my ($pkg, $client, $dataset_name) = @_;
+    my ($pkg, %args) = @_;
 
-    my $db = $pkg->new($client);
+    my $db = $pkg->new(%args);
 
     my $test_dataset = Bio::Otter::Lace::DataSet->new;
-    $test_dataset->name($dataset_name);
+    $test_dataset->name($args{dataset_name});
     $test_dataset->Client($db->test_client);
     $db->load_dataset_info($test_dataset);
 

@@ -424,7 +424,8 @@ sub fill_progressBar {
     return;
 }
 
-sub _launch_belvu {
+# silence a false positive from perlcritic (since &_launch_belvu is referenced only as a string)
+sub _launch_belvu { ## no critic (Subroutines::ProhibitUnusedPrivateSubroutines)
     my ($self, $alignment) = @_;
     if (my $pid = fork) {
         # parent

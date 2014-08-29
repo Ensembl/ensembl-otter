@@ -70,30 +70,24 @@ describing status of this software version.
 sub version_diagnosis {
     my ($pkg) = @_;
 
-    my $vsn = Bio::Otter::Git->as_text;
-    my ($desig, $desig_latest, $live) = Bio::Otter::Lace::Client->the->designate_this;
+    my $desig_info = Bio::Otter::Lace::Client->the->designate_this;
+    my ($desig, $descr, $stale) =
+      @{$desig_info}{qw{ major_designation descr stale }};
 
     # Ugly trick to direct tickets, for dev/otterlace_this and testers on MacOS
     $ENV{OTTERLACE_RAN_AS} = "inferred/otterlace_$desig"
-      unless defined $ENV{OTTERLACE_RAN_AS};
+      if defined $desig && !defined $ENV{OTTERLACE_RAN_AS};
 
-    my $colour = { live => 'white',
+    my %colour = ( live => 'white',
                    test => '#a1e3c9', # slightly minty
-                   dev => '#f4cb9f',
-                   old => 'pink' }->{$desig};
-    if ($desig eq 'dev') {
-        return (0, $colour, 'an unstable developer-edition Otterlace');
-    } elsif ($colour && $vsn eq $desig_latest) {
-        return (0, $colour, "the latest $desig Otterlace");
-    } elsif ($colour) {
-        my $txt = "is not the current $desig Otterlace\nIt is $vsn, latest is $desig_latest";
-        return (1, $colour, $txt);
-    } elsif (defined $desig && $desig !~ /^\d+(_|$)/) {
-        # some designation we didn't recognise e.g. (rt324508 ancient zircon)
-        return (0, 'pink', "a special $desig Otterlace");
-    } else {
-        return (1, 'red', "an obsolete Otterlace.  The latest is $live");
-    }
+                   dev => '#fb9f4a', #f4cb9f',
+                   old => 'pink',
+                   _designated => 'pink',
+                   _obsolete => 'red');
+    my $colour = $colour{ $desig || '_obsolete' };
+    $colour = $colour{_designated} if defined $desig && !$colour;
+
+    return ($stale, $colour, $descr);
 }
 
 

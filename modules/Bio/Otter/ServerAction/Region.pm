@@ -265,7 +265,8 @@ sub write_region {
         ##fetch a new slice, and convert this new_slice to xml so that
         ##the response xml has all the above changes done in this session
 
-        ##pass on to the xml generator the current set of genes , simple features
+        # Pass on to the xml generator the set of changed genes, and
+        # all simple features
         my $current_region =  Bio::Vega::Region->new(
             otter_dba     => $odba,
             slice         => $db_slice,

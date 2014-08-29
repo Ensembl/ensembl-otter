@@ -102,6 +102,10 @@ sub _init {
     return 0;
 }
 
+# sub new { bless ... }
+# This is written with class methods and has no constructor,
+# but test cases can call it on mocked out objects to feed it state.
+
 
 =head2 dump()
 
@@ -136,6 +140,42 @@ sub as_text {
     return "v$1.$2" if !$feat && $head =~ m{^humpub-release-(\d+)-(\d+)$};
     return "$head (feature $feat)" if $feat;
     return $head;
+}
+
+
+=head2 taglike()
+
+Return text describing released versions with a syntax like
+otter_ipath_get's $full_version, as used by build code.
+
+e.g. 84.04 84.51_zmq_test 85 85_slice_lock
+
+Extended for modified releases, e.g. 84.01+7ci
+
+=cut
+
+sub taglike {
+    my ($called) = @_;
+    my $head = $called->param('head');
+    my $feat = $called->param('feature');
+
+    my $vsn;
+    if ($head =~ m{^humpub-release-(\d+)-(\d+)$}) {
+        $vsn = "$1.$2";
+        $vsn .= "_$feat" if $feat;
+    } elsif ($head =~ m{^humpub-release-(\d+)-(\d+)-(\d+)-g[a-f0-9]+$}) {
+        $vsn = "$1.$2";
+        my $plusci = $3;
+        $vsn .= "_$feat" if $feat;
+        $vsn .= "+${plusci}ci";
+    } elsif ($head =~ m{^humpub-release-(\d+)-dev(?:-\d+-g[a-f0-9]+)?$}) {
+        $vsn = $1;
+        $vsn .= "_$feat" if $feat;
+    } else {
+        die "Incomprehensible head $head";
+    }
+
+    return $vsn;
 }
 
 
