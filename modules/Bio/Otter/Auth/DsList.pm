@@ -1,0 +1,92 @@
+package Bio::Otter::Auth::DsList;
+use strict;
+use warnings;
+use Try::Tiny;
+use Carp;
+use Scalar::Util 'weaken';
+
+
+=head1 NAME
+
+Bio::Otter::Auth::DsList - a list of datasets
+
+=head1 DESCRIPTION
+
+Class to hold a list of datasets for access control.
+
+=head1 METHODS
+
+Construct-only, with read-only attributes.
+
+=cut
+
+
+sub new {
+    my ($pkg, $access, $dataset_names_list) = @_;
+    my $self = bless {}, $pkg;
+
+    # Access to species_groups is needed to expand them
+    $self->{_access} = $access;
+    weaken $self->{_access};
+
+    $self->{_names} = $dataset_names_list;
+    croak "$pkg->new needs arrayref of dataset names"
+      unless ref($dataset_names_list);
+
+    return $self;
+}
+
+sub _access {
+    my ($self) = @_;
+    return $self->{_access}
+      or die "Lost my weakened _access";
+}
+
+sub raw_names {
+    my ($self) = @_;
+    return @{ $self->{_names} };
+}
+
+sub expanded_names {
+    my ($self) = @_;
+    my @name = $self->raw_names;
+    @name = map { /^:(.*)$/ ? $self->_group($1) : $_ } @name;
+    return @name;
+}
+
+sub _group {
+    my ($self, $groupname) = @_;
+    local $self->{_LOOPING} = 1;
+
+    my $sp_grp = $self->_access->species_groups;
+    die "Cannot resolve species_group $groupname without linkage"
+      unless $sp_grp && ref($sp_grp);
+
+    my $group = $sp_grp->{$groupname}; # expect another DsList
+    die "Cannot resolve unknown species_group $groupname"
+      unless defined $group;
+    die "Loop detected while resolving species_group $groupname"
+      if $group->{_LOOPING};
+
+    return $group->expanded_names;
+}
+
+
+# Returns {name => $dataset_object}
+sub datasets {
+    my ($called, @dslist) = @_;
+    push @dslist, $called if ref($called);
+    die "No DsList objects" unless @dslist;
+
+    my %ds;
+    foreach my $list (@dslist) {
+        my $species_dat = $list->_access->species_dat;
+        foreach my $name ($list->expanded_names) {
+            $ds{$name} = $species_dat->dataset($name)
+              or die "Unknown dataset '$name'";
+        }
+    }
+    return \%ds;
+}
+
+1;

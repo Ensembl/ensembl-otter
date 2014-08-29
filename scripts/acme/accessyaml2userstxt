@@ -27,43 +27,6 @@ Self-tests to compare backwards compatibility.
 =cut
 
 
-sub make_new {
-    my $u_in = Bio::Otter::Server::Config->users_hash__old;
-    my $sp_in = Bio::Otter::Server::Config->SpeciesDat;
-
-    # Build new-format user permissions
-    my %u_out;
-
-    while (my ($user, $allow_h) = each %$u_in) {
-        die Dump({ weird__allow_h => [ $user, $allow_h ] })
-          if grep { $_ ne 1 } values %$allow_h;
-        $u_out{$user} = { write => [ sort keys %$allow_h ] };
-    }
-
-    my $staff = qx{ ypmatch havana aliases };
-    chomp $staff;
-    my @staff = split ',', $staff;
-    die Dump({ weird__staff_list => \@staff })
-      unless @staff > 10 && grep { $_ eq $ENV{USER} } @staff;
-
-    unshift @{ $u_out{$_}{write} }, ':main' foreach @staff;
-
-    # Build species groups
-    my %sp_grp =
-      (dev => [ sort qw[ human_dev human_test cat_dev ]]);
-    foreach my $ds (sort { $a->name cmp $b->name } @{ $sp_in->datasets }) {
-        my $key = $ds->params->{RESTRICTED} ? 'restricted' : 'main';
-        push @{ $sp_grp{$key} }, $ds->name;
-    }
-
-    my %out =
-      (species_groups => \%sp_grp,
-#       _raw => { 'users.txt' => $u_in, 'species.dat' => $sp_in },
-       users => \%u_out);
-
-    return \%out;
-}
-
 sub make_legacy {
     # Get user sort order
     my @old_txt = split "\n", o_slurp('users.txt');
@@ -113,6 +76,12 @@ sub make_legacy {
         }
         sort $sort_u keys %$old_style;
 
+    $legacy_txt = <<HEADER . $legacy_txt;
+# Legacy users.txt for Otter Server below v85
+# generated @{[ scalar localtime ]}
+# from access.yaml by $0
+
+HEADER
     return $legacy_txt;
 }
 
@@ -124,14 +93,6 @@ sub o_slurp {
 
 sub main {
     $ENV{ANACODE_SERVER_CONFIG} = "$ENV{HOME}/.otter/server-config/";
-
-    # Create
-    if (0) {
-        my $new_style = make_new();
-        my $fn = Bio::Otter::Server::Config->data_filename('access.yaml');
-        die "File $fn: exists" if -e $fn;
-        write_file($fn, { atomic => 1 }, Dump($new_style));
-    }
 
     # Re-create
     my $legacy_txt = make_legacy();
@@ -149,10 +110,13 @@ sub main {
       or diag explain { old => $old, new => $new };
 
     my $orig_utxt = o_slurp('users.txt');
-    $orig_utxt =~ s{^(#.*)?\s*\n}{}mg; # remove comments, we don't try to keep them
-    eq_or_diff(scalar o_slurp('users.txt+'),
-               $orig_utxt,
+    my $new_utxt = o_slurp('users.txt+');
+    foreach ($orig_utxt, $new_utxt) {
+        s{^(#.*)?\s*\n}{}mg; # remove comments, we don't try to keep them
+    }
+    eq_or_diff($new_utxt, $orig_utxt,
                'users.txt re-generated from new format');
+    diag 'made legacy-style users.txt+ from access.yaml';
 
     return 0;
 }
