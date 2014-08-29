@@ -9,6 +9,7 @@ use List::MoreUtils 'uniq';
 use Bio::Otter::SpeciesDat;
 use Bio::Otter::SpeciesDat::Database;
 use Bio::Otter::Version;
+use Bio::Otter::Auth::Access;
 
 
 =head1 NAME
@@ -328,6 +329,21 @@ sub extant_versions {
 }
 
 
+=head2 Access()
+
+Return a freshly loaded L<Bio::Otter::Auth::Access> object, which
+tells dataset access for any user.
+
+=cut
+
+sub Access {
+    my ($pkg) = @_;
+    my $acc = $pkg->_get_yaml('/access.yaml');
+    my $sp = $pkg->SpeciesDat;
+    return Bio::Otter::Auth::Access->new($acc, $sp);
+}
+
+
 =head2 users_hash()
 
 Return a freshly loaded hash C<< ->{$user}{$dataset} = 1 >> from the
@@ -338,75 +354,8 @@ Otter Server config directory.
 # Regenerate an "old users.txt style" users_hash from new access.yaml
 sub users_hash {
     my ($pkg, @opt) = @_;
-    my $preserve_case = ("@opt" eq 'samecase'); # for testing
-    my $invalid = 0;
-
-    my $acc = $pkg->_get_yaml('/access.yaml');
-    my $sp_grp = $acc->{species_groups} or die "need species_groups";
-    my $u_grp = $acc->{user_groups} or die "need user_groups";
-
-    my %valid_dataset;
-    {
-        my $ds_list = $pkg->SpeciesDat->datasets;
-        @valid_dataset{ map { $_->name } @$ds_list } = @$ds_list;
-    }
-    my $check_ds = sub {
-        my ($where, @ds) = @_;
-        if (my @bad = grep { ! $valid_dataset{$_} } @ds) {
-            warn "Bad dataset names (@bad) found in $where";
-            $invalid = 1;
-        }
-        return 0;
-    };
-    $check_ds->("species_groups{$_}", @{ $sp_grp->{$_} }) foreach keys %$sp_grp;
-
-    my %out;
-    while (my ($UG, $info) = each %$u_grp) {
-        my %info = %$info;
-        delete $info{comment};
-        my @grp_ds = @{ delete $info{write} || [] }; # ignoring the read-only list
-        $check_ds->("user_groups{$UG}{write}", grep { !/^:/ } @grp_ds);
-        my $users = delete $info{users} || [];
-        if (my @badkey = sort keys %info) {
-            warn "user_groups{$UG}{qw{@badkey}} not understood";
-            $invalid = 1;
-        }
-        die "user_groups{$UG}{users} is $users" unless ref($users) eq 'ARRAY';
-
-        foreach my $u (@$users) {
-            my ($user, @extra_ds) = try {
-                my ($key) = keys %$u;
-                die if 1 != keys %$u;
-                ($key, @{ $u->{$key}->{write} });
-            } catch {
-                ($u);
-            };
-            $check_ds->("user_groups{$UG}{users}{$user}{write}", grep { !/^:/ } @extra_ds);
-            my @ds = (@grp_ds, @extra_ds);
-            if (ref($user)) {
-                my $maybe = try { join ' ', ' on', keys %$user } catch {''};
-                warn "In user_groups{$UG}: Bad username '$user' - trailing :$maybe in YAML?";
-                $invalid = 1;
-            }
-
-            # for "legacy" users_hash, skip the explicit default staff access
-            my $is_staff = $user !~ /@/;
-            @ds = grep { $_ ne ':main' } @ds if $is_staff;
-            next if !@ds && $is_staff;
-
-            die "User $user: duplicate entry" if $out{$user};
-            # to allow merging, we considered a "multigroup: 1" token.  YAGNI?
-
-            $user = lc($user) unless $preserve_case; # done in old _read_user_file
-
-            $out{$user} =
-              { map {($_ => 1)} # per dataset name
-                map { /^:(.*)$/ ? @{ $sp_grp->{$1} } : $_ } # expand species_groups
-                @ds };
-        }
-    }
-    die "access.yaml is invalid" if $invalid; # fail late, see more problems at once
-    return \%out;
+    my $acc = $pkg->Access;
+    return $acc->legacy_users_hash(@opt);
 }
 
 sub users_hash__old {
