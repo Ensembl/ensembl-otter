@@ -16,6 +16,7 @@ use Bio::Vega::DBSQL::AssemblyTagAdaptor;
 use Bio::Vega::DBSQL::ContigLockAdaptor;
 use Bio::Vega::DBSQL::MetaContainer;
 use Bio::Vega::DBSQL::SliceAdaptor;
+use Bio::Vega::DBSQL::SliceLockAdaptor;
 use Bio::Vega::DBSQL::SplicedAlignFeature::DnaAdaptor;
 use Bio::Vega::DBSQL::SplicedAlignFeature::ProteinAdaptor;
 
@@ -40,6 +41,15 @@ sub get_SliceAdaptor {
       $self->{'VegaSlice'}=$ad;
   }
   return $self->{'VegaSlice'};
+}
+
+sub get_SliceLockAdaptor {
+  my ($self) = @_;
+  if ( !exists $self->{'VegaSliceLock'} ){
+      my $ad=Bio::Vega::DBSQL::SliceLockAdaptor->new($self);
+      $self->{'VegaSliceLock'}=$ad;
+  }
+  return $self->{'VegaSliceLock'};
 }
 
 sub get_ContigInfoAdaptor {
@@ -187,6 +197,7 @@ sub _adaptor_tag_list {
         Author
         AuthorGroup
         ContigAttribute
+        SliceLock
         StableId
         VegaExon
         VegaTranscript

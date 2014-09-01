@@ -55,14 +55,15 @@ use warnings;
 
 use Carp qw{ confess };
 use Sys::Hostname qw{ hostname };
+use Try::Tiny;
+
 use Bio::Otter::Lace::Defaults;
-use Bio::Vega::ContigLockBroker;
+use Bio::Vega::SliceLockBroker;
 
 {
     my $dataset_name;
     my $force;
     my $once;
-    my $lock   = 1;
     my $author = (getpwuid($<))[0];
     my @stable_ids;
 
@@ -72,7 +73,6 @@ use Bio::Vega::ContigLockBroker;
         'dataset=s' => \$dataset_name,
         'force!'    => \$force,
         'once!'     => \$once,
-        'lock!'     => \$lock,
         'stable=s'  => \@stable_ids,
     );
     Bio::Otter::Lace::Defaults::show_help() unless $dataset_name;
@@ -136,36 +136,35 @@ use Bio::Vega::ContigLockBroker;
             my $prev_gene        = $gene_adaptor->fetch_by_dbID($previous_gene_id);
             if ($force || proceed($current_gene_id) =~ /^y$|^yes$/) {
 
-                my $cb;
-                if ($lock) {
-                    eval {
-                        $cb = Bio::Vega::ContigLockBroker->new(-hostname => hostname());
-                        printf STDERR "Locking gene slice %s <%d-%d>\n", $cur_gene->seq_region_name,
-                          $cur_gene->seq_region_start, $cur_gene->seq_region_end;
-                        $cb->lock_clones_by_slice([ $cur_gene->feature_Slice, $prev_gene->feature_Slice ],
-                            $author_obj, $otter_dba);
-                    };
-                    if ($@) {
-                        warn("Problem locking gene slice with author name $author\n$@\n");
-                        next GSI;
-                    }
-                }
+                my $broker = Bio::Vega::SliceLockBroker->new
+                  (-hostname => hostname(), -author => $author_obj, -adaptor => $otter_dba);
 
-                $gene_adaptor->remove($cur_gene);
-                $gene_adaptor->resurrect($prev_gene);
-                print STDERR "gene_id $current_gene_id REMOVED !!!!!!\n";
+                my $lock_ok;
+                my $work = sub {
+                    $lock_ok = 1;
+                    $gene_adaptor->remove($cur_gene);
+                    $gene_adaptor->resurrect($prev_gene);
+                    print STDERR "gene_id $current_gene_id REMOVED !!!!!!\n";
+                    return;
+                };
 
-                if ($lock) {
-                    eval {
-                        printf STDERR "Unlocking gene slice %s <%d-%d>\n", $cur_gene->seq_region_name,
-                          $cur_gene->seq_region_start, $cur_gene->seq_region_end;
-                        $cb->remove_by_slice([ $cur_gene->feature_Slice, $prev_gene->feature_Slice ],
-                            $author_obj, $otter_dba);
-                    };
-                    if ($@) {
-                        warn("Cannot remove locks from gene slice with author name $author\n$@\n");
+                try {
+                    printf STDERR "Locking gene slice %s <%d-%d>\n",
+                      $cur_gene->seq_region_name,
+                        $cur_gene->seq_region_start, $cur_gene->seq_region_end;
+                    $broker->lock_create_for_objects
+                      ("rollback_gene.pl" => $cur_gene, $prev_gene);
+                    $broker->exclusive_work($work, 1);
+                } catch {
+                    if ($lock_ok) {
+                        warn("Problem rolling back gene\n$_\n");
+                    } else {
+                        warn("Problem locking gene slice with author name $author\n$_\n");
                     }
-                }
+                } finally {
+                    $broker->unlock_all;
+                };
+
             }
             else {
                 last GENE;

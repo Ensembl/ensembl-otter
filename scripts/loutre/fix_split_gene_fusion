@@ -10,7 +10,7 @@ use List::MoreUtils 'uniq';
 use Carp;
 
 use Bio::Otter::Lace::Defaults;
-use Bio::Vega::ContigLockBroker;
+use Bio::Vega::SliceLockBroker;
 use Bio::Vega::Author;
 
 our $DEBUG = 0;
@@ -35,8 +35,9 @@ sub stable_id_numeric {
 # There is probably a limit on number of placeholders.  I don't expect
 # to reach it for MySQL -> don't bother batching.
 sub placeholders {
-    my $n = scalar @_; ## no critic (Subroutines::RequireArgUnpacking)
-    my @ph = ('?') x $n;
+    my @value = @_;
+    confess "Cannot construct 0 placeholders" unless @value;
+    my @ph = ('?') x scalar @value;
     return [ '('.(join ',', @ph).')' ];
 }
 
@@ -77,11 +78,14 @@ sub main {
     die "Oops, running for no chromosomes" unless @for_chr;
 
     my @gene_basenames = candidate_gene_basenames($dbh, \@for_chr);
+    if (!@gene_basenames) {
+        warn "No candidate genes in (@for_chr)\n";
+        return 0;
+    }
+
     my $chunked = chunked_all_transcripts($dbh, \@for_chr, @gene_basenames);
 
     my $gene_adaptor  = $otter_dba->get_GeneAdaptor;
-    my $contig_broker = Bio::Vega::ContigLockBroker->new(-hostname => hostname);
-    my $author_obj    = Bio::Vega::Author->new(-name => $cl->author, -email => $cl->email);
 
     print "\n";
 
@@ -103,9 +107,7 @@ sub main {
 
         my @sql = calculate_merge($dbh, @G);
         if ($wet) {
-            my $fail = execute_with_lock
-              ($otter_dba, $contig_broker, $author_obj, $dbh,
-               \@G, \@gsid, @sql);
+            my $fail = execute_with_lock($otter_dba, \@G, \@gsid, @sql);
             push @all_sql, @sql unless $fail;
             last if $fail > 1;
         } else {
@@ -129,65 +131,56 @@ sub main {
     }
     print Dump({ all_sql => \@all_sql }) if @all_sql;
 
-    return 0;
+    return 0; # has early returns
 }
 
 
 # Return fail: 0=ok, 1=skip, 2=bail out
 sub execute_with_lock {
-    my ($otter_dba, $contig_broker, $author_obj, $dbh,
-        $genes, $gsids, @sql) = @_;
+    my ($otter_dba, $genes, $gsids, @sql) = @_;
+    my $dbh = $otter_dba->dbc->db_handle;
 
-    $otter_dba->begin_work;
+    my $broker = Bio::Vega::SliceLockBroker->new
+      (-hostname => hostname, -author => 'for_uid', -adaptor => $otter_dba);
 
-    my $chr_slice = $genes->[0]->slice->seq_region_Slice;
-
-    my $skip;
-    try {
-        $contig_broker->lock_clones_by_slice($chr_slice, $author_obj, $chr_slice->adaptor->db);
-    } catch {
-        my $name = $chr_slice->name;
-        warn "Skip - Cannot lock chr $name for genes @$gsids: $_";
-        print "\t!! lock busy\n";
-        $skip = 1;
-    };
-
-    if ($skip) {
-        $otter_dba->rollback; # including any locks we did get
-        return 1;
-    }
+    $broker->lock_create_for_objects("fix_split_gene_fusion" => @$genes);
 
     # XXX: we loaded before locking!  could do a chromosome at a time?
-
-    try {
+    my $ret = 1; # skip - lock fail
+    my $work = sub {
+        $ret = 2; # bail - work fail
         foreach my $q (@sql) {
             next unless ref($q); # it's a comment
             my ($rowcount_want, $sql, @param) = @$q;
             my $rv = $dbh->do($sql, {}, @param);
-            die "Query return incorrect number of rows affected.\n".
-              Dump({ want => $rowcount_want, got => $rv, query => $q })
+            die "Query returned incorrect number of rows affected.\n".
+              Dump({ want => $rowcount_want,
+                     got => $rv,
+                     query => $q,
+                     gsids => $gsids })
                 unless $rv == $rowcount_want;
         }
-    } catch {
-        warn "Error processing genes @$gsids: $_";
-        $skip = 1;
+        $ret = 0; # ok
     };
 
     try {
-        $contig_broker->remove_by_slice($chr_slice, $author_obj, $chr_slice->adaptor->db);
+        $broker->exclusive_work($work, 1); # lock, work, unlock.  With COMMITs
     } catch {
-        warn "Unlock failed chr of @$gsids: $_";
-        $skip = 1;
+        if ($ret == 1) {
+            warn "Skip - Cannot lock for genes @$gsids: $_";
+            print "\t!! lock busy\n";
+        } elsif ($ret == 2) {
+            warn "Error processing genes @$gsids: $_";
+            warn "Rolled back - bail out - these queries should run smoothly";
+        } else {
+            warn "Unexpected problem: $_";
+            $ret = 2;
+        }
+    } finally {
+        my @fail = $broker->unlock_all;
+        $ret = 2 if @fail;
     };
-
-    if ($skip) {
-        $otter_dba->rollback; # changes & locks
-        warn "Rolled back - bail out - these queries should run smoothly";
-        return 2;
-    } else {
-        $otter_dba->commit;
-        return 0;
-    }
+    return $ret;
 }
 
 
@@ -228,9 +221,18 @@ sub calculate_merge {
         $unexpect{splice_ev} = $dbh->selectall_arrayref
           (qq{SELECT splicing_event_id, gene_id, name, attrib_type_id FROM splicing_event WHERE gene_id in @{ placeholders(@gid) }},
            {}, @gid);
-        $unexpect{unconventional_transcript_association} = $dbh->selectall_arrayref
-          (qq{SELECT DISTINCT gene_id, interaction_type FROM unconventional_transcript_association WHERE gene_id in @{ placeholders(@gid) }},
-           {}, @gid);
+        $unexpect{unconventional_transcript_association} = try {
+            local $dbh->{PrintError} = 0;
+            $dbh->selectall_arrayref
+              (qq{SELECT DISTINCT gene_id, interaction_type FROM unconventional_transcript_association WHERE gene_id in @{ placeholders(@gid) }},
+               {}, @gid);
+        } catch {
+            if (m{Table .*\.unconventional_transcript_association' doesn't exist}) {
+                [] # ok
+            } else {
+                [ "Puzzled: $_" ];
+            }
+        };
         die "I need there to be no gene-linked stuff, but found\n".Dump(\%unexpect)
           if grep { @$_ } values %unexpect; # if any rows
     }

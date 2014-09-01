@@ -49,8 +49,10 @@ use warnings;
 use Getopt::Long;
 use Net::Netrc;
 use Sys::Hostname;
+use Try::Tiny;
+
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
-use Bio::Vega::ContigLockBroker;
+use Bio::Vega::SliceLockBroker;
 use Bio::Vega::Author;
 use Bio::Vega::DBSQL::DBAdaptor;
 
@@ -125,35 +127,27 @@ GSI: foreach my $id (@sids) {
 					 $gene->strand,$gene->gene_author->name,$gene->is_current ? 'yes':'no' ;
 	if($force || &proceed() =~ /^y$|^yes$/ ) {
 
-		my ($cb,$author_obj);
-		eval {
-			$cb = Bio::Vega::ContigLockBroker->new(-hostname => hostname);
-			$author_obj = Bio::Vega::Author->new(-name => $author, -email => $author);
-			printf STDOUT "Locking gene slice %s <%d-%d>\n",$gene->seq_region_name,$gene->seq_region_start,$gene->seq_region_end;
-			$cb->lock_clones_by_slice($gene->feature_Slice,$author_obj,$db);
-		};
-		if($@){
-			warning("Problem locking gene slice with author name $author\n$@\n");
-			next GSI;
-		}
+            my $author_obj = Bio::Vega::Author->new(-name => $author, -email => $author);
+            my $broker = Bio::Vega::SliceLockBroker->new
+              (-hostname => hostname, -author => $author_obj, -adaptor => $db);
+            printf STDOUT "Locking gene slice %s <%d-%d>\n",$gene->seq_region_name,$gene->seq_region_start,$gene->seq_region_end;
+            $broker->lock_create_for_objects("set_to_obsolete.pl" => $gene);
 
+            my $work = sub {
 		$gene->gene_author($author_obj);
-		eval {
-			$gene_adaptor->set_obsolete($gene);
-		};
-		if($@) {
-			warning("Cannot make $id obsolete\n$@\n");
-		} else {
-			print STDOUT "gene_stable_id $id is now OBSOLETE !!!!!!\n";
-		}
+                $gene_adaptor->set_obsolete($gene);
+                print STDOUT "gene_stable_id $id is now OBSOLETE !!!!!!\n";
+                return;
+            };
 
-		eval {
-			printf STDOUT "Unlocking gene slice %s <%d-%d>\n",$gene->seq_region_name,$gene->seq_region_start,$gene->seq_region_end;
-			$cb->remove_by_slice($gene->feature_Slice,$author_obj,$db);
-		};
-		if($@){
-			warning("Cannot remove locks from gene slice with author name $author\n$@\n");
-		}
+            try {
+                $broker->exclusive_work($work, 1);
+            } catch {
+                warning("Cannot make $id obsolete\n$_\n");
+            } finally {
+                $broker->unlock_all;
+            };
+
 	} else {
 		next GSI;
 	}

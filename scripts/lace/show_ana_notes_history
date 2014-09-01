@@ -15,7 +15,6 @@ use Data::Dumper;
     my $ss_name      = undef;
     my $start        = undef;
     my $stop         = undef;
-    my $sql          = 0;
     my $special      = undef;
     my $ss;
     Bio::Otter::Lace::Defaults::do_getopt(
@@ -24,7 +23,6 @@ use Data::Dumper;
         'set=s'     => \$ss_name,
         'min=i'     => \$start,
         'max=i'     => \$stop,
-        'sql'       => \$sql,
         'slice=s'   => \$special,
         ) || usage();
     usage() if $help;
@@ -89,11 +87,6 @@ use Data::Dumper;
     foreach my $seqNote(@$notes){
         printf "\t%s %s %s\n", scalar(localtime($seqNote->timestamp)), $seqNote->author, $seqNote->text;
     }
-    }
-    if($sql){
-    warn "\nSELECT c.* FROM clone_lock c, clone cl\n";
-    warn "WHERE c.clone_id = cl.clone_id && cl.embl_acc \n";
-    warn " IN(" . join(",", @accs) . ");\n";
     }
 }
 
