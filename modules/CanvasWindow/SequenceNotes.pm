@@ -734,31 +734,22 @@ sub _open_SequenceSet {
 
     if ($adb_write_access) {
         # only lock the region if we have write access.
-        try { $adb->try_to_lock_the_block; return 1; }
+        try { $adb->try_to_lock_the_block }
         catch {
             $adb->error_flag(0);
             $adb->write_access(0);  # Stops AceDatabase DESTROY from trying to unlock clones
-            if (/Clones locked/) {
-                # if our error is because of locked clones, display these to the user
-                my $message = "Some of the clones you are trying to open are locked\n";
-                print STDERR $_ ;
-                for (split /\n/){
-                    if (my ($clone_name , $author) =
-                        m/(\S+) has been locked by \'(\S+)\'/ ){
-                        $message  .= "$clone_name is locked by $author \n";
-                    }
-                }
-                $self->message( $message  );
+            if (/Locking slice failed during locking.*do_lock failed <lost the race/s) { # a message concatenated in the lock_region action, from the SliceLockBroker
+                $self->message("The region you are trying to open is locked\n");
             } else {
                 $self->exception_message($_, 'Error initialising database');
-                print $_;
             }
             return 0;
         }
-        or return;
+        finally {
+            try { $self->refresh_lock_columns };
+        }
+          or return;
     }
-
-    $self->refresh_lock_columns;
 
     warn "Making ColumnChooser";
 
@@ -1559,10 +1550,12 @@ sub _column_padlock_icon {
 sub _column_who_locked {
     my ($cs) = @_;
 
-    if (my $lock = $cs->get_lock_as_CloneLock) {
+    if (my @lockers = $cs->get_lock_users) {
         # Remove domain from full email addresses
-        my ($name) = $lock->author->name =~ /^([^@]+)/;
-        return { -text => $name };
+        foreach (@lockers) { s{@.*}{} }
+        my $names = join ',', @lockers;
+        substr($names, 9) = '...' if length($names) > 12;
+        return { -text => $names };
     } else {
         # Put in empty spaces to keep column padded
         return { -text => ' ' x 12 };

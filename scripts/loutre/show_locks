@@ -3,19 +3,26 @@
 ### show_locks
 
 use strict;
+use warnings;
+
+use List::Util 'max';
+use Try::Tiny;
 
 use Bio::Otter::Lace::Defaults;
 use Bio::Otter::Server::Config;
 
+use Bio::Vega::ContigLockBroker;
+use Bio::Vega::SliceLockBroker;
+
 $| = 1;
 
-{
-    my $usage     = sub { exec('perldoc', $0) };
+sub main {
     my $dataset_name = undef;
     my $author    = undef;
     my $assembly  = undef;
     my $hostname  = undef;
     my $do_delete = 0;
+    my ($do_interrupt, $do_expire) = (0, 0);
     my @lock_id_range = ();
     my $range_parser = sub{
         my( $start, $end ) = $_[1] =~ /(\d+)(?:[^\d+](\d+))?/;
@@ -25,7 +32,7 @@ $| = 1;
         if ($start and $end and $start <= $end) {
             @lock_id_range = ($start, $end);
         } else {
-            $usage->();
+            die "Bad lock id range ($start, $end)";
         }
     };
     Bio::Otter::Lace::Defaults::do_getopt(
@@ -34,12 +41,133 @@ $| = 1;
         'set=s'         => \$assembly,
         'machine=s'     => \$hostname,
         'delete!'       => \$do_delete,
+        'interrupt!'    => \$do_interrupt,
+        'expire!'       => \$do_expire,
         'range=s'       => $range_parser,
-        ) or $usage->();
-    $usage->() unless $dataset_name;
+        # -h | --help : implicit in do_getopt
+        ) or die "Bad options";
+    die "No dataset name given" unless $dataset_name;
+    die "Did not understand extra argv (@ARGV)" if @ARGV;
+    die "Can only perform one of < -delete | -expire | -interrupt >"
+      if (!!$do_delete + !!$do_expire + !!$do_interrupt) > 1;
 
     my $ds = Bio::Otter::Server::Config->SpeciesDat->dataset($dataset_name);
+    die "Unknown dataset '$dataset_name'" unless $ds;
     my $otter_db = $ds->otter_dba;
+
+    my $exit = 0;
+
+    my $emulated_slice = {};
+    if (Bio::Vega::ContigLockBroker->supported($ds)) {
+        $exit |= process_contig_locks
+          ($otter_db, $author, $hostname, $assembly,
+           $do_delete, $emulated_slice, @lock_id_range)
+            if !$do_interrupt && !$do_expire;
+    } else {
+        warn "CONTIG_LOCKs not supported in dataset $dataset_name\n";
+        $exit |= $do_delete ? 8 : 0;
+    }
+
+    if (Bio::Vega::SliceLockBroker->supported($ds)) {
+        $exit |= process_slice_locks
+          ($otter_db, $author, $hostname, $assembly,
+           $emulated_slice,
+           $do_interrupt, $do_expire, @lock_id_range)
+            if !$do_delete;
+    } else {
+        warn "SLICE_LOCKs not supported in dataset $dataset_name\n";
+        $exit |= $do_interrupt || $do_expire ? 8 : 0;
+    }
+
+    return $exit;
+}
+
+sub process_slice_locks {
+    my ($otter_db, $author_name, $hostname, $assembly,
+        $emulated_slice,
+        $do_interrupt, $do_expire, @lock_id_range) = @_;
+
+    warn "Processing SLICE_LOCKs\n";
+    my $SLdba = $otter_db->get_SliceLockAdaptor;
+
+    check_stale_contig_lock($SLdba, $emulated_slice);
+
+    my $author;
+    if (defined $author_name) {
+        $author = $otter_db->get_AuthorAdaptor->fetch_by_name($author_name);
+        if (!$author) {
+            warn "  Could not find author_name='$author_name' - doing nothing\n";
+            return 4;
+        }
+    }
+
+    # Fetch & filter
+    my $locks;
+    # later: options to fetch the pre/free locks, by various criteria?
+    if ($author) {
+        $locks = $SLdba->fetch_by_author($author, 1);
+    } elsif (@lock_id_range && $lock_id_range[0] == $lock_id_range[1]) {
+        $locks=[ $SLdba->fetch_by_dbID($lock_id_range[0]) ];
+    } else {
+        $locks = $SLdba->fetch_by_active('held');
+    }
+
+    $locks = [ grep { $hostname eq $_->hostname } @$locks ]
+      if defined $hostname;
+
+    $locks = [ grep { $assembly eq $_->slice->seq_region_name } @$locks ]
+      if defined $assembly;
+
+    $locks = [ grep {( $_->dbID >= $lock_id_range[0] &&
+                       $_->dbID <= $lock_id_range[1] )} @$locks ]
+      if @lock_id_range;
+
+    # Show
+    my $len_host = max(10, map { length($_->hostname) } @$locks);
+    my $len_auth = max(7, map { length($_->describe_author) } @$locks);
+    my $lock_to_row = sub {
+        my ($L) = @_;
+        return ($L->dbID, $L->active, $L->hostname, $L->describe_author,
+                $L->describe_slice, $L->iso8601_ts_activity);
+    };
+    my $row_pattern = "%6s %-4s  %-${len_host}s  %-${len_auth}s  %-40s  %-23s\n";
+    printf STDERR $row_pattern, '#', qw( actv host author slice activity );
+    printf STDERR $row_pattern, map { "-" x $_ } (4, 4, $len_host, $len_auth, 40, 23);
+    foreach my $L (sort { $a->ts_activity <=> $b->ts_activity || $a->dbID <=> $b->dbID }
+                   @$locks) {
+        printf $row_pattern, $lock_to_row->($L);
+    }
+
+    # Unlock
+    my ($op, $freed);
+    ($op, $freed) = qw( expire    expired     ) if $do_expire;
+    ($op, $freed) = qw( interrupt interrupted ) if $do_interrupt;
+    if ($op && @$locks && q_del($op)) {
+        my $me = getpwuid($<);
+        my $unlocker = $otter_db->get_AuthorAdaptor->fetch_by_email($me)
+          or die "Could not find unlock author_email=$me";
+        my $count = 0;
+        foreach my $L (@$locks) {
+            try {
+                $L->adaptor->unlock($L, $unlocker, $freed);
+                $count ++;
+            } catch {
+                my $id = $L->dbID;
+                warn "Unlock #$id failed: $_";
+            };
+        }
+        print "\u$freed $count locks\n";
+    }
+
+    return 0;
+    # Early return for error conditions
+}
+
+sub process_contig_locks {
+    my ($otter_db, $author, $hostname, $assembly,
+        $do_delete, $emulated_slice, @lock_id_range) = @_;
+
+    warn "Processing CONTIG_LOCKs\n";
 
     my $sql = q{
         SELECT l.contig_lock_id
@@ -116,6 +244,8 @@ $| = 1;
             push(@$info, $type);
         } else {
             $lock_id{$lid} = [$host, $author, $acc_sv, $intl, $date, $type, $start, $end];
+            push @{ $emulated_slice->{$1} }, $lid
+              if $host =~ /^SliceLock\.(\d+)$/;
         }
     }
 
@@ -152,9 +282,7 @@ $| = 1;
     my $lock_count = scalar keys %lock_id;
 
     if ($do_delete and scalar keys %lock_id) {
-        print STDERR "Delete all these locks? [y|N] ";
-        my $ans = <STDIN>;
-        if ($ans =~ /^y/i) {
+        if (q_del("delete")) {
             my $del_sth = $otter_db->dbc->prepare(q{
                 DELETE FROM contig_lock
                 WHERE contig_lock_id = ?
@@ -167,9 +295,36 @@ $| = 1;
             print "Deleted $count locks\n";
         }
     }
-    
+    return 0;
 }
 
+sub check_stale_contig_lock {
+    my ($SLdba, $emulated_slice) = @_;
+
+    # First, remove the valid $emulated_slice
+    while (my ($slid, $contig_lock) = each %$emulated_slice) {
+        my $lock = try { $SLdba->fetch_by_dbID($slid) };
+        delete $emulated_slice->{$slid} if $lock && $lock->is_held;
+    }
+
+    foreach my $slid (sort { $a <=> $b } keys %$emulated_slice) {
+        # Warn of stale contig_lock
+        my $contig_lock = $emulated_slice->{$slid};
+        local $" = ', ';
+        warn "\n*** contig_lock_id in (@$contig_lock) emulating slice_lock_id=$slid is stale\n    Try with\n      ... -delete -machine SliceLock.$slid\n";
+    }
+
+    return;
+}
+
+sub q_del {
+    my ($op) = @_;
+    print STDERR "\u$op all these locks? [y|N] ";
+    my $ans = <STDIN>;
+    return ($ans =~ /^y/i);
+}
+
+exit main();
 
 __END__
 
@@ -178,16 +333,15 @@ __END__
 
 =head1 DESCRIPTION
 
-Show and delete clone locks from an otter
-database.  If locks need to be removed by hand
-using this script it is because something has
-gone wrong in the annotation system - which may
-need to be fixed!
+Show and delete locks from an otter database.
+
+If locks need to be removed by hand it is because something has gone
+wrong in the annotation system - which may need to be fixed!
 
 =head1 SYNOPSIS
 
-  show_locks -dataset <DATASET_NAME> [-delete] [-annotator <UNAME>] \
-    [-set <TYPE>] [-machine <HOSTNAME>] [-range <INT[-INT]>]
+  show_locks -dataset <DATASET_NAME> [-delete | -interrupt | -expire ] \
+    [-annotator <UNAME>] [-set <TYPE>] [-machine <HOSTNAME>] [-range <INT[-INT]>]
 
 =head1 ARGUMENTS
 
@@ -197,12 +351,16 @@ need to be fixed!
 
 The name of the dataset to search.  eg: B<human>
 
-=item -delete
+=item -delete | -interrupt | -expire
 
-With this flag set, the script will show the list
-of locks that match the search criteria followed
-by a prompt which asks if all the locks in the
-list should be deteleted.
+With one of these flags set, the script will show the list of locks
+that match the search criteria followed by a prompt which asks if all
+the locks in the list should be cancelled.
+
+"Delete" is for the old contig locks.  "Expire" is for SliceLocks
+which have been unused for long enough to be considered stale.
+"Interrupt" is for SliceLocks when the need to interrupt a region of
+work justifies preventing its owner saving.
 
 =back
 

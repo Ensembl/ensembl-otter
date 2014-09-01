@@ -14,9 +14,9 @@ sub lock_region {
     my ($server) = @_;
 
     my $sa_region = Bio::Otter::ServerAction::XML::Region->new_with_slice($server);
-    my $xml = $sa_region->lock_region;
+    my $token = $sa_region->lock_region;
 
-    return $xml;
+    return $token;
 }
 
 Bio::Otter::Server::Support::Web->send_response(\&lock_region);

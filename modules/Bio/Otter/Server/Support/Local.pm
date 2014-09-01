@@ -3,6 +3,7 @@ package Bio::Otter::Server::Support::Local;
 use strict;
 use warnings;
 
+use Test::MockObject;
 use base 'Bio::Otter::MappingFetcher';
 
 sub new {
@@ -28,7 +29,26 @@ sub authorized_user {
     return $authorized_user;
 }
 
+sub require_method {
+    my ($self, $want) = @_;
+    # Caller would want an HTTP request with '$want' method
+    return;
+}
+
+sub best_client_hostname {
+    my $h = __PACKAGE__;
+    $h =~ s{::}{.}g;
+    return $h;
+}
+
 ### Accessors
+
+sub content_type {
+    my ($self, @args) = @_;
+    ($self->{'content_type'}) = @args if @args;
+    my $content_type = $self->{'content_type'};
+    return $content_type;
+}
 
 sub dataset_name {
     my ($self, @args) = @_;
@@ -52,6 +72,12 @@ sub param {
     my $params = $self->{_params};
     return unless $params;
     return $params->{$key};
+}
+
+sub cgi {
+    my $cgi = Test::MockObject->new;
+    $cgi->mock(user_agent => sub { __PACKAGE__.'/0.1' });
+    return $cgi;
 }
 
 =head1 AUTHOR

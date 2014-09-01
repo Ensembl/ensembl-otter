@@ -8,7 +8,9 @@ use warnings;
 use Bio::Vega::DBSQL::DBAdaptor;
 use Sys::Hostname qw{ hostname };
 use Bio::Otter::Lace::Defaults;
-use Bio::Vega::ContigLockBroker;
+use Bio::Vega::SliceLockBroker;
+
+die "SELECT ... FROM gene_stable_id -- v65";
 
 {
     my $dsname = 'mouse';
@@ -23,9 +25,6 @@ use Bio::Vega::ContigLockBroker;
     my $ds = $cl->get_DataSet_by_name($dsname);
     my $dba = $ds->get_cached_DBAdaptor;
     my $gene_aptr = $dba->get_GeneAdaptor;
-    my $locker = Bio::Vega::ContigLockBroker->new(
-        -HOSTNAME   => hostname(),
-        );
     my $author = Bio::Vega::Author->new(
         -NAME       => $cl->author,
         -EMAIL      => $cl->email,
@@ -110,20 +109,30 @@ use Bio::Vega::ContigLockBroker;
                 }
                 $havana_gene->stable_id($gsid);
 
-                $dba->begin_work;
-                eval {
-                    save_gene($locker, $author, $gene_aptr, $now, $ko_gene);
-                    save_gene($locker, $author, $gene_aptr, $now, $havana_gene);
+                my $broker = Bio::Vega::SliceLockBroker->new
+                  (-hostname => hostname(), -author => $author, -adaptor => $gene_aptr);
+
+                my $locked_ok = 0;
+                my $save = sub {
+                    my ($gene) = @_;
+                    $locked_ok = 1; # locking is done before $save->(any)
+                    $gene_aptr->store($gene, $now);
+                    return;
                 };
-                if ($@) {
-                    $dba->rollback;
-                    warn $@;
-                } else {
+                try {
+                    my @gene = ($ko_gene, $havana_gene);
+                    $broker->lock_create_for_objects('repair_ko_gene_ott_ids' => @gene);
+                    $broker->foreach_object($save, @gene);
+
                     printf STDERR "Swapped stable IDs to:  KO:%s (%d)  HAVANA:%s (%d)\n",
                             $ko_gene->stable_id,     $ko_gene->dbID,
                         $havana_gene->stable_id, $havana_gene->dbID;
-                    $dba->commit;
-                }
+                } catch {
+                    die "Failed (locked_ok=$locked_ok) on $current_gene_id: $_";
+                } finally {
+                    $broker->unlock_all;
+                };
+
                 last OLD_GENE;
             }
         }
@@ -132,13 +141,6 @@ use Bio::Vega::ContigLockBroker;
     warn "Now you will need to patch genes with non-current transcripts and visa-versa, and, similarly, exons\n";
 }
 
-sub save_gene {
-    my ($locker, $author, $gene_aptr, $now, $gene) = @_;
-    
-    $locker->lock_by_object($gene, $author);
-    $gene_aptr->store($gene, $now);
-    $locker->remove_by_object($gene, $author);
-}
 
 sub format_gene {
     my ($gene_id, $results_hash) = @_;
