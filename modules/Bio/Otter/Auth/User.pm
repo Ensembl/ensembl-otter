@@ -97,7 +97,8 @@ sub _write_list {
 # by BOA:UserGroup->_build_users or BOA:Access->_flatten_users .
 #
 # Plan in RT#355854 was mutli-group membership when explicitly marked
-# in each place the user exists in a group, to avoid confusion
+# in each place the user exists in a group, to avoid confusion.
+# Also, beware email address case differences between groups.
 sub in_group {
     my ($self, @ugroup) = @_;
     my $e = $self->email;

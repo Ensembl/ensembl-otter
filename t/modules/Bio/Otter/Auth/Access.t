@@ -89,10 +89,11 @@ INPUT
 }
 
 
+# Demonstrate the object working normally
 sub user_groups_tt {
-    plan tests => 8;
+    plan tests => 12;
 
-    my $acc = try_load(<<INPUT);
+    my $acc = try_load(<<'INPUT');
 ---
 species_groups:
   main:
@@ -124,6 +125,12 @@ INPUT
               {qw{ human human  human_test human_test  mouse mouse }},
               'bob writes');
 
+    is($acc->user('elsie'), undef, 'unlisted user address rejected');
+
+    isa_ok($acc->user('BOB'), 'Bio::Otter::Auth::User', 'BOB: downcasing find');
+    isa_ok($acc->user('Bob')->write_dataset('human_test'),
+           'Bio::Otter::SpeciesDat::DataSet', 'Bob writes human_test');
+
 
     like(try_load(<<INPUT), qr{Duplicate user bob .* under user_groups/(one|two)}, 'bob dup');
 ---
@@ -135,6 +142,17 @@ user_groups:
   two:
     users:
       - bob
+INPUT
+
+
+    like(try_load(<<INPUT), qr{Duplicate user bob .* under user_groups/one}i, 'Bob/BOB dup');
+---
+species_groups: {}
+user_groups:
+  one:
+    users:
+      - BOB
+      - Bob
 INPUT
 
 

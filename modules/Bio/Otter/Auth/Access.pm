@@ -72,7 +72,7 @@ sub species_groups {
 # Returns a BOA:User or undef if not found
 sub user {
     my ($self, $email) = @_;
-    return $self->{_users}->{$email};
+    return $self->{_users}->{lc($email)};
 }
 
 sub _build_species_groups {
@@ -117,8 +117,8 @@ sub _flatten_users {
         $self->{_ptr} = "user_groups/$name";
         foreach my $u ($ugroup->users) {
             my $e = $u->email;
-            die "Duplicate user $e" if $out{$e}; # see $u->in_group comment
-            $out{$e} = $u;
+            die "Duplicate user $e" if $out{lc($e)}; # see $u->in_group comment
+            $out{lc($e)} = $u;
         }
     }
     $self->{_users} = \%out;
