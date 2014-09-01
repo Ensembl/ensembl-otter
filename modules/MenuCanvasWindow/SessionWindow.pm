@@ -30,7 +30,7 @@ use MenuCanvasWindow::TranscriptWindow;
 use MenuCanvasWindow::GenomicFeaturesWindow;
 use Text::Wrap qw{ wrap };
 
-use Zircon::Tk::Context;
+use Zircon::TkZMQ::Context;
 use Zircon::ZMap;
 
 use Bio::Otter::Lace::Client;
@@ -2552,13 +2552,20 @@ sub zmap_configs_dir {
 ### BEGIN: ZMap control interface
 
 sub zircon_context {
-    my ($self, @arg) = @_;
-    ($self->{'_zircon_context'}) = @arg if @arg;
+    my ($self) = @_;
     my $zircon_context =
         $self->{'_zircon_context'} ||=
-        Zircon::Tk::Context->new(
-            '-widget' => $self->menu_bar);
+        Zircon::TkZMQ::Context->new(
+            '-widget'       => $self->menu_bar,
+            '-trace_prefix' => sprintf('SW=[%s]', $self->AceDatabase->name),
+        );
     return $zircon_context;
+}
+
+sub _delete_zircon_context {
+    my ($self) = @_;
+    delete $self->{'_zircon_context'};
+    return;
 }
 
 sub zmap_new {
@@ -2579,14 +2586,16 @@ sub zmap_new {
     } else { # RT#387856
         push @$arg_list, Tk::Screens->nxt( $self->top_window )->gtk_arg;
     }
+    my $handshake_to   = $client->config_section_value(Peer => 'handshake-timeout-secs');
+    my $to_list_config = $client->config_section_value(Peer => 'timeout-list');
+    my @to_list = split(',', $to_list_config);
     my $zmap =
         Zircon::ZMap->new(
             '-app_id'     => $self->zircon_app_id,
             '-context'    => $self->zircon_context,
             '-arg_list'   => $arg_list,
-            '-timeout_ms'      => $client->config_section_value(Peer => 'timeout-ms'),
-            '-timeout_retries' => $client->config_section_value(Peer => 'timeout-retries'),
-            '-rolechange_wait' => $client->config_section_value(Peer => 'rolechange-wait'), # XXX: temporary, awaiting RT#324544
+            '-timeout_list'           => \@to_list,
+            '-handshake_timeout_secs' => $handshake_to,
         );
     return $zmap;
 }
@@ -2601,7 +2610,7 @@ sub zircon_app_id {
 sub _zmap_view_new {
     my ($self, $zmap) = @_;
     $zmap ||= $self->zmap_new;
-    delete $self->{'_zmap_view'};
+    $self->_delete_zmap_view;
     $self->{'_zmap_view'} =
         $zmap->new_view(
             %{$self->zmap_view_arg_hash},
@@ -2619,8 +2628,24 @@ sub _zmap_relaunch {
     # which removes the last reference to the ZMap object, causing it
     # to be destroyed, which sends a shutdown to the ZMap process.
 
+    $self->_delete_zircon_context;
     $self->_zmap_view_new($self->zmap_select);
     $self->ColumnChooser->load_filters(is_recover => 1);
+    return;
+}
+
+# Called during shutdown by SpeciesListWindow
+#
+sub delete_zmap_view {
+    my ($self) = @_;
+    $self->_delete_zmap_view;
+    $self->_delete_zircon_context;
+    return;
+}
+
+sub _delete_zmap_view {
+    my ($self) = @_;
+    delete $self->{'_zmap_view'};
     return;
 }
 
@@ -2879,7 +2904,7 @@ sub DESTROY {
 
     $self->zmap_select_destroy;
 
-    delete $self->{'_zmap_view'};
+    $self->_delete_zmap_view;
     delete $self->{'_AceDatabase'};
 
     return;
