@@ -1049,22 +1049,8 @@ sub get_all_DataSets {
     my $ds = $self->{'_datasets'};
     if (! $ds) {
 
-        my $datasets_xml =
-            $self->http_response_content(
-                'GET', 'get_datasets', {});
-
-        local $XML::Simple::PREFERRED_PARSER = 'XML::Parser';
-        # configure expat for speed, also used in Bio::Vega::Transform
-
-        my $datasets_hash =
-            XMLin($datasets_xml,
-                  ForceArray => [ qw(
-                      dataset
-                      ) ],
-                  KeyAttr => {
-                      dataset => 'name',
-                  },
-            )->{datasets}{dataset};
+        my $datasets_hash = $self->otter_response_content
+          ('GET', 'get_datasets', {});
 
         my @datasets = map {
             $self->_make_DataSet($_, $datasets_hash->{$_});
