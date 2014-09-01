@@ -28,7 +28,7 @@ sub new {
     weaken $self->{_access};
 
     my %info = %$hashref;
-    foreach my $key (qw( write comment )) {
+    foreach my $key (qw( write read comment )) {
         $self->{$key} = delete $info{$key} if exists $info{$key};
     }
 
@@ -70,10 +70,21 @@ sub _write {
     return $self->{write} || [];
 }
 
+sub _read {
+    my ($self) = @_;
+    return $self->{read} || [];
+}
+
 sub write_list {
     my ($self) = @_;
     return $self->{_write_dslist} ||=
       Bio::Otter::Auth::DsList->new($self->_access, $self->_write);
+}
+
+sub read_list {
+    my ($self) = @_;
+    return $self->{_read_dslist} ||=
+      Bio::Otter::Auth::DsList->new($self->_access, $self->_read);
 }
 
 1;

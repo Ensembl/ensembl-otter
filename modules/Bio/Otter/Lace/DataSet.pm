@@ -684,6 +684,7 @@ sub list_all_db_properties {
         DNA_DBNAME
         PORT
         ALIAS
+        READONLY
         };
 }
 
@@ -791,6 +792,14 @@ sub ALIAS {
         $self->{'_ALIAS'} = $ALIAS;
     }
     return $self->{'_ALIAS'};
+}
+
+sub READONLY {
+    my ($self, $READONLY) = @_;
+    if(defined($READONLY)) {
+        $self->{'_READONLY'} = $READONLY;
+    }
+    return $self->{'_READONLY'};
 }
 
 1;

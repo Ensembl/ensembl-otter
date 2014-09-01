@@ -26,7 +26,7 @@ sub main {
 exit main();
 
 
-my $_SP_DAT;
+our $_SP_DAT;
 sub try_load {
     my ($yaml) = @_;
     my $data = Load($yaml);
@@ -41,7 +41,7 @@ sub try_load {
 sub species_groups_tt {
     plan tests => 4;
 
-    like(try_load(<<INPUT), qr{Unknown dataset 'dinosaur' .* under species_groups/bogus}, 'dinosaur');
+    like(try_load(<<'INPUT'), qr{Unknown dataset 'dinosaur' .* under species_groups/bogus}, 'dinosaur');
 ---
 species_groups:
   main:
@@ -52,7 +52,7 @@ species_groups:
     - dinosaur
 INPUT
 
-    like(try_load(<<INPUT), qr{Cannot resolve unknown species_group weird .* under species_groups/dev}, ':weird group');
+    like(try_load(<<'INPUT'), qr{Cannot resolve unknown species_group weird .* under species_groups/dev}, ':weird group');
 ---
 species_groups:
   main:
@@ -64,7 +64,7 @@ species_groups:
     - :main
 INPUT
 
-    like(try_load(<<INPUT), qr{Loop detected while resolving species_group dev .* under species_groups/dev}, 'loopygroup');
+    like(try_load(<<'INPUT'), qr{Loop detected while resolving species_group dev .* under species_groups/dev}, 'loopygroup');
 ---
 species_groups:
   main:
@@ -76,7 +76,7 @@ species_groups:
     - :main
 INPUT
 
-    isa_ok(try_load(<<INPUT), 'Bio::Otter::Auth::Access');
+    isa_ok(try_load(<<'INPUT'), 'Bio::Otter::Auth::Access');
 ---
 species_groups:
   main:
@@ -93,7 +93,7 @@ INPUT
 
 # Demonstrate the object working normally
 sub user_groups_tt {
-    plan tests => 12;
+    plan tests => 20;
 
     my $acc = try_load(<<'INPUT');
 ---
@@ -113,15 +113,24 @@ user_groups:
       - bob:
           write:
             - :dev
+  ug2:
+    read:
+      - :main
+    write:
+      - sheep
+    users:
+      - Shaun
 INPUT
 
-    isa_ok($acc, 'Bio::Otter::Auth::Access');
+    isa_ok($acc, 'Bio::Otter::Auth::Access') or die "got $acc";
     is($acc->user('zebby'), undef, 'no zebby here');
     isa_ok($acc->user('alice'), 'Bio::Otter::Auth::User', 'alice');
 
     is_deeply(__user_to_datasetnames($acc->user('alice'), 'write_datasets'),
               {qw{ human human  mouse mouse }},
               'alice writes');
+    is_deeply(__user_to_datasetnames($acc->user('alice'), 'read_datasets'),
+              {}, 'alice reads (nothing)');
 
     is_deeply(__user_to_datasetnames($acc->user('bob'), 'write_datasets'),
               {qw{ human human  human_test human_test  mouse mouse }},
@@ -133,8 +142,26 @@ INPUT
     isa_ok($acc->user('Bob')->write_dataset('human_test'),
            'Bio::Otter::SpeciesDat::DataSet', 'Bob writes human_test');
 
+    my $shaun = $acc->user('shaun');
+    is_deeply(__user_to_datasetnames($shaun, 'write_datasets'),
+              {qw{ sheep sheep }}, 'shaun writes');
+    is_deeply(__user_to_datasetnames($shaun, 'read_datasets'),
+              {qw{ human human  mouse mouse }}, 'shaun reads');
+    is_deeply(__user_to_datasetnames($shaun, 'all_datasets'),
+              {qw{ human human  mouse mouse  sheep sheep }}, 'shaun can see');
 
-    like(try_load(<<INPUT), qr{Duplicate user bob .* under user_groups/(one|two)}, 'bob dup');
+    is($shaun->write_dataset('sheep')->params->{readonly}, 0,
+       'shaun: sheep not readonly');
+    is($shaun->read_dataset('human')->params->{readonly}, 1,
+       'shaun: human readonly');
+    is($shaun->write_dataset('human'), undef, 'shaun: no human write');
+    my @shaun_all = values %{ $shaun->all_datasets };
+    my @shaun_write = grep { ! $_->params->{readonly} } @shaun_all;
+    is_deeply({ all => scalar @shaun_all, write => scalar @shaun_write },
+              { all => 3, write => 1 }, 'shaun dataset count from all');
+
+
+    like(try_load(<<'INPUT'), qr{Duplicate user bob .* under user_groups/(one|two)}, 'bob dup');
 ---
 species_groups: {}
 user_groups:
@@ -147,7 +174,7 @@ user_groups:
 INPUT
 
 
-    like(try_load(<<INPUT), qr{Duplicate user bob .* under user_groups/one}i, 'Bob/BOB dup');
+    like(try_load(<<'INPUT'), qr{Duplicate user bob .* under user_groups/one}i, 'Bob/BOB dup');
 ---
 species_groups: {}
 user_groups:
@@ -158,7 +185,7 @@ user_groups:
 INPUT
 
 
-    like(try_load(<<INPUT), qr{UserGroup->new: unexpected subkeys \(frobnitz\) .* under user_groups/odd}, 'oddness');
+    like(try_load(<<'INPUT'), qr{UserGroup->new: unexpected subkeys \(frobnitz\) .* under user_groups/odd}, 'oddness');
 ---
 species_groups: {}
 user_groups:
@@ -169,7 +196,7 @@ user_groups:
 INPUT
 
 
-    like(try_load(<<INPUT), qr{Empty user spec for alice - trailing : in YAML\? .* under user_groups/colon}, 'trail:');
+    like(try_load(<<'INPUT'), qr{Empty user spec for alice - trailing : in YAML\? .* under user_groups/colon}, 'trail:');
 ---
 species_groups: {}
 user_groups:
