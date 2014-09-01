@@ -14,6 +14,21 @@ use Bio::Otter::Auth::User;
 
 Bio::Otter::Auth::Access - authorisation for authors' dataset access
 
+=head1 SYNOPSIS
+
+ # New style.  NB. there is no implicit access granted to staff.
+ my $acc = Bio::Otter::Server::Config->Access;
+ my $user = $acc->user($email) or die "User not authorised";
+ my $ds = $user->write_dataset($dataset_name)
+   or die "User not authorised on that dataset";
+
+ # Old style / legacy
+ my $users_txt = Bio::Otter::Server::Config->users_hash;
+ my $user = $users_txt->{lc($email)}; # nb. explicit downcasing
+ my $authorised = _allow_implicit_access($email, $dataset_name)
+   or try { $user->{$dataset_name} };
+
+
 =head1 DESCRIPTION
 
 Class to collect all access control for users to datasets.

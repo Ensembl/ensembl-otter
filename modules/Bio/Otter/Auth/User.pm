@@ -124,4 +124,10 @@ sub write_datasets {
     return Bio::Otter::Auth::DsList->datasets( $self->write_lists );
 }
 
+# Returns $dataset_object or undef
+sub write_dataset {
+    my ($self, $dataset_name) = @_;
+    return $self->write_datasets->{$dataset_name};
+}
+
 1;
