@@ -38,8 +38,12 @@ Michael Gray B<email> mg13@sanger.ac.uk
 use strict;
 use warnings;
 
+use Sys::Hostname;
+use Try::Tiny;
+
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::Otter::Lace::Defaults;
+use Bio::Vega::SliceLockBroker;
 
 {
     my $dataset_name;
@@ -96,17 +100,29 @@ use Bio::Otter::Lace::Defaults;
       }
 
       if ($force || &proceed() =~ /^y$|^yes$/x ) {
+          my $broker = Bio::Vega::SliceLockBroker->new
+            (-hostname => hostname, -author => 'for_uid', -adaptor => $dba);
 
-          my $ok = eval {
+          my $lock_ok;
+          my $work = sub {
+              $lock_ok = 1;
               $gene_adaptor->unhide_db_gene($gene);
-              1;
+              print STDOUT "gene_stable_id $id is now visible\n";
+              return;
           };
 
-          if ($ok) {
-              print STDOUT "gene_stable_id $id is now visible\n";
-          } else {
-              warning("Cannot unhide $id\n$@\n");
-          }
+          try {
+              $broker->lock_create_for_objects("unhide_gene.pl" => $gene);
+              $broker->exclusive_work($work, 1);
+          } catch {
+              if ($lock_ok) {
+                  warning("Cannot unhide $id\n$_\n");
+              } else {
+                  warning("Cannot lock for $id\n$_\n");
+              }
+          } finally {
+              $broker->unlock_all;
+          };
       }
   } # GSI
 

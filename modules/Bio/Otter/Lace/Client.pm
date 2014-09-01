@@ -21,8 +21,7 @@ use Term::ReadKey qw{ ReadMode ReadLine };
 use XML::Simple;
 use JSON;
 
-use Bio::Vega::Author;
-use Bio::Vega::ContigLock;
+use Bio::Vega::SliceLock;
 
 use Bio::Otter::Git; # for feature branch detection
 use Bio::Otter::Debug;
@@ -939,36 +938,19 @@ sub get_db_info {
 
 sub lock_refresh_for_DataSet_SequenceSet {
     my ($self, $ds, $ss) = @_;
-
-   my $response =
+    my $response =
        $self->_DataSet_SequenceSet_response_content(
            $ds, $ss, 'GET', 'get_locks');
 
-    my %lock_hash = ();
-    my %author_hash = ();
+    my @slice_lock = map { Bio::Vega::SliceLock->new_from_json($_) }
+      @{ $response->{SliceLock} || [] };
 
-    foreach my $clone_lock (@{ $response->{CloneLock} || [] }) {
-        my ($ctg_name, $hostname, $timestamp, $aut_name, $aut_email)
-          = @{$clone_lock}{qw{ ctg_name hostname timestamp author_name author_email }};
-
-        $author_hash{$aut_name} ||= Bio::Vega::Author->new(
-            -name  => $aut_name,
-            -email => $aut_email,
-        );
-
-        $lock_hash{$ctg_name} ||= Bio::Vega::ContigLock->new(
-            -author    => $author_hash{$aut_name},
-            -hostname  => $hostname,
-            -timestamp => $timestamp,
-        );
-    }
-
+    # O(N^2) in (clones*locks) but should still be plenty fast
     foreach my $cs (@{$ss->CloneSequence_list()}) {
-        if (my $lock = $lock_hash{$cs->contig_name}) {
-            $cs->set_lock_status($lock);
-        } else {
-            $cs->set_lock_status(undef);
-        }
+        my ($chr, $start, $end) = $ss->region_coordinates([ $cs ]);
+        my @overlap = grep { $_->seq_region_start <= $end &&
+                               $_->seq_region_end >= $start } @slice_lock;
+        $cs->set_SliceLocks(@overlap);
     }
 
     return;
@@ -1336,7 +1318,7 @@ sub _make_SequenceSet {
     return $sequenceset;
 }
 
-sub get_all_CloneSequences_for_DataSet_SequenceSet {
+sub get_all_CloneSequences_for_DataSet_SequenceSet { # without any lock info
   my ($self, $ds, $ss) = @_;
   return [] unless $ss ;
   my $csl = $ss->CloneSequence_list;
@@ -1389,24 +1371,6 @@ sub _make_CloneSequence {
         if ($key eq 'chr') {
             $clonesequence->chromosome($value->{name});
         }
-        elsif ($key eq 'lock') {
-
-            my ($author_name, $author_email, $host_name, $lock_id) =
-                @{$value}{qw( author_name email host_name lock_id )};
-
-            my $author = Bio::Vega::Author->new(
-                -name  => $author_name,
-                -email => $author_email,
-                );
-
-            my $clone_lock = Bio::Vega::ContigLock->new(
-                -author   => $author,
-                -hostname => $host_name,
-                -dbID     => $lock_id,
-                );
-
-            $clonesequence->set_lock_status($clone_lock);
-        }
         elsif ($clonesequence->can($key)) {
             $clonesequence->$key($value);
         }
@@ -1449,9 +1413,12 @@ sub get_taxonomy_info {
 }
 
 sub save_otter_xml {
-    my ($self, $xml, $dsname) = @_;
+    my ($self, $xml, $dsname, $lock_token) = @_;
 
-    $self->logger->logconfess("Don't have write access") unless $self->write_access;
+    $self->logger->logconfess("Cannot save_otter_xml, write_access configured off")
+      unless $self->write_access;
+    $self->logger->logconfess("Cannot save_otter_xml without a lock_token")
+      unless $lock_token && $lock_token !~ /^unlocked /;
 
     my $content = $self->http_response_content(
         'POST',
@@ -1459,25 +1426,14 @@ sub save_otter_xml {
         {
             'dataset'  => $dsname,
             'data'     => $xml,
+            'locknums' => $lock_token,
         }
     );
 
     return $content;
 }
 
-sub unlock_otter_xml {
-    my ($self, $xml, $dsname) = @_;
-
-    $self->general_http_dialog(
-        'POST',
-        'unlock_region',
-        {
-            'dataset'  => $dsname,
-            'data'     => $xml,
-        }
-    );
-    return 1;
-}
+# lock_region, unlock_region : see Bio::Otter::Lace::AceDatabase
 
 sub _DataSet_SequenceSet_response_content {
     my ($self, $ds, $ss, $method, $script) = @_;
@@ -1581,9 +1537,11 @@ sub sessions_needing_recovery {
 sub move_to_done {
     my ($self, $lace_dir) = @_;
 
-    my $done = "$lace_dir.done"; # also in new_AceDatabase
+    my $done = "$lace_dir.done"; # string also in new_AceDatabase
     rename($lace_dir, $done) # RT410906: sometimes this would fail
       or $self->logger->logdie("Error renaming '$lace_dir' to '$done'; $!");
+    # DUP: rename also in $adb->DESTROY
+
     return $done;
 }
 

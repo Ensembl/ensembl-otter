@@ -117,6 +117,7 @@ sub generate {
     my $user = $web->username;
 
     my %out = (ENV => __hash2table(\%ENV),
+               best_client_hostname => [ $server->best_client_hostname(1) ],
                CGI_param => '');
 
     foreach my $var ($server->param) {

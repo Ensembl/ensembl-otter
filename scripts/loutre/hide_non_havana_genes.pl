@@ -34,12 +34,14 @@ Michael Gray B<email> mg13@sanger.ac.uk
 
 use strict;
 use warnings;
+die "... JOIN gene_stable_id ..."; # v65 schema
 
 use Sys::Hostname;
+use Try::Tiny;
 
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::Otter::Lace::Defaults;
-use Bio::Vega::ContigLockBroker;
+use Bio::Vega::SliceLockBroker;
 use Bio::Vega::Author;
 
 {
@@ -74,7 +76,6 @@ use Bio::Vega::Author;
 
     my $gene_adaptor = $dba->get_GeneAdaptor;
 
-    my $contig_broker = Bio::Vega::ContigLockBroker->new(-hostname => hostname);
     my $author_obj    = Bio::Vega::Author->new(-name => $author, -email => $author);
 
     my $list_genes = $dba->dbc->prepare(<<'__SQL__');
@@ -112,41 +113,36 @@ __SQL__
 #           next GSI;
 #       }
 
-      my $lock_ok = eval { 
-          $contig_broker->lock_by_object($gene, $author_obj);
-          1;
+      my $broker = Bio::Vega::SliceLockBroker->new
+        (-hostname => hostname, -author => $author_obj, -adaptor => $dba);
+
+      my $lock_ok;
+      my $work = sub {
+          $lock_ok = 1;
+          $gene_adaptor->hide_db_gene($gene);
+          print STDOUT "hidden\n";
+          return;
       };
-      unless ($lock_ok) {
-          print STDOUT "LOCK FAIL\n";
-          warning("Cannot lock for $sid\n$@\n");
-          next GENE;
-      }
 
-      if ($dryrun) {
-          print STDOUT "dryrun";
-      } else {
-
-          my $ok = eval {
-              $gene_adaptor->hide_db_gene($gene);
-          };
-
-          if ($ok) {
-              print STDOUT "hidden";
+      try {
+          if ($dryrun) {
+              $lock_ok = 1;
+              print STDOUT "dryrun\n";
           } else {
-              print STDOUT "NOT HIDDEN";
-              warning("Cannot hide $sid ($dbid)\n$@\n");
+              $broker->lock_create_for_objects(hide_non_havana_genes => $gene);
+              $broker->exclusive_work($work, 1);
           }
-      }
-
-      print STDOUT "\n";
-
-      my $unlock_ok = eval {
-          $contig_broker->remove_by_object($gene, $author_obj);
-          1;
+      } catch {
+          if ($lock_ok) {
+              print STDOUT "NOT HIDDEN\n";
+              warning("Cannot hide $sid ($dbid)\n$_\n");
+          } else {
+              print STDOUT "LOCK FAIL\n";
+              warning("Cannot lock for $sid\n$_\n");
+          }
+      } finally {
+          $broker->unlock_all;
       };
-      unless ($unlock_ok) {
-          warning("Cannot unlock for $sid\n$@\n");
-      }
 
   } # GSI
 

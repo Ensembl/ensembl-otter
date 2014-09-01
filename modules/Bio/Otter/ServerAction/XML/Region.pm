@@ -45,15 +45,6 @@ sub deserialise_region {
     return $region;
 }
 
-sub deserialise_lock_token {
-    my ($self, $token) = @_;
-
-    my $parser = Bio::Vega::Transform::Otter->new;
-    $parser->parse($token);
-
-    return $parser->get_ChromosomeSlice;
-}
-
 =head1 AUTHOR
 
 Ana Code B<email> anacode@sanger.ac.uk

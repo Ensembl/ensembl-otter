@@ -187,7 +187,7 @@ CREATE TABLE contig_attrib (
 
 ################################################################################
 #
-# Table structure for table 'clone_lock'
+# Table structure for table 'contig_lock'
 # otter table
 # locks for a set of seq_region_id/s per annotator in a transaction
 #

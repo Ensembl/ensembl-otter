@@ -77,6 +77,23 @@ sub group{
 }
 
 
+=head2 new_for_uid($uid)
+
+A shortcut to return a new Author for the OS user ID C<$uid>, using the
+conventional representation for "staff".
+
+$uid defaults to C<< $< >>.
+
+=cut
+
+sub new_for_uid {
+    my ($class, $uid) = @_;
+    $uid ||= $<;
+    my $user = getpwuid($uid);
+    return $class->new(-NAME => $user, -EMAIL => $user);
+}
+
+
 1;
 
 __END__
