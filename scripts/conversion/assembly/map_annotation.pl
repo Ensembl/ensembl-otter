@@ -329,7 +329,7 @@ foreach my $V_chr (@chrs) {
 	next GENE;
       }
     }
-    if ( $support->param('for_web') && ( $gene->biotype =~ /artifact|TEC/) ) {
+    if ( $support->param('for_web') && ( $gene->biotype =~ /artifact/ ) ) {
 	$support->log("Gene: ".$gene->stable_id." skipping because of its biotype (".$gene->biotype . ")\n", 2);
 	next GENE;
       }
