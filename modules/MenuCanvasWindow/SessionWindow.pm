@@ -2400,7 +2400,7 @@ sub run_dotter {
 }
 
 sub run_exonerate {
-    my ($self) = @_;
+    my ($self, %options) = @_;
 
     my $ew = EditWindow::Exonerate->in_Toplevel
       (-title => 'On The Fly (OTF) Alignment',
@@ -2409,6 +2409,9 @@ sub run_exonerate {
          init => { SessionWindow => $self },
          from => $self->top_window });
 
+    if ($options{clear_accessions}) {
+        $ew->clear_accessions;
+    }
     $ew->update_from_SessionWindow;
 
     return 1;
