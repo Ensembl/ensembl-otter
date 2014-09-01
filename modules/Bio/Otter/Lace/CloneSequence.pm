@@ -5,6 +5,7 @@ package Bio::Otter::Lace::CloneSequence;
 
 use strict;
 use warnings;
+use List::MoreUtils 'uniq';
 
 sub new {
     my ($pkg) = @_;
@@ -233,25 +234,34 @@ sub current_SequenceNote {
     return $self->{'_current_SequenceNote'};
 }
 
-sub set_lock_status {
-    my ($self, $lock_status) = @_;
-
-    $self->{'_lock_status'} = $lock_status;
-
+# SliceLocks which overlap this clone.  They could also overlap
+# another clone, when we start doing that.
+sub set_SliceLocks {
+    my ($self, @lock_list) = @_;
+    $self->{'_SliceLocks'} = \@lock_list;
     return;
 }
 
 sub get_lock_status {
     my ($self, @args) = @_;
     warn "get_lock_status is 'Get' only" if @args;
-    return $self->{'_lock_status'} ? 1 : 0 ;
+    my $slocks = $self->{'_SliceLocks'} || [];
+    return @$slocks ? 1 : 0;
 }
 
-sub get_lock_as_CloneLock {
+sub get_SliceLocks {
     my ($self) = @_;
-
-    return $self->{'_lock_status'};
+    my $slocks = $self->{'_SliceLocks'} || [];
+    return @$slocks;
 }
+
+sub get_lock_users {
+    my ($self) = @_;
+    my @usr = map { $_->describe_author } $self->get_SliceLocks;
+    @usr = uniq sort(@usr);
+    return @usr;
+}
+
 
 1;
 

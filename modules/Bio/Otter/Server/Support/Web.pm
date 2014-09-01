@@ -128,6 +128,14 @@ sub path_info {
     return $self->cgi->path_info();
 }
 
+sub require_method {
+    my ($self, $want) = @_;
+    my $got = $self->cgi->request_method;
+    die "Request should be made with $want method, but was made with $got method"
+      unless lc($got) eq lc($want);
+    return;
+}
+
 sub make_map {
     my ($self) = @_;
     return {
@@ -186,6 +194,30 @@ sub dataset_filter {
 sub users_hash {
     my ($self) = @_;
     return $self->{'_users_hash'} ||= Bio::Otter::Server::Config->users_hash;
+}
+
+
+=head2 best_client_hostname
+
+Return the best guess at the client's hostname.  Use this instead of
+C<$ENV{REMOTE_ADDR}>, which is guaranteed to be wrong behind the
+reverse proxy on the live webservers.
+
+This is for guidance only, it isn't going to be reliable.
+
+=cut
+
+sub best_client_hostname {
+    my ($self, $all) = @_;
+    my @addr = ($ENV{REMOTE_ADDR}, $self->cgi->remote_host);
+    if (defined (my $fwd = $ENV{HTTP_X_FORWARDED_FOR})) {
+        my @x_fwd = split /[ ,]+/, $fwd; # each HTTP proxy appends here
+        push @addr, reverse @x_fwd;
+    }
+    push @addr, $self->param('hostname');
+    @addr = grep { defined } @addr;
+    return @addr if $all; # intended for debug via scripts/apache/test
+    return $addr[-1];
 }
 
 

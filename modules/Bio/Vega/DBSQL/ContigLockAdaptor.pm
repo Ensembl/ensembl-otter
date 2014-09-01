@@ -65,6 +65,21 @@ sub list_by_author {
   return $locks;
 }
 
+sub list_by_hostname {
+  my ($self, $hostname) = @_;
+  my $locks = $self->_generic_sql_fetch("where hostname = ? ", $hostname);
+  return $locks;
+}
+
+sub clean_lost_legacy {
+  my ($self, $hostname) = @_;
+  my $locks = $self->_generic_sql_fetch("where hostname like 'SliceLock.%' and hostname not in (select concat('SliceLock.', slice_lock_id) from slice_lock)");
+  foreach my $lock (@$locks) {
+      $self->remove($lock);
+  }
+  return ();
+}
+
 
 sub store {
   my ($self, $contig_lock) = @_;

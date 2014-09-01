@@ -50,8 +50,8 @@ our @EXPORT_OK = qw( db_or_skipall
                      data_dir_or_skipall
                      farm_or_skipall
                      OtterClient
-                     get_BOLDatasets
-                     diagdump
+                     get_BOLDatasets get_BOSDatasets
+                     diagdump try_err
                      excused );
 
 
@@ -328,17 +328,16 @@ sub data_dir_or_skipall {
 # Silence is golden.
 #
 sub check_data_dir {
-    my $data_dir;
-    eval {
+    return try {
         require Bio::Otter::Server::Config;
-        $data_dir = Bio::Otter::Server::Config::data_dir();
-    };
-    if (my $error = $@) {
+        my $data_dir = Bio::Otter::Server::Config::data_dir();
+        my $builder = __PACKAGE__->builder;
+        $builder->note("data_dir: '$data_dir'");
+        return;                     # ok
+    } catch {
+        my $error = $_;
         return "Test cannot find otter data_dir: '$error'";
-    }
-    my $builder = __PACKAGE__->builder;
-    $builder->note("data_dir: '$data_dir'");
-    return;                     # ok
+    };
 }
 
 =head2 OtterClient()
@@ -346,46 +345,82 @@ sub check_data_dir {
 Caches and returns a L<Bio::Otter::Lace::Client> made with no extra
 parameters.
 
-=head2 get_BOLDatasets(@name)
+=head2 get_BOLDatasets(@name), get_BOSDatasets(@name)
 
-This wraps up L<Bio::Otter::Lace::Defaults/make_Client> to return a
-list of datasets.
+These wrap up L<Bio::Otter::Lace::Defaults/make_Client> and
+L<Bio::Otter::Server::Config/SpeciesDat> to return a list of datasets.
 
-The requested L<Bio::Otter::Lace::DataSet> object is returned for each
-element of C<@name>. Methods C<get_cached_DBAdaptor> and
+The requested dataset object is returned C<foreach @name>.
+
+For C<get_BOLDatasets>, the methods C<get_cached_DBAdaptor> and
 C<get_pipeline_DBAdaptor> give the loutre and pipe databases.
 
-If C<"@name" eq "ALL"> then all published species are used.  This
-won't include C<human_dev> etc..
+For C<get_BOSDatasets>, the methods C<otter_dba> and C<pipeline_dba>
+do it.  There is also C<satellite_dba>.
 
-Defining C<get_BOSDatasets> for L<Bio::Otter::SpeciesDat::DataSet> may
-be better but is not yet implemented.  Equivalent methods are named
-C<otter_dba> and C<pipeline_dba>, there is also C<satellite_dba>.
+If C<"@name" eq "ALL"> then all available species are used.  The
+server mode does no filtering, but the client mode may hide
+C<human_dev> etc. depending which user you seem to be.
 
 Further tags like C<ALL_UNLISTED> would be useful, allowing for
 restricted and unlisted datasets.
 
+See also F<t/obtain-db.t>
+
 =cut
 
 {
-    my $cl;
+    my $cl_cache;
     sub OtterClient {
-        return $cl ||= do {
+        return $cl_cache ||= do {
             local @ARGV = ();
             require Bio::Otter::Lace::Defaults;
             Bio::Otter::Lace::Defaults::do_getopt();
-            Bio::Otter::Lace::Defaults::make_Client();
+            my $cl = Bio::Otter::Lace::Defaults::make_Client();
+
+            # Test scripts shall not request user password
+            my $no_pass = sub {
+                my ($self) = @_;
+                warn "$self: wanted your password.  Run live otterlace to get a cookie!\n";
+                return;
+            };
+            $cl->password_prompt($no_pass);
+
+            $cl; # no 'return' from 'do'
         };
     }
 }
 
 sub get_BOLDatasets {
     my @name = @_;
+    local $SIG{__WARN__} = \&__BOLC_warn_filter; # hide client startup noise
     my $cl = OtterClient();
     warn "No datasets requested" unless @name;
+    die "wantarray" unless wantarray;
     return $cl->get_all_DataSets if "@name" eq 'ALL';
     return map { $cl->get_DataSet_by_name($_) } @name;
 }
+
+sub get_BOSDatasets {
+    my @name = @_;
+    require Bio::Otter::Server::Config;
+    my $bosc_sd = Bio::Otter::Server::Config->SpeciesDat;
+    warn "No datasets requested" unless @name;
+    die "wantarray" unless wantarray;
+    return @{ $bosc_sd->datasets } if "@name" eq 'ALL';
+    return map { $bosc_sd->dataset($_) or die "No such dataset '$_'" } @name;
+}
+
+sub __BOLC_warn_filter { # a "temporary" solution
+    my ($msg) = @_;
+    return if $msg eq "No git cache: assuming a git checkout.\n";
+    return if $msg =~ m{^setup_pfetch_env: hostname=};
+    return if $msg =~ m{^DEBUG: (CLIENT|ZIRCON|XREMOTE) = 1\n\z};
+    return if $msg =~ m{^GET  http.*/get_datasets\?|^get_datasets - client received \d+ bytes from server};
+    warn $msg;
+    return;
+}
+
 
 
 =head2 diagdump(%info)
@@ -401,6 +436,23 @@ sub diagdump {
     my %info = @_;
     require YAML;
     return main::diag YAML::Dump(\%info);
+}
+
+
+=head2 try_err { ... }
+
+Shortcut for
+
+ try { ... } catch { "ERR:$_" };
+
+which is a useful fit with the C<like> assertion.
+
+=cut
+
+# XXX:DUP same as zircon.git lib/TestShared.pm
+sub try_err(&) { ## no critic (Subroutines::ProhibitSubroutinePrototypes)
+    my ($code) = @_;
+    return try { $code->() } catch { "ERR:$_" };
 }
 
 

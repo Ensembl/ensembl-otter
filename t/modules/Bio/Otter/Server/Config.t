@@ -8,6 +8,8 @@ use Try::Tiny;
 use File::Temp 'tempdir';
 use File::Path 'make_path';
 
+use Test::Otter 'try_err';
+
 use Bio::Otter::Version;
 
 
@@ -20,11 +22,6 @@ use Bio::Otter::Server::Config;
 #
 #   get meaningful error messages on breakage
 
-
-sub try_err(&) { ## no critic (Subroutines::ProhibitSubroutinePrototypes)
-    my ($code) = @_;
-    return try { $code->() } catch { "ERR:$_" };
-}
 
 sub main {
     plan tests => 3;

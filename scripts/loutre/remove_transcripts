@@ -5,12 +5,14 @@
 use strict;
 use warnings;
 
+use Try::Tiny;
+
 use Bio::Otter::Lace::Defaults;
 use Bio::Vega::DBSQL::DBAdaptor;
-use Bio::Vega::ContigLockBroker;
+use Bio::Vega::SliceLockBroker;
 use Sys::Hostname 'hostname';
 
-{
+sub main {
     my $dsname;
 
     Bio::Otter::Lace::Defaults::do_getopt(
@@ -26,30 +28,30 @@ use Sys::Hostname 'hostname';
     my $dba = $ds->get_cached_DBAdaptor;
     my $gene_dba = $dba->get_GeneAdaptor;
 
-    my $locker = Bio::Vega::ContigLockBroker->new(
-        -HOSTNAME   => hostname(),
-        );
     my $author = Bio::Vega::Author->new(
         -NAME       => $cl->author,
         -EMAIL      => $cl->email,
         );
 
+    my $exit = 0;
     while (<>) {
         foreach my $t_stable_id (split) {
-            delete_transcript($t_stable_id, $gene_dba, $locker, $author);
+            $exit |= delete_transcript($t_stable_id, $gene_dba, $author);
         }
     }
+
+    return $exit;
 }
 
 sub delete_transcript {
-    my ($t_stable_id, $gene_dba, $locker, $author) = @_;
+    my ($t_stable_id, $gene_dba, $author) = @_;
     
     my $gene = $gene_dba->fetch_by_transcript_stable_id($t_stable_id);
     unless ($gene) {
         warn "Can't fetch gene for transcript '$t_stable_id'\n";
         return;
     }
-    
+
     # Need to make a fresh transcript array because the old one
     # is cached inside the TranscriptAdaptor.
     my $tsct_list = [ @{$gene->get_all_Transcripts} ];
@@ -68,17 +70,40 @@ sub delete_transcript {
     unless ($found) {
         die "Failed to find transcript '$t_stable_id' in gene";
     }
-    eval {
-        $locker->lock_by_object($gene, $author);
+
+    unless ($gene->iscurrent) {
+        my $gsid = $gene->stable_id;
+        my $dbid = $gene->dbID;
+        die "Gene $gsid $dbid for $t_stable_id is not current";
+    }
+
+    my $broker = Bio::Vega::SliceLockBroker->new
+      (-hostname => hostname(), -author => $author, -adaptor => $gene_dba);
+
+    my $work = sub {
         if (@$tsct_list) {
             $gene_dba->store($gene);
         } else {
             $gene_dba->remove($gene);
         }
-        $locker->remove_by_object($gene, $author);
+        return;
     };
-    warn $@ if $@;
+
+    my $retcode = try {
+        $broker->lock_create_for_objects(remove_transcripts => $gene);
+        $broker->exclusive_work($work, 1);
+        0;
+    } catch {
+        warn "$t_stable_id: $_";
+        2;
+    } finally {
+        $broker->unlock_all;
+    };
+
+    return $retcode;
 }
+
+exit main();
 
 
 __END__

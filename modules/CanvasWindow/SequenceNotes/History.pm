@@ -98,16 +98,12 @@ sub draw {
     my ($self) = @_;
     my $current_clone = $self->current_clone();
     $self->SUPER::draw();
-    if ($current_clone->get_lock_status) {
+    foreach my $l ($current_clone->get_SliceLocks) {
         my $canvas = $self->canvas();
         my $size   = $self->font_size();
         my $list   = $self->get_rows_list();
         my $row_t  = 'row=' . (@$list + 1);
         my $font   = [ 'Helvetica', $size, 'normal' ];
-        my $locker = $current_clone->get_lock_as_CloneLock()->author->name;
-        my $host   = $current_clone->get_lock_as_CloneLock()->hostname;
-
-        my $c_name = $current_clone->clone_name;
 
         my @bbox      = $canvas->bbox('all');
         my $max_vis_y = $bbox[3] + $size;
@@ -117,8 +113,7 @@ sub draw {
             -font   => $font,
             -tags   => ['lock_status'],
             -fill   => 'red',
-            -text   =>
-              qq(Clone '$c_name' is locked by user '$locker' on host '$host')
+            -text   => $l->describe,
         );
         $self->fix_window_min_max_sizes();
     }

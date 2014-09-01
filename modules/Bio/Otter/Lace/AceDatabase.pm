@@ -147,18 +147,15 @@ sub fetch_region_xml {
     return $self->DB->get_tag_value('region_xml');
 }
 
-sub save_lock_region_xml {
-    my ($self, $xml) = @_;
-
-    $self->DB->set_tag_value('lock_region_xml', $xml);
-
+sub save_lock_token {
+    my ($self, $token) = @_;
+    $self->DB->set_tag_value('slicelock_token', $token);
     return;
 }
 
-sub fetch_lock_region_xml {
+sub fetch_lock_token {
     my ($self) = @_;
-
-    return $self->DB->get_tag_value('lock_region_xml');
+    return $self->DB->get_tag_value('slicelock_token');
 }
 
 sub tace {
@@ -279,11 +276,18 @@ sub write_otter_acefile {
 sub try_to_lock_the_block {
     my ($self) = @_;
 
-    my $lock_xml = $self->http_response_content(
-        'GET', 'lock_region', { 'hostname' => $self->Client->client_hostname });
-    $self->save_lock_region_xml($lock_xml) if $lock_xml;
+    my $client = $self->Client;
+    $self->logger->logconfess("Cannot lock_region, write_access configured off")
+      unless $client->write_access;
 
-    return;
+    # could usefully pass "intent" here, but there is no UI for it
+
+    my $hash = $client->otter_response_content
+      ('POST', 'lock_region',
+       $self->_query_hash(hostname => $client->client_hostname));
+    die "Locking failed but no error?" unless $hash && $hash->{locknums};
+    $self->save_lock_token($hash->{locknums});
+    return 1;
 }
 
 sub write_file {
@@ -313,7 +317,7 @@ sub recover_slice_from_region_xml {
 
     my $client = $self->Client or $self->logger->logdie("No Client attached");
 
-    my $xml = $self->fetch_region_xml || $self->fetch_lock_region_xml;
+    my $xml = $self->fetch_region_xml;
     unless ($xml) {
         $self->logger->logconfess("Could not fetch XML from SQLite DB to create smart slice");
     }
@@ -856,12 +860,22 @@ sub unlock_otter_slice {
 
     my $client   = $self->Client or $self->logger->logconfess("No Client attached");
 
-    my $xml_text = $self->fetch_lock_region_xml;
-
-    if ($client->unlock_otter_xml($xml_text, $dsname)) {
-        $self->write_access(0);
-        $self->save_lock_region_xml('unlocked at ' . scalar localtime);
+    my $token = $self->fetch_lock_token;
+    if ($token =~ /^unlocked /) { # as set by this method
+        $self->logger->info("  already $token, continuing");
+        return 1;
     }
+
+    my $hash = $self->Client->otter_response_content
+      ('POST', 'unlock_region',
+       { dataset  => $dsname,
+         locknums => $token });
+    die "Unlock request failed without error?"
+      unless $hash && ($hash->{unlocked} || $hash->{already});
+
+    $self->write_access(0);
+    $self->save_lock_token('unlocked at ' . scalar localtime);
+
     return 1;
 }
 
@@ -1287,7 +1301,7 @@ sub script_arguments {
 
     my $arguments = {
         client => 'otterlace',
-        %{$self->query_hash},
+        %{$self->_query_hash},
         gff_version => $self->DataSet->gff_version,
         session_dir => $self->home,
         url_root    => $self->Client->url_root,
@@ -1300,17 +1314,15 @@ sub script_arguments {
 sub http_response_content {
     my ($self, $command, $script, $args) = @_;
 
-    my $query = $self->query_hash;
-    $query = { %{$query}, %{$args} } if $args;
-
+    my $query = $self->_query_hash(%{ $args || {} });
     my $response = $self->Client->http_response_content(
         $command, $script, $query);
 
     return $response;
 }
 
-sub query_hash {
-    my ($self) = @_;
+sub _query_hash {
+    my ($self, @args) = @_;
 
     my $slice = $self->slice;
 
@@ -1323,6 +1335,7 @@ sub query_hash {
             'name'    => $slice->seqname(),
             'start'   => $slice->start(),
             'end'     => $slice->end(),
+            @args,
     };
 
     return $hash;
@@ -1354,8 +1367,14 @@ sub DESTROY {
     }
     catch { $logger->error("Error in AceDatabase::DESTROY : $_"); };
 
-    rename($home, "${home}.done")
-        or $logger->logdie("Error renaming the session directory; $!");
+    my $writable = try { $self->write_access } catch { "unknown: $_" };
+    if ($writable eq '0') {
+        # clean, mark it done
+        rename($home, "${home}.done") # DUP: $client->move_to_done
+          or $logger->logdie("Error renaming the session directory; $!");
+    } else {
+        $logger->info("Cleanup '$home' failed, write_access=$writable");
+    }
 
     if ($callback) {
         $callback->();
