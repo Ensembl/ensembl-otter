@@ -7,6 +7,8 @@ use Test::More;
 use YAML qw( Dump Load );
 use Try::Tiny;
 
+use Test::Otter qw( try_err );
+
 use Bio::Otter::Server::Config;
 use Bio::Otter::Auth::Access;
 
@@ -240,11 +242,6 @@ HASH
     return;
 }
 
-
-sub try_err(&) {
-    my ($code) = @_;
-    return try { $code->() } catch {"ERR:$_"};
-}
 
 sub various_fail_tt {
     plan tests => 1;
