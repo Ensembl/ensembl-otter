@@ -328,17 +328,16 @@ sub data_dir_or_skipall {
 # Silence is golden.
 #
 sub check_data_dir {
-    my $data_dir;
-    eval {
+    return try {
         require Bio::Otter::Server::Config;
-        $data_dir = Bio::Otter::Server::Config::data_dir();
-    };
-    if (my $error = $@) {
+        my $data_dir = Bio::Otter::Server::Config::data_dir();
+        my $builder = __PACKAGE__->builder;
+        $builder->note("data_dir: '$data_dir'");
+        return;                     # ok
+    } catch {
+        my $error = $_;
         return "Test cannot find otter data_dir: '$error'";
-    }
-    my $builder = __PACKAGE__->builder;
-    $builder->note("data_dir: '$data_dir'");
-    return;                     # ok
+    };
 }
 
 =head2 OtterClient()
@@ -371,9 +370,9 @@ See also F<t/obtain-db.t>
 =cut
 
 {
-    my $cl;
+    my $cl_cache;
     sub OtterClient {
-        return $cl ||= do {
+        return $cl_cache ||= do {
             local @ARGV = ();
             require Bio::Otter::Lace::Defaults;
             Bio::Otter::Lace::Defaults::do_getopt();
@@ -419,6 +418,7 @@ sub __BOLC_warn_filter { # a "temporary" solution
     return if $msg =~ m{^DEBUG: (CLIENT|ZIRCON|XREMOTE) = 1\n\z};
     return if $msg =~ m{^GET  http.*/get_datasets\?|^get_datasets - client received \d+ bytes from server};
     warn $msg;
+    return;
 }
 
 
@@ -450,7 +450,7 @@ which is a useful fit with the C<like> assertion.
 =cut
 
 # XXX:DUP same as zircon.git lib/TestShared.pm
-sub try_err(&) {
+sub try_err(&) { ## no critic (Subroutines::ProhibitSubroutinePrototypes)
     my ($code) = @_;
     return try { $code->() } catch { "ERR:$_" };
 }
