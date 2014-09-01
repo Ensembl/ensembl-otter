@@ -54,7 +54,7 @@ sub new {
                  _input => $hashref };
     bless $self, $pkg;
 
-    local $self->{_ptr}; # where we are up to, with parsing
+    local $self->{_ptr} = 'begin'; # where we are up to, with parsing
     try {
         $self->_check_species_groups;
         $self->_flatten_users;
@@ -140,6 +140,13 @@ sub _flatten_users {
     return;
 }
 
+
+=head2 legacy_users_hash(@opt)
+
+Return a reconstruction of the C<users_hash()> made from the old
+F<users.txt> .  This ignores users' read-only datasets.
+
+=cut
 
 sub legacy_users_hash {
     my ($self, @opt) = @_;

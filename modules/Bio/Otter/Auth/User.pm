@@ -41,7 +41,7 @@ sub new {
         die "Empty user spec for $e - trailing : in YAML?" unless $data;
 
         my %info = %$data;
-        foreach my $key (qw( write comment )) {
+        foreach my $key (qw( read write comment )) {
             $self->{$key} = delete $info{$key} if exists $info{$key};
         }
         my @badkey = sort keys %info;
@@ -83,10 +83,26 @@ sub _more_write {
     return $self->{write};
 }
 
+sub _more_read {
+    my ($self) = @_;
+    return $self->{read};
+}
+
+
 sub _write_list {
     my ($self) = @_;
     if (my $mw = $self->_more_write) {
         return $self->{_write_dslist} ||=
+          Bio::Otter::Auth::DsList->new($self->_access, $mw);
+    } else {
+        return ();
+    }
+}
+
+sub _read_list {
+    my ($self) = @_;
+    if (my $mw = $self->_more_read) {
+        return $self->{_read_dslist} ||=
           Bio::Otter::Auth::DsList->new($self->_access, $mw);
     } else {
         return ();
@@ -116,6 +132,23 @@ sub write_lists {
     my ($self) = @_;
     my @w = ($self->_write_list,
              map { $_->write_list } $self->in_group);
+    return @w;
+}
+
+sub read_lists {
+    my ($self) = @_;
+    my @r = ($self->_read_list,
+             map { $_->read_list } $self->in_group);
+    return @r;
+}
+
+
+# Returns {name => $dataset_object}
+sub all_datasets {
+    my ($self) = @_;
+    my %all = (%{ $self->read_datasets  },
+               %{ $self->write_datasets });
+    return \%all;
 }
 
 # Returns {name => $dataset_object}
@@ -124,10 +157,26 @@ sub write_datasets {
     return Bio::Otter::Auth::DsList->datasets( $self->write_lists );
 }
 
+# Returns {name => $dataset_object}
+sub read_datasets {
+    my ($self) = @_;
+    my $rw = Bio::Otter::Auth::DsList->datasets( $self->read_lists );
+    while (my ($name, $ds) = each %$rw) {
+        $rw->{$name} = $ds->new_readonly;
+    }
+    return $rw;
+}
+
 # Returns $dataset_object or undef
 sub write_dataset {
     my ($self, $dataset_name) = @_;
     return $self->write_datasets->{$dataset_name};
+}
+
+# Returns $dataset_object or undef
+sub read_dataset {
+    my ($self, $dataset_name) = @_;
+    return $self->read_datasets->{$dataset_name};
 }
 
 1;

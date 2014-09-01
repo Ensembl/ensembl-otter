@@ -11,12 +11,27 @@ use Bio::Otter::Utils::RequireModule qw(require_module);
 
 sub new {
     my ($pkg, $name, $params) = @_;
+    my %params = %{ $params };
+    $params{readonly} = 0 unless exists $params{readonly};
     my $new = {
         _name   => $name,
-        _params => $params,
+        _params => \%params,
     };
     bless $new, $pkg;
     return $new;
+}
+
+# This is a weakly readonly dataset, in that writing must be prevented
+# after inspecting ->params->{readonly} .
+sub new_readonly {
+    my ($called) = @_;
+    die "Need an object" unless ref($called);
+    my $pkg = ref($called);
+    my %param = %{ $called->params };
+    $param{readonly} = 1;
+    # XXX: replace the database params
+    my $self = $pkg->new($called->name, \%param);
+    return $self;
 }
 
 sub name {
