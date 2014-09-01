@@ -671,9 +671,9 @@ short_window_title_prefix=1
 session_colourset = cadetblue firebrick goldenrod #f80 #ff00ff chartreuse2
 
 [Peer]
-timeout-ms=2000
-timeout-retries=10
-rolechange-wait=500
+# what we pass to Zircon-0MQ & to ZMap
+timeout-list=333,1000,3000,9000
+handshake-timeout-secs=15
 
 [RequestQueue]
 # just send everything for now
