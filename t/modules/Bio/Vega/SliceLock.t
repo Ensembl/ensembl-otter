@@ -42,10 +42,10 @@ sub main {
 
     # Test supportedness with B:O:L:Dataset + raw $dbh
     #
-    # During feature branch, assume it is present on human_dev but not
-    # human_test
+    # Merged - all databases will support both, until contig_locks are
+    # being removed.
     subtest supported_live => sub {
-        supported_tt(human_test => [qw[ old ]]);
+        supported_tt(human => [qw[ old new ]]);
     };
     subtest supported_dev => sub {
         supported_tt(human_dev => [qw[ old new ]]);
