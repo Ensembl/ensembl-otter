@@ -394,7 +394,8 @@ sub describe_author {
 sub describe_freed_author {
     my ($self) = @_;
     my $fa = $self->freed_author;
-    return undef unless defined $fa;
+    # always return one element, in list or scalar context
+    return undef unless defined $fa; ## no critic (Subroutines::ProhibitExplicitReturnUndef)
     return try { $self->freed_author->email } catch { "<???>" };
 }
 
