@@ -154,6 +154,36 @@ sub _flatten_users {
 }
 
 
+=head2 legacy_access($email)
+
+Given an email address, modify the objects state to grant legacy
+access as under F<users.txt>.
+
+If the user is listed explicitly, nothing happens.  This could result
+in reduced access.
+
+=cut
+
+sub legacy_access {
+    my ($self, $email) = @_;
+
+    # XXX:DUP belongs to Bio::Otter::Auth::SSO::auth_user
+    my $internal_flag = ($email =~ m{^[a-z0-9]+$});
+
+    if ($internal_flag && !$self->user($email)) {
+        my %G = (comment => "Made by $self->legacy_access for $email",
+                 write => [ ':main' ]);
+        my $G = Bio::Otter::Auth::UserGroup->new($self, \%G);
+        my $U = Bio::Otter::Auth::User->new($self, $email);
+        $U->in_group($G);
+
+        $self->_user_groups->{legacy_access} = $G;
+        $self->all_users->{$email} = $U;
+    }
+
+    return;
+}
+
 =head2 legacy_users_hash(@opt)
 
 Return a reconstruction of the C<users_hash()> made from the old
