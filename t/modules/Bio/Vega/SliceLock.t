@@ -1549,7 +1549,7 @@ sub broker_tt {
     my $dba_alt = $ds_alt->get_cached_DBAdaptor;
     isnt($ds->name, $ds_alt->name, 'have two datasets');
 
-    like(Bio::Vega::SliceLockBroker::__dbc_str($SLdba->dbc),
+    like(Bio::Vega::SliceLockBroker::__dbc_str($SLdba->dbc), ## no critic (Subroutines::ProtectPrivateSubs)
          qr{-PASS='redact'}, 'password redaction');
 
     subtest adaptor_types => sub {
