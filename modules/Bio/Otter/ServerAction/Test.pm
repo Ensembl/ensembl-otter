@@ -145,8 +145,11 @@ sub generate {
 #        BOSSS => $server, # would leak users config & CGI internals
         internal_user => $server->internal_user };
 
+    my $Access = $server->_Access; # ugly private access
+    # because we test internals, with the per-user legacy access grant
+
     foreach my $mod (qw( Bio::Otter::Auth::SSO Bio::Otter::Auth::Pagesmith )) {
-        $out{ $mod->test_key } = { $mod->auth_user($web, $server->users_hash) };
+        $out{ $mod->test_key } = { $mod->auth_user($web, $Access) };
     }
 
     $out{'B:O:Server::Config'} =

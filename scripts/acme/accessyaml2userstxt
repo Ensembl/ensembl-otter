@@ -6,15 +6,9 @@ use File::Slurp qw( slurp write_file );
 use YAML 'Dump';
 use Test::More;
 use Test::Differences qw( eq_or_diff unified_diff );
-use Test::Otter 'try_err';
 
 use Bio::Otter::Server::Config;
 our $BOSC = 'Bio::Otter::Server::Config';
-
-use Test::MockObject;
-BEGIN { $INC{'SangerWeb.pm'} = '/bogus/file' }
-use Bio::Otter::Server::Support::Web;
-
 
 =head1 DESCRIPTION
 
@@ -30,9 +24,9 @@ the file on that branch!
 
 Self-tests to compare backwards compatibility.
 
-=head2 Check per-user datasets match the old logic
+=head2 (Checked per-user datasets match the old logic)
 
-It's a test, but when the old code is gone it won't matter.
+It was tested, but the old code is gone.
 
 =cut
 
@@ -112,7 +106,7 @@ sub main {
     write_file($fn, { atomic => 1 }, $legacy_txt);
 
     # Test
-    plan tests => 3;
+    plan tests => 2;
     my $old = $BOSC->users_hash__old;
     my $new = $BOSC->users_hash;
     unified_diff();
@@ -128,61 +122,7 @@ sub main {
                'users.txt re-generated from new format');
     diag 'made legacy-style users.txt+ from access.yaml';
 
-    subtest legacy_dataset_match => \&legacy_dataset_match_tt;
-
     return 0;
 }
 
 exit main();
-
-
-# ugly but transient
-my $EMAIL;
-sub SangerWeb::new {
-    # testing auth code in B:O:S:S:Web : need to insert our mock
-    # SangerWeb into its ->new
-    die "SangerWeb must not be loaded" if SangerWeb->can('handler');
-    return Test::MockObject->new->mock(username => sub { $EMAIL });
-}
-
-# See that under access.yaml all users get the same access as under
-# users.txt .
-#
-# Beware that B:O:S:S:Web uses B:O:Auth:SSO which takes the
-# users_hash, but we already checked that matches exactly.
-sub legacy_dataset_match_tt {
-    my $users_new = $BOSC->Access->all_users;
-    my @emails = map { $_->email } values %$users_new;
-    foreach my $email ('staff', sort @emails) {
-        $EMAIL = $email;
-        note "BOSSW->new for $email";
-        my $SSW = Bio::Otter::Server::Support::Web->new; # may call exit(1) !
-        my $new = $SSW->allowed_datasets;
-        my $old = $SSW->allowed_datasets__old;
-
-        my @cmp = map { __datasets_hashified(@$_) } ($new, $old);
-        is_deeply($cmp[0], $cmp[1], "allowed_datasets{,__old} for $email")
-          or diag explain \@cmp;
-    }
-
-    $EMAIL = 'nonstaff@example.org';
-    my $SSW_extern = try_err {
-        no warnings 'redefine';
-        local *Bio::Otter::Server::Support::Web::unauth_exit =
-          sub {
-              my ($obj, $reason) = @_;
-              die "unauth_exit: $reason";
-          };
-        Bio::Otter::Server::Support::Web->new;
-    };
-    like($SSW_extern, qr{^ERR:unauth_exit: User not authorized},
-         'external unknown user');
-
-    done_testing();
-}
-
-sub __datasets_hashified {
-    my @dataset = @_;
-    my %out = map {( $_->name, $_ )} @dataset;
-    return \%out;
-}
