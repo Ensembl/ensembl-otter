@@ -331,16 +331,22 @@ sub extant_versions {
 
 =head2 Access()
 
-Return a freshly loaded L<Bio::Otter::Auth::Access> object, which
-tells dataset access for any user.
+Return a L<Bio::Otter::Auth::Access> object, which tells dataset
+access for any user.
+
+Currently freshly loaded.  Maybe should be cached.
 
 =cut
 
+my $_access;
 sub Access {
     my ($pkg) = @_;
     my $acc = $pkg->_get_yaml('/access.yaml');
     my $sp = $pkg->SpeciesDat;
-    return Bio::Otter::Auth::Access->new($acc, $sp);
+    # this is not caching (like a singleton), it prevents weak refs to
+    # the B:O:A:Access vanishing during multi-statement method chains
+    $_access = Bio::Otter::Auth::Access->new($acc, $sp);
+    return $_access;
 }
 
 
