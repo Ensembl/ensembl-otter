@@ -170,6 +170,13 @@ sub dataset_name {
 
 sub allowed_datasets {
     my ($self) = @_;
+    my $username = $self->sangerweb->username;
+    my $user = Bio::Otter::Server::Config->Access->user($username);
+    return $user ? [ values %{ $user->all_datasets } ] : [];
+}
+
+sub allowed_datasets__old {
+    my ($self) = @_;
     my $filter = $self->dataset_filter;
     return [ grep { $filter->($_) } @{$self->SpeciesDat->datasets} ];
 }
