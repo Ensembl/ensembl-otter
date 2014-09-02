@@ -171,7 +171,7 @@ sub dataset_name {
 sub allowed_datasets {
     my ($self) = @_;
     my $username = $self->sangerweb->username;
-    my $user = Bio::Otter::Server::Config->Access->user($username);
+    my $user = Bio::Otter::Server::Config->Access($username)->user($username);
     return $user ? [ values %{ $user->all_datasets } ] : [];
 }
 
