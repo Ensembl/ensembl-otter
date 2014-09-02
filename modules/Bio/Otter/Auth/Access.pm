@@ -157,10 +157,10 @@ sub _flatten_users {
 =head2 legacy_access($email)
 
 Given an email address, modify the objects state to grant legacy
-access as under F<users.txt>.
+access as under F<users.txt>; but read only.
 
-If the user is listed explicitly, nothing happens.  This could result
-in reduced access.
+If the user was already listed explicitly, nothing happens.  This
+could result in reduced access.
 
 =cut
 
@@ -172,7 +172,7 @@ sub legacy_access {
 
     if ($internal_flag && !$self->user($email)) {
         my %G = (comment => "Made by $self->legacy_access for $email",
-                 write => [ ':main' ]);
+                 read => [ ':main' ]);
         my $G = Bio::Otter::Auth::UserGroup->new($self, \%G);
         my $U = Bio::Otter::Auth::User->new($self, $email);
         $U->in_group($G);
