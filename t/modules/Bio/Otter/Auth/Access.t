@@ -93,7 +93,7 @@ INPUT
 
 # Demonstrate the object working normally
 sub user_groups_tt {
-    plan tests => 20;
+    plan tests => 23;
 
     my $acc = try_load(<<'INPUT');
 ---
@@ -123,6 +123,11 @@ user_groups:
 INPUT
 
     isa_ok($acc, 'Bio::Otter::Auth::Access') or die "got $acc";
+    is_deeply([ sort keys %{ $acc->all_users } ], # keys are lowercased
+              [qw[ alice bob shaun ]], 'get all users (keys)');
+    is_deeply([ sort map { $_->email } values %{ $acc->all_users } ], # values are not
+              [qw[ Shaun alice bob ]], 'get all users (values)');
+
     is($acc->user('zebby'), undef, 'no zebby here');
     isa_ok($acc->user('alice'), 'Bio::Otter::Auth::User', 'alice');
 
@@ -159,6 +164,14 @@ INPUT
     my @shaun_write = grep { ! $_->params->{readonly} } @shaun_all;
     is_deeply({ all => scalar @shaun_all, write => scalar @shaun_write },
               { all => 3, write => 1 }, 'shaun dataset count from all');
+
+    # For regression of forgotten-Access due to weakened $self->{_access}
+    my ($any_real_username) = keys
+      %{ Bio::Otter::Server::Config->Access->all_users };
+    is(try_err {
+        my $u = Bio::Otter::Server::Config->Access->user($any_real_username);
+        $u->all_datasets; 'ok' },
+       'ok', 'multi-statement chained call');
 
 
     like(try_load(<<'INPUT'), qr{Duplicate user bob .* under user_groups/(one|two)}, 'bob dup');
@@ -272,7 +285,8 @@ HASH
 
 sub various_fail_tt {
     plan tests => 1;
-    like(try_err { Bio::Otter::Auth::DsList->new([ 'blah' ], 'bar') },
+    my $acc = Bio::Otter::Auth::Access->new({}, ['bogus']);
+    like(try_err { Bio::Otter::Auth::DsList->new($acc, 'bar') },
          qr{new needs arrayref of dataset names}, 'DsList->new arrayref');
     return;
 }

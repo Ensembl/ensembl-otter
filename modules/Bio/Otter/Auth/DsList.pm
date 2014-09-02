@@ -28,6 +28,8 @@ sub new {
     # Access to species_groups is needed to expand them
     $self->{_access} = $access;
     weaken $self->{_access};
+    confess "Made without _access" unless
+      try{ $self->_access->can('species_groups') };
 
     $self->{_names} = $dataset_names_list;
     croak "$pkg->new needs arrayref of dataset names"

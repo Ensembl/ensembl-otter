@@ -87,7 +87,7 @@ sub species_groups {
 # Returns a BOA:User or undef if not found
 sub user {
     my ($self, $email) = @_;
-    return $self->{_users}->{lc($email)};
+    return $self->all_users->{lc($email)};
 }
 
 sub _build_species_groups {
@@ -125,6 +125,19 @@ sub _build_user_groups {
     return \%out;
 }
 
+
+=head2 all_users()
+
+Return the hashref of C<{ $email => $user_object }>.
+
+=cut
+
+sub all_users {
+    my ($self) = @_;
+    return $self->{_users};
+}
+
+
 sub _flatten_users {
     my ($self) = @_;
     my %out;
@@ -159,7 +172,7 @@ sub legacy_users_hash {
     }
 
     my %out;
-    foreach my $user (values %{ $self->{_users} }) {
+    foreach my $user (values %{ $self->all_users }) {
         my $ds = $user->write_datasets;
 
         # for "legacy" users_hash, skip the explicit default staff access
