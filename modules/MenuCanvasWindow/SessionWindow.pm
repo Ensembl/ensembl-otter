@@ -2674,9 +2674,9 @@ sub zircon_zmap_view_features_loaded {
                 sprintf "zzvfl: column '%s', status, '%s',", $column->name, $column->status);
 
             my $column_status =
-                (! $status)    ? 'Error'   :
-                $feature_count ? 'Visible' :
-                1              ? 'Empty'   :
+                (! $status)    ? 'Error'      :
+                $feature_count ? 'Processing' :
+                1              ? 'Empty'      :
                 $self->logger->logdie('this code should be unreachable');
 
             if ($column->status ne $column_status) {
@@ -2697,14 +2697,22 @@ sub zircon_zmap_view_features_loaded {
         # }
     }
 
-    my $process_result =
-        $self->AceDatabase->process_Columns(@columns_to_process);
-    $self->update_from_process_result($process_result);
-
     $self->exonerate_done_callback(@otf_loaded) if @otf_loaded;
 
     # This will get called by Tk event loop when idle
-    $self->top_window->afterIdle(sub{ return $self->RequestQueuer->features_loaded_callback(@featuresets); });
+    $self->top_window->afterIdle(
+        sub{
+            my $process_result =
+                $self->AceDatabase->process_Columns(@columns_to_process);
+            $self->update_from_process_result($process_result);
+
+            # These were all set to 'Processing' above
+            foreach my $column (@columns_to_process) {
+                $column->status('Visible');
+                $col_aptr->store_Column_state($column);
+            }
+            return $self->RequestQueuer->features_loaded_callback(@featuresets);
+        });
 
     return;
 }

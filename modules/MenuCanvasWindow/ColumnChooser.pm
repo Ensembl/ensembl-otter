@@ -187,22 +187,13 @@ sub initialise {
                       -underline => 0,
         );
 
-    $status_menu->add('command',
-        -label      => 'Queued',
-        -command    => sub{ $self->select_by_status('Queued') },
+    foreach my $status (qw( Queued Loading Processing Empty Error )) {
+        $status_menu->add(
+            'command',
+            -label      => $status,
+            -command    => sub{ $self->select_by_status($status) },
         );
-    $status_menu->add('command',
-        -label      => 'Loading',
-        -command    => sub{ $self->select_by_status('Loading') },
-        );
-    $status_menu->add('command',
-        -label      => 'Empty',
-        -command    => sub{ $self->select_by_status('Empty') },
-        );
-    $status_menu->add('command',
-        -label      => 'Error',
-        -command    => sub{ $self->select_by_status('Error') },
-        );
+    }
 
     my $bottom_frame = $self->bottom_frame;
 
@@ -678,7 +669,7 @@ sub load_filters {
     $self->AceDatabase->save_filter_state;
 
     my @statuses =  qw( Selected );
-    push @statuses, qw( Queued Loading Visible ) if $is_recover;
+    push @statuses, qw( Queued Loading Processing Visible ) if $is_recover;
 
     my @to_fetch = $cllctn->list_Columns_with_status(@statuses);
     my @to_fetch_names;
