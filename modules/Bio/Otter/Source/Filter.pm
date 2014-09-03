@@ -101,6 +101,8 @@ sub from_config {
     for my $key (keys %{$config}) {
         die "unrecognized configuration key '$key'"
             unless $filter->can($key);
+        die "bad configuration key '$key'"
+            unless $key =~ m{^[_a-zA-Z][_a-zA-Z0-9]{1,63}$};
         $filter->$key($config->{$key});
     }
 
