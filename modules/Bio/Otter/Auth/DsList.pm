@@ -91,4 +91,11 @@ sub datasets {
     return \%ds;
 }
 
+
+=head1 AUTHOR
+
+Ana Code B<email> anacode@sanger.ac.uk
+
+=cut
+
 1;
