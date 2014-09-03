@@ -1084,6 +1084,7 @@ sub _make_DataSet {
     $dataset->name($name);
     while (my ($key, $value) = each %{$params}) {
         my $method = uc $key;
+        die "Bad method $method" unless $method =~ /^[_A-Za-z]{1,16}$/;
         $dataset->$method($value) if $dataset->can($method);
     }
     $dataset->Client($self);
@@ -1311,6 +1312,7 @@ sub _make_SequenceSet {
             }
         }
         elsif ($sequenceset->can($key)) {
+            die "Bad key $key" unless $key =~ /^[_A-Za-z]{1,16}$/;
             $sequenceset->$key($value);
         }
     }
@@ -1372,6 +1374,7 @@ sub _make_CloneSequence {
             $clonesequence->chromosome($value->{name});
         }
         elsif ($clonesequence->can($key)) {
+            die "Bad key $key" unless $key =~ /^[_A-Za-z]{1,16}$/;
             $clonesequence->$key($value);
         }
     }
