@@ -35,11 +35,38 @@ Class to collect all access control for users to datasets.
 
 =head2 Overview
 
-Access holds a L<Bio::Otter::SpeciesDat>, so dataset names can be
-checked.
+There is normally just one Access object.  Objects lower in the tree
+hold a reference back to it to reach species info.  This is weakened,
+so something must keep hold of the Access object.
+L<Bio::Otter::Server::Config/Access> does this for normal use.
 
-It uses L<Bio::Otter::Auth::DsList> to hold lists of datasets, for the
-species groups and for the access lists of user groups and usesrs.
+It holds
+
+=over 4
+
+=item - a L<Bio::Otter::SpeciesDat>
+
+So dataset names can be checked.
+
+=item - the C<species_groups>
+
+To provide shortcuts to many datasets.
+
+=item - the C<user_groups>
+
+These are kept private to the object, because the groupings are for
+brevity of configuration and not intended for API access.
+
+=item - direct links to the user objects, in a flattened hash
+
+User objects hold weak references to their user_group(s).
+
+=back
+
+L<Bio::Otter::Auth::DsList> are used to hold lists of datasets, for
+the species groups and the access lists of users and user groups.
+They get mashed together in combination where they are used.
+
 
 =head1 METHODS
 
@@ -84,7 +111,19 @@ sub species_groups {
       ||= $self->_build_species_groups($self->_input('species_groups'));
 }
 
-# Returns a BOA:User or undef if not found
+
+=head2 user($email)
+
+This is the main interface to use on the object.
+
+Return an authorised L<Bio::Otter::Auth::User>, or undef if not found.
+
+The search key is C<lc($email)> but that need not concern the caller.
+The resulting C<<$user->email>> case is preserved from the
+configuration file.
+
+=cut
+
 sub user {
     my ($self, $email) = @_;
     return $self->all_users->{lc($email)};
@@ -129,6 +168,11 @@ sub _build_user_groups {
 =head2 all_users()
 
 Return the hashref of C<{ $email => $user_object }>.
+
+This is intended for code testing, not production use.  It has the
+weakness that it may not include all possible users, due to
+L</legacy_access> and the fact that it doesn't ask databases for lists
+of authors.
 
 =cut
 
@@ -219,5 +263,12 @@ sub legacy_users_hash {
 
     return \%out;
 }
+
+
+=head1 AUTHOR
+
+Ana Code B<email> anacode@sanger.ac.uk
+
+=cut
 
 1;

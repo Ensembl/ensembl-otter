@@ -115,6 +115,9 @@ sub _read_list {
 # Plan in RT#355854 was mutli-group membership when explicitly marked
 # in each place the user exists in a group, to avoid confusion.
 # Also, beware email address case differences between groups.
+#
+# UserGroups are part of the configuration interface (via YAML), but
+# not particularly intended to be useful in the API.
 sub in_group {
     my ($self, @ugroup) = @_;
     my $e = $self->email;
@@ -178,5 +181,12 @@ sub read_dataset {
     my ($self, $dataset_name) = @_;
     return $self->read_datasets->{$dataset_name};
 }
+
+
+=head1 AUTHOR
+
+Ana Code B<email> anacode@sanger.ac.uk
+
+=cut
 
 1;

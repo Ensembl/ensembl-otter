@@ -87,4 +87,11 @@ sub read_list {
       Bio::Otter::Auth::DsList->new($self->_access, $self->_read);
 }
 
+
+=head1 AUTHOR
+
+Ana Code B<email> anacode@sanger.ac.uk
+
+=cut
+
 1;
