@@ -123,7 +123,10 @@ sub in_group {
     my $e = $self->email;
     if (@ugroup) {
         die "User $e has _in_group already" if $self->{_in_group};
-        $self->{_in_group} = \@ugroup;
+        $self->{_in_group} = [ @ugroup ];
+        foreach my $i (0..$#ugroup) {
+            weaken($ugroup[$i]);
+        }
     }
     my $glist = $self->{_in_group}
       or die "User $e _in_group is not yet set";
