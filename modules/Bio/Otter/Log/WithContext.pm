@@ -20,12 +20,9 @@ BEGIN {
     my %is_carp = map { $_ => 1 } @carps;
 
     ## no critic (Variables::ProhibitPackageVars)
-    ## no critic (TestingAndDebugging::ProhibitNoStrict)
 
     for my $level (@levels, @carps, @extras) {
-        no strict 'refs';
-
-        *{$level} = sub {
+        my $code = sub {
             my ( $self, @message ) = @_;
 
             local $Log::Log4perl::caller_depth = $Log::Log4perl::caller_depth + $LOG_LEVEL_ADJUSTMENT;
@@ -42,19 +39,25 @@ BEGIN {
 
             return 1;
         };
+
+        ## no critic (TestingAndDebugging::ProhibitNoStrict)
+        no strict 'refs';
+        *{$level} = $code;
     }
 
     for my $level (@levels) {
-        no strict 'refs';
-
         my $func = "is_${level}";
-        *{$func} = sub {
+        my $code = sub {
             my ( $self, @args ) = @_;
 
             local $Log::Log4perl::caller_depth = $Log::Log4perl::caller_depth + $LOG_LEVEL_ADJUSTMENT;
 
             return $self->{logger}->$func(@args);
         };
+
+        ## no critic (TestingAndDebugging::ProhibitNoStrict)
+        no strict 'refs';
+        *{$func} = $code;
     }
 
 }
