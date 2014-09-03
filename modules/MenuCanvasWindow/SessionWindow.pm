@@ -120,7 +120,6 @@ sub initialise {
     }
 
     $self->Assembly;
-    $self->fetch_external_SubSeqs;
     $self->populate_clone_menu;
     # Drawing the sequence list can take a long time the first time it is
     # called (QC checks not yet cached), so do it before zmap is launched.
