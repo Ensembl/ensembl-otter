@@ -333,10 +333,12 @@ sub draw {
         my $data_set = $dsl[$i];
         my $x = $size;
         my $y = $row_height * (1 + $i);
+        my $ro = $data_set->READONLY ? ' (r-o)' : '';
         $canvas->createText(
             $x, $y,
-            -text   => $data_set->name,
+            -text   => $data_set->name . $ro,
             -font   => $font,
+            -fill   => $ro ? 'DarkRed' : 'DarkGreen', # matches CW:SequenceSetChooser->draw
             -anchor => 'nw',
             -tags   => ['DataSet=' . $data_set->name],
             );
