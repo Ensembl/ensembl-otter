@@ -2651,7 +2651,6 @@ sub zircon_zmap_view_features_loaded {
 
     my $cllctn = $self->AceDatabase->ColumnCollection;
     my $col_aptr = $self->AceDatabase->DB->ColumnAdaptor;
-    my $state_changed = 0;
 
     $self->logger->debug("zzvfl: status '$status', message '$message', feature_count '$feature_count'");
 
@@ -2671,13 +2670,11 @@ sub zircon_zmap_view_features_loaded {
                 1              ? 'Empty'      :
                 $self->logger->logdie('this code should be unreachable');
 
-            if ($column->status ne $column_status) {
-                $state_changed = 1;
-                $column->status($column_status);
-                push @columns_to_process, $column
-                    if $status && $feature_count;
+            if ($column_status eq 'Processing') {
+                push @columns_to_process, $column;
             }
 
+            $column->status($column_status);
             $column->status_detail($message);
             $col_aptr->store_Column_state($column);
 
