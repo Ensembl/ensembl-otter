@@ -1229,45 +1229,21 @@ sub _process_Column {
 
     my $logger = $self->logger;
 
-    my $filter = $column->Filter;
-    my $filter_name = $filter->name;
-    my $gff_file = $column->gff_file;
-    unless ($gff_file) {
-        $logger->logconfess("gff_file column not set for '$filter_name' in otter_filter table in SQLite DB");
-    }
-
-    my $full_gff_file = $self->home . "/$gff_file";
-
-    # feature_kind values from otter_config:
-    # DitagFeature
-    # DnaDnaAlignFeature
-    # DnaPepAlignFeature
-    # ExonSupportingFeature
-    # MarkerFeature
-    # PredictionExon
-    # PredictionTranscript
-    # RepeatFeature
-    # SimpleFeature
-    # VariationFeature
-
     my @transcripts = ( );
     my $close_error;
-    open my $gff_fh, '<', $full_gff_file or $logger->logconfess("Can't read GFF file '$full_gff_file'; $!");
-    my $process_gff = Bio::Otter::Lace::ProcessGFF->new(
-        gff_fh      => $gff_fh,
-        column_name => $filter_name,
-        log_name    => $self->log_name,
-        );
+    my $gff_processor = $self->_new_ProcessGFF_for_column($column);
 
     try {
-        @transcripts = $self->_process_fh($column, $process_gff);
+        @transcripts = $self->_process_fh($column, $gff_processor);
     }
-    catch { $logger->logdie(sprintf "%s: %s: $_", $filter_name, $full_gff_file); }
+    catch {
+        $logger->logdie(sprintf "%s: %s: $_", $column->Filter->name, $column->gff_file);
+    }
     finally {
         # want to &confess here but that would hide any errors from
         # the try block so we save the error for later
-        close $gff_fh
-            or $close_error = "Error closing GFF file '$full_gff_file'; $!";
+        $gff_processor->close
+            or $close_error = "Error closing via ProcessGFF";
     };
 
     $logger->logconfess($close_error) if $close_error;
@@ -1275,17 +1251,35 @@ sub _process_Column {
     return @transcripts;
 }
 
+sub _new_ProcessGFF_for_column {
+    my ($self, $column) = @_;
+
+    my $gff_file    = $column->gff_file;
+    my $filter_name = $column->Filter->name;
+
+    unless ($gff_file) {
+        $self->logger->logconfess("gff_file column not set for '$filter_name' in otter_filter table in SQLite DB");
+    }
+    my $gff_path = sprintf '%s/%s', $self->home, $gff_file;
+
+    return Bio::Otter::Lace::ProcessGFF->new(
+        gff_path    => $gff_path,
+        column_name => $filter_name,
+        log_name    => $self->log_name,
+        );
+}
+
 # "perlcritic --stern" refuses to learn that $logger->logconfess is fatal
 sub _process_fh { ## no critic (Subroutines::RequireFinalReturn)
-    my ($self, $column, $process_gff) = @_;
+    my ($self, $column, $gff_processor) = @_;
 
     my $filter = $column->Filter;
 
     if ($filter->content_type eq 'transcript') {
-        return $process_gff->make_ace_transcripts_from_gff($self->slice->start, $self->slice->end);
+        return $gff_processor->make_ace_transcripts_from_gff($self->slice->start, $self->slice->end);
     }
     elsif ($filter->content_type eq 'alignment_feature') {
-        $process_gff->store_hit_data_from_gff($self->AccessionTypeCache);
+        $gff_processor->store_hit_data_from_gff($self->AccessionTypeCache);
         # Unset flag so that we don't reprocess this file if we recover the session.
         $column->process_gff(0);
         $self->DB->ColumnAdaptor->store_Column_state($column);
