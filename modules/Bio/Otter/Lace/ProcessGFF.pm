@@ -46,17 +46,42 @@ use Try::Tiny;
 sub new {
     my ($pkg, %args) = @_;
 
-    my ($gff_fh, $log_name, $column_name) = @args{qw( gff_fh log_name column_name )};
+    my ($gff_path, $log_name, $column_name) = @args{qw( gff_path log_name column_name )};
     my $self = bless {}, $pkg;
     $self->log_name($log_name);
     $self->column_name($column_name);
 
-    unless ($gff_fh) {
-        $self->logger->logconfess("Cannot create ProcessGFF without gff_fh parameter");
+    unless ($gff_path) {
+        $self->logger->logconfess("Cannot create ProcessGFF without gff_path parameter");
     }
-    $self->gff_fh($gff_fh);
+    $self->gff_path($gff_path);
 
     return $self;
+}
+
+sub gff_fh {
+    my ($self) = @_;
+    return $self->{'gff_fh'} if $self->{'gff_fh'};
+
+    my $gff_path = $self->gff_path;
+    $self->logger->debug("Opening '$gff_path'");
+    open my $gff_fh, '<', $gff_path or $self->logger->logconfess("Can't read GFF file '$gff_path'; $!");
+
+    return $self->{'gff_fh'} = $gff_fh;
+}
+
+sub close {
+    my ($self) = @_;
+    my $gff_fh   = $self->gff_fh;
+    my $gff_path = $self->gff_path;
+
+    $self->logger->debug("Closing '$gff_path'");
+    my $ok = close $gff_fh;
+    delete $self->{'gff_fh'};
+    return $ok if $ok;
+
+    $self->logger->error("Error closing GFF file '$gff_path'; $!");
+    return;
 }
 
 sub store_hit_data_from_gff {
@@ -287,11 +312,11 @@ sub _gff3_unescape {
 # $gff->{end},     $gff->{score},  $gff->{strand},  $gff->{frame},
 
 
-sub gff_fh {
+sub gff_path {
     my ($self, @args) = @_;
-    ($self->{'gff_fh'}) = @args if @args;
-    my $gff_fh = $self->{'gff_fh'};
-    return $gff_fh;
+    ($self->{'gff_path'}) = @args if @args;
+    my $gff_path = $self->{'gff_path'};
+    return $gff_path;
 }
 
 sub column_name {
