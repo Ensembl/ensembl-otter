@@ -1554,7 +1554,7 @@ sub _column_who_locked {
         # Remove domain from full email addresses
         foreach (@lockers) { s{@.*}{} }
         my $names = join ',', @lockers;
-        substr($names, 9, '...') if length($names) > 12;
+        $names = substr($names, 0, 9) . '...' if length($names) > 12;
         return { -text => $names };
     } else {
         # Put in empty spaces to keep column padded
