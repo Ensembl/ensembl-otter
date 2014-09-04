@@ -1276,7 +1276,8 @@ sub resync_with_db {
 
     # Refetch transcripts
     $self->Assembly;
-    $self->fetch_external_SubSeqs;
+    my @visible_columns = $self->AceDatabase->ColumnCollection->list_Columns_with_status('Visible');
+    $self->process_and_update_columns(@visible_columns);
 
     return;
 }
@@ -1553,29 +1554,20 @@ sub add_external_SubSeqs {
     return;
 }
 
-sub fetch_external_SubSeqs {
-    my ($self) = @_;
+# Does hits and transcripts for now - will separate later
+#
+sub process_and_update_columns {
+    my ($self, @columns) = @_;
 
-    my $AceDatabase = $self->AceDatabase;
+    my $process_result = $self->AceDatabase->process_Columns(@columns);
 
-    my $process_result =
-        $AceDatabase->process_Columns(
-            grep { $_->status eq 'Visible' }
-            $AceDatabase->ColumnCollection->list_Columns
-        );
+    my ($transcripts, $failed) = @{$process_result}{qw( -transcripts -failed )};
 
-    $self->update_from_process_result($process_result);
-    return;
-}
-
-sub update_from_process_result {
-    my ($self, $process_result) = @_;
-    my ($transcripts, $failed) =
-        @{$process_result}{qw( -transcripts -failed )};
     if (@$transcripts) {
         $self->add_external_SubSeqs(@{$transcripts});
-        $self->draw_subseq_list;        
+        $self->draw_subseq_list;
     }
+
     if (@{$failed}) {
         my $message = sprintf
             'Failed to load any transcripts or alignment features from column(s): %s'
@@ -2701,9 +2693,7 @@ sub zircon_zmap_view_features_loaded {
     # This will get called by Tk event loop when idle
     $self->top_window->afterIdle(
         sub{
-            my $process_result =
-                $self->AceDatabase->process_Columns(@columns_to_process);
-            $self->update_from_process_result($process_result);
+            $self->process_and_update_columns(@columns_to_process);
 
             # These were all set to 'Processing' above
             foreach my $column (@columns_to_process) {
