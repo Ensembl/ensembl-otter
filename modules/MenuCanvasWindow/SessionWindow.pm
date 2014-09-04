@@ -1559,16 +1559,17 @@ sub add_external_SubSeqs {
 sub process_and_update_columns {
     my ($self, @columns) = @_;
 
-    my $process_result = $self->AceDatabase->process_Columns(@columns);
+    my $alignment_result  = $self->AceDatabase->process_alignment_Columns(@columns);
+    my $transcript_result = $self->AceDatabase->process_transcript_Columns(@columns);
 
-    my ($transcripts, $failed) = @{$process_result}{qw( -transcripts -failed )};
+    my ($transcripts, $failed) = @{$transcript_result}{qw( -results -failed )};
 
-    if (@$transcripts) {
+    if ($transcripts and @$transcripts) {
         $self->add_external_SubSeqs(@{$transcripts});
         $self->draw_subseq_list;
     }
 
-    if (@{$failed}) {
+    if ($failed and @$failed) {
         my $message = sprintf
             'Failed to load any transcripts or alignment features from column(s): %s'
             , join ', ', sort map { $_->name } @{$failed};
