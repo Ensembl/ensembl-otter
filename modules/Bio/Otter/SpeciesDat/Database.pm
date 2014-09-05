@@ -26,18 +26,28 @@ sub new {
     my $self = { _name => $name, _params => \%params };
     bless $self, $pkg;
 
-    if ($params{-alias}) {
+    # Leading dashes are optional.  (Why did I ever want them?)
+    if (grep { /^-/ } keys %params) {
+        my @k = sort keys %params;
+        if (grep { ! /^-/ } keys %params) {
+            die "New $pkg for name=$name has inconsistent -dash/nodash keys (@k)";
+        }
+        foreach (@k) { s/^-// }
+        %params = map {($_ => $params{"-$_"})} @k;
+    }
+
+    if ($params{alias}) {
         # Aliases are resolved by new_many_from_dbspec
-        die "New $pkg for name=$name has -alias=$params{-alias}, should have nothing else"
+        die "New $pkg for name=$name has alias=$params{alias}, should have nothing else"
           if keys %params > 1;
     } else {
         # Any other entry has to have the expected keys
         my %bad = %params;
-        delete @bad{qw{ -host -port -user -pass }};
+        delete @bad{qw{ host port user pass }};
         my @bad = sort keys %bad;
         die "New $pkg for name=$name contains bad keys (@bad) - should point just to a server"
           if @bad;
-        my @miss = grep { !defined $params{$_} } qw{ -host -port -user };
+        my @miss = grep { !defined $params{$_} } qw{ host port user };
         die "New $pkg for name=$name has missing keys (@miss)"
           if @miss;
     }
@@ -52,13 +62,13 @@ sub new_many_from_dbspec {
     # resolve aliases, if any
     my %replace;
     while (my ($k, $obj) = each %out) {
-        my $al = $obj->_params->{-alias};
+        my $al = $obj->_params->{alias};
         next unless $al;
         my $r = $replace{$k} = $out{$al};
         die "Alias $k --> $al points nowhere" unless $r;
         die "Alias $k --> $al points to another alias"
           # not interested in chasing out the loops
-          if $r->_params->{-alias};
+          if $r->_params->{alias};
     }
     @out{ keys %replace } = values %replace if keys %replace;
 
@@ -83,10 +93,22 @@ sub _params {
     return $self->{_params};
 }
 
+=head2 params()
+
+Return list of (key, value) pairs.  Keys will be among C<qw( host port
+user pass )>.
+
+=cut
+
+sub params {
+    my ($self) = @_;
+    return %{ $self->_params };
+}
+
 sub _init_accessors {
     my ($pkg) = @_;
     foreach my $method (qw( host port user pass )) {
-        my $key = "-$method";
+        my $key = $method;
         my $code = sub {
             my ($self) = @_;
             return $self->_params->{$key};
