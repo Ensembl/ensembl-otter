@@ -575,6 +575,51 @@ sub zmap_arg_list {
     return $arg_list;
 }
 
+
+### DBI info indirects through Bio::Otter::SpeciesDat::Database
+#
+#   Database passwords are no longer passed from Otter Server,
+#   this is backwards compatibility for old scripts.
+#
+#   This new code needs species.dat be229b40
+
+sub DBSPEC {
+    my ($self, $DBSPEC) = @_;
+
+    if(defined($DBSPEC)) {
+        $self->{'_DBSPEC'} = $DBSPEC;
+    }
+    return $self->{'_DBSPEC'};
+}
+
+sub DNA_DBSPEC {
+    my ($self, $DNA_DBSPEC) = @_;
+
+    if(defined($DNA_DBSPEC)) {
+        $self->{'_DNA_DBSPEC'} = $DNA_DBSPEC;
+    }
+    return $self->{'_DNA_DBSPEC'};
+}
+
+my $_bwarp; # one noise is enough
+sub _dbspec {
+    my ($self) = @_;
+    carp 'DBI access via B:O:Lace:DS is deprecated (and slow)' unless $_bwarp++;
+    my $dbspec = $self->DBSPEC
+      or croak "$self didn't get DBSPEC from species.dat";
+    require Bio::Otter::Server::Config;
+    return Bio::Otter::Server::Config->Database($dbspec);
+}
+
+sub _dna_dbspec {
+    my ($self) = @_;
+    carp 'DBI access via B:O:Lace:DS is deprecated (and slow)' unless $_bwarp++;
+    my $dna_dbspec = $self->DNA_DBSPEC
+      or croak "$self didn't get DNA_DBSPEC from species.dat";
+    require Bio::Otter::Server::Config;
+    return Bio::Otter::Server::Config->Database($dna_dbspec);
+}
+
 #
 # DB connection handling
 #-------------------------------------------------------------------------------
@@ -671,6 +716,8 @@ sub _attach_DNA_DBAdaptor{
 }
 
 sub list_all_db_properties {
+    # qw( DBSPEC DNA_DBSPEC ) are not listed because they aren't
+    # passed to DBAdaptor
     return qw{
         HOST
         USER
@@ -690,36 +737,41 @@ sub HOST {
     my ($self, $HOST) = @_;
 
     if(defined($HOST)) {
-        $self->{'_HOST'} = $HOST;
+        carp 'Write now ignored';
+        return;
+    } else {
+        return $self->_dbspec->host;
     }
-    return $self->{'_HOST'};
 }
 
 sub USER {
     my ($self, $USER) = @_;
-
     if(defined($USER)) {
-        $self->{'_USER'} = $USER;
+        carp 'Write now ignored';
+        return;
+    } else {
+        return $self->_dbspec->user;
     }
-    return $self->{'_USER'};
 }
 
 sub DNA_PASS {
     my ($self, $DNA_PASS) = @_;
-
     if(defined($DNA_PASS)) {
-        $self->{'_DNA_PASS'} = $DNA_PASS;
+        carp 'Write now ignored';
+        return;
+    } else {
+        return $self->_dna_dbspec->pass;
     }
-    return $self->{'_DNA_PASS'};
 }
 
 sub PASS {
     my ($self, $PASS) = @_;
-
     if(defined($PASS)) {
-        $self->{'_PASS'} = $PASS;
+        carp 'Write now ignored';
+        return;
+    } else {
+        return $self->_dbspec->pass;
     }
-    return $self->{'_PASS'};
 }
 
 sub DBNAME {
@@ -733,30 +785,34 @@ sub DBNAME {
 
 sub DNA_PORT {
     my ($self, $DNA_PORT) = @_;
-
     if(defined($DNA_PORT)) {
-        $self->{'_DNA_PORT'} = $DNA_PORT;
+        carp 'Write now ignored';
+        return;
+    } else {
+        return $self->_dna_dbspec->port;
     }
-    return $self->{'_DNA_PORT'};
 }
 
 sub DNA_HOST {
     my ($self, $DNA_HOST) = @_;
-
     if(defined($DNA_HOST)) {
-        $self->{'_DNA_HOST'} = $DNA_HOST;
+        carp 'Write now ignored';
+        return;
+    } else {
+        return $self->_dna_dbspec->host;
     }
-    return $self->{'_DNA_HOST'};
 }
 
 sub DNA_USER {
     my ($self, $DNA_USER) = @_;
-
     if(defined($DNA_USER)) {
-        $self->{'_DNA_USER'} = $DNA_USER;
+        carp 'Write now ignored';
+        return;
+    } else {
+        return $self->_dna_dbspec->user;
     }
-    return $self->{'_DNA_USER'};
 }
+
 sub DNA_DBNAME {
     my ($self, $DNA_DBNAME) = @_;
 
@@ -765,13 +821,15 @@ sub DNA_DBNAME {
     }
     return $self->{'_DNA_DBNAME'};
 }
+
 sub PORT {
     my ($self, $PORT) = @_;
-
     if(defined($PORT)) {
-        $self->{'_PORT'} = $PORT;
+        carp 'Write now ignored';
+        return;
+    } else {
+        return $self->_dbspec->port;
     }
-    return $self->{'_PORT'};
 }
 
 sub ALIAS {

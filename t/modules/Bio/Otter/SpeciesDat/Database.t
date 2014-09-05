@@ -7,13 +7,17 @@ use Test::More;
 use YAML qw( Dump Load );
 use Try::Tiny;
 
+# Some tests could run without data_dir...
+use Test::Otter qw( ^data_dir_or_skipall try_err );
+
 use Bio::Otter::Server::Config;
 use Bio::Otter::SpeciesDat::Database;
 
 my $BOSdb = 'Bio::Otter::SpeciesDat::Database';
+my $BOSC = 'Bio::Otter::Server::Config';
 
 sub main {
-    my @t = qw( small_tt various_fail_tt real_tt );
+    my @t = qw( noDBI_tt small_tt various_fail_tt real_tt );
     plan tests => scalar @t;
 
     foreach my $subt (@t) {
@@ -36,6 +40,22 @@ sub try_load {
     };
 }
 
+
+sub noDBI_tt {
+    plan tests => 2;
+
+    {
+        local $ENV{'ANACODE_SERVER_CONFIG'} = '/absent';
+        like(try_err { $BOSC->Database('human') },
+             qr{Database passwords not found: data_dir /absent},
+             'tell absence of DBI params');
+    }
+
+    isa_ok(try_err { $BOSC->Database('otterlive') },
+           $BOSdb, 'databases.yaml:human');
+
+    return;
+}
 
 sub small_tt {
     plan tests => 9;
@@ -153,7 +173,6 @@ INPUT
 
 sub real_tt {
     plan tests => 3;
-    my $BOSC = 'Bio::Otter::Server::Config';
     my $db = $BOSC->Databases;
     isa_ok($db, 'HASH') or diag "db=$db";
     isa_ok($db->{otterlive}, $BOSdb, 'otterlive');

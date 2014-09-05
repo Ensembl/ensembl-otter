@@ -1084,8 +1084,13 @@ sub _make_DataSet {
     $dataset->name($name);
     while (my ($key, $value) = each %{$params}) {
         my $method = uc $key;
-        die "Bad method $method" unless $method =~ /^[_A-Za-z]{1,16}$/;
-        $dataset->$method($value) if $dataset->can($method);
+        if ($method =~ /(host|port|user|pass|restricted|headcode)$/i) {
+            warn "Got an old species.dat?  Ignored key $method";
+        } elsif ($method =~ /^((dna_)?(dbname|dbspec)|alias)$/i) {
+            $dataset->$method($value);
+        } else {
+            die "Bad method $method";
+        }
     }
     $dataset->Client($self);
 
