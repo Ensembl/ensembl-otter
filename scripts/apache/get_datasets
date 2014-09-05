@@ -9,21 +9,15 @@ use Bio::Otter::Git qw{ :server_ensembl :match };
 
 use Bio::Otter::Server::Support::Web;
 
-# For added security we don't show mysql connection details to clients outside
-# the Sanger. We only need connection details to for scripts running at Sanger.
-my %secret_params = map { ( $_ => 1 ) } qw{
-    HOST
-    PORT
-    USER
-    PASS
-    DBNAME
+# Don't show any mysql connection details to clients Outside.
+my %secret_params = map { ( $_ => 1 ) }
+  qw{ DBNAME DBSPEC  DNA_DBSPEC DNA_DBNAME };
 
-    DNA_HOST
-    DNA_PORT
-    DNA_USER
-    DNA_PASS
-    DNA_DBNAME
-};
+# DBI params no longer go over HTTP anywhere.  Whitelist the rest.
+my %good_params = map { ( $_ => 1 ) }
+  qw{ ALIAS  DBNAME DBSPEC  DNA_DBSPEC DNA_DBNAME };
+  # HEADCODE, TYPE : obsolete
+  # RESTRICTED : not relevant to the client
 
 sub get_datasets {
     my ($server) = @_;
@@ -41,6 +35,10 @@ sub get_datasets {
         $xml .= qq{    <dataset name="$name">\n};
 
         foreach my $key (keys %$params) {
+            unless ($good_params{$key}) {
+                warn "Redacted key=$key - old species.dat?";
+                next;
+            }
             unless ($show_details) {
                 next if $secret_params{$key};
             }
