@@ -10,6 +10,8 @@ use Try::Tiny;
 use Bio::Otter::Server::Config;
 use Bio::Otter::SpeciesDat::Database;
 
+my $BOSdb = 'Bio::Otter::SpeciesDat::Database';
+
 sub main {
     my @t = qw( small_tt various_fail_tt real_tt );
     plan tests => scalar @t;
@@ -51,9 +53,9 @@ dbspec:
 INPUT
 
     isa_ok($dbs, 'HASH') or diag "dbs=$dbs";
-    isa_ok($dbs->{loopy}, 'Bio::Otter::SpeciesDat::Database');
+    isa_ok($dbs->{loopy}, $BOSdb);
     my $fruit = $dbs->{fruit};
-    isa_ok($fruit, 'Bio::Otter::SpeciesDat::Database');
+    isa_ok($fruit, $BOSdb);
 
     my $dbs_dash = try_load(<<'INPUT');
 ---
@@ -150,9 +152,11 @@ INPUT
 
 
 sub real_tt {
-    plan tests => 2;
-    my $db = Bio::Otter::Server::Config->databases;
+    plan tests => 3;
+    my $BOSC = 'Bio::Otter::Server::Config';
+    my $db = $BOSC->Databases;
     isa_ok($db, 'HASH') or diag "db=$db";
-    isa_ok($db->{otterlive}, 'Bio::Otter::SpeciesDat::Database', 'otterlive');
+    isa_ok($db->{otterlive}, $BOSdb, 'otterlive');
+    isa_ok($BOSC->Database('otterlive'), $BOSdb);
     return;
 }
