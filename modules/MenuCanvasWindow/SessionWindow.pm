@@ -2676,11 +2676,11 @@ sub zircon_zmap_view_features_loaded {
         # }
     }
 
-    $self->exonerate_done_callback(@otf_loaded) if @otf_loaded;
-
     # This will get called by Tk event loop when idle
     $self->top_window->afterIdle(
         sub{
+            $self->exonerate_done_callback(@otf_loaded) if @otf_loaded;
+
             $self->process_and_update_columns(@columns_to_process);
 
             # These were all set to 'Processing' above
