@@ -677,7 +677,6 @@ sub list_all_db_properties {
         DNA_PASS
         PASS
         DBNAME
-        TYPE
         DNA_PORT
         DNA_HOST
         DNA_USER
@@ -730,15 +729,6 @@ sub DBNAME {
         $self->{'_DBNAME'} = $DBNAME;
     }
     return $self->{'_DBNAME'};
-}
-
-sub TYPE {
-    my ($self, $TYPE) = @_;
-
-    if(defined($TYPE)) {
-        $self->{'_TYPE'} = $TYPE;
-    }
-    return $self->{'_TYPE'};
 }
 
 sub DNA_PORT {
