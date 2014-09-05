@@ -36,9 +36,26 @@ sub try_load {
 
 
 sub small_tt {
-    plan tests => 5;
+    plan tests => 9;
 
     my $dbs = try_load(<<'INPUT');
+---
+dbspec:
+  loopy:
+    -alias: fruit
+  fruit:
+    host: tree
+    port: 1234
+    user: bob
+    pass: sekret
+INPUT
+
+    isa_ok($dbs, 'HASH') or diag "dbs=$dbs";
+    isa_ok($dbs->{loopy}, 'Bio::Otter::SpeciesDat::Database');
+    my $fruit = $dbs->{fruit};
+    isa_ok($fruit, 'Bio::Otter::SpeciesDat::Database');
+
+    my $dbs_dash = try_load(<<'INPUT');
 ---
 dbspec:
   loopy:
@@ -50,10 +67,13 @@ dbspec:
     -pass: sekret
 INPUT
 
-    isa_ok($dbs, 'HASH') or diag "dbs=$dbs";
-    isa_ok($dbs->{loopy}, 'Bio::Otter::SpeciesDat::Database');
-    my $fruit = $dbs->{fruit};
-    isa_ok($fruit, 'Bio::Otter::SpeciesDat::Database');
+    isa_ok($dbs_dash, 'HASH') or diag "dbs_dash=$dbs_dash";
+    is_deeply($dbs_dash, $dbs, 'dbs = dbs_dash');
+
+    my $exp_P = { host => 'tree', port => 1234, user => 'bob', pass => 'sekret' };
+    is_deeply({ $fruit->params }, $exp_P, 'db->params');
+    is_deeply({ host => $fruit->host, port => $fruit->port,
+                user => $fruit->user, pass => $fruit->pass }, $exp_P, 'db->$key');
 
     is_deeply([$fruit->spec_DBI('froot', { Tangy => 1 })],
               ['DBI:mysql:host=tree;port=1234;database=froot', 'bob', 'sekret',
@@ -69,9 +89,9 @@ INPUT
 
 
 sub various_fail_tt {
-    plan tests => 5;
+    plan tests => 6;
 
-    like(try_load(<<'INPUT'), qr{name=all_ias has -alias=thing, should have nothing else}, 'ambigu-alias');
+    like(try_load(<<'INPUT'), qr{name=all_ias has alias=thing, should have nothing else}, 'ambigu-alias');
 ---
 dbspec:
   all_ias:
@@ -79,7 +99,7 @@ dbspec:
     -host: cheddar
 INPUT
 
-    like(try_load(<<'INPUT'), qr{name=strange contains bad keys \(-veins\) }, 'bad keys');
+    like(try_load(<<'INPUT'), qr{name=strange contains bad keys \(veins\) }, 'bad keys');
 ---
 dbspec:
   strange:
@@ -88,7 +108,16 @@ dbspec:
     -veins: blue
 INPUT
 
-    like(try_load(<<'INPUT'), qr{name=storm has missing keys \(-port\)}, 'no port');
+    like(try_load(<<'INPUT'), qr{name=mixy has inconsistent -dash/}, 'mixed nodash');
+---
+dbspec:
+  mixy:
+    host: cheddar
+    -port: 1234
+    user: mild
+INPUT
+
+    like(try_load(<<'INPUT'), qr{name=storm has missing keys \(port\)}, 'no port');
 ---
 dbspec:
   storm:
