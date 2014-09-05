@@ -17,10 +17,13 @@ that we have a few of these with many named databases inside.
 
 =head1 METHODS
 
+Instantiate through L<Bio::Otter::Server::Config/Databases>.
+
+Accessors are read-only, and have method names C<qw( name host port
+user pass )>.
+
 =cut
 
-
-# Instantiate through Bio::Otter::Server::Config->databases()
 sub new {
     my ($pkg, $name, %params) = @_;
     my $self = { _name => $name, _params => \%params };

@@ -2,6 +2,7 @@ package Bio::Otter::Server::Config;
 use strict;
 use warnings;
 
+use Carp;
 use Try::Tiny;
 use List::MoreUtils 'uniq';
 # require YAML::Any; # sometimes (below), but it is a little slow
@@ -234,22 +235,44 @@ sub __git_head {
 }
 
 
-=head2 databases()
+=head2 Databases()
 
 Return a reference to the hash of C<database_key> to
 L<Bio::Otter::SpeciesDat::Database> objects from the Otter Server
 config directory (since v81).
 
+The collection is cached on the class.
+
+=head2 Database($name)
+
+Return the requested L<Bio::Otter::SpeciesDat::Database> object, or
+die.
+
 =cut
 
-sub databases {
+my $_DBS;
+sub Databases {
     my ($pkg) = @_;
+    return $_DBS if defined $_DBS;
     require YAML::Any;
     my $fn = $pkg->data_filename('/databases.yaml');
     my ($h) = YAML::Any::LoadFile($fn);
     my $dbs = $h->{dbspec};
     die "No dbspec in $fn" unless $dbs;
-    return Bio::Otter::SpeciesDat::Database->new_many_from_dbspec($dbs);
+    return $_DBS = Bio::Otter::SpeciesDat::Database->new_many_from_dbspec($dbs);
+}
+
+sub Database {
+    my ($pkg, $name) = @_;
+    my $db = $pkg->Databases->{$name}
+      or croak "dbspec{$name} does not exist in databases.yaml";
+    return $db;
+}
+
+sub databases {
+    my ($pkg) = @_;
+    warn "deprecated - renamed to match similar"; # one use from webvm.git
+    return $pkg->Databases;
 }
 
 
