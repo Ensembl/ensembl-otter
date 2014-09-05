@@ -2548,21 +2548,12 @@ sub zmap_configs_dir {
 
 ### BEGIN: ZMap control interface
 
-sub zircon_context {
+sub new_zircon_context {
     my ($self) = @_;
-    my $zircon_context =
-        $self->{'_zircon_context'} ||=
-        Zircon::TkZMQ::Context->new(
+    return Zircon::TkZMQ::Context->new(
             '-widget'       => $self->menu_bar,
             '-trace_prefix' => sprintf('SW=[%s]', $self->AceDatabase->name),
         );
-    return $zircon_context;
-}
-
-sub _delete_zircon_context {
-    my ($self) = @_;
-    delete $self->{'_zircon_context'};
-    return;
 }
 
 sub zmap_new {
@@ -2589,7 +2580,7 @@ sub zmap_new {
     my $zmap =
         Zircon::ZMap->new(
             '-app_id'     => $self->zircon_app_id,
-            '-context'    => $self->zircon_context,
+            '-context'    => $self->new_zircon_context,
             '-arg_list'   => $arg_list,
             '-timeout_list'           => \@to_list,
             '-handshake_timeout_secs' => $handshake_to,
@@ -2626,7 +2617,6 @@ sub _zmap_relaunch {
     # to be destroyed, which sends a shutdown to the ZMap process.
 
     $self->_delete_zmap_view;
-    $self->_delete_zircon_context;
     $self->_zmap_view_new($self->zmap_select);
     $self->ColumnChooser->load_filters(is_recover => 1);
     return;
@@ -2637,7 +2627,6 @@ sub _zmap_relaunch {
 sub delete_zmap_view {
     my ($self) = @_;
     $self->_delete_zmap_view;
-    $self->_delete_zircon_context;
     return;
 }
 
