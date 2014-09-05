@@ -2625,6 +2625,7 @@ sub _zmap_relaunch {
     # which removes the last reference to the ZMap object, causing it
     # to be destroyed, which sends a shutdown to the ZMap process.
 
+    $self->_delete_zmap_view;
     $self->_delete_zircon_context;
     $self->_zmap_view_new($self->zmap_select);
     $self->ColumnChooser->load_filters(is_recover => 1);
