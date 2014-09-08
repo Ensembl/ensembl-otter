@@ -37,6 +37,26 @@ sub new {
     return $new;
 }
 
+# Construct from HOST, PORT, USER, PASS fields; ignore DBSPEC.
+# Used from t/obtain-db.t and to be removed later.
+sub new__old {
+    my ($pkg, $file) = @_;
+    my $dataset_hash = _dataset_hash($file);
+    my $dataset = {
+        map {
+            croak "Dataset $_: legacy HOST field finally removed, don't need this now?"
+              unless $dataset_hash->{$_}->{HOST};
+            $_ => Bio::Otter::SpeciesDat::DataSet->new($_, $dataset_hash->{$_});
+        } keys %{$dataset_hash} };
+    my $datasets = [ values %{$dataset} ];
+    my $new = {
+        _dataset  => $dataset,
+        _datasets => $datasets,
+    };
+    bless $new, $pkg;
+    return $new;
+}
+
 sub _spec2list {
     my ($pkg, $ds_name, $dbspec, $prefix) = @_;
     die "no dbspec - old species.dat ?" unless $dbspec;
