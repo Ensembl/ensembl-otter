@@ -76,6 +76,7 @@ sub priv_tt {
     my $BOSC = 'Bio::Otter::Server::Config';
     plan tests => 4;
 
+    ## no critic (ValuesAndExpressions::ProhibitLeadingZeros) here be octal perms
     # Emulate Apache data/otter/ being public
     set_env(ANACODE_SERVER_CONFIG => "$dir/main");
     __chmod(0755, "$dir/main");

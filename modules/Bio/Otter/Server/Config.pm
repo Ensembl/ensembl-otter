@@ -247,6 +247,7 @@ sub __git_head {
 # not be world readable.
 sub _assert_private {
     my ($pkg, $dir) = @_;
+    ## no critic (ValuesAndExpressions::ProhibitLeadingZeros) here be octal perms
     my $dmode = (stat($dir))[2] & 07777;
     my $want = $dmode & 07770;
     die sprintf("Insufficient privacy (found mode 0%03o, want 0%03o) on %s",
