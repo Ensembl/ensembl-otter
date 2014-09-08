@@ -8,23 +8,43 @@ package Bio::Otter::SpeciesDat;
 use strict;
 use warnings;
 
+use Try::Tiny;
+use Carp;
 use Bio::Otter::SpeciesDat::DataSet;
 
-# consider using Bio::Otter::Server::Config->SpeciesDat instead
+# Consider using Bio::Otter::Server::Config->SpeciesDat or
+# $server->allowed_datasets instead.
 sub new {
     my ($pkg, $file) = @_;
     my $dataset_hash = _dataset_hash($file);
-    my $dataset = {
-        map {
-            $_ => Bio::Otter::SpeciesDat::DataSet->new($_, $dataset_hash->{$_});
-        } keys %{$dataset_hash} };
-    my $datasets = [ values %{$dataset} ];
+    my %dataset;
+    while (my ($name, $info) = each %$dataset_hash) {
+        try {
+            my %param =
+              (%$info,
+               $pkg->_spec2list($name, $info->{DBSPEC}, ''),
+               $pkg->_spec2list($name, $info->{DNA_DBSPEC}, 'DNA_'));
+            $dataset{$name} = Bio::Otter::SpeciesDat::DataSet->new($name, \%param);
+        } catch {
+            croak "Dataset $name from $file: $_";
+        };
+    }
     my $new = {
-        _dataset  => $dataset,
-        _datasets => $datasets,
+        _dataset  => \%dataset,
+        _datasets => [ values %dataset ],
     };
     bless $new, $pkg;
     return $new;
+}
+
+sub _spec2list {
+    my ($pkg, $ds_name, $dbspec, $prefix) = @_;
+    die "no dbspec - old species.dat ?" unless $dbspec;
+    my $db = Bio::Otter::Server::Config->Database($dbspec);
+    return ("${prefix}HOST" => $db->host,
+            "${prefix}PORT" => $db->port,
+            "${prefix}USER" => $db->user,
+            $db->pass_maybe("${prefix}PASS"));
 }
 
 sub dataset {

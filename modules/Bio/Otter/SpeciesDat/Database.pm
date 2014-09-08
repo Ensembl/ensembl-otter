@@ -122,7 +122,7 @@ sub _init_accessors {
     return;
 }
 
-sub _pass_maybe {
+sub pass_maybe {
     my ($self, $key) = @_;
     my $p = $self->pass;
     return defined $p ? ($key => $p) : ();
@@ -153,24 +153,6 @@ sub spec_DBI {
     return ($dsn, $self->user, $self->pass, \%attr);
 }
 
-
-=head2 spec_DataSet($name => $dbname)
-
-Return a L<Bio::Otter::SpeciesDat::DataSet> object derived from this
-server and the schema C<$dbname>.
-
-=cut
-
-sub spec_DataSet {
-    my ($self, $name, $dbname) = @_;
-    return Bio::Otter::SpeciesDat::DataSet->new
-      ($name,
-       HOST => $self->host,
-       PORT => $self->port,
-       USER => $self->user,
-       $self->_pass_maybe('PASS'),
-       DBNAME => $dbname);
-}
 
 __PACKAGE__->_init_accessors;
 

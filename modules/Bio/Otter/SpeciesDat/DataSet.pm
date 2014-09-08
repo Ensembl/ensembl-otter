@@ -9,6 +9,7 @@ use Try::Tiny;
 
 use Bio::Otter::Utils::RequireModule qw(require_module);
 
+# Construct via Bio::Otter::SpeciesDat
 sub new {
     my ($pkg, $name, $params) = @_;
     my $new = {
