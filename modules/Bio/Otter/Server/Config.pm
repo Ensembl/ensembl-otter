@@ -141,6 +141,12 @@ sub mid_url_args {
 # member of our primary group.
 sub _dev_config {
     my ($pkg) = @_;
+
+    if (my $test_devdir = $ENV{ANACODE_SERVER_DEVCONFIG}) {
+        # override for test suite
+        return $test_devdir;
+    }
+
     my $developer = $pkg->mid_url_args->{'~'};
     return () unless defined $developer;
 
@@ -188,6 +194,9 @@ sub data_filename {
     # Possible override for testing config
     my $dev_cfg = $pkg->_dev_config;
 
+    $pkg->_assert_private($data_dir);
+    $pkg->_assert_private($dev_cfg) if defined $dev_cfg;
+
     if (!defined $dev_cfg) {
         @out = ("$data_dir/$fn", 'default');
     } elsif (-f "$dev_cfg/species.dat" && -f "$dev_cfg/$vsn/otter_config") {
@@ -234,6 +243,18 @@ sub __git_head {
     return ($vsn, $branch);
 }
 
+# Directories containing databases.yaml or .git/ with its history must
+# not be world readable.
+sub _assert_private {
+    my ($pkg, $dir) = @_;
+    my $dmode = (stat($dir))[2] & 07777;
+    my $want = $dmode & 07770;
+    die sprintf("Insufficient privacy (found mode 0%03o, want 0%03o) on %s",
+                $dmode, $want, $dir)
+      if $dmode & 0x7;
+    return 1;
+}
+
 
 =head2 Databases()
 
@@ -259,7 +280,7 @@ sub Databases {
         my $fn = $pkg->data_filename('/databases.yaml');
         YAML::Any::LoadFile($fn);
     } catch {
-        die "Database passwords not found: $_";
+        die "Database passwords not available: $_";
     };
     my $dbs = $h->{dbspec};
     die "No dbspec in databases.yaml" unless $dbs;
