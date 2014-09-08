@@ -58,7 +58,7 @@ sub noDBI_tt {
 }
 
 sub small_tt {
-    plan tests => 9;
+    plan tests => 10;
 
     my $dbs = try_load(<<'INPUT');
 ---
@@ -105,6 +105,26 @@ INPUT
               ['DBI:mysql:host=tree;port=1234', 'bob', 'sekret',
                { RaiseError => 1, AutoCommit => 1, PrintError => 0 }],
               'fruit->spec_DBI');
+
+    my $checkp = try_load(<<'INPUT');
+---
+dbspec:
+  withpass:
+    host: foo
+    port: 1234
+    user: bob
+    pass: sekret
+  nopass:
+    host: foo
+    port: 1234
+    user: dod
+INPUT
+
+    my $checkp_pass =
+      { map { $_ => [ $checkp->{$_}->pass_maybe('PaSS') ] } qw( withpass nopass ) };
+    is_deeply($checkp_pass,
+              { withpass => [ PaSS => 'sekret' ], nopass => [] },
+              'pass_maybe');
 
     return;
 }
