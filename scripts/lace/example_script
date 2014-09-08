@@ -20,16 +20,13 @@ use Bio::Otter::Server::Config;
         'dataset=s'     => \$dataset_name,
         ) or $usage->();
     $usage->() unless $dataset_name;
-    
-    # Client communicates with otter HTTP server
-    my $cl = Bio::Otter::Lace::Defaults::make_Client();
-    
+
     # DataSet interacts directly with an otter database
     my $ds = Bio::Otter::Server::Config->SpeciesDat->dataset($dataset_name);
 
     my $otter_dba = $ds->otter_dba;
     my $pipe_dba = $ds->pipeline_dba;
-    
+
     my $sth = $otter_dba->dbc->prepare('SELECT (1)');
 }
 
