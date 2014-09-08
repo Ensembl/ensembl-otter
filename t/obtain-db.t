@@ -107,7 +107,7 @@ Ana Code B<email> anacode@sanger.ac.uk
 
 
 sub main {
-    plan tests => 7;
+    plan tests => 8;
 
     my @warn;
     local $SIG{__WARN__} = sub {
@@ -142,6 +142,8 @@ sub main {
                   [ 'loutre_(human_dev) via Server', 'human', 'ensembl:loutre' ],
                   [ 'pipe_(human_dev) via Server', 'human', 'ensembl:pipe' ]);
     };
+
+    subtest "DBSPEC vs HOST" => __PACKAGE__->can('equivs_tt'); # transient
 
   TODO: {
         local $TODO = "Not tested";
@@ -354,5 +356,44 @@ sub guess_schema {
     return join ':', sort @type;
 }
 
+
+# See that the HOST,PORT,USER,PASS fields of species.dat
+# are equivalent to the DBSPEC fields used with databases.yaml
+#
+# This tests both code and config.  It won't fix config problems
+# (i.e. doesn't regenerate old species.dat fields)
+sub equivs_tt { # transient
+    my $fn = Bio::Otter::Server::Config->data_filename('species.dat');
+    my $new = Bio::Otter::SpeciesDat->new($fn);
+    plan tests => 1 + @{ $new->datasets };
+
+    my $old = Bio::Otter::SpeciesDat->new__old($fn);
+    # When this method is gone or fails for want of legacy fields, we
+    # just don't need the test
+
+#    # Paper over some CNAME vs. canonical hostname differences
+#    my %munge = qw( lutra7 otterpipe2 lutra5 otterpipe1 );
+#    foreach my $db (@{ $old->datasets }) {
+#        foreach my $k (qw( HOST DNA_HOST )) {
+#            my $p = $db->params;
+#            my $replace = $munge{ $p->{$k} };
+#            next unless defined $replace;
+#            diag sprintf "In %s (old), replace %s = %s with %s\n",
+#              $db->name, $k, $p->{$k}, $replace;
+#            $p->{$k} = $replace;
+#        }
+#    }
+#
+### Not required, it was a data bug.  Left in case it becomes...  a feature.
+
+    foreach my $ds_name (sort map { $_->name } @{ $new->datasets }) {
+        is_deeply($old->dataset($ds_name),
+                  $new->dataset($ds_name),
+                  "Dataset $ds_name");
+    }
+    is_deeply($old, $new, 'trees equiv') or
+      note explain { old => $old, new => $new };
+    return;
+}
 
 main();
