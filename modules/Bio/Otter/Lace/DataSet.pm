@@ -628,8 +628,9 @@ sub get_cached_DBAdaptor {
     my ($self) = @_;
 
     unless($self->{'_dba_cache'}){
-        $self->{'_dba_cache'} = $self->make_Vega_DBAdaptor;
-        $self->_attach_DNA_DBAdaptor($self->{'_dba_cache'});
+        my $tmp = $self->make_Vega_DBAdaptor;
+        $self->_attach_DNA_DBAdaptor($tmp) if $self->DNA_DBNAME;
+        $self->{'_dba_cache'} = $tmp;
     }
     #warn "OTTER DBADAPTOR = '$dba'";
     return $self->{'_dba_cache'};
@@ -677,7 +678,7 @@ sub _make_DBAdaptor_with_class {
             push(@args, "-$prop", $val);
         }
     }
-    warn "About to $class->new without a username - server didn't give me config?"
+    warn "About to $class->new(@args) without -USER.  No databases.yaml ?"
       unless grep { $_ eq '-USER' } @args;
 
     return $class->new(@args);
@@ -685,7 +686,7 @@ sub _make_DBAdaptor_with_class {
 sub _attach_DNA_DBAdaptor{
     my ($self, $dba) = @_;
 
-    return unless $dba;
+    die "Nothing to attach to?" unless $dba;
 
     my (@ott_args, @dna_args);
     foreach my $this ($self->list_all_db_properties) {
@@ -698,18 +699,20 @@ sub _attach_DNA_DBAdaptor{
     }
 
     if(("@dna_args" eq "@ott_args") && @dna_args){
-        #warn "They are the same the DBAdaptor will just return itself\n";
+        die "They are the same the DBAdaptor will just return itself\n";
     }elsif(@dna_args){
         #warn "dna_args: @dna_args\n";
-        my $dnadb = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
-            @dna_args,
-            # Extra arguments to stop Bio::EnsEMBL::Registry issuing warnings
-            -GROUP      => 'dnadb',
-            -SPECIES    => $self->name,
-            );
+        my $class = 'Bio::EnsEMBL::DBSQL::DBAdaptor';
+        warn "About to $class->new(@dna_args) without -USER, for dnadb"
+          unless grep { $_ eq '-USER' } @dna_args;
+        my $dnadb = $class->new
+          (@dna_args,
+           # Extra arguments to stop Bio::EnsEMBL::Registry issuing warnings
+           -GROUP      => 'dnadb',
+           -SPECIES    => $self->name);
         $dba->dnadb($dnadb);
     }else{
-        warn "No DNA_* options found. *** CHECK species.dat ***\n";
+        die "No DNA_* options found. *** CHECK species.dat ***\n";
     }
 
     return;
