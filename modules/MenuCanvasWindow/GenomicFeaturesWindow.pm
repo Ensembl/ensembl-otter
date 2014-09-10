@@ -23,7 +23,7 @@ my %strand_name = (
 
 my $def_score = 0.5;
 
-# --------------- order-encoded-strand manupulation subroutines ------------
+# --------------- order-encoded-strand manipulation subroutines ------------
 
 sub order_coords_by_strand {
     my ($coord1, $coord2, $strand) = @_;
