@@ -69,7 +69,7 @@ sub add_value {
     push(@{$self->{'_values'}}, $value);
 }
 
-sub values {
+sub mvalues {
     my( $self, @values ) = @_;
     
     if (@values) {
@@ -107,7 +107,7 @@ sub png {
     }
     
     # Get the data to be plotted on the image
-    my @values = $self->values;
+    my @values = $self->mvalues;
     my $value_count = @values;
     confess "Number of values '$value_count' doesn't match image length '$x'"
         unless $x == $value_count;
