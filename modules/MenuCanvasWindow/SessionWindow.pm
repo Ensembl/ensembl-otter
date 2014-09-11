@@ -120,7 +120,6 @@ sub initialise {
     }
 
     $self->Assembly;
-    $self->fetch_external_SubSeqs;
     $self->populate_clone_menu;
     # Drawing the sequence list can take a long time the first time it is
     # called (QC checks not yet cached), so do it before zmap is launched.
@@ -1277,7 +1276,8 @@ sub resync_with_db {
 
     # Refetch transcripts
     $self->Assembly;
-    $self->fetch_external_SubSeqs;
+    my @visible_columns = $self->AceDatabase->ColumnCollection->list_Columns_with_status('Visible');
+    $self->process_and_update_columns(@visible_columns);
 
     return;
 }
@@ -1554,30 +1554,22 @@ sub add_external_SubSeqs {
     return;
 }
 
-sub fetch_external_SubSeqs {
-    my ($self) = @_;
+# Does hits and transcripts for now - will separate later
+#
+sub process_and_update_columns {
+    my ($self, @columns) = @_;
 
-    my $AceDatabase = $self->AceDatabase;
+    my $alignment_result  = $self->AceDatabase->process_alignment_Columns(@columns);
+    my $transcript_result = $self->AceDatabase->process_transcript_Columns(@columns);
 
-    my $process_result =
-        $AceDatabase->process_Columns(
-            grep { $_->status eq 'Visible' }
-            $AceDatabase->ColumnCollection->list_Columns
-        );
+    my ($transcripts, $failed) = @{$transcript_result}{qw( -results -failed )};
 
-    $self->update_from_process_result($process_result);
-    return;
-}
-
-sub update_from_process_result {
-    my ($self, $process_result) = @_;
-    my ($transcripts, $failed) =
-        @{$process_result}{qw( -transcripts -failed )};
-    if (@$transcripts) {
+    if ($transcripts and @$transcripts) {
         $self->add_external_SubSeqs(@{$transcripts});
-        $self->draw_subseq_list;        
+        $self->draw_subseq_list;
     }
-    if (@{$failed}) {
+
+    if ($failed and @$failed) {
         my $message = sprintf
             'Failed to load any transcripts or alignment features from column(s): %s'
             , join ', ', sort map { $_->name } @{$failed};
@@ -2400,7 +2392,7 @@ sub run_dotter {
 }
 
 sub run_exonerate {
-    my ($self) = @_;
+    my ($self, %options) = @_;
 
     my $ew = EditWindow::Exonerate->in_Toplevel
       (-title => 'On The Fly (OTF) Alignment',
@@ -2409,6 +2401,9 @@ sub run_exonerate {
          init => { SessionWindow => $self },
          from => $self->top_window });
 
+    if ($options{clear_accessions}) {
+        $ew->clear_accessions;
+    }
     $ew->update_from_SessionWindow;
 
     return 1;
@@ -2553,21 +2548,12 @@ sub zmap_configs_dir {
 
 ### BEGIN: ZMap control interface
 
-sub zircon_context {
+sub new_zircon_context {
     my ($self) = @_;
-    my $zircon_context =
-        $self->{'_zircon_context'} ||=
-        Zircon::TkZMQ::Context->new(
+    return Zircon::TkZMQ::Context->new(
             '-widget'       => $self->menu_bar,
             '-trace_prefix' => sprintf('SW=[%s]', $self->AceDatabase->name),
         );
-    return $zircon_context;
-}
-
-sub _delete_zircon_context {
-    my ($self) = @_;
-    delete $self->{'_zircon_context'};
-    return;
 }
 
 sub zmap_new {
@@ -2594,7 +2580,7 @@ sub zmap_new {
     my $zmap =
         Zircon::ZMap->new(
             '-app_id'     => $self->zircon_app_id,
-            '-context'    => $self->zircon_context,
+            '-context'    => $self->new_zircon_context,
             '-arg_list'   => $arg_list,
             '-timeout_list'           => \@to_list,
             '-handshake_timeout_secs' => $handshake_to,
@@ -2630,7 +2616,7 @@ sub _zmap_relaunch {
     # which removes the last reference to the ZMap object, causing it
     # to be destroyed, which sends a shutdown to the ZMap process.
 
-    $self->_delete_zircon_context;
+    $self->_delete_zmap_view;
     $self->_zmap_view_new($self->zmap_select);
     $self->ColumnChooser->load_filters(is_recover => 1);
     return;
@@ -2641,7 +2627,6 @@ sub _zmap_relaunch {
 sub delete_zmap_view {
     my ($self) = @_;
     $self->_delete_zmap_view;
-    $self->_delete_zircon_context;
     return;
 }
 
@@ -2656,7 +2641,6 @@ sub zircon_zmap_view_features_loaded {
 
     my $cllctn = $self->AceDatabase->ColumnCollection;
     my $col_aptr = $self->AceDatabase->DB->ColumnAdaptor;
-    my $state_changed = 0;
 
     $self->logger->debug("zzvfl: status '$status', message '$message', feature_count '$feature_count'");
 
@@ -2671,18 +2655,16 @@ sub zircon_zmap_view_features_loaded {
                 sprintf "zzvfl: column '%s', status, '%s',", $column->name, $column->status);
 
             my $column_status =
-                (! $status)    ? 'Error'   :
-                $feature_count ? 'Visible' :
-                1              ? 'Empty'   :
+                (! $status)    ? 'Error'      :
+                $feature_count ? 'Processing' :
+                1              ? 'Empty'      :
                 $self->logger->logdie('this code should be unreachable');
 
-            if ($column->status ne $column_status) {
-                $state_changed = 1;
-                $column->status($column_status);
-                push @columns_to_process, $column
-                    if $status && $feature_count;
+            if ($column_status eq 'Processing') {
+                push @columns_to_process, $column;
             }
 
+            $column->status($column_status);
             $column->status_detail($message);
             $col_aptr->store_Column_state($column);
 
@@ -2694,14 +2676,20 @@ sub zircon_zmap_view_features_loaded {
         # }
     }
 
-    my $process_result =
-        $self->AceDatabase->process_Columns(@columns_to_process);
-    $self->update_from_process_result($process_result);
-
-    $self->exonerate_done_callback(@otf_loaded) if @otf_loaded;
-
     # This will get called by Tk event loop when idle
-    $self->top_window->afterIdle(sub{ return $self->RequestQueuer->features_loaded_callback(@featuresets); });
+    $self->top_window->afterIdle(
+        sub{
+            $self->exonerate_done_callback(@otf_loaded) if @otf_loaded;
+
+            $self->process_and_update_columns(@columns_to_process);
+
+            # These were all set to 'Processing' above
+            foreach my $column (@columns_to_process) {
+                $column->status('Visible');
+                $col_aptr->store_Column_state($column);
+            }
+            return $self->RequestQueuer->features_loaded_callback(@featuresets);
+        });
 
     return;
 }

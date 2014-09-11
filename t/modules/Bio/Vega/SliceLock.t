@@ -247,7 +247,7 @@ sub exercise_tt {
     my $slice = $stored->slice;
     cmp_ok($slice->start, '<', $slice->end, 'slice is forwards');
     my $weird = Bio::EnsEMBL::Slice->new_fast
-      ({ %$slice, strand => 0, start => 1000, end => 999 });
+      (+{ %$slice, strand => 0, start => 1000, end => 999 });
     cmp_ok($weird->start, '>', $weird->end, 'weird slice is backwards');
 
     # Instantiation failures expected
@@ -1203,10 +1203,10 @@ sub two_conn_tt {
 
         my $err7 = $p7_lock0[-1][2][1];
         my $err8 = $p8_lock1[-1][2][1];
-        like($err7, $RE_LOCKWAIT, 'pair7:   second INSERT - lock time out') &&
-        like($err8, $RE_LOCKWAIT, 'pair8:   UPDATE second - lock time out')
+        ( like($err7, $RE_LOCKWAIT, 'pair7:   second INSERT - lock time out') &&
+          like($err8, $RE_LOCKWAIT, 'pair8:   UPDATE second - lock time out')
           #  && 0 # wow it really does!
-          or diag explain({ adap => \@SLdba, no_lock => \@p6,
+        ) or diag explain({ adap => \@SLdba, no_lock => \@p6,
                             with_lock0 => \@p7_lock0,
                             with_lock1 => \@p8_lock1 });
     }
@@ -1549,7 +1549,7 @@ sub broker_tt {
     my $dba_alt = $ds_alt->get_cached_DBAdaptor;
     isnt($ds->name, $ds_alt->name, 'have two datasets');
 
-    like(Bio::Vega::SliceLockBroker::__dbc_str($SLdba->dbc),
+    like(Bio::Vega::SliceLockBroker::__dbc_str($SLdba->dbc), ## no critic (Subroutines::ProtectPrivateSubs)
          qr{-PASS='redact'}, 'password redaction');
 
     subtest adaptor_types => sub {

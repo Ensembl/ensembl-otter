@@ -24,7 +24,7 @@ use Bio::Otter::Server::Config;
 
 
 sub main {
-    plan tests => 3;
+    plan tests => 4;
 
     my $tmp = tempdir('BOSConfig.t.XXXXXX', TMPDIR => 1, CLEANUP => 1);
     my $vsn = Bio::Otter::Version->version;
@@ -32,9 +32,11 @@ sub main {
                       "access.yaml", "species.dat") {
         mkfile("$tmp/asc_tt/$file");
         mkfile("$tmp/web_tt/data/otter/$file");
+        mkfile("$tmp/priv_tt/main/$file");
+        mkfile("$tmp/priv_tt/dev/$file");
     }
 
-    foreach my $test (qw( asc_tt web_tt )) {
+    foreach my $test (qw( asc_tt web_tt priv_tt )) {
         subtest $test => sub {
             return __PACKAGE__->$test("$tmp/$test");
         }
@@ -61,13 +63,55 @@ sub mkfile {
 # Set specified vars, clear other relevant ones
 sub set_env { ## no critic (Foo)
     my (%kv) = @_;
-    delete @ENV{qw{ ANACODE_SERVER_CONFIG DOCUMENT_ROOT REQUEST_URI SCRIPT_NAME }};
+    delete @ENV{qw{ ANACODE_SERVER_CONFIG ANACODE_SERVER_DEVCONFIG DOCUMENT_ROOT REQUEST_URI SCRIPT_NAME }};
     while (my ($k, $v) = each %kv) {
         $ENV{$k} = $v;
     }
     return;
 }
 
+
+sub priv_tt {
+    my ($pkg, $dir) = @_;
+    my $BOSC = 'Bio::Otter::Server::Config';
+    plan tests => 4;
+
+    ## no critic (ValuesAndExpressions::ProhibitLeadingZeros) here be octal perms
+    # Emulate Apache data/otter/ being public
+    set_env(ANACODE_SERVER_CONFIG => "$dir/main");
+    __chmod(0755, "$dir/main");
+    like(try_err { $BOSC->data_filename('databases.yaml') },
+         qr{^ERR:.*Insufficient privacy \(found mode 0755, want 0750\) on .*priv_tt/main },
+         'reject public data_dir');
+    __chmod(0750, "$dir/main");
+
+    # Emulate ~/.otter/server-config/ being public
+    set_env(ANACODE_SERVER_CONFIG => "$dir/main",
+            ANACODE_SERVER_DEVCONFIG => "$dir/dev");
+    __chmod(0705, "$dir/dev");
+    like(try_err { $BOSC->data_filename('databases.yaml') },
+         qr{^ERR:.*Insufficient privacy \(found mode 0705, want 0700\) on .*priv_tt/dev },
+         'reject public _dev_config');
+
+    # Access OK to test config
+    __chmod(0750, "$dir/dev");
+    like(try_err { $BOSC->data_filename('databases.yaml') },
+         qr{^/.*/priv_tt/dev/databases\.yaml$}, 'test dirs mended');
+
+    # Access OK to (untouched) live config
+    set_env();
+    like(try_err { $BOSC->data_filename('databases.yaml') },
+         qr{^/.*yaml$}, 'live dir mended');
+
+    return;
+}
+
+sub __chmod {
+    my ($perm, $fn) = @_;
+    chmod $perm, $fn
+      or die sprintf("chmod 0%o %s: %s", $perm, $fn, $!);
+    return;
+}
 
 sub asc_tt {
     my ($pkg, $dir) = @_;

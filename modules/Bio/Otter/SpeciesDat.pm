@@ -8,14 +8,40 @@ package Bio::Otter::SpeciesDat;
 use strict;
 use warnings;
 
+use Try::Tiny;
+use Carp;
 use Bio::Otter::SpeciesDat::DataSet;
 
-# consider using Bio::Otter::Server::Config->SpeciesDat instead
+# Consider using Bio::Otter::Server::Config->SpeciesDat or
+# $server->allowed_datasets instead.
 sub new {
+    my ($pkg, $file) = @_;
+    my $dataset_hash = _dataset_hash($file);
+    my %dataset;
+    while (my ($name, $info) = each %$dataset_hash) {
+        try {
+            $dataset{$name} = Bio::Otter::SpeciesDat::DataSet->new($name, $info);
+        } catch {
+            croak "Dataset $name from $file: $_";
+        };
+    }
+    my $new = {
+        _dataset  => \%dataset,
+        _datasets => [ values %dataset ],
+    };
+    bless $new, $pkg;
+    return $new;
+}
+
+# Construct from HOST, PORT, USER, PASS fields; ignore DBSPEC.
+# Used from t/obtain-db.t and to be removed later.
+sub new__old {
     my ($pkg, $file) = @_;
     my $dataset_hash = _dataset_hash($file);
     my $dataset = {
         map {
+            croak "Dataset $_: legacy HOST field finally removed, don't need this now?"
+              unless $dataset_hash->{$_}->{HOST};
             $_ => Bio::Otter::SpeciesDat::DataSet->new($_, $dataset_hash->{$_});
         } keys %{$dataset_hash} };
     my $datasets = [ values %{$dataset} ];
