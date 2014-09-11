@@ -9,6 +9,7 @@ use strict;
 use warnings;
 
 use Bio::Otter::Lace::Defaults;
+use Bio::Otter::Server::Config;
 
 {
     my $dataset_name    = undef;
@@ -24,13 +25,10 @@ use Bio::Otter::Lace::Defaults;
         $usage->();
     }
     
-    # Client communicates with otter HTTP server
-    my $cl = Bio::Otter::Lace::Defaults::make_Client();
-    
     # DataSet interacts directly with an otter database
-    my $ds = $cl->get_DataSet_by_name($dataset_name);
+    my $ds = Bio::Otter::Server::Config->SpeciesDat->dataset($dataset_name);
     
-    my $otter_dba = $ds->get_cached_DBAdaptor;
+    my $otter_dba = $ds->otter_dba;
     my $dbc = $otter_dba->dbc;
     
     my $gene_sth = $dbc->prepare(q{
@@ -77,7 +75,7 @@ use Bio::Otter::Lace::Defaults;
 
         $update_gene->execute($gene_id);
         $update_gene_name->execute($new_gene_name, $gene_id);
-        $add_gene_hidden_remark->execute($gene_id, "Gene originally annotated by $prefix");
+        $add_gene_hidden_remark->execute($gene_id, "$prefix gene");
 
         $tsct_sth->execute($gene_id);
         while (my ($tsct_id, $tsct_name) = $tsct_sth->fetchrow) {
