@@ -1049,22 +1049,8 @@ sub get_all_DataSets {
     my $ds = $self->{'_datasets'};
     if (! $ds) {
 
-        my $datasets_xml =
-            $self->http_response_content(
-                'GET', 'get_datasets', {});
-
-        local $XML::Simple::PREFERRED_PARSER = 'XML::Parser';
-        # configure expat for speed, also used in Bio::Vega::Transform
-
-        my $datasets_hash =
-            XMLin($datasets_xml,
-                  ForceArray => [ qw(
-                      dataset
-                      ) ],
-                  KeyAttr => {
-                      dataset => 'name',
-                  },
-            )->{datasets}{dataset};
+        my $datasets_hash = $self->otter_response_content
+          ('GET', 'get_datasets', {});
 
         my @datasets = map {
             $self->_make_DataSet($_, $datasets_hash->{$_});
@@ -1084,7 +1070,13 @@ sub _make_DataSet {
     $dataset->name($name);
     while (my ($key, $value) = each %{$params}) {
         my $method = uc $key;
-        $dataset->$method($value) if $dataset->can($method);
+        if ($method =~ /(host|port|user|pass|restricted|headcode)$/i) {
+            warn "Got an old species.dat?  Ignored key $method";
+        } elsif ($method =~ /^((dna_)?(dbname|dbspec)|alias)$/i) {
+            $dataset->$method($value);
+        } else {
+            die "Bad method $method";
+        }
     }
     $dataset->Client($self);
 
@@ -1317,6 +1309,7 @@ sub _make_SequenceSet {
             }
         }
         elsif ($sequenceset->can($key)) {
+            die "Bad key $key" unless $key =~ /^[_A-Za-z]{1,16}$/;
             $sequenceset->$key($value);
         }
     }
@@ -1378,6 +1371,7 @@ sub _make_CloneSequence {
             $clonesequence->chromosome($value->{name});
         }
         elsif ($clonesequence->can($key)) {
+            die "Bad key $key" unless $key =~ /^[_A-Za-z]{1,16}$/;
             $clonesequence->$key($value);
         }
     }

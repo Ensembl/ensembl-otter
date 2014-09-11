@@ -59,9 +59,6 @@ sub do_it {
         open my $gff_file, '<', $cache_file or die "Failed to open cache file: $!\n";
         $self->_spool_gff($gff_file);
         close $gff_file or die "Failed to close cache file: $!\n";
-        # update the SQLite db - to ensure gff processing if appropriate
-        $self->SUPER::do_requires;
-        $self->update_local_db($gff_source, $cache_file, 1);
         return;
     }
 

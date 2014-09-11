@@ -95,7 +95,7 @@ sub initialise {
                     -expand => 1,
                 );
 
-            my $launch = sub { $self->SessionWindow->run_exonerate; };
+            my $launch = sub { $self->SessionWindow->run_exonerate( clear_accessions => 1 ); };
             $top->bind('<Control-g>', $launch);
             $top->bind('<Control-G>', $launch);
             my $launch_button = $otf_gen_frame->Button(

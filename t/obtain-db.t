@@ -46,8 +46,13 @@ Ensure all configured databases are available.  Incomplete.
 
 =item *
 
+Ensure DNA sequence can be fetched, to exercise the cases using
+C<DNA_DBNAME>.
+
+=item *
+
 For read-write databases, check the transaction isolation mode.
-Later!
+The SliceLock tests do this, for selected datasets.
 
 =item *
 
@@ -102,7 +107,7 @@ Ana Code B<email> anacode@sanger.ac.uk
 
 
 sub main {
-    plan tests => 30;
+    plan tests => 8;
 
     my @warn;
     local $SIG{__WARN__} = sub {
@@ -110,23 +115,35 @@ sub main {
 #        warn "@_";
     };
 
-    # 3
-    cmdline_tt({qw{ host otterlive database loutre_human }},
-               [ 'loutre_human by netrc args', 'human', 'ensembl:loutre' ]);
+    subtest "cmdline, loutre" => sub {
+        cmdline_tt({qw{ host otterlive database loutre_human }},
+                   [ 'loutre_human by netrc args', 'human', 'ensembl:loutre' ]);
+    };
 
-    # 3
-    cmdline_tt({qw{ host otterpipe1 database pipe_human }},
-               [ 'pipe_human by netrc args', 'human', 'ensembl:pipe' ]);
+    subtest "cmdline, pipe" => sub {
+        cmdline_tt({qw{ host otterpipe1 database pipe_human }},
+                   [ 'pipe_human by netrc args', 'human', 'ensembl:pipe' ]);
+    };
 
-    # 10
-    server_tt('human',
-              [ 'loutre_human as server', 'human', 'ensembl:loutre' ],
-              [ 'pipe_human as server', 'human', 'ensembl:pipe' ]);
+    subtest "server, human" => sub {
+        server_tt('human',
+                  [ 'loutre_human as server', 'human', 'ensembl:loutre' ],
+                  [ 'pipe_human as server', 'human', 'ensembl:pipe' ]);
+    };
 
-    # 12
-    client_tt('human',
-              [ 'loutre_human via Server', 'human', 'ensembl:loutre' ],
-              [ 'pipe_human via Server', 'human', 'ensembl:pipe' ]);
+    subtest "client, human" => sub {
+        client_tt('human',
+                  [ 'loutre_human via Server', 'human', 'ensembl:loutre' ],
+                  [ 'pipe_human via Server', 'human', 'ensembl:pipe' ]);
+    };
+
+    subtest "client, human_dev" => sub {
+        client_tt('human_dev',
+                  [ 'loutre_(human_dev) via Server', 'human', 'ensembl:loutre' ],
+                  [ 'pipe_(human_dev) via Server', 'human', 'ensembl:pipe' ]);
+    };
+
+    subtest "DBSPEC vs HOST" => __PACKAGE__->can('equivs_tt'); # transient
 
   TODO: {
         local $TODO = "Not tested";
@@ -144,6 +161,7 @@ sub main {
 
 sub cmdline_tt {
     my ($args, $check) = @_;
+    plan tests => 3;
 
     my $dbh = try { netrc_dbh(%$args) } catch { "perl_err=$_" };
     check_dbh($dbh, @$check);
@@ -154,6 +172,7 @@ sub cmdline_tt {
 
 sub server_tt {
     my ($dataset_name, $check_loutre, $check_pipe) = @_;
+    plan tests => 4;
 
     my $dataset = SpeciesDat()->dataset($dataset_name);
     check_dba($dataset->otter_dba, @$check_loutre);
@@ -176,6 +195,7 @@ sub server_tt {
 
 sub client_tt {
     my ($dataset_name, $check_loutre, $check_pipe) = @_;
+    plan tests => 3;
 
     my $cl = OtterClient();
     my $dataset = $cl->get_DataSet_by_name($dataset_name);
@@ -198,7 +218,12 @@ sub client_tt {
 
 
 sub check_dba {
+    my @arg = my ($dba, $what, $species_want, $schema_want) = @_;
+    return subtest "check_dba($what)" => sub { _check_dba(@arg) };
+}
+sub _check_dba {
     my ($dba, $what, $species_want, $schema_want) = @_;
+    plan tests => 6;
 
     my $dbh = $dba->dbc->db_handle;
     my $schema_got = guess_schema($dbh);
@@ -209,7 +234,23 @@ sub check_dba {
         'ensembl:pipe' => 'Bio::EnsEMBL::Pipeline::DBSQL::Finished::DBAdaptor',
       }->{$schema_want} || 'some subclass of DBAdaptor';
 
-    is(ref($dba), $class_want, "$what: class");
+  SKIP: {
+        skip("not an expected ensembl class" => 1) unless
+          is(ref($dba), $class_want, "$what: class");
+
+        # check we can get genomic sequence, i.e. DNADB works
+        my ($any_chr) =
+          grep { $_->length > 1E6 }
+            @{ $dba->get_SliceAdaptor->fetch_all('chromosome', 'Otter') };
+        isa_ok($any_chr, 'Bio::EnsEMBL::Slice', 'any_chr (with 1 Mbase)');
+        my $name = $any_chr->display_id;
+        my $mid = int($any_chr->centrepoint);
+        my $checkseq = $any_chr->sub_Slice($mid - 50_000, $mid + 50_000, 1)
+          or die "Can't get sub_Slice at mid=$mid of any_chr=$name";
+        my $checkname = $checkseq->display_id;
+        like($checkseq->seq, qr{[ACGT]{1000,}}, "$checkname has sequence");
+    }
+
 
     check_dbh($dbh, $what, $species_want, $schema_want);
     return ();
@@ -315,5 +356,44 @@ sub guess_schema {
     return join ':', sort @type;
 }
 
+
+# See that the HOST,PORT,USER,PASS fields of species.dat
+# are equivalent to the DBSPEC fields used with databases.yaml
+#
+# This tests both code and config.  It won't fix config problems
+# (i.e. doesn't regenerate old species.dat fields)
+sub equivs_tt { # transient
+    my $fn = Bio::Otter::Server::Config->data_filename('species.dat');
+    my $new = Bio::Otter::SpeciesDat->new($fn);
+    plan tests => 1 + @{ $new->datasets };
+
+    my $old = Bio::Otter::SpeciesDat->new__old($fn);
+    # When this method is gone or fails for want of legacy fields, we
+    # just don't need the test
+
+#    # Paper over some CNAME vs. canonical hostname differences
+#    my %munge = qw( lutra7 otterpipe2 lutra5 otterpipe1 );
+#    foreach my $db (@{ $old->datasets }) {
+#        foreach my $k (qw( HOST DNA_HOST )) {
+#            my $p = $db->params;
+#            my $replace = $munge{ $p->{$k} };
+#            next unless defined $replace;
+#            diag sprintf "In %s (old), replace %s = %s with %s\n",
+#              $db->name, $k, $p->{$k}, $replace;
+#            $p->{$k} = $replace;
+#        }
+#    }
+#
+### Not required, it was a data bug.  Left in case it becomes...  a feature.
+
+    foreach my $ds_name (sort map { $_->name } @{ $new->datasets }) {
+        is_deeply($old->dataset($ds_name),
+                  $new->dataset($ds_name),
+                  "Dataset $ds_name");
+    }
+    is_deeply($old, $new, 'trees equiv') or
+      note explain { old => $old, new => $new };
+    return;
+}
 
 main();

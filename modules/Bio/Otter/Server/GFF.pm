@@ -125,6 +125,9 @@ sub get_requested_features {
     my ($self) = @_;
 
     my @feature_kinds  = split(/,/, $self->require_argument('feature_kind'));
+    foreach (@feature_kinds) {
+        die "bad feature_kind $_" unless /^[_A-Za-z][_A-Za-z0-9]{1,63}$/;
+    }
     my $analysis_list = $self->param('analysis');
     my @analysis_names = $analysis_list ? split(/,/, $analysis_list) : ( undef );
     my $filter_module = $self->param('filter_module');

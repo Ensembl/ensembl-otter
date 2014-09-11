@@ -9,50 +9,46 @@ use Bio::Otter::Git qw{ :server_ensembl :match };
 
 use Bio::Otter::Server::Support::Web;
 
-# For added security we don't show mysql connection details to clients outside
-# the Sanger. We only need connection details to for scripts running at Sanger.
-my %secret_params = map { ( $_ => 1 ) } qw{
-    HOST
-    PORT
-    USER
-    PASS
-    DBNAME
+# Don't show any mysql connection details to clients Outside.
+my %secret_params = map { ( $_ => 1 ) }
+  qw{ DBNAME DBSPEC  DNA_DBSPEC DNA_DBNAME };
 
-    DNA_HOST
-    DNA_PORT
-    DNA_USER
-    DNA_PASS
-    DNA_DBNAME
-};
+# DBI params no longer go over HTTP anywhere.  Whitelist the rest.
+my %good_params = map { ( $_ => 1 ) }
+  qw{ ALIAS  DBNAME DBSPEC  DNA_DBSPEC DNA_DBNAME };
+  # HEADCODE, TYPE : obsolete
+  # RESTRICTED : not relevant to the client
 
 sub get_datasets {
     my ($server) = @_;
-
-    my $xml = '';
+    $server->content_type('application/json');
 
     # Only local users get to see mysql connection details
     my $show_details = $server->local_user;
 
-    $xml   .= qq{  <datasets>\n};
+    my %datasets;
     foreach my $dataset (@{$server->allowed_datasets}) {
         my $name   = $dataset->name;
         my $params = $dataset->params;
 
-        $xml .= qq{    <dataset name="$name">\n};
-
+        my %ds;
         foreach my $key (keys %$params) {
+            unless ($good_params{$key}) {
+                warn "Redacted key=$key - old species.dat?";
+                next;
+            }
             unless ($show_details) {
                 next if $secret_params{$key};
             }
             my $lckey = lc($key);   ### Why do we bother lower casing this?
-            $xml .= qq{      <$lckey>$params->{$key}</$lckey>\n};
+            # BOL:Client upcases it, to make property accessor names
+            $ds{$lckey} = $params->{$key};
         }
 
-        $xml .= qq{    </dataset>\n};
+        $datasets{$name} = \%ds;
     }
-    $xml .= qq{  </datasets>\n};
 
-    return $server->otter_wrap_response($xml);
+    return \%datasets;
 }
 
 Bio::Otter::Server::Support::Web->send_response(\&get_datasets);

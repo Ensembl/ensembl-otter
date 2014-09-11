@@ -2,6 +2,7 @@ package Bio::Otter::Server::Config;
 use strict;
 use warnings;
 
+use Carp;
 use Try::Tiny;
 use List::MoreUtils 'uniq';
 # require YAML::Any; # sometimes (below), but it is a little slow
@@ -141,6 +142,12 @@ sub mid_url_args {
 # member of our primary group.
 sub _dev_config {
     my ($pkg) = @_;
+
+    if (my $test_devdir = $ENV{ANACODE_SERVER_DEVCONFIG}) {
+        # override for test suite
+        return $test_devdir;
+    }
+
     my $developer = $pkg->mid_url_args->{'~'};
     return () unless defined $developer;
 
@@ -188,6 +195,9 @@ sub data_filename {
     # Possible override for testing config
     my $dev_cfg = $pkg->_dev_config;
 
+    $pkg->_assert_private($data_dir);
+    $pkg->_assert_private($dev_cfg) if defined $dev_cfg;
+
     if (!defined $dev_cfg) {
         @out = ("$data_dir/$fn", 'default');
     } elsif (-f "$dev_cfg/species.dat" && -f "$dev_cfg/$vsn/otter_config") {
@@ -234,23 +244,62 @@ sub __git_head {
     return ($vsn, $branch);
 }
 
+# Directories containing databases.yaml or .git/ with its history must
+# not be world readable.
+sub _assert_private {
+    my ($pkg, $dir) = @_;
+    ## no critic (ValuesAndExpressions::ProhibitLeadingZeros) here be octal perms
+    my $dmode = (stat($dir))[2] & 07777;
+    my $want = $dmode & 07770;
+    die sprintf("Insufficient privacy (found mode 0%03o, want 0%03o) on %s",
+                $dmode, $want, $dir)
+      if $dmode & 0x7;
+    return 1;
+}
 
-=head2 databases()
+
+=head2 Databases()
 
 Return a reference to the hash of C<database_key> to
 L<Bio::Otter::SpeciesDat::Database> objects from the Otter Server
 config directory (since v81).
 
+The collection is cached on the class.
+
+=head2 Database($name)
+
+Return the requested L<Bio::Otter::SpeciesDat::Database> object, or
+die.
+
 =cut
+
+my $_DBS;
+sub Databases {
+    my ($pkg) = @_;
+    return $_DBS if defined $_DBS;
+    my ($h) = try {
+        require YAML::Any;
+        my $fn = $pkg->data_filename('/databases.yaml');
+        YAML::Any::LoadFile($fn);
+    } catch {
+        die "Database passwords not available: $_";
+    };
+    my $dbs = $h->{dbspec};
+    die "No dbspec in databases.yaml" unless $dbs;
+    return $_DBS = Bio::Otter::SpeciesDat::Database->new_many_from_dbspec($dbs);
+}
+
+sub Database {
+    my ($pkg, $name) = @_;
+    my $db = $pkg->Databases->{$name}
+      or croak "dbspec{$name} does not exist in databases.yaml";
+    return $db;
+}
 
 sub databases {
     my ($pkg) = @_;
-    require YAML::Any;
-    my $fn = $pkg->data_filename('/databases.yaml');
-    my ($h) = YAML::Any::LoadFile($fn);
-    my $dbs = $h->{dbspec};
-    die "No dbspec in $fn" unless $dbs;
-    return Bio::Otter::SpeciesDat::Database->new_many_from_dbspec($dbs);
+    warn "deprecated - renamed to match similar"; # one use from webvm.git
+    return $pkg->Databases;
 }
 
 
