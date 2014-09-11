@@ -245,9 +245,11 @@ config directory (since v81).
 
 sub databases {
     my ($pkg) = @_;
-    my $h = $pkg->_get_yaml('/databases.yaml');
+    require YAML::Any;
+    my $fn = $pkg->data_filename('/databases.yaml');
+    my ($h) = YAML::Any::LoadFile($fn);
     my $dbs = $h->{dbspec};
-    die "No dbspec in databases.yaml" unless $dbs;
+    die "No dbspec in $fn" unless $dbs;
     return Bio::Otter::SpeciesDat::Database->new_many_from_dbspec($dbs);
 }
 
