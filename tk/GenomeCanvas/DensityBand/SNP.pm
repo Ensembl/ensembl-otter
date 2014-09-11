@@ -71,7 +71,7 @@ sub draw_snps {
     $map->range(0, 35);
     my $color = $band->band_color;
     $map->color($color);
-    $map->values(@snp_count);
+    $map->mvalues(@snp_count);
 
     # Add the png to the image
     my $canvas = $band->canvas;
