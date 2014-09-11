@@ -7,6 +7,7 @@ use Carp;
 
 use Try::Tiny;
 
+use Bio::Otter::Server::Config;
 use Bio::Otter::Utils::RequireModule qw(require_module);
 
 # Construct via Bio::Otter::SpeciesDat
@@ -17,6 +18,7 @@ sub new {
         _params => $params,
     };
     bless $new, $pkg;
+    $new->_init_fillin;
     return $new;
 }
 
@@ -29,6 +31,30 @@ sub params {
     my ($self) = @_;
     return $self->{_params};
 }
+
+# Populate HOST,PORT,USER,PASS in-place from DBSPEC and databases.yaml
+sub _init_fillin {
+    my ($self) = @_;
+    my $p = $self->params;
+    my $nm = $self->name;
+    foreach my $prefix ('', 'DNA_') {
+        my $speckey = "${prefix}DBSPEC";
+        my $dbspec = $p->{$speckey};
+        die "no $speckey - old species.dat ?" unless $dbspec;
+        my $db = Bio::Otter::Server::Config->Database($dbspec);
+
+        my %info =
+          ("${prefix}HOST" => $db->host,
+           "${prefix}PORT" => $db->port,
+           "${prefix}USER" => $db->user,
+           $db->pass_maybe("${prefix}PASS"));
+
+        # Replace into our params
+        @$p{ keys %info } = values %info;
+    }
+    return;
+}
+
 
 sub otter_dba {
     my ($self) = @_;
