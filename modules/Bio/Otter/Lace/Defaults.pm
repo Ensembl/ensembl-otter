@@ -676,8 +676,6 @@ timeout-list=333,1000,3000,9000
 handshake-timeout-secs=15
 
 [RequestQueue]
-# just send everything for now
-# concurrent=12
-concurrent=10000
+concurrent=12
 min-batch=4
 send-queued-callback-timeout-ms=500
