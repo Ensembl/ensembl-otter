@@ -277,15 +277,13 @@ my $_DBS;
 sub Databases {
     my ($pkg) = @_;
     return $_DBS if defined $_DBS;
-    my ($h) = try {
-        require YAML::Any;
-        my $fn = $pkg->data_filename('/databases.yaml');
-        YAML::Any::LoadFile($fn);
+    my $dbs = try {
+        my ($h) = $pkg->_get_yaml('/databases.yaml');
+        $h->{dbspec} or
+          die "no dbspec in databases.yaml";
     } catch {
         die "Database passwords not available: $_";
     };
-    my $dbs = $h->{dbspec};
-    die "No dbspec in databases.yaml" unless $dbs;
     return $_DBS = Bio::Otter::SpeciesDat::Database->new_many_from_dbspec($dbs);
 }
 
