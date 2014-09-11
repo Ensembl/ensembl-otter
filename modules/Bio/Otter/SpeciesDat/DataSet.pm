@@ -10,7 +10,21 @@ use Try::Tiny;
 use Bio::Otter::Server::Config;
 use Bio::Otter::Utils::RequireModule qw(require_module);
 
-# Construct via Bio::Otter::SpeciesDat
+
+=head1 METHODS
+
+=head2 new
+
+This class is not intended for construction directly.
+
+Use L<Bio::Otter::Server::Config/SpeciesDat>, or where access control
+is needed L<Bio::Otter::Server::Support::Web/allowed_datasets>, or if
+you have a writable dataset L</clone_readonly>.
+
+(Immediate callers C<catch> to put debug info in the error text.)
+
+=cut
+
 sub new {
     my ($pkg, $name, $params) = @_;
     my %params = %{ $params };
@@ -24,16 +38,27 @@ sub new {
     return $new;
 }
 
-# This is a weakly readonly dataset, in that writing must be prevented
-# after inspecting ->params->{readonly} .
-sub new_readonly {
+
+=head2 clone_readonly()
+
+Returns a (weakly) readonly dataset, in that writing must be prevented
+after inspecting ->params->{readonly} .
+
+=cut
+
+sub clone_readonly {
     my ($called) = @_;
     die "Need an object" unless ref($called);
     my $pkg = ref($called);
     my %param = %{ $called->params };
     $param{readonly} = 1;
     # XXX: replace the database params
-    my $self = $pkg->new($called->name, \%param);
+    my $name = $called->name;
+    my $self = try {
+        $pkg->new($name, \%param);
+    } catch {
+        croak "Dataset $name clone_readonly: $_";
+    };
     return $self;
 }
 

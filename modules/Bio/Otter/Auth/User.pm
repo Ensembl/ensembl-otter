@@ -167,10 +167,9 @@ sub write_datasets {
 sub read_datasets {
     my ($self) = @_;
     my $rw = Bio::Otter::Auth::DsList->datasets( $self->read_lists );
-    while (my ($name, $ds) = each %$rw) {
-        $rw->{$name} = $ds->new_readonly;
-    }
-    return $rw;
+    my %ro;
+    @ro{ keys %$rw } = map { $_->clone_readonly } values %$rw;
+    return \%ro;
 }
 
 # Returns $dataset_object or undef
