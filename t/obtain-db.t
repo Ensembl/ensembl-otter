@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use Test::More;
-use Test::Otter qw( ^db_or_skipall OtterClient );
+use Test::Otter qw( ^db_or_skipall OtterClient try_err );
 
 use YAML 'Dump'; # for diag
 use File::Slurp 'read_dir';
@@ -42,7 +42,13 @@ Ensure all routes lead to the same place.  Incomplete.
 
 =item *
 
-Ensure all configured databases are available.  Incomplete.
+Ensure L<Bio::Otter::SpeciesDat::DataSet/clone_readonly> gives the
+right database, and it is actually read-only.
+
+=item *
+
+Ensure all configured databases are available.
+Incomplete, but see webvm.git F<cgi-bin/selftest/05database-access.t>
 
 =item *
 
@@ -107,7 +113,7 @@ Ana Code B<email> anacode@sanger.ac.uk
 
 
 sub main {
-    plan tests => 8;
+    plan tests => 9;
 
     my @warn;
     local $SIG{__WARN__} = sub {
@@ -142,6 +148,8 @@ sub main {
                   [ 'loutre_(human_dev) via Server', 'human', 'ensembl:loutre' ],
                   [ 'pipe_(human_dev) via Server', 'human', 'ensembl:pipe' ]);
     };
+
+    subtest "BOSDataSet readonly" => __PACKAGE__->can('readonly_ds_tt');
 
     subtest "DBSPEC vs HOST" => __PACKAGE__->can('equivs_tt'); # transient
 
@@ -216,6 +224,83 @@ sub client_tt {
     return ();
 }
 
+sub readonly_ds_tt {
+    my $dslist = SpeciesDat()->datasets;
+    plan tests => 10 * @$dslist;
+    foreach my $ds (@$dslist) {
+        my $name = $ds->name;
+        my $ds_ro = $ds->clone_readonly;
+        my $ok = 1;
+        # Is it the same thing?
+        is_deeply(_db_fingerprint($ds_ro),
+                  _db_fingerprint($ds),
+                  "fingerprint of BOSD($name)->clone_readonly")
+          or $ok=0;
+        # Is it read-only? (both parts)
+        be_readonly("$name(r-o)", $ds_ro->otter_dba->dbc->db_handle)
+          or $ok=0;
+      SKIP: {
+            my $name_dna = $ds_ro->DNA_DBNAME;
+            skip("ds=$name has no DNA_DBNAME" => 3) unless $name_dna;
+            be_readonly("$name(r-o)~DNA", $ds_ro->otter_dba->dnadb->dbc->db_handle)
+              or $ok=0;
+        }
+        is($ds_ro->clone_readonly, $ds_ro, 'readonly of readonly is self')
+          or $ok=0;
+# die explain({ ds_params => $ds->ds_all_params, ro_params => $ds_ro->ds_all_params }) unless $ok;
+    }
+    return;
+}
+
+sub _db_fingerprint {
+    my ($ds) = @_;
+    my $dbh = $ds->otter_dba->dbc->db_handle;
+    my $ds_name = $ds->name;
+    $ds_name .= '(r-o)' if $ds->READONLY;
+    return try {
+        my %out;
+        $out{meta} = $dbh->selectall_arrayref('select * from meta');
+        $out{schemas} = $dbh->selectall_arrayref('show databases');
+        my ($slinfo, $slice) = _dba2subslice($ds_name, $ds->otter_dba);
+        $out{$slinfo} = $slice->seq;
+        \%out;
+    } catch {
+        "ERR:$ds_name: $_"; # $ds_name should ensure a difference in output
+    };
+}
+
+# plan += 3
+sub be_readonly { # XXX:DUP team_tools.git cron/t/otter_databases.t
+    my ($what, $dbh) = @_;
+    my $ok = 1;
+
+    my $ins = try_err {
+        local $SIG{__WARN__} = sub { };
+        $dbh->begin_work if $dbh->{AutoCommit};;
+        $dbh->do("insert into meta (species_id, meta_key, meta_value) values (null, ?,?)", {},
+                 "be_readonly.$0", scalar localtime);
+        "Inserted";
+    };
+    like($ins,
+         qr{INSERT command denied to user|MySQL server is running with the --read-only option},
+         "$what: Insert to meta") or $ok=0;
+    $dbh->do("rollback");
+
+    my $read = $dbh->selectall_arrayref("SELECT * from meta");
+    ok(scalar @$read, "$what: meta not empty") or $ok=0;
+
+    my @was_not_readonly = grep { row_as_text($_) =~ /:be_readonly/ } @$read;
+    ok(!@was_not_readonly, "$what: test row is absent") or $ok=0;
+    diag Dump(\@was_not_readonly) if @was_not_readonly;
+    die "abort - I am leaving droppings?" if @was_not_readonly;
+
+    return $ok;
+}
+sub row_as_text {
+    my ($row) = @_;
+    return join ":", map { defined $_ ? $_ : "(undef)" } @$row;
+}
+
 
 sub check_dba {
     my @arg = my ($dba, $what, $species_want, $schema_want) = @_;
@@ -235,22 +320,19 @@ sub _check_dba {
       }->{$schema_want} || 'some subclass of DBAdaptor';
 
   SKIP: {
-        skip("not an expected ensembl class" => 1) unless
+        skip("not an expected ensembl class" => 2) unless
           is(ref($dba), $class_want, "$what: class");
 
         # check we can get genomic sequence, i.e. DNADB works
-        my ($any_chr) =
-          grep { $_->length > 1E6 }
-            @{ $dba->get_SliceAdaptor->fetch_all('chromosome', 'Otter') };
-        isa_ok($any_chr, 'Bio::EnsEMBL::Slice', 'any_chr (with 1 Mbase)');
-        my $name = $any_chr->display_id;
-        my $mid = int($any_chr->centrepoint);
-        my $checkseq = $any_chr->sub_Slice($mid - 50_000, $mid + 50_000, 1)
-          or die "Can't get sub_Slice at mid=$mid of any_chr=$name";
-        my $checkname = $checkseq->display_id;
-        like($checkseq->seq, qr{[ACGT]{1000,}}, "$checkname has sequence");
+        try {
+            my ($checkname, $checkslice) = _dba2subslice($what, $dba);
+            my $seq = $checkslice->seq;
+            $seq =~ s{(N+)}{'('.length($1).' Ns)'}e;
+            like($seq, qr{[ACGT]{1000,}}, "$checkname has sequence");
+        } catch {
+            fail($_);
+        };
     }
-
 
     check_dbh($dbh, $what, $species_want, $schema_want);
     return ();
@@ -281,6 +363,7 @@ sub check_dbh {
 
 
 ### Utility functions - could be more useful elsewhere
+#
 
 sub netrc_dbh {
     my %args = @_;
@@ -356,6 +439,41 @@ sub guess_schema {
     return join ':', sort @type;
 }
 
+# Return a well-defined (name, subslice) which isn't too big; or error
+#
+# plan += 1
+sub _dba2subslice {
+    my ($what, $dba) = @_;
+
+    # Define "nice".  Rules are fiddled to work with current datasets.
+    my $sr_niceness = sub {
+        my ($sr) = @_;
+        my $lendiff = $sr->length - 1E6;
+        return -log(1+abs($lendiff)) # log difference from 1 Mbase,
+          +($lendiff > 0 ? 10 : 0) # bonus for being long enough to have data
+          -($sr->seq_region_name =~ /^chr\d+-/ ? 0 : 20); # weird name penalty
+    };
+
+    # Select a nice chromosome.
+    my @chr = @{ $dba->get_SliceAdaptor->fetch_all('chromosome', 'Otter') };
+    die "Found no chromosome:Otter in $what" unless @chr;
+    my ($any_chr) = sort { $sr_niceness->($b) <=> $sr_niceness->($a) } @chr;
+    my $name = $any_chr->display_id;
+    my $mid = int($any_chr->centrepoint);
+    my $out = $any_chr->sub_Slice($mid - 50_000, $mid + 50_000, 1);
+
+    if (!$out) {
+        my %score = map {( $_->display_id, $sr_niceness->($_) )} @chr;
+        note explain { chr => \%score };
+        die "Can't get sub_Slice at mid=$mid of any_chr=$name from $what";
+    }
+    isa_ok($out, 'Bio::EnsEMBL::Slice', "$what subslice");
+    return ($out->display_id, $out);
+}
+
+#
+###
+
 
 # See that the HOST,PORT,USER,PASS fields of species.dat
 # are equivalent to the DBSPEC fields used with databases.yaml
@@ -375,7 +493,7 @@ sub equivs_tt { # transient
 #    my %munge = qw( lutra7 otterpipe2 lutra5 otterpipe1 );
 #    foreach my $db (@{ $old->datasets }) {
 #        foreach my $k (qw( HOST DNA_HOST )) {
-#            my $p = $db->params;
+#            my $p = $db->ds_all_params;
 #            my $replace = $munge{ $p->{$k} };
 #            next unless defined $replace;
 #            diag sprintf "In %s (old), replace %s = %s with %s\n",

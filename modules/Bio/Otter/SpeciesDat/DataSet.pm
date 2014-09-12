@@ -10,24 +10,111 @@ use Try::Tiny;
 use Bio::Otter::Server::Config;
 use Bio::Otter::Utils::RequireModule qw(require_module);
 
-# Construct via Bio::Otter::SpeciesDat
+
+=head1 METHODS
+
+Read accessors are named like C<HOST>, C<READONLY> or C<DNA_DBSPEC>.
+
+=head2 new
+
+This class is not intended for construction directly.
+
+Use L<Bio::Otter::Server::Config/SpeciesDat>, or where access control
+is needed L<Bio::Otter::Server::Support::Web/allowed_datasets>, or if
+you have a writable dataset L</clone_readonly>.
+
+(Immediate callers C<catch> to put debug info in the error text.)
+
+=cut
+
 sub new {
     my ($pkg, $name, $params) = @_;
+    my %params = %{ $params };
+    $params{READONLY} = 0 unless exists $params{READONLY};
     my $new = {
         _name   => $name,
-        _params => $params,
+        _params => \%params,
     };
     bless $new, $pkg;
     $new->_init_fillin;
     return $new;
 }
 
+
+=head2 clone_readonly()
+
+Returns a readonly dataset.
+
+The caller should prevent writing by inspecting L</READONLY>, but also
+the configuration should provide alternative database parameters (for
+slave or readonly user).
+
+=cut
+
+sub clone_readonly {
+    my ($called) = @_;
+    die "Need an object" unless ref($called);
+    return $called if $called->READONLY;
+    my $name = $called->name;
+
+    # Ugly because I copied BOS:Database props instead of holding a ref
+    my %param = (READONLY => 1,
+                 ALIAS => $called->ALIAS,
+                 DBNAME => $called->DBNAME,
+                 DNA_DBNAME => $called->DNA_DBNAME);
+    foreach my $spec (qw( DBSPEC DNA_DBSPEC )) {
+        my $rw_spec = $called->$spec;
+        my $db = Bio::Otter::Server::Config->Database($rw_spec);
+        $param{$spec} = $db->ro_dbspec
+          or die "Cannot clone_readonly for dataset $name using $spec=$rw_spec - add databases.yaml {dbspec}{$rw_spec}{ro_dbspec}";
+    }
+
+    my $pkg = ref($called);
+    my $self = try {
+        $pkg->new($name, \%param);
+    } catch {
+        croak "Dataset $name clone_readonly: $_";
+    };
+    return $self;
+}
+
+
+=head2 name()
+
+Name of dataset.
+
+=cut
+
 sub name {
     my ($self) = @_;
     return $self->{_name};
 }
 
-sub params {
+
+=head2 ds_all_params()
+
+Return a (copied) hashref of all configured and derived key/value
+pairs.
+
+This is useful for access as a collection, but if you need specific
+properties use the read accessors like C<HOST>, C<READONLY> or
+C<DNA_DBSPEC> to prevent silent typos.
+
+=cut
+
+sub ds_all_params {
+    my ($self) = @_;
+    my %out = %{ $self->_params };
+    return \%out;
+}
+sub params { # useful, but too easy to mis-key and too hard to grep for
+    my ($self) = @_;
+    carp '$BOSDataSet->params->{KEY} deprecated'; # use ->KEY or ->ds_all_params
+    return $self->ds_all_params;
+}
+
+# Internal.  We may change the set of keys held.
+sub _params {
     my ($self) = @_;
     return $self->{_params};
 }
@@ -35,7 +122,7 @@ sub params {
 # Populate HOST,PORT,USER,PASS in-place from DBSPEC and databases.yaml
 sub _init_fillin {
     my ($self) = @_;
-    my $p = $self->params;
+    my $p = $self->_params;
     my $nm = $self->name;
     foreach my $prefix ('', 'DNA_') {
         my $speckey = "${prefix}DBSPEC";
@@ -56,6 +143,12 @@ sub _init_fillin {
 }
 
 
+=head2 otter_dba()
+
+Return cached Otter DBA.
+
+=cut
+
 sub otter_dba {
     my ($self) = @_;
     return $self->{_otter_dba} ||=
@@ -64,12 +157,9 @@ sub otter_dba {
 
 sub _otter_dba {
     my ($self) = @_;
-
     my $name   = $self->name;
-    my $params = $self->params;
 
-    my $dbname = $params->{DBNAME};
-    die "Failed opening otter database [No database name]" unless $dbname;
+    die "Failed opening otter database [No database name]" unless $self->DBNAME;
 
     require Bio::Vega::DBSQL::DBAdaptor;
     require Bio::EnsEMBL::DBSQL::DBAdaptor;
@@ -77,27 +167,26 @@ sub _otter_dba {
     my $odba;
     try {
         $odba = Bio::Vega::DBSQL::DBAdaptor->new(
-            -host    => $params->{HOST},
-            -port    => $params->{PORT},
-            -user    => $params->{USER},
-            -pass    => $params->{PASS},
-            -dbname  => $dbname,
+            -host    => $self->HOST,
+            -port    => $self->PORT,
+            -user    => $self->USER,
+            -pass    => $self->PASS,
+            -dbname  => $self->DBNAME,
             -group   => 'otter',
             -species => $name,
             );
     }
     catch { die "Failed opening otter database [$_]"; };
 
-    my $dna_dbname = $params->{DNA_DBNAME};
-    if ($dna_dbname) {
+    if ($self->DNA_DBNAME) {
         my $dnadb;
         try {
             $dnadb = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
-                -host    => $params->{DNA_HOST},
-                -port    => $params->{DNA_PORT},
-                -user    => $params->{DNA_USER},
-                -pass    => $params->{DNA_PASS},
-                -dbname  => $dna_dbname,
+                -host    => $self->DNA_HOST,
+                -port    => $self->DNA_PORT,
+                -user    => $self->DNA_USER,
+                -pass    => $self->DNA_PASS,
+                -dbname  => $self->DNA_DBNAME,
                 -group   => 'dnadb',
                 -species => $name,
                 );
@@ -109,8 +198,14 @@ sub _otter_dba {
     return $odba;
 }
 
-# With no options, you get a read-only vanilla-ensembl DBAdaptor.
-# Pass opts 'pipe' and 'rw' to get a read-write B:E:Pipeline::Finished:DBA
+
+=head2 pipeline_dba(@opt)
+
+With no options, you get a read-only vanilla-ensembl DBAdaptor.
+Pass opts 'pipe' and 'rw' to get a read-write B:E:Pipeline::Finished:DBA
+
+=cut
+
 sub pipeline_dba {
     my ($self, @opt) = @_;
 
@@ -214,6 +309,28 @@ sub _satellite_dba_options {
 
     return $options;
 }
+
+
+sub _init {
+    my ($pkg) = @_;
+    my @reader =
+      (qw( ALIAS READONLY ),
+       qw( HOST     PORT     USER     PASS     DBSPEC     DBNAME ),
+       qw( DNA_HOST DNA_PORT DNA_USER DNA_PASS DNA_DBSPEC DNA_DBNAME ));
+
+    foreach my $method (@reader) {
+        my $code = sub {
+            my ($self, @junk) = @_;
+            confess "no write" if @junk;
+            return $self->_params->{$method};
+        };
+        no strict 'refs'; ## no critic (TestingAndDebugging::ProhibitNoStrict)
+        *{"$pkg\::$method"} = $code;
+    }
+    return 1;
+}
+
+__PACKAGE__->_init;
 
 1;
 

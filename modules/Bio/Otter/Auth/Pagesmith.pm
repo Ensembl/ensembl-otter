@@ -154,7 +154,7 @@ sub __redirect_once {
 
 
 sub auth_user {
-    my ($called, $sangerweb, $users_hash) = @_;
+    my ($called, $sangerweb, $Access) = @_;
     my %out = (_authenticated_user => undef,
                _authorized_user => undef,
                _internal_user => 0);
@@ -171,7 +171,7 @@ sub auth_user {
         if ($user =~ /^[a-z0-9]+\@sanger\.ac\.uk$/) {   # Internal users
             $auth_flag = 1;
             $internal_flag = 1;
-        } elsif ($users_hash->{$user}) {  # Check external users (email address)
+        } elsif ($Access->user($user)) {  # Check configured users (email address)
             $auth_flag = 1;
         } # else not auth
 

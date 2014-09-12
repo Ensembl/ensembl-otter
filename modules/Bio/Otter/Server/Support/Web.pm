@@ -170,30 +170,19 @@ sub dataset_name {
 
 sub allowed_datasets {
     my ($self) = @_;
-    my $filter = $self->dataset_filter;
-    return [ grep { $filter->($_) } @{$self->SpeciesDat->datasets} ];
+    my $username = $self->sangerweb->username;
+    my $user = $self->_Access->user($username);
+    return $user ? [ values %{ $user->all_datasets } ] : [];
 }
 
-sub dataset_filter {
+# this is a local cache, and a shim to grant legacy access
+sub _Access {
     my ($self) = @_;
-
-    my $user = lc $self->sangerweb->username;
-    my $user_is_external = ! ( $self->local_user || $self->internal_user );
-    my $user_datasets = $self->users_hash->{$user};
-
-    return sub {
-        my ($dataset) = @_;
-        my $is_listed = $user_datasets && $user_datasets->{$dataset->name};
-        my $list_rejected = $user_is_external && ! $is_listed;
-        my $is_restricted = $dataset->params->{RESTRICTED};
-        my $restrict_rejected = $is_restricted && ( $user_is_external || ! $is_listed );
-        return ! ( $list_rejected || $restrict_rejected );
+    my $acc = $self->{_Access} ||= do {
+        my $username = $self->sangerweb->username;
+        Bio::Otter::Server::Config->Access($username);
     };
-}
-
-sub users_hash {
-    my ($self) = @_;
-    return $self->{'_users_hash'} ||= Bio::Otter::Server::Config->users_hash;
+    return $acc;
 }
 
 
@@ -240,8 +229,7 @@ sub authenticate_user {
     my ($self) = @_;
 
     my $sw = $self->sangerweb;
-    my $users = $self->users_hash;
-    my %set = Bio::Otter::Auth::SSO->auth_user($sw, $users);
+    my %set = Bio::Otter::Auth::SSO->auth_user($sw, $self->_Access);
 
     # Merge properties (_authorized_user, _internal_user, _local_user) into %$self
     @{ $self }{ keys %set } = values %set;

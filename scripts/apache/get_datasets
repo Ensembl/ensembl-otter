@@ -29,7 +29,7 @@ sub get_datasets {
     my %datasets;
     foreach my $dataset (@{$server->allowed_datasets}) {
         my $name   = $dataset->name;
-        my $params = $dataset->params;
+        my $params = $dataset->ds_all_params;
 
         my %ds;
         foreach my $key (keys %$params) {
@@ -60,8 +60,7 @@ __END__
 =head1 DESCRIPTION
 
 Returns a list of datasets to the Client. Returns a list of datasets which the
-user is permitted to access (determined by entries in the users.txt file for
-external users and restricted datasets).
+user is permitted to access, determined by L<Bio::Otter::Auth::Access>.
 
 =head1 AUTHOR
 
