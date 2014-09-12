@@ -43,8 +43,11 @@ sub new {
 
 =head2 clone_readonly()
 
-Returns a (weakly) readonly dataset, in that writing must be prevented
-after inspecting L</READONLY>.
+Returns a readonly dataset.
+
+The caller should prevent writing by inspecting L</READONLY>, but also
+the configuration should provide alternative database parameters (for
+slave or readonly user).
 
 =cut
 
@@ -52,15 +55,21 @@ sub clone_readonly {
     my ($called) = @_;
     die "Need an object" unless ref($called);
     return $called if $called->READONLY;
-    my $pkg = ref($called);
+    my $name = $called->name;
+
+    # Ugly because I copied BOS:Database props instead of holding a ref
     my %param = (READONLY => 1,
                  ALIAS => $called->ALIAS,
-                 DBSPEC => $called->DBSPEC,
                  DBNAME => $called->DBNAME,
-                 DNA_DBSPEC => $called->DNA_DBSPEC,
                  DNA_DBNAME => $called->DNA_DBNAME);
-    # XXX: replace the database params
-    my $name = $called->name;
+    foreach my $spec (qw( DBSPEC DNA_DBSPEC )) {
+        my $rw_spec = $called->$spec;
+        my $db = Bio::Otter::Server::Config->Database($rw_spec);
+        $param{$spec} = $db->ro_dbspec
+          or die "Cannot clone_readonly for dataset $name using $spec=$rw_spec - add databases.yaml {dbspec}{$rw_spec}{ro_dbspec}";
+    }
+
+    my $pkg = ref($called);
     my $self = try {
         $pkg->new($name, \%param);
     } catch {
