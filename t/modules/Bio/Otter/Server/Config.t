@@ -29,7 +29,7 @@ sub main {
     my $tmp = tempdir('BOSConfig.t.XXXXXX', TMPDIR => 1, CLEANUP => 1);
     my $vsn = Bio::Otter::Version->version;
     foreach my $file ("$vsn/otter_config", "$vsn/otter_styles.ini",
-                      "users.txt", "species.dat") {
+                      "access.yaml", "species.dat") {
         mkfile("$tmp/asc_tt/$file");
         mkfile("$tmp/web_tt/data/otter/$file");
         mkfile("$tmp/priv_tt/main/$file");
@@ -129,7 +129,7 @@ sub asc_tt {
     like(try_err { $BOSC->data_dir }, qr{^/\S+_tt/?$}, 'find direct');
 
     # broken
-    ok(unlink("$dir/users.txt"), # or any other we made
+    ok(unlink("$dir/access.yaml"), # or any other we made
        'unlink one') or note "unlink: $!";
     like(try_err { $BOSC->data_dir },
          qr{^ERR:data_dir \S+_tt \(from \$ANACODE_SERVER_CONFIG\): lacks expected files \(users\.txt\)},

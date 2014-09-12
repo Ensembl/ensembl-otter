@@ -73,10 +73,10 @@ sub login {
 }
 
 
-=head2 auth_user($sangerweb, $external_users_hash)
+=head2 auth_user($sangerweb, $Access_obj)
 
 Server side.  Given an existing L<SangerWeb> object containing the
-client's authentication cookie, and a hash of external users, set
+client's authentication cookie, and the access control for users, set
 flags for the user.
 
 Returns a list of hash key => value pairs suitable for inserting into
@@ -112,7 +112,7 @@ Note that this rolls authentication and authorisation into one lump.
 =cut
 
 sub auth_user {
-    my ($called, $sangerweb, $users_hash) = @_;
+    my ($called, $sangerweb, $Access) = @_;
     my %out = (_authenticated_user => undef,
                _authorized_user => undef,
                _internal_user => 0);
@@ -128,7 +128,7 @@ sub auth_user {
         if ($user =~ /^[a-z0-9]+$/) {   # Internal users (simple user name)
             $auth_flag = 1;
             $internal_flag = 1;
-        } elsif ($users_hash->{$user}) {  # Check external users (email address)
+        } elsif ($Access->user($user)) {  # Check configured users (email address)
             $auth_flag = 1;
         } # else not auth
 

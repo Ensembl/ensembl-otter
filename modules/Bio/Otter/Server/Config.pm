@@ -10,6 +10,7 @@ use List::MoreUtils 'uniq';
 use Bio::Otter::SpeciesDat;
 use Bio::Otter::SpeciesDat::Database;
 use Bio::Otter::Version;
+use Bio::Otter::Auth::Access;
 
 
 =head1 NAME
@@ -78,7 +79,7 @@ sub data_dir {
       unless -d $data;
 
     my $vsn = Bio::Otter::Version->version;
-    my @want = ("species.dat", "users.txt",
+    my @want = ("species.dat", "access.yaml",
                 "$vsn/otter_config", "$vsn/otter_styles.ini");
     my @lack = grep { ! -f "$data/$_" } @want;
     die "data_dir $data (from $src): lacks expected files (@lack)"
@@ -276,15 +277,13 @@ my $_DBS;
 sub Databases {
     my ($pkg) = @_;
     return $_DBS if defined $_DBS;
-    my ($h) = try {
-        require YAML::Any;
-        my $fn = $pkg->data_filename('/databases.yaml');
-        YAML::Any::LoadFile($fn);
+    my $dbs = try {
+        my ($h) = $pkg->_get_yaml('/databases.yaml');
+        $h->{dbspec} or
+          die "no dbspec in databases.yaml";
     } catch {
         die "Database passwords not available: $_";
     };
-    my $dbs = $h->{dbspec};
-    die "No dbspec in databases.yaml" unless $dbs;
     return $_DBS = Bio::Otter::SpeciesDat::Database->new_many_from_dbspec($dbs);
 }
 
@@ -379,6 +378,32 @@ sub extant_versions {
 }
 
 
+=head2 Access($given_email)
+
+Return a L<Bio::Otter::Auth::Access> object, which tells dataset
+access for any user.
+
+Implicit access was granted to unlisted staff by the users.txt
+mechanism.  That is granted here (by adding permissions to the Access
+object) if an email address is passed in.
+
+Currently freshly loaded.  Maybe should be cached.
+
+=cut
+
+my $_access;
+sub Access {
+    my ($pkg, $given_email) = @_;
+    my $acc = $pkg->_get_yaml('/access.yaml');
+    my $sp = $pkg->SpeciesDat;
+    # this is not caching (like a singleton), it prevents weak refs to
+    # the B:O:A:Access vanishing during multi-statement method chains
+    $_access = Bio::Otter::Auth::Access->new($acc, $sp);
+    $_access->legacy_access($given_email) if $given_email;
+    return $_access;
+}
+
+
 =head2 users_hash()
 
 Return a freshly loaded hash C<< ->{$user}{$dataset} = 1 >> from the
@@ -386,7 +411,14 @@ Otter Server config directory.
 
 =cut
 
+# Regenerate an "old users.txt style" users_hash from new access.yaml
 sub users_hash {
+    my ($pkg, @opt) = @_;
+    my $acc = $pkg->Access;
+    return $acc->legacy_users_hash(@opt);
+}
+
+sub users_hash__old {
     my ($pkg) = @_;
     my $usr_file = $pkg->data_filename('users.txt');
     return $pkg->_read_user_file($usr_file);
@@ -434,6 +466,15 @@ sub get_file {
     close $fh;
 
     return $content;
+}
+
+sub _get_yaml {
+    my ($pkg, $name) = @_;
+    require YAML::Any;
+    my $fn = $pkg->data_filename($name);
+    my @load = YAML::Any::LoadFile($fn);
+    die "expected one object in $fn" unless 1 == @load;
+    return $load[0];
 }
 
 

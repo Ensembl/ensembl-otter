@@ -58,6 +58,7 @@ my $select_mapping_sql = <<'SQL'
 SQL
     ;
 
+# loutre_*.sequence_set_access tables contain no rows 2014-09-03
 my $select_access_sql = <<'SQL'
     SELECT acc.access_type
       FROM sequence_set_access acc,
@@ -124,7 +125,7 @@ XML
 
         my $chr_name = $ss_slice->seq_region_name();
         my $description  = ''; # default
-        my $write_access = 1;  # default
+        my $write_access = 1;  # default; but ignoring dataset readonly-ness
         my $hidden       = 1;  # default
 
         for my $attrib (@{ $attribute_adaptor->fetch_all_by_Slice( $ss_slice ) }) {
@@ -139,7 +140,7 @@ XML
         }
 
         # An attempt at finer, by-author's-name control over visibility/writability of sequence sets
-        #
+        # This is more advisory.  access.yaml gives harder security.
         my $select_access_sth=$odba->dbc()->prepare($select_access_sql);
         $select_access_sth->execute($author, $chr_name);
         if (my($access) = $select_access_sth->fetchrow) {

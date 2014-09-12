@@ -112,16 +112,16 @@ sub auth_tt {
     my @cred = grep { $_->[0] eq "\L$MODE" } creds();
 
     # Find suitable user:pass
-    my $users_hash = Bio::Otter::Server::Config->users_hash;
-    my $users_fn_here = Bio::Otter::Server::Config->data_filename('users.txt');
+    my $Access = Bio::Otter::Server::Config->Access;
+    my $users_fn_here = Bio::Otter::Server::Config->data_filename('/access.yaml');
     @cred = grep {
         my $u = $_->[1];
-        (exists $users_hash->{ $u } && # authorised here, so should be on server
+        (exists $Access->all_users->{ $u } && # authorised here, so should be on server
          $_->[1] =~ /\@/ && $_->[1] !~ /\@sanger/); # not internal
     } @cred;
 
     if (!@cred) {
-        plan skip_all => "Need a type='\L$MODE\E' credential, listed in users_hash at $users_fn_here";
+        plan skip_all => "Need a type='\L$MODE\E' credential, listed in $users_fn_here";
         return;
     }
     plan tests => 12;

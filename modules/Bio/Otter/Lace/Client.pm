@@ -1284,6 +1284,12 @@ sub get_all_SequenceSets_for_DataSet {
               $_, $dataset_name, $sequencesets_hash->{$_});
       } keys %{$sequencesets_hash} ];
 
+  if ($ds->READONLY) {
+      foreach my $ss (@$sequencesets) {
+          $ss->write_access(0);
+      }
+  }
+
   return $sequencesets;
 }
 
