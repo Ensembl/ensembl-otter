@@ -155,13 +155,13 @@ INPUT
     is_deeply(__user_to_datasetnames($shaun, 'all_datasets'),
               {qw{ human human  mouse mouse  sheep sheep }}, 'shaun can see');
 
-    is($shaun->write_dataset('sheep')->params->{readonly}, 0,
+    is($shaun->write_dataset('sheep')->READONLY, 0,
        'shaun: sheep not readonly');
-    is($shaun->read_dataset('human')->params->{readonly}, 1,
+    is($shaun->read_dataset('human')->READONLY, 1,
        'shaun: human readonly');
     is($shaun->write_dataset('human'), undef, 'shaun: no human write');
     my @shaun_all = values %{ $shaun->all_datasets };
-    my @shaun_write = grep { ! $_->params->{readonly} } @shaun_all;
+    my @shaun_write = grep { ! $_->READONLY } @shaun_all;
     is_deeply({ all => scalar @shaun_all, write => scalar @shaun_write },
               { all => 3, write => 1 }, 'shaun dataset count from all');
 
