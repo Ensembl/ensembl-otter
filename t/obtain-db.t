@@ -240,14 +240,14 @@ sub readonly_ds_tt {
         be_readonly("$name(r-o)", $ds_ro->otter_dba->dbc->db_handle)
           or $ok=0;
       SKIP: {
-            my $name_dna = $ds_ro->params->{DNA_DBNAME};
+            my $name_dna = $ds_ro->DNA_DBNAME;
             skip("ds=$name has no DNA_DBNAME" => 3) unless $name_dna;
             be_readonly("$name(r-o)~DNA", $ds_ro->otter_dba->dnadb->dbc->db_handle)
               or $ok=0;
         }
         is($ds_ro->clone_readonly, $ds_ro, 'readonly of readonly is self')
           or $ok=0;
-        die explain({ ds_params => $ds->params, ro_params => $ds_ro->params }) unless $ok;
+# die explain({ ds_params => $ds->ds_all_params, ro_params => $ds_ro->ds_all_params }) unless $ok;
     }
     return;
 }
@@ -256,7 +256,7 @@ sub _db_fingerprint {
     my ($ds) = @_;
     my $dbh = $ds->otter_dba->dbc->db_handle;
     my $ds_name = $ds->name;
-    $ds_name .= '(r-o)' if $ds->params->{READONLY};
+    $ds_name .= '(r-o)' if $ds->READONLY;
     return try {
         my %out;
         $out{meta} = $dbh->selectall_arrayref('select * from meta');
@@ -493,7 +493,7 @@ sub equivs_tt { # transient
 #    my %munge = qw( lutra7 otterpipe2 lutra5 otterpipe1 );
 #    foreach my $db (@{ $old->datasets }) {
 #        foreach my $k (qw( HOST DNA_HOST )) {
-#            my $p = $db->params;
+#            my $p = $db->ds_all_params;
 #            my $replace = $munge{ $p->{$k} };
 #            next unless defined $replace;
 #            diag sprintf "In %s (old), replace %s = %s with %s\n",
