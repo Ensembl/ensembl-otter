@@ -58,7 +58,7 @@ sub noDBI_tt {
 }
 
 sub small_tt {
-    plan tests => 10;
+    plan tests => 13;
 
     my $dbs = try_load(<<'INPUT');
 ---
@@ -126,12 +126,31 @@ INPUT
               { withpass => [ PaSS => 'sekret' ], nopass => [] },
               'pass_maybe');
 
+    my $romap = try_load(<<'INPUT');
+---
+dbspec:
+  rwrw:
+    host: foo
+    port: 1234
+    user: bob
+    ro_dbspec: roro
+  roro:
+    host: bar
+    port: 1234
+    user: dunk
+INPUT
+    my $rwrw = $romap->{rwrw};
+    my $roro = $romap->{  $rwrw->ro_dbspec  }; # how it's used in BOS:DataSet
+    is($rwrw->user, 'bob', 'rwrw user');
+    is($roro->user, 'dunk', 'roro user');
+    is($roro->ro_dbspec, undef, 'roro has no ro_dbspec');
+
     return;
 }
 
 
 sub various_fail_tt {
-    plan tests => 6;
+    plan tests => 8;
 
     like(try_load(<<'INPUT'), qr{name=all_ias has alias=thing, should have nothing else}, 'ambigu-alias');
 ---
@@ -185,6 +204,26 @@ dbspec:
     -host: tree
     -port: 1234
     -user: bob
+INPUT
+
+    like(try_load(<<'INPUT'), qr{rwrw\{ro_dbspec\} = roro points nowhere}, 'bad ro_dbspec');
+---
+dbspec:
+  rwrw:
+    host: foo
+    port: 1234
+    user: bob
+    ro_dbspec: roro
+INPUT
+
+    like(try_load(<<'INPUT'), qr{rwrw\{ro_dbspec\} = rwrw has another}, 'lame ro_dbspec');
+---
+dbspec:
+  rwrw:
+    host: foo
+    port: 1234
+    user: bob
+    ro_dbspec: rwrw
 INPUT
 
     return;

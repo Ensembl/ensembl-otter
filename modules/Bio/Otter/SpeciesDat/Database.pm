@@ -24,6 +24,8 @@ user pass )>.
 
 =cut
 
+my @_VALIDKEY = qw( host port user pass ro_dbspec );
+my @_REQDKEY = qw( host port user );
 sub new {
     my ($pkg, $name, %params) = @_;
     my $self = { _name => $name, _params => \%params };
@@ -46,11 +48,11 @@ sub new {
     } else {
         # Any other entry has to have the expected keys
         my %bad = %params;
-        delete @bad{qw{ host port user pass }};
+        delete @bad{@_VALIDKEY};
         my @bad = sort keys %bad;
         die "New $pkg for name=$name contains bad keys (@bad) - should point just to a server"
           if @bad;
-        my @miss = grep { !defined $params{$_} } qw{ host port user };
+        my @miss = grep { !defined $params{$_} } @_REQDKEY;
         die "New $pkg for name=$name has missing keys (@miss)"
           if @miss;
     }
@@ -74,6 +76,16 @@ sub new_many_from_dbspec {
           if $r->_params->{alias};
     }
     @out{ keys %replace } = values %replace if keys %replace;
+
+    # check ro_dbspec, if any
+    while (my ($k, $obj) = each %out) {
+        my $ro = $obj->ro_dbspec;
+        if (defined $ro) {
+            die "$k\{ro_dbspec} = $ro points nowhere" unless $out{$ro};
+            die "$k\{ro_dbspec} = $ro has another ro_dbspec"
+              if defined $out{$ro}->ro_dbspec;
+        } # else nothing to check
+    }
 
     return \%out;
 }
@@ -99,7 +111,7 @@ sub _params {
 =head2 params()
 
 Return list of (key, value) pairs.  Keys will be among C<qw( host port
-user pass )>.
+user pass ro_dbspec )>.
 
 =cut
 
@@ -110,7 +122,7 @@ sub params {
 
 sub _init_accessors {
     my ($pkg) = @_;
-    foreach my $method (qw( host port user pass )) {
+    foreach my $method (@_VALIDKEY) {
         my $key = $method;
         my $code = sub {
             my ($self) = @_;
