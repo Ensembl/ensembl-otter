@@ -28,7 +28,7 @@ you have a writable dataset L</clone_readonly>.
 sub new {
     my ($pkg, $name, $params) = @_;
     my %params = %{ $params };
-    $params{readonly} = 0 unless exists $params{readonly};
+    $params{READONLY} = 0 unless exists $params{READONLY};
     my $new = {
         _name   => $name,
         _params => \%params,
@@ -42,16 +42,17 @@ sub new {
 =head2 clone_readonly()
 
 Returns a (weakly) readonly dataset, in that writing must be prevented
-after inspecting ->params->{readonly} .
+after inspecting ->params->{READONLY} .
 
 =cut
 
 sub clone_readonly {
     my ($called) = @_;
     die "Need an object" unless ref($called);
+    return $called if $called->params->{READONLY};
     my $pkg = ref($called);
     my %param = %{ $called->params };
-    $param{readonly} = 1;
+    $param{READONLY} = 1;
     # XXX: replace the database params
     my $name = $called->name;
     my $self = try {
