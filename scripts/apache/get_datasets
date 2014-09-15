@@ -15,7 +15,7 @@ my %secret_params = map { ( $_ => 1 ) }
 
 # DBI params no longer go over HTTP anywhere.  Whitelist the rest.
 my %good_params = map { ( $_ => 1 ) }
-  qw{ ALIAS  DBNAME DBSPEC  DNA_DBSPEC DNA_DBNAME };
+  qw{ READONLY ALIAS  DBNAME DBSPEC  DNA_DBSPEC DNA_DBNAME };
   # HEADCODE, TYPE : obsolete
   # RESTRICTED : not relevant to the client
 
