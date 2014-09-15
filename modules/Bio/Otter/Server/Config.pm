@@ -306,9 +306,23 @@ sub databases {
 Return a fresh instance of L<Bio::Otter::SpeciesDat> from the Otter
 Server config directory.
 
+Note that per-user access control has not been applied here, and if it
+looks like a webserver is running this will die.
+
+On server, use L<Bio::Otter::Server::Support/allowed_datasets> or
+L<Bio::Otter::Server::Support/dataset> instead.
+
 =cut
 
 sub SpeciesDat {
+    my ($pkg) = @_;
+    confess "Didn't expect to be on a webserver - access control was not promised"
+      if (grep { defined $ENV{$_} } qw{ GATEWAY_INTERFACE REQUEST_METHOD }) ||
+        ((scalar getpwuid($<)) =~ /www|web/);
+    return $pkg->_SpeciesDat;
+}
+
+sub _SpeciesDat {
     my ($pkg) = @_;
     my $fn = $pkg->data_filename('/species.dat');
     return Bio::Otter::SpeciesDat->new($fn);
@@ -395,10 +409,9 @@ my $_access;
 sub Access {
     my ($pkg, $given_email) = @_;
     my $acc = $pkg->_get_yaml('/access.yaml');
-    my $sp = $pkg->SpeciesDat;
     # this is not caching (like a singleton), it prevents weak refs to
     # the B:O:A:Access vanishing during multi-statement method chains
-    $_access = Bio::Otter::Auth::Access->new($acc, $sp);
+    $_access = Bio::Otter::Auth::Access->new($acc, $pkg->_SpeciesDat);
     $_access->legacy_access($given_email) if $given_email;
     return $_access;
 }

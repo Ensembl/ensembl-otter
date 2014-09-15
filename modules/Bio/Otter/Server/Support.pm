@@ -25,6 +25,10 @@ sub new { # just to make it possible to instantiate an object
 #   authorized_user
 #   authenticated_username
 
+
+# Access control is applied during this call.
+#
+# Error text like m{^(\d{3}) (.*)$} is an HTTP status code
 sub dataset {
     my ($self, $dataset) = @_;
 
@@ -32,17 +36,7 @@ sub dataset {
         $self->{'_dataset'} = $dataset;
     }
 
-    return $self->{'_dataset'} ||=
-        $self->dataset_default;
-}
-
-sub dataset_default {
-    my ($self) = @_;
-    my $dataset_name = $self->dataset_name;
-    die "dataset_name not set" unless $dataset_name;
-    my $dataset = $self->SpeciesDat->dataset($dataset_name);
-    die "no dataset" unless $dataset;
-    return $dataset;
+    return $self->{'_dataset'} ||= $self->_guarded_dataset;
 }
 
 sub dataset_name {
@@ -71,6 +65,31 @@ sub allowed_datasets {
     return $user ? [ values %{ $user->all_datasets } ] : [];
 }
 
+sub _guarded_dataset {
+    my ($self) = @_;
+    my ($user, $dataset_name);
+    return try {
+        $user = $self->AccessUser || die "user unknown\n";
+        $dataset_name = $self->dataset_name;
+        $user->all_datasets->{$dataset_name} || die "not in access.yaml\n";
+    } catch {
+        my $err = $_;
+
+        # This is necessary to provoke the login mechanism of
+        # Otterlace when authentication has not been done.  It does a
+        # (real) 403 and then hard exit; our 403 below is munged to a
+        # 412 in ::Web to circumvent re-login in the case of not
+        # having access to a dataset.
+        my $username = $self->authorized_user;
+
+        $dataset_name = '(none)' unless defined $dataset_name;
+        warn "Rejected user $username request for dataset $dataset_name: $err";
+        die "403 Forbidden\n";
+    };
+}
+
+
+# Access control is applied during ->dataset
 sub otter_dba {
     my ($self, @args) = @_;
 
