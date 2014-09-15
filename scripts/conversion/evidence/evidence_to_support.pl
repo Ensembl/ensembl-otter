@@ -123,12 +123,14 @@ $support->parse_extra_options(
   'chromosomes|chr=s@',
   'gene_stable_id|gsi=s@',
   'check_evidence_table=s',
+  'prune',
 );
 $support->allowed_params(
   $support->get_common_params,
   'chromosomes',
   'gene_stable_id',
   'check_evidence_table',
+  'prune',
 );
 
 if ($support->param('help') or $support->error) {
@@ -153,6 +155,13 @@ my $dba = $support->get_database('loutre');
 my $sa = $dba->get_SliceAdaptor();
 my $ga = $dba->get_GeneAdaptor();
 my $aa = $dba->get_AnalysisAdaptor();
+
+if ($support->param('prune') and $support->user_proceed('Would you really like to delete all supporting features ?')) {
+  my $num = $dba->dbc->do(qq(DELETE FROM supporting_feature));
+  $support->log("Deleted $num supporting_features");
+  $num = $dba->dbc->do(qq(DELETE FROM transcript_supporting_feature));
+  $support->log("Deleted $num transcript_supporting_features");
+}
 
 # statement handles for storing supporting evidence
 my $sth = $dba->dbc->prepare(qq(
