@@ -229,8 +229,11 @@ sub _authenticate_user {
 sub authorized_user { # deprecated, because of hard exit()
     my ($self) = @_;  # but also a setter in ::Local
 
-    my $user = try { $self->authorized_user__catchable };
-    $self->_unauth_exit('User not authorized') unless $user;
+    my $user = try {
+        $self->authorized_user__catchable;
+    } catch {
+        $self->_unauth_exit('User not authorized');
+    };
 
     return $user;
 }
@@ -321,9 +324,19 @@ sub send_response {
 
     die $error unless $ERROR_WRAPPING_ENABLED;
     chomp($error);
-    warn "ERROR: $error\n";
-    $self->compression(0);
-    $self->_send_response($self->$encode_error($error), 417);
+    if (my ($num, $txt) = $error =~ m{^(\d{3}) (.*)}s) {
+        # Specific HTTP status.  Error text already logged.
+        #
+        # B:O:L:C->general_http_dialog uses 403 to trigger password
+        # request, so we have to bodge.
+        $num = 412 if $num == 403;
+        $self->_send_response($self->$encode_error($txt), $num);
+    } else {
+        # unexpected error, we presume caused by bad request
+        warn "ERROR: $error\n";
+        $self->compression(0);
+        $self->_send_response($self->$encode_error($error), 417);
+    }
 
     return;
 }
