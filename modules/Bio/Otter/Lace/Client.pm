@@ -1072,7 +1072,7 @@ sub _make_DataSet {
         my $method = uc $key;
         if ($method =~ /(host|port|user|pass|restricted|headcode)$/i) {
             warn "Got an old species.dat?  Ignored key $method";
-        } elsif ($method =~ /^((dna_)?(dbname|dbspec)|alias)$/i) {
+        } elsif ($method =~ /^((dna_)?(dbname|dbspec)|alias|readonly)$/i) {
             $dataset->$method($value);
         } else {
             die "Bad method $method";
