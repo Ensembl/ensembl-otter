@@ -237,11 +237,11 @@ sub authenticate_user {
     return;
 }
 
-sub authorized_user {
+sub authorized_user { # deprecated, because of hard exit()
     my ($self) = @_;
 
     my $user = $self->{'_authorized_user'};
-    $self->unauth_exit('User not authorized') unless $user;
+    $self->_unauth_exit('User not authorized') unless $user;
 
     return $user;
 }
@@ -397,7 +397,7 @@ XML
 ;
 }
 
-sub unauth_exit {
+sub _unauth_exit {
     my ($self, $reason) = @_;
 
     print $self->header(
