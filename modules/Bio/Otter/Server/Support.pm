@@ -20,10 +20,10 @@ sub new { # just to make it possible to instantiate an object
     return $self;
 }
 
-sub SpeciesDat {
-    my ($self) = @_;
-    return $self->{_SpeciesDat} ||= Bio::Otter::Server::Config->SpeciesDat;
-}
+# In subclass:
+#   authorized_user__catchable
+#   authorized_user
+#   authenticated_username
 
 sub dataset {
     my ($self, $dataset) = @_;
@@ -47,6 +47,28 @@ sub dataset_default {
 
 sub dataset_name {
     die "no default dataset name";
+}
+
+# this is a local cache, and a shim to grant legacy access
+sub Access {
+    my ($self) = @_;
+    my $acc = $self->{_Access} ||= do {
+        my $username = $self->authenticated_username;
+        Bio::Otter::Server::Config->Access($username);
+    };
+    return $acc;
+}
+
+sub AccessUser {
+    my ($self) = @_;
+    my $user = $self->Access->user($self->authenticated_username);
+    return $user;
+}
+
+sub allowed_datasets {
+    my ($self) = @_;
+    my $user = $self->AccessUser;
+    return $user ? [ values %{ $user->all_datasets } ] : [];
 }
 
 sub otter_dba {
