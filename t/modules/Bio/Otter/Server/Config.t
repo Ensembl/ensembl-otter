@@ -132,7 +132,7 @@ sub asc_tt {
     ok(unlink("$dir/access.yaml"), # or any other we made
        'unlink one') or note "unlink: $!";
     like(try_err { $BOSC->data_dir },
-         qr{^ERR:data_dir \S+_tt \(from \$ANACODE_SERVER_CONFIG\): lacks expected files \(users\.txt\)},
+         qr{^ERR:data_dir \S+_tt \(from \$ANACODE_SERVER_CONFIG\): lacks expected files \(access\.yaml\)},
          'find incomplete');
 
     return;
