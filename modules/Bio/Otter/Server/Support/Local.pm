@@ -21,12 +21,25 @@ sub new {
 
 ### Methods
 
-sub authorized_user {
+sub authorized_user { # is deprecated in ::Web, move by renaming?
     my ($self, @args) = @_;
     ($self->{'_authorized_user'}) = @args if @args;
-    my $authorized_user = $self->{'_authorized_user'};
-    $authorized_user ||= getpwuid($<);
-    return $authorized_user;
+    return $self->authorized_user__catchable;
+}
+
+sub authorized_user__catchable {
+    my ($self) = @_;
+    my $user = $self->{'_authorized_user'};
+    $user ||= getpwuid($<);
+    return $user;
+}
+
+sub authenticated_username {
+    my ($self) = @_;
+    my $user = $self->authorized_user__catchable;
+    # In ::Web this would be circular, because we authenticate before
+    # authorising.  Here in ::Local we can be anyone.
+    return $user;
 }
 
 sub require_method {

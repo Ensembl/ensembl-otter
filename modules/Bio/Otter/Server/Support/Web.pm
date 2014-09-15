@@ -60,7 +60,7 @@ sub new {
     $self->compression($options{-compression});
     $self->content_type($options{-content_type});
 
-    $self->authenticate_user;
+    $self->_authenticate_user;
     if ($self->show_restricted_datasets || ! $self->local_user) {
         $self->authorized_user;
     }
@@ -168,21 +168,10 @@ sub dataset_name {
     return $dataset_name;
 }
 
-sub allowed_datasets {
+# Authenticated but not yet authorised
+sub authenticated_username {
     my ($self) = @_;
-    my $username = $self->sangerweb->username;
-    my $user = $self->_Access->user($username);
-    return $user ? [ values %{ $user->all_datasets } ] : [];
-}
-
-# this is a local cache, and a shim to grant legacy access
-sub _Access {
-    my ($self) = @_;
-    my $acc = $self->{_Access} ||= do {
-        my $username = $self->sangerweb->username;
-        Bio::Otter::Server::Config->Access($username);
-    };
-    return $acc;
+    return $self->sangerweb->username;
 }
 
 
@@ -225,11 +214,11 @@ sub sangerweb {
 }
 
 
-sub authenticate_user {
+sub _authenticate_user {
     my ($self) = @_;
 
     my $sw = $self->sangerweb;
-    my %set = Bio::Otter::Auth::SSO->auth_user($sw, $self->_Access);
+    my %set = Bio::Otter::Auth::SSO->auth_user($sw, $self->Access);
 
     # Merge properties (_authorized_user, _internal_user, _local_user) into %$self
     @{ $self }{ keys %set } = values %set;
@@ -238,18 +227,25 @@ sub authenticate_user {
 }
 
 sub authorized_user { # deprecated, because of hard exit()
-    my ($self) = @_;
+    my ($self) = @_;  # but also a setter in ::Local
 
-    my $user = $self->{'_authorized_user'};
+    my $user = try { $self->authorized_user__catchable };
     $self->_unauth_exit('User not authorized') unless $user;
 
+    return $user;
+}
+
+sub authorized_user__catchable {
+    my ($self) = @_;
+    my $user = $self->{'_authorized_user'};
+    die 'User not authorized' unless defined $user;
     return $user;
 }
 
 sub internal_user {
     my ($self) = @_;
 
-    # authenticate_user sets '_internal_user', and is called
+    # _authenticate_user sets '_internal_user', and is called
     # by new(), so this hash key will be populated.
     return $self->{'_internal_user'};
 }
@@ -264,7 +260,7 @@ Is the caller on the WTSI internal network?
 sub local_user {
     my ($self) = @_;
 
-    # authenticate_user sets '_local_user', and is called
+    # _authenticate_user sets '_local_user', and is called
     # by new(), so this hash key will be populated.
     return $self->{'_local_user'};
 }
