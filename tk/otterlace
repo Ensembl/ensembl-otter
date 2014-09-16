@@ -106,13 +106,12 @@ use EditWindow::Password;
     try {
         $client->get_server_otter_config;
         $client->reauthorize_if_cookie_will_expire_soon;
+        $SpeciesListWindow->draw;
     } catch {
         my $msg = "Cannot start: $_";
         $passwarn_sub->($client, $msg);
         die $msg;
     };
-
-    $SpeciesListWindow->draw;
 
     # postpone slow checks, for improved responsiveness
     $main_window->after(750, [ $SpeciesListWindow, 'ensure_tools' ]);

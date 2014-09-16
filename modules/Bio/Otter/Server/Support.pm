@@ -71,7 +71,14 @@ sub AccessUser {
 sub allowed_datasets {
     my ($self) = @_;
     my $user = $self->AccessUser;
-    return $user ? [ values %{ $user->all_datasets } ] : [];
+    if (!defined $user) {
+        # Provoke a login?
+        my $username = $self->authorized_user; # may generate (real) 403 and exit
+        warn "Username $username: authenticated, not authorized";
+        die "403 Forbidden\n";
+    } else {
+        return [ values %{ $user->all_datasets } ];
+    }
 }
 
 sub _guarded_dataset {
