@@ -60,6 +60,8 @@ sub import {
 
     $pkg->_ensure_tlib;
 
+    $pkg->_quiet_require_BOG; # I think we always want this..?
+
     # run some
     my @imp_tag;
     foreach my $t (@tag) {
@@ -86,6 +88,22 @@ sub _ensure_tlib {
     lib->import($fn);
 
     return ();
+}
+
+sub _quiet_require_BOG {
+    local $SIG{__WARN__} = \&__BOG_warn_filter;
+    if ($INC{'Bio/Otter/Git.pm'}) {
+        warn "_quiet_require_BOG: too late!  Load T:O before B:O:G (maybe B:O:L:C)";
+    } else {
+        require Bio::Otter::Git;
+    }
+    return;
+}
+sub __BOG_warn_filter {
+    my ($msg) = @_;
+    return if $msg eq "No git cache: assuming a git checkout.\n";
+    warn "[__BOG_warn_filter passed] $msg";
+    return;
 }
 
 
@@ -375,6 +393,7 @@ See also F<t/obtain-db.t>
         return $cl_cache ||= do {
             local @ARGV = ();
             require Bio::Otter::Lace::Defaults;
+            local $SIG{__WARN__} = \&__BOLC_warn_filter; # hide client startup noise
             Bio::Otter::Lace::Defaults::do_getopt();
             my $cl = Bio::Otter::Lace::Defaults::make_Client();
 
@@ -393,7 +412,6 @@ See also F<t/obtain-db.t>
 
 sub get_BOLDatasets {
     my @name = @_;
-    local $SIG{__WARN__} = \&__BOLC_warn_filter; # hide client startup noise
     my $cl = OtterClient();
     warn "No datasets requested" unless @name;
     die "wantarray" unless wantarray;
@@ -413,11 +431,11 @@ sub get_BOSDatasets {
 
 sub __BOLC_warn_filter { # a "temporary" solution
     my ($msg) = @_;
-    return if $msg eq "No git cache: assuming a git checkout.\n";
+    return if $msg =~ m{^Debug from config: '[a-zA-Z,]+'$};
     return if $msg =~ m{^setup_pfetch_env: hostname=};
     return if $msg =~ m{^DEBUG: (CLIENT|ZIRCON|XREMOTE) = 1\n\z};
     return if $msg =~ m{^GET  http.*/get_datasets\?|^get_datasets - client received \d+ bytes from server};
-    warn $msg;
+    warn "[__BOLC_warn_filter passed] $msg";
     return;
 }
 
