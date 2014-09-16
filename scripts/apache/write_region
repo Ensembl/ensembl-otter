@@ -12,6 +12,7 @@ use Bio::Otter::Server::Support::Web;
 
 sub write_region {
     my ($server) = @_;
+    $server->dataset_assert_write;
 
     my $sa_region = Bio::Otter::ServerAction::XML::Region->new($server);
     my $output_xml = $sa_region->write_region;

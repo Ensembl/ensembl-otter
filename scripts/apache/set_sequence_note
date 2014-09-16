@@ -11,6 +11,7 @@ use Bio::Otter::Server::Support::Web;
 
 sub set_sequence_note {
     my ($server) = @_;
+    $server->dataset_assert_write;
 
     my $contig_name = $server->require_argument('contig');
     my $timestamp   = $server->require_argument('timestamp');

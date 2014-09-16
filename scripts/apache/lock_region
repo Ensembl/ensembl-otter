@@ -12,6 +12,7 @@ use Bio::Otter::ServerAction::XML::Region;
 
 sub lock_region {
     my ($server) = @_;
+    $server->dataset_assert_write;
 
     my $sa_region = Bio::Otter::ServerAction::XML::Region->new_with_slice($server);
     my $token = $sa_region->lock_region;

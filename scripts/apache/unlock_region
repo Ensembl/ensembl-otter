@@ -12,6 +12,7 @@ use Bio::Otter::ServerAction::XML::Region;
 
 sub unlock_region {
     my ($server) = @_;
+    $server->dataset_assert_write;
 
     my $sa_region = Bio::Otter::ServerAction::XML::Region->new($server);
     return $sa_region->unlock_region;

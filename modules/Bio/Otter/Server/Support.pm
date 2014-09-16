@@ -39,6 +39,15 @@ sub dataset {
     return $self->{'_dataset'} ||= $self->_guarded_dataset;
 }
 
+# Return if user may write the dataset, or give a clear failure.
+# Without this check, we would proceed on a read-only $dbh, then
+# generate a more obscure error
+sub dataset_assert_write {
+    my ($self) = @_;
+    die "403 Forbidden\n" if $self->dataset->READONLY;
+    return;
+}
+
 sub dataset_name {
     die "no default dataset name";
 }
