@@ -38,6 +38,25 @@ sub new {
     return $self;
 }
 
+sub clone_without {
+    my ($obj, $exclude, $dropped) = @_;
+
+    # Operate on expanded_names, because the set subtraction is more
+    # complex with the species_groups
+    my @keep;
+    foreach my $name ($obj->expanded_names) {
+        if (exists $exclude->{$name}) {
+            push @$dropped, $name if $dropped;
+        } else {
+            push @keep, $name;
+        }
+    }
+
+    my $pkg = ref($obj);
+    return $pkg->new($obj->_access, \@keep);
+}
+
+
 sub _access {
     my ($self) = @_;
     return $self->{_access}

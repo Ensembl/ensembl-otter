@@ -92,8 +92,7 @@ sub _more_read {
 sub _write_list {
     my ($self) = @_;
     if (my $mw = $self->_more_write) {
-        return $self->{_write_dslist} ||=
-          Bio::Otter::Auth::DsList->new($self->_access, $mw);
+        return Bio::Otter::Auth::DsList->new($self->_access, $mw);
     } else {
         return ();
     }
@@ -136,8 +135,28 @@ sub in_group {
 # Returns a list of DsList
 sub write_lists {
     my ($self) = @_;
+    return @{ $self->{_write_dslists} } if $self->{_write_dslists};
+
     my @w = ($self->_write_list,
              map { $_->write_list } $self->in_group);
+
+    # Ugliness which comes from too much input flexibility
+    my @ro;
+    foreach my $read ($self->read_lists) {
+        push @ro, $read->expanded_names;
+    }
+    if (@ro) {
+        # Need to exclude some read-only datasets from write_list, for
+        # datasets and species_groups.
+        my %ro = map {($_ => 1)} @ro;
+        my @dropped;
+        @w = map { $_->clone_without(\%ro, \@dropped) } @w;
+        my $e = $self->email;
+        warn "User $e has both read+write on (@dropped), taken as read only"
+          if @dropped;
+    }
+
+    $self->{_write_dslists} = \@w;
     return @w;
 }
 
