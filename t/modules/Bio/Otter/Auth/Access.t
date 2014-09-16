@@ -12,8 +12,10 @@ use Test::Otter qw( try_err );
 use Bio::Otter::Server::Config;
 use Bio::Otter::Auth::Access;
 
+my $BOAA = 'Bio::Otter::Auth::Access';
+
 sub main {
-    my @t = qw( species_groups_tt user_groups_tt legacy_tt various_fail_tt );
+    my @t = qw( species_groups_tt user_groups_tt legacy_tt dslist_tt dup_tt );
     plan tests => scalar @t;
 
     foreach my $subt (@t) {
@@ -93,7 +95,7 @@ INPUT
 
 # Demonstrate the object working normally
 sub user_groups_tt {
-    plan tests => 23;
+    plan tests => 21;
 
     my $acc = try_load(<<'INPUT');
 ---
@@ -172,30 +174,6 @@ INPUT
         my $u = Bio::Otter::Server::Config->Access->user($any_real_username);
         $u->all_datasets; 'ok' },
        'ok', 'multi-statement chained call');
-
-
-    like(try_load(<<'INPUT'), qr{Duplicate user bob .* under user_groups/(one|two)}, 'bob dup');
----
-species_groups: {}
-user_groups:
-  one:
-    users:
-      - bob
-  two:
-    users:
-      - bob
-INPUT
-
-
-    like(try_load(<<'INPUT'), qr{Duplicate user bob .* under user_groups/one}i, 'Bob/BOB dup');
----
-species_groups: {}
-user_groups:
-  one:
-    users:
-      - BOB
-      - Bob
-INPUT
 
 
     like(try_load(<<'INPUT'), qr{UserGroup->new: unexpected subkeys \(frobnitz\) .* under user_groups/odd}, 'oddness');
@@ -283,10 +261,119 @@ HASH
 }
 
 
-sub various_fail_tt {
-    plan tests => 1;
-    my $acc = Bio::Otter::Auth::Access->new({}, ['bogus']);
+sub dslist_tt {
+    plan tests => 3;
+
+    my $acc = try_load(<<'INPUT');
+---
+species_groups:
+  qux:
+    - human
+    - mouse
+INPUT
+
     like(try_err { Bio::Otter::Auth::DsList->new($acc, 'bar') },
          qr{new needs arrayref of dataset names}, 'DsList->new arrayref');
+
+    my $ds1 = Bio::Otter::Auth::DsList->new($acc, [qw[ foo bar baz :qux fum ]]);
+    my @drop;
+    my %drop = (foo => undef, baz => 1, human => 1, whumpf => 1);
+    my $ds2 = $ds1->clone_without(\%drop, \@drop);
+    is_deeply([ $ds2->raw_names ], [qw[ bar mouse fum ]], 'clone_without');
+    is_deeply(\@drop, [qw[ foo baz human ]], 'dropped');
+
     return;
 }
+
+
+sub dup_tt {
+    plan tests => 16;
+
+    like(try_load(<<'INPUT'), qr{Duplicate user bob .* under user_groups/(one|two)}, 'bob dup');
+---
+species_groups: {}
+user_groups:
+  one:
+    users:
+      - bob
+  two:
+    users:
+      - bob
+INPUT
+
+
+    like(try_load(<<'INPUT'), qr{Duplicate user bob .* under user_groups/one}i, 'Bob/BOB dup');
+---
+species_groups: {}
+user_groups:
+  one:
+    users:
+      - BOB
+      - Bob
+INPUT
+
+    my $dup_ds = try_load(<<'INPUT');
+---
+species_groups: {}
+user_groups:
+  ug1:
+    write:
+      - human
+    users:
+      - alice:
+          write:
+            - human
+      - bob
+INPUT
+
+    isa_ok($dup_ds, $BOAA, 'alice has human*2');
+
+    # two permits to write a dataset is fine
+    is_deeply(scalar $dup_ds->user('alice')->all_datasets,
+              scalar $dup_ds->user('bob')->all_datasets,
+              'human*2 = human*1');
+
+    my $ds_rwro = try_load(<<'INPUT');
+---
+species_groups: {}
+user_groups:
+  ug1:
+    write:
+      - human
+    users:
+      - chuck:
+          read:
+            - human
+INPUT
+    my $ds_rorw = try_load(<<'INPUT');
+---
+species_groups: {}
+user_groups:
+  ug1:
+    read:
+      - human
+    users:
+      - chuck:
+          write:
+            - human
+INPUT
+    foreach my $pair ([ rorw => $ds_rorw ],
+                      [ rwro => $ds_rwro ]) {
+        my ($name, $acc) = @$pair;
+        my @warn;
+        local $SIG{__WARN__} = sub { my ($msg) = @_; push @warn, $msg };
+        isa_ok($acc, $BOAA, $name);
+        my $user = $acc->user('chuck');
+        is_deeply($user->write_datasets, {}, "$name: no write");
+        my $ro = $user->read_datasets;
+        ok(try { $ro->{human}->READONLY }, "$name: human is r-o");
+        is_deeply($user->all_datasets,
+                  { human => $ro->{human} }, "$name: nothing else");
+        is(scalar @warn, 1, 'warned once');
+        like($warn[0],
+             qr{^User chuck has both read\+write on \(human\),}, 'warn text');
+    }
+
+    return;
+}
+

@@ -6,14 +6,18 @@ use warnings;
 use Test::More;
 use Test::MockObject;
 use Test::MockObject::Extends;
+use Try::Tiny;
 
+use Test::Otter qw( OtterClient try_err );
+
+use Bio::Otter::Lace::Defaults;
 use Bio::Otter::Lace::Client;
 
 
 sub main {
-    plan tests => 1;
+    plan tests => 2;
 
-    my @tt = qw( designations_tt );
+    my @tt = qw( designations_tt login_tt );
     foreach my $sub (@tt) {
         my $code = __PACKAGE__->can($sub) or die "can't find \&$sub";
         note "begin subtest: $sub";
@@ -169,4 +173,53 @@ sub _mock_BOG {
                die "$self: no key $key" unless exists $self->{$key};
                return $self->{$key};
            });
+}
+
+
+# This only tests certain aspects of the login process.
+sub login_tt {
+    plan tests => 10;
+
+    my $cl = OtterClient();
+    is(scalar Bio::Otter::Lace::Client->the, $cl, 'singleton');
+
+    note 'need to start logged in';
+    my $me = $cl->do_authentication;
+    like($me, qr{^[-_a-zA-Z0-9]+(?:\@[-_a-zA-Z0-9.]+)?$}, 'authenticate_me')
+      or return; # we have bad cookie, we failed
+
+    my $ua = $cl->get_UserAgent;
+    my $real_jar = $cl->get_CookieJar;
+
+    try {
+        my $bad_jar = HTTP::Cookies::Netscape->new;
+        note 'cookie jar replaced with empty';
+        $ua->cookie_jar($bad_jar);
+
+        $cl->password_prompt(sub { die 'it wants my password' });
+        like(try_err { $cl->do_authentication },
+             qr{^ERR:it wants my password}, 'authenticate_me, no cookie');
+
+        # get_datasets wrapper caches the answer
+        is($cl->{_datasets}, undef, 'cache pre-check: get_datasets');
+        like(try_err { $cl->get_all_DataSets },
+             qr{^ERR:it wants my password}, 'get_datasets: prompts password');
+
+        # get_config's wrappers cache the answer.  Be aware of this
+        # when testing.
+        is($cl->{ensembl_version}, undef, 'cache pre-check: get_config');
+        like(try_err { $cl->get_server_ensembl_version },
+             qr{^\d+$}, 'unauthenticated, can get_config');
+        isnt($cl->{ensembl_version}, undef, 'cache post-check: get_config');
+
+    } finally {
+        $ua->cookie_jar($real_jar); # restore, for other subtests
+    };
+
+    note 'cookie jar restored';
+    isa_ok(try_err { my @ds = $cl->get_all_DataSets; ref($ds[0]) },
+           'Bio::Otter::Lace::DataSet', 'get_datasets: returns some');
+    isnt($cl->{_datasets}, undef, 'cache post-check: get_datasets');
+
+    return;
 }
