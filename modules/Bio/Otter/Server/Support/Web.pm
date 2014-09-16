@@ -165,6 +165,8 @@ sub make_map_value {
 sub dataset_name {
     my ($self) = @_;
     my $dataset_name = $self->require_argument('dataset');
+    ($dataset_name) = $dataset_name =~ m{^([-_a-zA-Z0-9]{1,64})$}
+      or die 'Bad dataset name';
     return $dataset_name;
 }
 
