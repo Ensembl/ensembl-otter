@@ -12,6 +12,7 @@ use Net::hostent;
 use Try::Tiny;
 
 use Bio::Otter::Lace::Defaults;
+use Bio::Otter::Source::Filter;
 
 sub ottscript_options {
     return ( dataset_mode => 'one_or_all' );
@@ -51,7 +52,7 @@ sub process_dataset {
   my $client_ds = $self->client->get_DataSet_by_name($ds_name);
   $client_ds->load_client_config;
 
- FILTER: foreach my $filter ( @{$client_ds->filters} ) {
+ FILTER: foreach my $filter ( @{$client_ds->filters}, $self->_core_filter ) {
 
       my $metakey = $filter->metakey;
       next unless $metakey;
@@ -72,6 +73,20 @@ sub process_dataset {
       $self->add_translation($ds_name, $metakey, $hostname) if $self->mode eq 'config';
   }
   return;
+}
+
+# fake filter entry for pipeline_db_head
+#
+sub _core_filter {
+    my ($self) = @_;
+    my $_core_filter = $self->{'_core_filter'};
+    return $_core_filter if $_core_filter;
+
+    $_core_filter = Bio::Otter::Source::Filter->new;
+    $_core_filter->name('core');
+    $_core_filter->metakey('pipeline_db_head');
+
+    return $self->{'_core_filter'} = $_core_filter;
 }
 
 {
