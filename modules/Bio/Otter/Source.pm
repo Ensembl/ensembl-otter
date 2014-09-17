@@ -145,6 +145,17 @@ sub _param_value { ## no critic(Subroutines::ProhibitUnusedPrivateSubroutines)
     return @argument;
 }
 
+sub resource_bin {
+    my ($self, @args) = @_;
+    ($self->{'_resource_bin'}) = @args if @args;
+    my $resource_bin = $self->{'_resource_bin'};
+    return $resource_bin;
+}
+
+sub init_resource_bin {
+    confess "init_resource_bin() not implemented in parent ", __PACKAGE__;
+}
+
 1;
 
 __END__
