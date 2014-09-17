@@ -114,13 +114,21 @@ sub _core_filter {
         my ($self) = @_;
         return unless $self->mode eq'config';
 
-        # Pivot the hashes, choosing 'default' if available
+        # Pivot the hashes, putting metakeys into (in order of priority):
+        #  - $ds_name if only a single dataset has that metakey
+        #  - default  if in multiple datasets and identical in each
+        #  - $ds_name if in multiple datasets and different in some
+
         my %translations_by_dataset;
         while (my ($metakey, $translation_by_mk) = each %translations_by_metakey) {
-            if (my $default = $translation_by_mk->{default}) {
-                $translation_by_mk = { default => $default };
+
+            if (scalar keys %$translation_by_mk == 2) { # default + just one dataset...
+                delete $translation_by_mk->{default};   # ...so leave just the one
+            }
+            elsif (my $default = $translation_by_mk->{default}) {
+                $translation_by_mk = { default => $default }; # identical, so use default
             } else {
-                delete $translation_by_mk->{default};
+                delete $translation_by_mk->{default}; # multiple, remove empty default key
             }
             while (my ($ds_name, $hostname) = each %$translation_by_mk) {
                 my $translation_by_ds = $translations_by_dataset{$ds_name} ||= {};
