@@ -362,6 +362,26 @@ sub script_name {
     return $self->{'_script_name'} || "filter_get"; # see also Bio::Otter::Utils::About
 }
 
+sub init_resource_bin {
+    my ($self, $mk_to_rb_config) = @_;
+
+    my $resource_bin = $self->resource_bin;
+
+  SWITCH: {
+      $resource_bin                                and return $resource_bin; # already explicitly set
+
+      $resource_bin = $self->source                and last SWITCH;          # from 'source'
+
+      my $metakey   = $self->metakey || 'pipeline_db_head';                  # default is for core columns
+
+      $resource_bin = $mk_to_rb_config->{$metakey} and last SWITCH;          # we know the resource for the metakey
+      $resource_bin = $metakey;                        last SWITCH;          # fallback to metakey itself
+    }
+
+    # warn "setting '", $self->name, "' resource_bin to: '", $resource_bin, "'\n";
+    return $self->resource_bin($resource_bin);
+}
+
 1;
 
 __END__

@@ -313,6 +313,7 @@ sub _bam_load {
         try {
             my $bam = Bio::Otter::Source::BAM->new($name, $config);
             $bam->wanted(1);
+            $bam->init_resource_bin;
             $bam_by_name->{$name} = $bam;
         }
         catch { warn sprintf "BAM section for ${name}: ignored: $_"; };
@@ -340,11 +341,14 @@ sub _filter_load {
     my ($self) = @_;
 
     my $filter_by_name = $self->{_filter_by_name} = { };
+    my $mk_to_rb_config = $self->config_section('metakey_to_resource_bin');
+
     for my $name ( @{$self->config_keys("filter")} ) {
         my $config = $self->config_section("filter.${name}");
         try {
             my $filter= Bio::Otter::Source::Filter->from_config($config);
             $filter->name($name);
+            $filter->init_resource_bin($mk_to_rb_config);
             $filter_by_name->{$name} = $filter;
         }
         catch { warn sprintf "filter section for ${name}: ignored: $_"; };
