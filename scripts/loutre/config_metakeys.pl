@@ -24,8 +24,8 @@ sub ottscript_validate_args {
 
     $args ||= [];
     my $mode = shift @$args;
-    $mode                       or $self->usage_error("<mode> must be specified");
-    $mode =~ /^(check|config)$/ or $self->usage_error('<mode> must be one of: check, config');
+    $mode                          or $self->usage_error("<mode> must be specified");
+    $mode =~ /^(check|gen_mk2rb)$/ or $self->usage_error('<mode> must be one of: check, gen_mk2rb');
     $self->mode($mode);
 
     return;
@@ -71,7 +71,7 @@ sub process_dataset {
       };
       next FILTER unless $hostname;
       say sprintf "\t\t%s\t%s\t(%s)", $metakey, $hostname, $raw_hostname if $self->verbose;
-      $self->add_translation($ds_name, $metakey, $hostname) if $self->mode eq 'config';
+      $self->add_translation($ds_name, $metakey, $hostname) if $self->mode eq 'gen_mk2rb';
   }
   return;
 }
@@ -113,7 +113,7 @@ sub _core_filter {
 
     sub finish {
         my ($self) = @_;
-        return unless $self->mode eq'config';
+        return unless $self->mode eq'gen_mk2rb';
 
         # Pivot the hashes, putting metakeys into (in order of priority):
         #  - $ds_name if only a single dataset has that metakey
