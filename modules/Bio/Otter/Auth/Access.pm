@@ -16,7 +16,7 @@ Bio::Otter::Auth::Access - authorisation for authors' dataset access
 
 =head1 SYNOPSIS
 
- # New style.  NB. there is no implicit access granted to staff.
+ # New style.  NB. implicit access is only granted to staff by L</legacy_access>
  my $acc = Bio::Otter::Server::Config->Access;
  my $user = $acc->user($email) or die "User not authorised";
  my $ds = $user->write_dataset($dataset_name)
@@ -93,6 +93,17 @@ sub new {
 
     return $self;
 }
+
+
+=head2 species_dat()
+
+The object carries its own ref to a L<Bio::Otter::SpeciesDat>
+which usually matches B<Bio::Otter::Server::Config/SpeciesDat>.
+
+This has not had access control applied and should not be used outside
+the C<Bio::Otter::Auth::*> classes.
+
+=cut
 
 sub species_dat {
     my ($self) = @_;
