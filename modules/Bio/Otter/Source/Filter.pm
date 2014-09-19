@@ -370,7 +370,10 @@ sub init_resource_bin {
   SWITCH: {
       $resource_bin                                and return $resource_bin; # already explicitly set
 
-      $resource_bin = $self->source                and last SWITCH;          # from 'source'
+      if ($self->source) {
+          $resource_bin = $self->resource_bin_from_uri($self->source);
+          last SWITCH;
+      }
 
       my $metakey   = $self->metakey || 'pipeline_db_head';                  # default is for core columns
 
