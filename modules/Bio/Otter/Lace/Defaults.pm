@@ -125,12 +125,11 @@ sub do_getopt {
     # MacOS passes '-psn_0_######' arguments, which we must drop before
     # GetOptions gets to them
 
-    foreach my $i ( 0 .. $#ARGV ) {
-        my $opt = $ARGV[$i];
-        next unless $opt =~ /^-psn_0_\d+$/;
-        warn "Ignoring MacOS PSN option '$opt'\n";
-        splice @ARGV, $i, 1;
-    }
+    @ARGV = grep {
+        my $keep_opt = not /^-psn_\d+_\d+$/;
+        $keep_opt or warn "Ignoring MacOS PSN option '$_'\n";
+        $keep_opt;
+    } @ARGV;
 
     ## If you have any 'local defaults' that you want to take precedence
     #  over the configuration files' settings, unshift them into @ARGV
