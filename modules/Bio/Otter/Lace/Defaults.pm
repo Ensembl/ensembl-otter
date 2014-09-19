@@ -122,11 +122,22 @@ sub do_getopt {
     confess "do_getopt already called" if defined $DONE_GETOPT;
     $DONE_GETOPT = 0;
 
+    # MacOS passes '-psn_0_######' arguments, which we must drop before
+    # GetOptions gets to them
+
+    foreach my $i ( 0 .. $#ARGV ) {
+        my $opt = $ARGV[$i];
+        next unless $opt =~ /^-psn_0_\d+$/;
+        warn "Ignoring MacOS PSN option '$opt'\n";
+        splice @ARGV, $i, 1;
+    }
+
     ## If you have any 'local defaults' that you want to take precedence
     #  over the configuration files' settings, unshift them into @ARGV
     #  before running do_getopt()
 
     __parse_available_config_files();
+
     ############################################################################
     ############################################################################
     GetOptions(
