@@ -74,19 +74,22 @@ sub _send_queued_requests {
   SLOTS: while ($self->_slots_available and $self->_queue_not_empty) {
 
       my ($current, $bin);
-    QUEUE: foreach my $i ( 0 .. $#{$queue} ) {
+    QUEUE: for (my $i = 0; $i < @$queue; ) {
 
         my $request = $queue->[$i];
         $bin = $self->_request_resource_bin($request);
-        next QUEUE unless $bin;
-
-        $current = $self->_request_to_name($request);
-        splice @$queue, $i, 1;
-        last QUEUE;
+        if ($bin) {
+            # We've found something with resource_bin capacity
+            $current = $self->_request_to_name($request);
+            splice @$queue, $i, 1;
+            last QUEUE;
+        } else {
+            $i++;               # next item in queue
+        }
     }
       # if we didn't find an available resource, we're done here
       unless ($current) {
-          $logger->debug("_send_queue_requests: no free resources for current queue");
+          $logger->debug("_send_queue_requests: no more free resources for current queue");
           last SLOTS;
       }
 
