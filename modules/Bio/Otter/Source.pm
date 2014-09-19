@@ -7,6 +7,7 @@ use strict;
 use warnings;
 
 use Carp;
+use URI;
 
 sub name {
     my ($self, @args) = @_;
@@ -154,6 +155,22 @@ sub resource_bin {
 
 sub init_resource_bin {
     confess "init_resource_bin() not implemented in parent ", __PACKAGE__;
+}
+
+sub resource_bin_from_uri {
+    my ($self, $uri) = @_;
+    my $resource_bin;
+  SWITCH: {
+      my $uri_obj = URI->new($uri);
+      if ($uri_obj->can('host')) {
+          $resource_bin = $uri_obj->host and last SWITCH; # use host if it's set
+      }
+      my @path_segs = $uri_obj->path_segments;
+      $resource_bin = $path_segs[0] and last SWITCH; # relative, use first seg
+      $resource_bin = $path_segs[1] and last SWITCH; # absolute, use first seg ([0] will be undef for leading /)
+      $resource_bin = $uri;                          # fallback
+    }
+    return $resource_bin;
 }
 
 1;
