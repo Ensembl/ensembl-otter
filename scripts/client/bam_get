@@ -104,16 +104,37 @@ GFF
     return;
 }
 
+# CIGAR commands
+my %clip_command  = map { $_ => 1 } qw( H S ); # these clip
+my %query_command = map { $_ => 1 } qw( M I ); # these contribute to the query sequence of the match
+
 sub _print_feature {
     my ($feature, $fstart, $fend) = @_;
 
     # the -gff_source flag overrides the source from the BAM file
     my $source = $gff_source || $feature->source_tag;
     my ($score) = $feature->get_tag_values('AS');
-    my $query = $feature->query;
 
     my $strand = '+';
-    my @target_fields = ( $feature->name, $query->start, $query->end, $strand );
+
+    # $feature->query->{start,end} are buggy when there is hard
+    # clipping (CIGAR command 'H'), see
+    # https://github.com/GMOD/GBrowse-Adaptors/issues/4 , so we
+    # calculate $start and $end from the CIGAR ourselves
+
+    my @cigar = @{$feature->cigar_array};
+    while ($cigar[0][0] eq 'H') { shift @cigar } # skip hard clipping
+    my $soft_clip = 0;
+    while ($cigar[0][0] eq 'S') { $soft_clip += $cigar[0][1]; shift @cigar }
+    my $q_start = $soft_clip + 1;
+    my $q_end = $soft_clip;
+    for (@cigar) {
+        my ($command, $arg) = @{$_};
+        last if $clip_command{$command};
+        $q_end += $arg if $query_command{$command};
+    }
+
+    my @target_fields = ( $feature->name, $q_start, $q_end, $strand );
 
     my $flags = join ' ', $feature->get_tag_values('FLAGS');
 
