@@ -123,7 +123,7 @@ sub _print_feature {
         cigar_bam  => $feature->cigar_str,
         bam_flags  => $flags,
         Target     => \ @target_fields,
-        sequence   => $query->seq->seq,
+        sequence   => $feature->qseq,
     };
     if ($feature->flag & $paired_flag) {
        $attribute_hash->{'ID'} = $feature->display_name;
