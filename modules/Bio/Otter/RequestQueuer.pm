@@ -18,10 +18,12 @@ sub new {
         '_session'          => $session,
         '_queue'            => [],
         '_current_requests' => {},
+        '_resource_bins'    => {},
         '_cfg_concurrent'   => $client->config_section_value(RequestQueue => 'concurrent'),
         '_cfg_min_batch'    => $client->config_section_value(RequestQueue => 'min-batch'),
         '_cfg_send_queued_callback_timeout_ms' =>
             $client->config_section_value(RequestQueue => 'send-queued-callback-timeout-ms'),
+        '_cfg_requests_per_bin' => 2, # try a simple global per-bin config before going further
     };
     weaken($self->{_session});
     bless $self, $pkg;
@@ -34,6 +36,7 @@ sub new {
     return $self;
 }
 
+# Accepts Filter objects or column names
 sub request_features {
     my ($self, @feature_list) = @_;
     $self->_queue_features(@feature_list);
@@ -67,11 +70,29 @@ sub _send_queued_requests {
 
     my $queue = $self->_queue;
     my @to_send;
-    while ($self->_slots_available and $self->_queue_not_empty) {
-        my $current = shift @$queue;
-        push @to_send, $current;
-        $self->_current_request($current, $current);
+
+  SLOTS: while ($self->_slots_available and $self->_queue_not_empty) {
+
+      my ($current, $bin);
+    QUEUE: foreach my $i ( 0 .. $#{$queue} ) {
+
+        my $request = $queue->[$i];
+        $bin = $self->_request_resource_bin($request);
+        next QUEUE unless $bin;
+
+        $current = $self->_request_to_name($request);
+        splice @$queue, $i, 1;
+        last QUEUE;
     }
+      # if we didn't find an available resource, we're done here
+      unless ($current) {
+          $logger->debug("_send_queue_requests: no free resources for current queue");
+          last SLOTS;
+      }
+
+      push @to_send, $current;
+      $self->_current_request($current, $bin);
+  }
 
     if (@to_send) {
         my $to_send_debug = join(',', @to_send);
@@ -84,7 +105,8 @@ sub _send_queued_requests {
         catch {
             my $err = $_;
             my $requeue;
-            $requeue = 'busy connection' if $err =~ /Zircon: busy connection/;
+
+            # This will never get hit under ZeroMQ, but code left in case it's useful:
             $requeue = 'send_command_and_xml timeout' if $err =~ /send_command_and_xml: timeout/;
             if ($requeue) {
                 $logger->warn(
@@ -124,14 +146,14 @@ sub features_loaded_callback {
     my ($self, @loaded_features) = @_;
 
     foreach my $loaded (@loaded_features) {
-        my $current_request = $self->_current_request($loaded);
-        unless ($current_request) {
+        my $bin = $self->_current_request($loaded);
+        unless ($bin) {
             $self->_logger->warn("features_loaded_callback: no request in progress for '$loaded'");
             next;
         }
 
-        $self->_logger->debug("features_loaded_callback: loaded '$loaded'");
-        $self->_clear_request($loaded);
+        $self->_logger->debug("features_loaded_callback: loaded '$loaded', resource_bin '$bin'");
+        $self->_clear_request($loaded, $bin);
     }
     $self->_send_queued_requests;
     return;
@@ -140,6 +162,7 @@ sub features_loaded_callback {
 sub flush_current_requests {
     my ($self) = @_;
     $self->{'_current_requests'} = {};
+    $self->{'_resource_bins'} = {};
     return;
 }
 
@@ -177,8 +200,44 @@ sub _current_request {
 }
 
 sub _clear_request {
-    my ($self, $feature) = @_;
+    my ($self, $feature, $bin) = @_;
+    $self->{_resource_bins}->{$bin}--;
     return delete $self->{'_current_requests'}->{$feature};
+}
+
+sub _request_resource_bin {
+    my ($self, $request) = @_;
+    my $resource_bin = $self->_request_to_resource_bin($request);
+
+    my $bins = $self->{_resource_bins};
+    my $count = $bins->{$resource_bin};
+    if ($count and $count >= $self->_cfg_requests_per_bin) {
+        return;                 # bin full
+    }
+    $bins->{$resource_bin}++;
+    return $resource_bin;
+}
+
+sub _request_to_name {
+    my ($self, $request) = @_;
+    if (ref($request)) {
+        return $request->name;
+    } else {
+        return $request;
+    }
+}
+
+sub _request_to_resource_bin {
+    my ($self, $request) = @_;
+    if (ref($request)) {
+        if ($request->can('resource_bin')) {
+            return $request->resource_bin;
+        } else {
+            return $request->name;
+        }
+    } else {
+        return $request;
+    }
 }
 
 sub _cfg_concurrent {
@@ -200,6 +259,13 @@ sub _cfg_send_queued_callback_timeout_ms {
     ($self->{'_cfg_send_queued_callback_timeout_ms'}) = @args if @args;
     my $_cfg_send_queued_callback_timeout_ms = $self->{'_cfg_send_queued_callback_timeout_ms'};
     return $_cfg_send_queued_callback_timeout_ms;
+}
+
+sub _cfg_requests_per_bin {
+    my ($self, @args) = @_;
+    ($self->{'_cfg_requests_per_bin'}) = @args if @args;
+    my $_cfg_requests_per_bin = $self->{'_cfg_requests_per_bin'};
+    return $_cfg_requests_per_bin;
 }
 
 sub _logger {
