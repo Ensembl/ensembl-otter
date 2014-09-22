@@ -96,6 +96,20 @@ sub url_query {
     return $query;
 }
 
+# Resource bins
+
+sub init_resource_bin {
+    my ($self) = @_;
+
+    my $resource_bin = $self->resource_bin;
+    $resource_bin and return $resource_bin; # already explicitly set
+
+    $resource_bin = $self->resource_bin_from_uri($self->file);
+
+    # warn "setting '", $self->name, "' resource_bin to: '", $resource_bin, "'\n";
+    return $self->resource_bin($resource_bin);
+}
+
 # NB: the following subroutines are *not* methods
 
 sub _query_string {

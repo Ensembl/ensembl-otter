@@ -1189,6 +1189,7 @@ sub _bam_coverage_filter {
     };
     my $filter = Bio::Otter::Source::Filter->from_config($config);
     $filter->name($name);
+    $filter->resource_bin($bam->resource_bin);
 
     return $filter;
 }
