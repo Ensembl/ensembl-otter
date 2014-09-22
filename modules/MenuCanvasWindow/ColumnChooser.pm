@@ -672,10 +672,8 @@ sub load_filters {
     push @statuses, qw( Queued Loading Processing Visible ) if $is_recover;
 
     my @to_fetch = $cllctn->list_Columns_with_status(@statuses);
-    my @to_fetch_names;
     foreach my $col (@to_fetch) {
         $col->status('Queued');
-        push @to_fetch_names, $col->Filter->name;
     }
 
     if ($self->init_flag) {
@@ -721,7 +719,7 @@ sub load_filters {
         $self->AceDatabase->Client->reauthorize_if_cookie_will_expire_soon;
         my $rq = $self->SessionWindow->RequestQueuer;
         $rq->flush_current_requests; # in case of Zircon message loss
-        $rq->request_features(@to_fetch_names);
+        $rq->request_features(map { $_->Filter } @to_fetch);
     }
 
     undef $busy; # i.e. Unbusy

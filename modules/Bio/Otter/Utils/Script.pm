@@ -270,6 +270,8 @@ sub execute {
         $self->process_dataset($ds_obj, $ss_obj);
     }
 
+    $self->finish;
+
     return;
 }
 
@@ -315,9 +317,26 @@ processing datasets. If a value is returned, it will be stored and
 made available via C<setup_data> (which can be accessed within each
 invocation of C<process_dataset> via C<$dataset->script->setup_data>).
 
+Will not be called automatically if C<dataset_mode> option is 'none'.
+
 =cut
 
 sub setup {
+    my ($self, $opt, $args) = @_;
+    return;
+}
+
+=head2 finish
+
+  $cmd->finish();
+
+May be overridden to perform final actions after processing datasets.
+
+Will not be called automatically if C<dataset_mode> option is 'none'.
+
+=cut
+
+sub finish {
     my ($self, $opt, $args) = @_;
     return;
 }
