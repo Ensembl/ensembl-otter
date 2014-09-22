@@ -13,25 +13,28 @@ use Try::Tiny;
 sub new {
     my ($pkg, $session) = @_;
 
-    my $client = $session->AceDatabase->Client;
     my $self = {
         '_session'          => $session,
         '_queue'            => [],
         '_current_requests' => {},
         '_resource_bins'    => {},
-        '_cfg_concurrent'   => $client->config_section_value(RequestQueue => 'concurrent'),
-        '_cfg_min_batch'    => $client->config_section_value(RequestQueue => 'min-batch'),
-        '_cfg_send_queued_callback_timeout_ms' =>
-            $client->config_section_value(RequestQueue => 'send-queued-callback-timeout-ms'),
-        '_cfg_requests_per_bin' => 2, # try a simple global per-bin config before going further
     };
     weaken($self->{_session});
     bless $self, $pkg;
 
+    my %configs = (
+        'concurrent'                      => '_cfg_concurrent',
+        'min-batch'                       => '_cfg_min_batch',
+        'send-queued-callback-timeout-ms' => '_cfg_send_queued_callback_timeout_ms',
+        # try a simple global per-bin config before going further
+        'requests-per-bin'                => '_cfg_requests_per_bin',
+        );
+    my $client = $session->AceDatabase->Client;
     my $logger = $self->_logger;
-    $logger->debug('_cfg_concurrent: ', $self->_cfg_concurrent                      || '<unset>');
-    $logger->debug('_cfg_min_batch:  ', $self->_cfg_min_batch                       || '<unset>');
-    $logger->debug('_cfg_sqcbto_ms:  ', $self->_cfg_send_queued_callback_timeout_ms || '<unset>');
+    while (my ($cfg_key, $method) = each %configs) {
+        $self->$method($client->config_section_value(RequestQueue => $cfg_key));
+        $logger->debug(sprintf('%-36s: %s', $method, $self->$method || '<unset>'));
+    }
 
     return $self;
 }
