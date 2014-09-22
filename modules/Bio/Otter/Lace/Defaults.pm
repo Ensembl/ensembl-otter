@@ -689,3 +689,4 @@ handshake-timeout-secs=15
 concurrent=12
 min-batch=4
 send-queued-callback-timeout-ms=500
+requests-per-bin=2
