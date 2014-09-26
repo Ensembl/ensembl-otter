@@ -217,13 +217,21 @@ sub show_output {
     $add =~ s{\\x([0-9a-fA-F][0-9a-fA-F])}{\\5Cx$1}g; # Literal \x00 to \x5Cx00
     $add =~ s{([^ -~\n])}{sprintf('\\x%02X', ord($1))}eg; # quote non-ASCII
 
-    my (undef, $oldY) = @{ $txt->yview };
+    my (undef, $oldY) = @{ $txt->yview }; # a bit slow when the text is fast
     my $jump = $oldY > 0.999999;
 
     my @tagged = $txt->tagRanges('seenmark');
     $jump = 0 if @tagged;
 
+    # Append, maybe expiring old
     $txt->insert('end', $add);
+    my $lines = int( $txt->index('end') ); # linenum.linecol
+    my $maxlines = 10000;
+    if ($lines > $maxlines) {
+        my $keepfrom = $lines - int($maxlines * 0.75);
+        $txt->delete('0.0', "$keepfrom.0");
+    }
+
     $txt->yview('end') if $jump;
 
     return;
