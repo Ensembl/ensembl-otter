@@ -74,10 +74,13 @@ sub make_log {
         $logger->info('In child, pid ', $$);
         $0 .= ":logger";
 
-        for my $sig (qw( INT TERM )) {
-            # ensure logs are written when app is zapped / GUI zaps kids
-            $SIG{$sig} = sub { $logger->info("Logger ignored SIG$sig") };
-        }
+        # ensure logs are written when app is zapped / GUI zaps kids
+        $SIG{TERM} = 'IGNORE';
+        $SIG{INT} = sub {
+            $logger->info("Logger ignored SIGINT");
+            # then most likely, "Logger stdin sysread: Interrupted system call"
+            return;
+        };
 
         my $child_logger = Log::Log4perl->get_logger('otter.children');
 
