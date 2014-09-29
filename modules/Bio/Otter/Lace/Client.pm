@@ -1183,7 +1183,7 @@ sub designate_this {
 
     if (!defined $key) {
         my @v = sort values %$desig;
-        $self->logger->warn("No match for $major_re against designations.txt values (@v)");
+        $self->logger->info("$major_re !~ designations.txt values (@v), designate_this -> experimental?");
     }
 
     my %out = (major_designation => $key, # or undef (obsolete)
