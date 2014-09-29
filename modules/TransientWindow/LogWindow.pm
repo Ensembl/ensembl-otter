@@ -6,6 +6,9 @@ use warnings;
 use IO::Handle;
 use Log::Log4perl;
 
+use Try::Tiny;
+use POSIX ();
+
 use Bio::Otter::LogFile;
 use Bio::Otter::Lace::Client;
 use Bio::Otter::Git;
@@ -111,9 +114,17 @@ sub initialise {
         -command => sub { $self->hide_me },
     )->pack(-side => 'right');
 
+    my $copy_dest = Bio::Otter::Lace::Client->the->config_value('log_rsync');
+    $but_frame->Button(
+        -text    => 'rsync logfiles',
+        -command => [ $self, 'sync' ],
+        -state => $copy_dest ? 'normal' : 'disabled',
+    )->pack(-side => 'right');
+
     $lw->Tk::bind('<Escape>', [ $self, 'hide_me' ]);
     $lw->Tk::bind('<Control-w>', [ $self, 'hide_me' ]);
     $lw->Tk::bind('<Control-W>', [ $self, 'hide_me' ]);
+    $lw->Tk::bind('<Control-s>', [ $self, 'sync' ]);
 
     $but_frame->bind('<Destroy>', sub { $self = undef; });
 
@@ -307,6 +318,39 @@ sub mail_contents {
         $self->logger->error("Could not send email to '$to',\n".uri_config_how());
     };
 
+    return;
+}
+
+sub sync {
+    my ($self) = @_;
+    my $home = (getpwuid($<))[7];
+    my $copy_dest = Bio::Otter::Lace::Client->the->config_value('log_rsync');
+    die "Copy where?" unless $copy_dest;
+
+    # This is only going to work if you have
+    #   a) VPN into firewall
+    #   b) ssh keypair already set up
+    my $pid = fork();
+    if (!defined $pid) {
+        die "Fork failed: $!";
+    } elsif ($pid) {
+        # parent
+        $self->logger->info("Started rsync, pid $pid");
+    } else {
+        # child
+        close STDIN; # no password available
+        my @cmd = ('rsync', '-aiSz', '--delete-excluded', '--delete-after',
+                   '--exclude', 'Mac', # avoid loop, if tested with src=dest
+                   '--exclude', 'ns_cookie_jar', # me no share cookie
+                   "$home/.otter/", "$copy_dest:.otter/Mac");
+        { exec(@cmd); }
+        try {
+            warn "Failed to exec '@cmd': $!";
+            close STDERR;
+            close STDOUT;
+        }; # no catch, just be sure to _exit
+        POSIX::_exit(127); # avoid triggering DESTROY
+    }
     return;
 }
 
