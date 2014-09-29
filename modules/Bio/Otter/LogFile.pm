@@ -72,6 +72,7 @@ sub make_log {
     } elsif (defined $pid) {
 
         $logger->info('In child, pid ', $$);
+        $0 .= ":logger";
 
         for my $sig (qw( INT TERM )) {
             # ensure logs are written when app is zapped / GUI zaps kids
@@ -80,10 +81,41 @@ sub make_log {
 
         my $child_logger = Log::Log4perl->get_logger('otter.children');
 
-        while (<STDIN>) { ## no critic (InputOutput::ProhibitExplicitStdin)
-            chomp;
-            $child_logger->warn($_);
-        }
+        my $maxline = 4096; # RT#422965 limit unbroken line length
+        my $buff = '';
+        my $flush = sub {
+            if ($buff ne '') {
+                $logger->warn("flushing unterminated log text");
+                $child_logger->warn($buff);
+                $buff = '';
+            }
+            return;
+        };
+        while(1) {
+            my $n = STDIN->sysread($buff, $maxline + 512, length($buff));
+            # sysread rather than read, so that we promptly get whole
+            # lines before reaching $maxline
+            if (!defined $n) {
+                # error
+                $logger->error("Logger stdin sysread: $!");
+                STDIN->clearerr;
+                $flush->();
+            } elsif ($n) {
+                # data
+                while ($buff =~ s{\A(?:(.{0,$maxline})\n|(.{$maxline}))}{}) {
+                    my $txt = defined $1 ? $1 : $2;
+                    # take whole lines, or a big bite off the front of
+                    # an unbroken line
+                    $child_logger->warn($txt);
+                }
+                # there may be some $buff left
+            } else {
+                # EOF is often preceded by an (ignored) SIGTERM from the GUI
+                $flush->();
+                $logger->info("Logger EOF");
+                last;
+            }
+        };
 
         # close the output file & screen writer.  _exit does not flush.
         Log::Log4perl->eradicate_appender('Logfile');
