@@ -4,10 +4,13 @@ use strict;
 use warnings;
 
 use IO::Handle;
+use Log::Log4perl;
+
 use Bio::Otter::LogFile;
 use Bio::Otter::Lace::Client;
 use Bio::Otter::Git;
 use Bio::Vega::Utils::URI qw{ open_uri uri_config_how };
+
 use Net::Domain qw{ hostfqdn };
 
 
@@ -161,6 +164,11 @@ sub current_logfile {
     return Bio::Otter::LogFile::current_logfile();
 }
 
+sub logger {
+    my ($self) = @_;
+    return Log::Log4perl->get_logger('TW.LogWindow');
+}
+
 sub readonly_text {
     my ($self, $widget) = @_;
 
@@ -186,7 +194,7 @@ sub show_output {
         $self->logfile_handle(undef);
         if ($fh) {
             close $fh; # ignore tail process exit status
-            warn "LogWindow: no GUI to write in, closed the pipe";
+            $self->logger->warn("LogWindow: no GUI to write in, closed the pipe");
         }
         if (Tk::Exists($txt)) {
             $txt->insert('end', 'Appending stopped because pipe was closed');
@@ -296,8 +304,7 @@ sub mail_contents {
         $self->message_highlight("Could not open your email client");
         # nb. this works OK for GUI mail clients, but those that run
         # in a terminal don't return an error to us!
-        warn "Error opening email client to send email to '$to'";
-        warn uri_config_how();
+        $self->logger->error("Could not send email to '$to',\n".uri_config_how());
     };
 
     return;
@@ -310,7 +317,7 @@ sub message_highlight {
     chomp $msg;
     $txt->yview('end');
     $txt->insert('end - 1 char linestart', "$msg\n", 'seenmark');
-    warn "(LogWindow mark inserted to highlight entry: $msg)\n";
+    $self->logger->info("(LogWindow mark inserted to highlight entry: $msg)");
 
     return ();
 }
@@ -318,7 +325,8 @@ sub message_highlight {
 sub DESTROY {
     my ($self) = @_;
 
-    warn "Destroying logfile monitor for '", $self->current_logfile, "'\n";
+    my $lfn =  $self->current_logfile;
+    CORE::warn "Destroying logfile monitor for '$lfn'";
 
     if (my $pid = $self->tail_process) {
         kill 'TERM', $pid if defined $pid;
