@@ -10,6 +10,7 @@ use Carp;
 use POSIX ();
 use IO::Handle;
 use Log::Log4perl qw(:levels);
+use Try::Tiny;
 
 use Bio::Otter::Log::TieHandle;
 
@@ -133,6 +134,25 @@ sub make_log {
     }
 
     return (); # not reached
+}
+
+sub unmake_log {
+    my ($called) = @_;
+
+    # For use during global destruction, so "warn" will work properly
+    # instead of making Log4perl complain about lack of init
+    try {
+        Bio::Otter::Log::TieHandle->untie_for(*STDOUT);
+    } catch {
+        warn "Untie STDOUT: $_";
+    };
+    try {
+        Bio::Otter::Log::TieHandle->untie_for(*STDERR);
+    } catch {
+        warn "Untie STDERR: $_";
+    };
+
+    return;
 }
 
 sub current_logfile {

@@ -124,7 +124,7 @@ use EditWindow::Password;
     Tk::MainLoop();
 
     $logger->info("GUI exit");
-
+    Bio::Otter::LogFile->unmake_log;
     local $SIG{'TERM'} = 'IGNORE';
 
     # Sending signal to negative of our PID sends
