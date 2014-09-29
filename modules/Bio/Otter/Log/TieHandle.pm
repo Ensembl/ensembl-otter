@@ -56,6 +56,20 @@ sub CLOSE {
     return close($fh);
 }
 
+sub untie_for {
+    my ($pkg, $tied_fh) = @_;
+
+    # untie is tricky, need to drop every other reference to $self
+    # first.  Do it this way so caller is not holding a ref
+    my $self = tied($tied_fh);
+
+    my $fh = $self->{orig};
+    undef $self;
+    untie *$fh;
+
+    return;
+}
+
 1;
 
 __END__
