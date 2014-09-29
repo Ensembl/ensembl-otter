@@ -123,7 +123,7 @@ use EditWindow::Password;
 
     Tk::MainLoop();
 
-    $logger->info("Exiting");
+    $logger->info("GUI exit");
 
     local $SIG{'TERM'} = 'IGNORE';
 
