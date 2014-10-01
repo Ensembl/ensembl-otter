@@ -1036,7 +1036,7 @@ sub save_data {
     my $adb = $self->AceDatabase;
 
     unless ($adb->write_access) {
-        $self->logger->info("Read only session - not saving");
+        $self->message("Read only session - not saving");
         return 1;   # Can't save - but is OK
     }
     my $top = $self->top_window();
