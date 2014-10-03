@@ -28,7 +28,7 @@ use Try::Tiny;
     print "$sql\n";
 
 #    my $cl = Bio::Otter::Lace::Defaults::make_Client();
-    foreach my $ds (Bio::Otter::Server::Config->SpeciesDat->datasets) {
+    foreach my $ds (Bio::Otter::Server::Config->SpeciesDat->all_datasets) {
         printf "Querying dataset %s\n", $ds->name;
         my $query_dba =
           $pipe_flag

@@ -241,7 +241,7 @@ sub execute {
 
     my @ds_names = $self->_datasets;
     unless (@ds_names) {
-        @ds_names = map { $_->name } @{$species_dat->datasets};
+        @ds_names = map { $_->name } $species_dat->all_datasets;
     }
 
     foreach my $ds_name (sort @ds_names) {
