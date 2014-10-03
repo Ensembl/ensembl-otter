@@ -57,6 +57,9 @@ sub designations_tt {
         $BOLC_A->designate_this(@arg);
     };
 
+    my $UNMATCH_EXPERIMENTAL_RE =
+      qr{(?<feat_regex_str>.*) !~ designations\.txt values \((?<vals>.*)\), .* experimental\?};
+
     _check_hash('dev seen from live=84',
                 $do->({ head => 'humpub-release-85-dev-66-g9cf15b2' },
                       major => 85),
@@ -75,8 +78,7 @@ sub designations_tt {
                 stale => 0,
                 latest_this_major => undef,
                 current_live => '84.04');
-    $BOLC_A->logger->ok_pop("was not designated",
-                            qr{^No match for .*_anyfeat\$.* against designations\.txt});
+    $BOLC_A->logger->ok_pop("was not designated", $UNMATCH_EXPERIMENTAL_RE);
 
     _check_hash('live seen from live=84',
                 $do->({ head => 'humpub-release-84-04' }, major => 84),
@@ -116,8 +118,7 @@ sub designations_tt {
                 stale => 1,
                 latest_this_major => '84.04',
                 current_live => '84.04');
-    $BOLC_A->logger->ok_pop("undesig list",
-                            qr{^No match for \S+ against designations\.txt values });
+    $BOLC_A->logger->ok_pop("undesig list", $UNMATCH_EXPERIMENTAL_RE);
 
     return;
 }
@@ -136,9 +137,9 @@ sub _check_hash {
 sub _logger {
     my $logger = Test::MockObject->new([]);
 
-    $logger->mock(warn => sub {
+    $logger->mock(info => sub {
                       my ($self, $msg) = @_;
-                      push @$self, [ warn => $msg ];
+                      push @$self, [ info => $msg ];
                       return;
                   });
 
