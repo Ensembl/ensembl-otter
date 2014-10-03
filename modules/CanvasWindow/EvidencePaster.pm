@@ -9,6 +9,7 @@ use Log::Log4perl;
 use Readonly;
 use Scalar::Util 'weaken';
 use Hum::Sort 'ace_sort';
+use Try::Tiny;
 use Bio::Otter::Lace::Client;
 use Bio::Otter::Lace::OnTheFly::Transcript;
 use Bio::Otter::UI::TextWindow::TranscriptAlign;
@@ -56,7 +57,28 @@ sub initialise {
                     -expand => 1,
                 );
 
-            my $align = sub { $self->align_to_transcript; };
+            my $doing_align = 0; # capture by closure...
+            my $align = sub {
+                if ($doing_align) {
+                    $self->logger->warn('Already aligning, ignoring click.');
+                    return;
+                }
+                $doing_align = 1;
+                try {
+                    $self->align_to_transcript;
+                }
+                catch {
+                    my $err = $_;
+                    $self->top->messageBox(
+                        -title   => $Bio::Otter::Lace::Client::PFX.'Error',
+                        -icon    => 'warning',
+                        -message => 'Error running align to transcript: ' . $err,
+                        -type    => 'OK',
+                        );
+                    $self->logger->error('Error running align_to_transcript: ', $err);
+                };
+                $doing_align = 0;
+            };
             $top->bind('<Control-t>', $align);
             $top->bind('<Control-T>', $align);
             my $align_button = $otf_ts_frame->Button(
