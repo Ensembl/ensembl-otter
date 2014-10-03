@@ -49,8 +49,8 @@ $PORTS_RE = qr{\b($PORTS_RE)\b};
         ) or $usage->();
     $usage->() unless $switch;
 
-    my $ds_list = Bio::Otter::Server::Config->SpeciesDat->datasets;
-    foreach my $ds (sort { $a->name cmp $b->name } @$ds_list) {
+    foreach my $ds (sort { $a->name cmp $b->name }
+                    Bio::Otter::Server::Config->SpeciesDat->all_datasets) {
         my $name = $ds->name;
         my $dba = $ds->otter_dba;
         my $meta = $dba->get_MetaContainer;

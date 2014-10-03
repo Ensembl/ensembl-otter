@@ -225,9 +225,9 @@ sub client_tt {
 }
 
 sub readonly_ds_tt {
-    my $dslist = SpeciesDat()->datasets;
-    plan tests => 10 * @$dslist;
-    foreach my $ds (@$dslist) {
+    my @all_ds = SpeciesDat()->all_datasets;
+    plan tests => 10 * @all_ds;
+    foreach my $ds (@all_ds) {
         my $name = $ds->name;
         my $ds_ro = $ds->clone_readonly;
         my $ok = 1;
@@ -483,7 +483,8 @@ sub _dba2subslice {
 sub equivs_tt { # transient
     my $fn = Bio::Otter::Server::Config->data_filename('species.dat');
     my $new = Bio::Otter::SpeciesDat->new($fn);
-    plan tests => 1 + @{ $new->datasets };
+    my @new_all = $new->all_datasets;
+    plan tests => 1 + @new_all;
 
     my $old = Bio::Otter::SpeciesDat->new__old($fn);
     # When this method is gone or fails for want of legacy fields, we
@@ -491,7 +492,7 @@ sub equivs_tt { # transient
 
 #    # Paper over some CNAME vs. canonical hostname differences
 #    my %munge = qw( lutra7 otterpipe2 lutra5 otterpipe1 );
-#    foreach my $db (@{ $old->datasets }) {
+#    foreach my $db ($old->all_datasets) {
 #        foreach my $k (qw( HOST DNA_HOST )) {
 #            my $p = $db->ds_all_params;
 #            my $replace = $munge{ $p->{$k} };
@@ -504,7 +505,7 @@ sub equivs_tt { # transient
 #
 ### Not required, it was a data bug.  Left in case it becomes...  a feature.
 
-    foreach my $ds_name (sort map { $_->name } @{ $new->datasets }) {
+    foreach my $ds_name (sort map { $_->name } @new_all) {
         is_deeply($old->dataset($ds_name),
                   $new->dataset($ds_name),
                   "Dataset $ds_name");

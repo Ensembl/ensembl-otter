@@ -60,7 +60,15 @@ sub dataset {
 
 sub datasets {
     my ($self) = @_;
+    carp 'B:O:SD->datasets deprecated';
+    # because it provides write access to internals,
+    # and (surprising within e-o) arrayref semantics instead of list
     return $self->{_datasets};
+}
+
+sub all_datasets {
+    my ($self) = @_;
+    return @{ $self->{_datasets} };
 }
 
 sub _dataset_hash {

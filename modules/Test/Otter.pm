@@ -425,7 +425,7 @@ sub get_BOSDatasets {
     my $bosc_sd = Bio::Otter::Server::Config->SpeciesDat;
     warn "No datasets requested" unless @name;
     die "wantarray" unless wantarray;
-    return @{ $bosc_sd->datasets } if "@name" eq 'ALL';
+    return $bosc_sd->all_datasets if "@name" eq 'ALL';
     return map { $bosc_sd->dataset($_) or die "No such dataset '$_'" } @name;
 }
 
