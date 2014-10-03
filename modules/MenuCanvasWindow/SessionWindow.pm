@@ -36,6 +36,7 @@ use Zircon::ZMap;
 use Bio::Otter::Lace::Client;
 use Bio::Otter::Log::WithContext;
 use Bio::Otter::RequestQueuer;
+use Bio::Otter::Zircon::ProcessHits;
 use Bio::Otter::ZMap::XML;
 use Bio::Vega::Transform::Otter::Ace;
 
@@ -130,6 +131,7 @@ sub initialise {
     delete $self->{'_zmap'};
 
     $self->RequestQueuer(Bio::Otter::RequestQueuer->new($self));
+    my $proc = $self->_process_hits_proc; # launches process_hits_proc, ready for action
 
     return;
 }
@@ -1567,6 +1569,8 @@ sub process_and_update_columns {
     my $alignment_result  = $self->AceDatabase->process_alignment_Columns(@columns);
     my $transcript_result = $self->AceDatabase->process_transcript_Columns(@columns);
 
+    $self->_process_hits_proc->process_columns(@columns); # FIXME: WIP!!
+
     my ($transcripts, $failed) = @{$transcript_result}{qw( -results -failed )};
 
     if ($transcripts and @$transcripts) {
@@ -1581,6 +1585,27 @@ sub process_and_update_columns {
         $self->message($message);
     }
     return;
+}
+
+sub _process_hits_proc {
+    my ($self) = @_;
+    my $_process_hits_proc = $self->{'_process_hits_proc'};
+    unless ($_process_hits_proc) {
+
+        my $home     = $self->AceDatabase->home;
+        my $url_root = $self->AceDatabase->Client->url_root;
+
+        my $proc = Bio::Otter::Zircon::ProcessHits->new(
+            '-app_id'   => $self->zircon_app_id,
+            '-context'  => $self->new_zircon_context('PHO'),
+            '-arg_list' => [
+                "session_dir=$home",
+                "url_root=$url_root",
+            ],
+            );
+        $_process_hits_proc = $self->{'_process_hits_proc'} = $proc;
+    }
+    return $_process_hits_proc;
 }
 
 sub delete_subsequences {
@@ -2560,10 +2585,11 @@ sub zmap_configs_dir {
 ### BEGIN: ZMap control interface
 
 sub new_zircon_context {
-    my ($self) = @_;
+    my ($self, $prefix) = @_;
+    $prefix //= 'SW';
     my $context = Zircon::Context::ZMQ::Tk->new(
             '-widget'       => $self->menu_bar,
-            '-trace_prefix' => sprintf('SW=[%s]', $self->AceDatabase->name),
+            '-trace_prefix' => sprintf('%s=[%s]', $prefix, $self->AceDatabase->name),
         );
     $self->logger->debug(sprintf('New context: %s', $context));
     return $context;
