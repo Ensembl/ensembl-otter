@@ -7,16 +7,16 @@ use Test::More;
 use LWP::UserAgent;
 use YAML qw( Dump Load );
 use Try::Tiny;
+use File::Temp 'tempfile';
+
+use Test::Otter 'OtterClient';
 
 use Bio::Otter::Server::Config;
 use Bio::Otter::Lace::Client;
 use Bio::Otter::Lace::Defaults;
-use File::Temp 'tempfile';
 
 use Bio::Otter::Auth::SSO;
 use Bio::Otter::Auth::Pagesmith;
-
-use Test::Otter 'OtterClient';
 
 
 our ($MODE, $CLASS);
