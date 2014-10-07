@@ -77,13 +77,20 @@ sub main {
     my $FROM_ASM_A_CMP = q{  from
    seq_region asm
     join assembly a     on a.asm_seq_region_id = asm.seq_region_id
-    join seq_region cmp on a.cmp_seq_region_id = cmp.seq_region_id};
+    join seq_region cmp on a.cmp_seq_region_id = cmp.seq_region_id
+    join coord_system asmcs on asm.coord_system_id = asmcs.coord_system_id
+    join coord_system cmpcs on cmp.coord_system_id = cmpcs.coord_system_id};
+
+    my ($ASM_NAME, $CMP_NAME) =
+      map { qq{ concat_ws(':', ${_}cs.name, ${_}cs.version, ${_}.name) } }
+        qw( asm cmp );
 
     my %sql =
       ('assembly segment asm/cmp length: match && >= 0' => qq{
   select
-   asm.name, asm_end-asm_start+1 asm_len,
-   cmp.name, cmp_end-cmp_start+1 cmp_len, a.*
+   '>asm:name,seglen', $ASM_NAME, asm_end-asm_start+1 asm_len,
+   '>cmp:name,seglen', $CMP_NAME, cmp_end-cmp_start+1 cmp_len,
+   '>assembly_row', a.*
   $FROM_ASM_A_CMP
   where asm_end-asm_start+1 <> cmp_end-cmp_start+1
      or asm_end-asm_start+1 <= 0 },
@@ -91,21 +98,23 @@ sub main {
        # (almost always, and the rest look like a bad AGP loaded)
 
        (map {( "assembly.${_} side" => qq{
-  select distinct asm.name, cmp.name,
-   asm_start, asm_end, cmp_start, cmp_end, ori
+  select distinct
+   '>asm:name,len,start,end', $ASM_NAME, asm.length, asm_start, asm_end,
+   '>cmp:name,len,start,end', $CMP_NAME, cmp.length, cmp_start, cmp_end,
+   '>ori', ori
   $FROM_ASM_A_CMP
   where (${_}_end > ${_}.length
       or ${_}_start < 1) } )} qw( asm cmp )),
 
        'contigs match their clone' => qq{
-  select distinct asm.name, asm.length, cmp.name
+  select distinct
+   '>asm:name,len', $ASM_NAME, asm.length,
+   '>cmp:name',     $CMP_NAME
   $FROM_ASM_A_CMP
-    join coord_system acs  on asm.coord_system_id = acs.coord_system_id
-    join coord_system ccs  on cmp.coord_system_id = ccs.coord_system_id
-  where ccs.name = 'contig'
-    and acs.name = 'clone'
+  where cmpcs.name = 'contig'
+    and asmcs.name = 'clone'
     and (cmp.name <> concat_ws('.', asm.name, 1, asm.length)
-      or acs.name <> 'clone'
+      or asmcs.name <> 'clone'
       or a.asm_start <> 1 or a.cmp_start <> 1
       or a.asm_end <> asm.length
       or a.cmp_end <> asm.length
@@ -132,6 +141,7 @@ sub main {
         foreach my $qname (sort keys %sql) {
             my $R = $dbh->selectall_arrayref("$sql{$qname} limit $maxrow");
 
+            local $TODO = "many things are broken";
             is(scalar @$R, 0, "$dbname: $qname")
               or diagdump(R => $R);
         }
