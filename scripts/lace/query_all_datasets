@@ -35,36 +35,36 @@ use Try::Tiny;
           ? $ds->pipeline_dba('rw')
           : $ds->otter_dba;
 
-        my $row_count;
-        if ($do_flag) {
-            try {
+        try {
+            my $row_count;
+            if ($do_flag) {
                 $row_count = $query_dba->dbc->do($sql);
             }
-            catch {
-                if ($ignore_flag) {
-                    warn $_;
-                }
-                else {
-                    die $_;
-                }
-            };
-        }
-        else {
-            my $sth = $query_dba->dbc->prepare($sql);
-            $sth->execute;
-            my $head = "\t" . DBI::neat_list($sth->{'NAME'}) . "\n";
-            my $data = $sth->fetchall_arrayref;
-            $row_count = $sth->rows;
-            if ($row_count) {
-                print $head;
-                foreach my $row (@$data) {
-                    print "\t", DBI::neat_list($row), "\n";
+            else {
+                my $sth = $query_dba->dbc->prepare($sql);
+                $sth->execute;
+                my $head = "\t" . DBI::neat_list($sth->{'NAME'}) . "\n";
+                my $data = $sth->fetchall_arrayref;
+                $row_count = $sth->rows;
+                if ($row_count) {
+                    print $head;
+                    foreach my $row (@$data) {
+                        print "\t", DBI::neat_list($row), "\n";
+                    }
                 }
             }
-        }
-        
-        printf STDERR "%d row%s\n", $row_count, $row_count == 1 ? '' : 's';
-        
+
+            printf STDERR "%d row%s\n", $row_count, $row_count == 1 ? '' : 's';
+
+        } catch {
+            if ($ignore_flag) {
+                warn $_;
+            }
+            else {
+                die $_;
+            }
+        };
+
         # while (my @row = $sth->fetchrow) {
         #     print join("\t", @row), "\n";
         # }
@@ -98,7 +98,7 @@ The SQL to send to each database. Alternatively it will take SQL from STDIN.
 
 =item B<-ignore>
 
-Ignore otherwise fatal errors from executing queries when running in C<-do> mode.
+Ignore otherwise fatal errors from executing queries.
 
 =back
 
