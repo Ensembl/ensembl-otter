@@ -248,7 +248,7 @@ sub check_for_good_symbols {
     return 0;
   }
 
-  # want first letter is capital and do not have internal captial letter(s)
+  # want first letter is capital and do not have internal capital letter(s)
   elsif ( $mgi_symbol =~ /^[A-Z]{1,1}\w+/ and $mgi_symbol !~ /^.+[A-Z]/ ) {
     print STDERR "cat-5: SYMBOL_OK\n";
     return 1;
