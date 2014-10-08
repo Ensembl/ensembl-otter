@@ -10,6 +10,59 @@ use Try::Tiny;
 
 =head1 DESCRIPTION
 
+This test can run on all datasets (default), or those named in @ARGV
+(not so convenient for L<prove(1)>), or those named in the
+C<$PROVE_DATASETS> environment variable.
+
+For each dataset (on both loutre and pipe), enumerate the
+"interesting" pairs of C<seq_region>s linked via the C<assembly> table
+and assert that one of
+
+=over 2
+
+=item 1. The projection API maps in both directions.
+
+The number of segments and total bases returned should match the
+assembly table.
+
+=item 2. One or both C<seq_region>s are in C<chromosome:OtterArchive>
+and therefore not expected to project correctly.
+
+We treat this C<coord_system> like a never-purged trash folder.
+
+It seems the assembly mapper currently (to v76) doesn't work well
+where there is not a single source and destination on the
+coord_systems involved.  Even when the C<assembly.mapping> is marked
+with C<#> instead of C<|>.
+
+Not sure whether it's a code bug or a data bug, just remember not to
+step on it.
+
+=item 3. There is something wrong with the assembly rows.
+
+It should be possible to report this in the failure.
+
+Not implemented - first see what's broken.
+
+=back
+
+should hold in every case.
+
+Also there should be "interesting" chromosome:Otter#chromosome
+mappings on loutre.
+
+
+=head2 Interesting assembly groups
+
+As defined in C<interesting_q()>.
+
+=head2 Not checked
+
+Clone to contig mapping is ignored.
+
+
+=head1 OLD CHECKS
+
 =head2 This script checks
 
 =over 4
@@ -47,30 +100,56 @@ mca@sanger.ac.uk
 
 
 sub main {
-    if (!@ARGV) {
-        # species which pass
-        push @ARGV,
-          qw( rat gibbon opossum chimp wallaby gorilla platypus chicken
-              mus_spretus dog tropicalis cat tomato marmoset medicago lemur
-              sordaria tas_devil );
+    my @ds_name = @_;
+    @ds_name = split /\s+/, $ENV{PROVE_DATASETS}
+      if !@ds_name && defined $ENV{PROVE_DATASETS};
+    @ds_name = qw( ALL ) unless @ds_name;
 
-        # species which fail
-@ARGV=();
-        push @ARGV, qw( human mouse zebrafish pig );
+    my @ds = get_BOSDatasets(grep { $_ ne 'TEST' } @ds_name);
 
-        # restricted: nod_mouse
+    if (grep { $_ eq 'TEST' } @ds_name) {
+        # Replace with backup-restored-hacked copy, for building the testcases
+        push @ds, Bio::Otter::SpeciesDat::DataSet->new
+          (human_20140101 => {qw{ DBNAME mca_loutre_human_20140101 DBSPEC otterpipe2 DNA_DBSPEC otterlive READONLY 1 }});
     }
 
-    my @ds = get_BOSDatasets(@ARGV);
+    show_vsn();
+
+    plan tests => 1 * @ds;
+    foreach my $ds (@ds) {
+        my $name = $ds->name;
+        subtest $name => sub {
+            plan tests => 3;
+            note "In $name";
+
+            foreach my $t ([ loutre => $ds->otter_dba ],
+                           [ pipe => $ds->pipeline_dba ]) {
+
+                my ($type, $dba) = @$t;
+                my $dbh = $dba->dbc->db_handle;
+                my @asmpairs = interesting_select($dbh);
+                my $dbname = $dba->dbc->dbname;
+
+                # Can we 1) map it 2) not care about it 3) explain the breakage?
+                subtest "$name\[$type]=$dbname trilemma" => sub {
+                    trilemma_tt($dba, \@asmpairs);
+                };
+
+                # Is everything connected which should be?
+                subtest "$dbname is linked" => sub {
+                    linkage_tt($dba, \@asmpairs);
+                } if $type eq 'loutre';
+
+            }
+        };
+    }
+
+    return 0;
+}
 
 
-    ### Replace with backup-restored-hacked copy, for building the testcases
-    #
-    @ds = ();
-    push @ds, Bio::Otter::SpeciesDat::DataSet->new
-      (human_20140101 => {qw{ DBNAME mca_loutre_human_20140101 DBSPEC otterpipe2 DNA_DBSPEC otterlive READONLY 1 }});
-    #
-    ###
+sub old_check_tt {
+    my ($ds) = @_;
 
     my $maxrow = 2;
 
@@ -124,6 +203,25 @@ sub main {
 
       );
 
+    plan tests => scalar keys %sql;
+
+    my $dbc = $ds->otter_dba->dbc;
+    my $dbh = $dbc->db_handle;
+    my $dbname = $dbc->dbname;
+
+    foreach my $qname (sort keys %sql) {
+        my $R = $dbh->selectall_arrayref("$sql{$qname} limit $maxrow");
+
+        local $TODO = "many things are broken";
+        is(scalar @$R, 0, "$dbname: $qname")
+          or diagdump(R => $R);
+    }
+
+}
+
+sub fuzz {
+    my ($ds_name) = @_;
+
     my %fuzz; # hardwired excuses for some non-exact assemblies
     $fuzz{mca_loutre_human_20140101} =
       { 'chr7-04:chr7-03' => 4267,
@@ -131,35 +229,47 @@ sub main {
         'chr13-13:chr13-12' => 27069,
         'chr1-14:chr1-13' => 7962073 };
 
-    plan tests => @ds * (2 + keys %sql);
+    return $fuzz{$ds_name} || {};
+}
 
-    foreach my $ds (@ds) {
-        my $dbc = $ds->otter_dba->dbc;
-        my $dbh = $dbc->db_handle;
-        my $dbname = $dbc->dbname;
 
-        foreach my $qname (sort keys %sql) {
-            my $R = $dbh->selectall_arrayref("$sql{$qname} limit $maxrow");
+sub trilemma_tt {
+    my ($dba, $asmpairs) = @_;
+    my $name = $dba->dbc->dbname;
+    note "In $name";
+    my $fuzzh = fuzz($name);
+    # plan tests => variable
 
-            local $TODO = "many things are broken";
-            is(scalar @$R, 0, "$dbname: $qname")
-              or diagdump(R => $R);
-        }
-
-        for my $dba ($ds->otter_dba, $ds->pipeline_dba) {
-            my $name = $dba->dbc->dbname;
-
-            subtest "$name by API" => sub {
-                return try {
-                    project_tt($dba, $fuzz{$name} || {});
-                } catch {
-                    fail 'Caught exception';
-                    note $_;
-                };
-            };
-        }
+    my @no_project;
+    foreach my $pair (@$asmpairs) {
+        next unless $pair->col('nseg'); # no segments, nothing to project
+        next if $pair->as_txt eq 'clone:-:<various> ~~ contig:none:<various>';
+        my @trashy = $pair->is_trash;
+        my $proj = try {
+            local $TODO = @trashy ? "not expected to project (@trashy)" : undef;
+            my $fuzz = $fuzzh->{ join ':', $pair->col(qw( asm_name cmp_name )) };
+            push @no_project, $pair
+              unless can_project($dba, $pair, $fuzz || 0) || $TODO;
+        } catch {
+            fail 'Caught exception on '.$pair->as_txt;
+            note $_;
+        };
     }
 
+    return;
+}
+
+
+sub linkage_tt {
+    my ($dba, $asmpairs) = @_;
+    my $name = $dba->dbc->dbname;
+    plan tests => 1;
+    local $TODO = 'not implemented';
+    return fail();
+}
+
+
+sub show_vsn {
     my $V = try {
         require Bio::EnsEMBL::ApiVersion; # since v59
         Bio::EnsEMBL::ApiVersion::software_version();
@@ -168,119 +278,212 @@ sub main {
         Bio::EnsEMBL::Registry::software_version(); # since v34 ?
     };
     note "e! API v$V";
-
-    return ();
-}
-
-
-sub project_tt {
-    my ($dba, $fuzzh) = @_;
-    my $dbname = $dba->dbc->dbname;
-    my $dbh = $dba->dbc->db_handle;
-    my $SA = $dba->get_SliceAdaptor;
-
-    # What current chromosomes do we have?
-    my $chr = $dbh->selectcol_arrayref
-      (q{ SELECT r.name
-          FROM seq_region r
-            JOIN coord_system cs using (coord_system_id)
-          WHERE cs.name = 'chromosome'
-            AND cs.version = 'Otter' });
-
-    plan tests => scalar @$chr;
-
-    foreach my $sr_name (@$chr) { SKIP: {
-        # Get whole chromosome, no fuzzy
-        my $slice = $SA->fetch_by_region
-          (chromosome => $sr_name => undef, undef, undef, Otter => 1);
-        if (!$slice) {
-            fail("$dbname $sr_name: slice not found");
-            next;
-        }
-        my $srid = $SA->get_seq_region_id($slice);
-
-        # What does the assembly table say should be reachable?
-        my @linked;
-        foreach my $iter ([qw[ asm cmp forwards ]], [qw[ cmp asm backwards ]]) {
-            my ($from, $to, $dir) = @$iter;
-            my $linked = $dbh->selectall_arrayref
-              (qq{ SELECT '$dir',
-                    r.seq_region_id, r.name, cs.version,
-                    sum(a.asm_end - a.asm_start + 1) nbase,
-                    count(a.asm_end)                 nseg
-                  FROM seq_region r
-                   JOIN assembly a ON r.seq_region_id = a.${to}_seq_region_id
-                   JOIN coord_system cs using (coord_system_id)
-                  WHERE a.${from}_seq_region_id = ?
-                    AND cs.name='chromosome'
-                    AND cs.version not in ('OtterArchive')
-                 -- to project to/from OtterArchive, first move to another cs
-                  GROUP BY 1,2,3,4 }, {}, $srid);
-            push @linked, @$linked;
-
-        }
-        if (!@linked && $dbname =~ /^pipe_/) {
-            skip "$dbname.assembly shows no chromosomes linked to $sr_name", 1;
-        } elsif (!@linked) {
-            diag "no chromosomes linked to $sr_name, expected some";
-        }
-
-        my (@project_ok, @project_bad);
-        foreach my $ln (@linked) {
-            my ($dir, $to_srid, $to_name, $to_vsn, $nbase, $nseg) = @$ln;
-            my $to_slice = $SA->fetch_by_seq_region_id($to_srid);
-
-            my $proj = $slice->project_to_slice($to_slice);
-            if (!@$proj) {
-                # no segments, try the other way
-                $proj = $to_slice->project_to_slice($slice);
-                fail("Inverse projection $sr_name<-$to_name gave results!?")
-                  if @$proj;
-                # It shouldn't help.  If it did, we also see badproj
-                # because this swapping code is not fully symmetrical
-            }
-            my ($to_nbase, $to_nseg, $badproj) = (0) x 3;
-            foreach my $seg (@$proj) {
-                $to_nbase += abs($seg->from_end - $seg->from_start) + 1;
-                $to_nseg ++;
-                my $got_to_srid = $SA->get_seq_region_id($seg->to_Slice);
-                $badproj = $seg->to_Slice->display_id
-                  if $to_srid != $got_to_srid;
-            }
-
-            my %projection =
-              (from => $slice->display_id,
-               to => $to_slice->display_id,
-               direction => $dir,
-               got_nbase => $to_nbase,
-               got_nseg => $to_nseg,
-               want_nbase => $nbase,
-               expect_nseg => $nseg,
-               badproj => $badproj);
-
-            my $fuzzname = join ':', $sr_name, $to_name;
-            my $pairfuzz = $fuzzh->{$fuzzname} || 0;
-
-            my @bad;
-            push @bad, 'badproj' if $badproj;
-            push @bad, 'noseg' unless $to_nseg;
-            my $nbase_diff = $to_nbase - $nbase;
-            push @bad, "shortlen:$nbase_diff" unless
-              ( !$to_nseg # already reported
-                || abs($nbase_diff) <= $pairfuzz # match enough (all) bases
-              );
-            $projection{bad} = \@bad if @bad;
-            my $binref = @bad ? \@project_bad : \@project_ok;
-            push @$binref, \%projection;
-        }
-        my $n_ok = @project_ok;
-        my $n_bad = @project_bad;
-        ok($n_ok && !$n_bad,
-           "$dbname $sr_name has projections ($n_ok good, $n_bad bad)") or
-             diagdump(good => \@project_ok, bad => \@project_bad);
-    } }
-
     return;
 }
 
-main();
+
+sub interesting_q {
+    return <<'SQL';
+ SELECT
+  asmcs.name, asmcs.version, if(asmcs.name in ('clone','contig'), '<various>', asm.name) asm_name,
+  cmpcs.name, cmpcs.version, case
+    when min(cmp.name) is null and max(cmp.name) is null then null
+    when min(cmp.name) = max(cmp.name) then min(cmp.name)
+    else '<various>' end cmp_name,
+  sum(a.asm_end - a.asm_start + 1) nbase,
+  count(a.asm_end)                 nseg,
+  count(distinct cmp_seq_region_id) n_cmp_region,
+  min(asm_start), max(asm_end),
+  min(cmp_start), max(cmp_end)
+ FROM seq_region asm
+   JOIN coord_system asmcs on asm.coord_system_id=asmcs.coord_system_id
+   LEFT JOIN assembly a ON asm.seq_region_id = a.asm_seq_region_id
+   LEFT JOIN seq_region cmp on cmp.seq_region_id = a.cmp_seq_region_id
+   LEFT JOIN coord_system cmpcs on cmp.coord_system_id=cmpcs.coord_system_id
+ GROUP BY 1,2,3,4,5
+ ORDER BY 1,2,4,5,length(asm.name),3,6
+SQL
+}
+
+sub interesting_select {
+    my ($dbh) = @_;
+    my $rows = $dbh->selectall_arrayref(interesting_q());
+    return map { _Interesting->new($_) } @$rows;
+}
+
+sub can_project {
+    my ($dba, $pair, $lenfuzz) = @_;
+    my $dbname = $dba->dbc->dbname;
+    my $dbh = $dba->dbc->db_handle;
+    my $SA = $dba->get_SliceAdaptor;
+    my $pairname = $pair->as_txt;
+
+    # Get slices for both regions
+    my ($asm, $cmp) = map { $pair->fetch_by_region($_ => $SA) } qw{ asm cmp };
+
+    my %proj; # the segments
+    my %proj_to; # expected destination
+
+    # $cmp, and so $rev, may be undef if '<various>'
+    if (defined $cmp) {
+        @proj{qw{ fwd rev }} =
+          ($asm->project_to_slice($cmp),
+           $cmp->project_to_slice($asm));
+        @proj_to{qw{ fwd_srid rev_srid }} =
+          map { $SA->get_seq_region_id($_) } ($cmp, $asm);
+    } else {
+        my @to_cs = undef_dash( $pair->col('cmpcs.name', 'cmpcs.version') );
+        $proj{fwd} = $asm->project(@to_cs);
+        $proj{rev} = undef;
+        $proj_to{fwd_cs} = join ':', @to_cs;
+    }
+
+    my $ok = 1;
+    foreach my $dir (sort keys %proj) { SKIP: {
+        skip "no $dir projection for $pairname", 1 unless defined $proj{$dir};
+
+        my $proj = $proj{$dir};
+        my ($to_nbase, $to_nseg, $badproj) = (0) x 3;
+        for (my $i=0; $i < @$proj; $i++) {
+            my $seg = $proj->[$i];
+            $to_nbase += abs($seg->from_end - $seg->from_start) + 1;
+            $to_nseg ++;
+            if (my $to_srid = $proj_to{$dir.'_srid'}) {
+                my $got_to_srid = $SA->get_seq_region_id($seg->to_Slice);
+                $badproj ||= "#$i: ".$seg->to_Slice->display_id
+                  if $to_srid != $got_to_srid;
+            } else {
+                my $got_cs = $seg->to_Slice->coord_system;
+                $got_cs = join ':', undef_dash($got_cs->name, $got_cs->version);
+                $badproj ||= "#$i: ".$seg->to_Slice->display_id
+                  if $proj_to{$dir.'_cs'} ne $got_cs;
+            }
+        }
+
+        # Now we know how it projects OK.  Summarise.
+        my %projection =
+          (name => "$pairname ($dir)",
+           got_nbase => $to_nbase,
+           got_nseg => $to_nseg,
+           want_nbase => $pair->col('nbase'),
+           want_nseg => $pair->col('nseg'));
+        $projection{badproj} = $badproj if $badproj;
+
+        my @bad;
+        push @bad, 'badproj' if $badproj;
+        push @bad, 'noseg' unless $to_nseg;
+        my $nbase_diff = $to_nbase - $projection{want_nbase};
+        my $nseg_diff  = $to_nseg  - $projection{want_nseg};
+        if ($to_nseg) {
+            push @bad, "shortlen:$nbase_diff" unless abs($nbase_diff) <= $lenfuzz;
+            push @bad, "nseg:$nseg_diff"      unless $nseg_diff == 0;
+        }
+        $projection{bad} = \@bad if @bad;
+
+        if ("@bad" eq 'noseg') {
+            # spare the noise for an outright non-projection
+            fail("$dbname $pairname projects $dir to no segments");
+            $ok = 0;
+        } elsif (ok(!@bad, "$dbname $pairname projects $dir")) {
+            # good
+        } else {
+            diagdump(projection => \%projection);
+            $ok = 0;
+        }
+    } }
+
+    return $ok;
+}
+
+sub undef_dash {
+    my @in = @_;
+    my @out = map { defined $_ ? $_ : '-' } @in;
+    die unless wantarray;
+    return @out;
+}
+
+
+exit main(@ARGV);
+
+
+
+package _Interesting; # a blessed SQL row
+
+my %F;
+sub new {
+    my ($pkg, $row) = @_;
+    $pkg->_classinit unless keys %F;
+    return bless $row, $pkg;
+}
+
+sub _classinit {
+    my @F =
+      qw( asmcs.name asmcs.version  asm_name
+          cmpcs.name cmpcs.version  cmp_name
+          nbase nseg n_cmp_region
+          min_asm_start max_asm_end
+          min_cmp_start max_cmp_end );
+    @F{@F} = (0 .. $#F);
+}
+
+sub col {
+    my ($self, @field) = @_;
+    my @x = @F{@field};
+    die "Unknown field(s)  (@field) => (@x)" if grep {!defined} @x;
+    return $self->[$x[0]] if 1==@x;
+    die 'wantarray' unless wantarray;
+    return @{$self}[@x];
+}
+
+sub _CVR {
+    my ($self, $side) = @_;
+    return $self->col("${side}cs.name", "${side}cs.version", "${side}_name");
+}
+
+sub name {
+    my ($self, $side, $CVR) = @_;
+    $CVR ||= 'CVR';
+    my %name;
+    @name{qw{ C V R }} = $self->_CVR($side);
+    my @out = map { defined $_ ? $_ : '-' }
+      @name{ split //, $CVR };
+    return join ':', @out;
+}
+
+
+sub _Trash_cs {
+    return qw( chromosome:OtterArchive );
+    # Things in here may not map correctly, but we don't care.
+    # To project to/from OtterArchive, first move to another cs.
+}
+
+sub is_trash {
+    my ($self) = @_;
+    my @out;
+    foreach my $side (qw( asm cmp )) {
+        my $coord_system = $self->name($side, 'CV');
+        push @out, $side if grep { $_ eq $coord_system } _Trash_cs();
+    }
+    return @out;
+}
+
+
+sub fetch_by_region {
+    my ($self, $side, $slice_adaptor) = @_;
+    my ($C, $V, $R) = $self->_CVR($side);
+    my $slice = $slice_adaptor->fetch_by_region
+      ($C, $R, undef, undef, undef, $V, 1);
+    if (!$slice) {
+        my $dbname = $slice_adaptor->dbc->dbname;
+        my $name = $self->name($side);
+        die "$dbname: region $name not found"
+          unless $R eq '<various>' && $side eq 'cmp'; # e.g. chromosome=>contigs
+    }
+    return $slice;
+}
+
+sub as_txt {
+    my ($self) = @_;
+    my ($asm, $cmp) = ($self->name('asm'), $self->name('cmp'));
+    return "$asm ~~ $cmp";
+}
