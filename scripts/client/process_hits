@@ -5,13 +5,13 @@ use warnings;
 
 use feature 'switch';
 
+package Bio::Otter::GetScript::ProcessHits;
+
 use AnyEvent::Impl::Perl;       # (try to) ensure pure-perl loop is used
 use AnyEvent;
 
 use Zircon::Context::ZMQ::AnyEvent;
 use Zircon::Protocol;
-
-package Bio::Otter::GetScript::ProcessHits;
 
 use base qw(
     Bio::Otter::Utils::GetScript::LocalDB
@@ -84,7 +84,7 @@ sub _zircon_message {
 sub zircon_server_protocol_command {
     my ($self, $command, $view_id, $request_body) = @_;
 
-    # FIXME: dup with B:O:Zircon::ProcessHits, Zircon::ZMap (and below, in process())
+    # FIXME: some dup with Zircon::Protocol::Server::AppLauncher (and below, in process())
     my $tag_entity_hash = { };
     $tag_entity_hash->{$_->[0]} = $_ for @{$request_body};
 
