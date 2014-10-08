@@ -4,7 +4,7 @@ package Bio::Otter::Zircon::ProcessHits;
 use strict;
 use warnings;
 
-use feature 'switch';
+use Readonly;
 
 use parent qw( Zircon::Protocol::Server::AppLauncher );
 
@@ -34,32 +34,18 @@ sub process_columns {
     return $self->send_command('process', undef, [ columns => {}, map { $_->name } @columns ]);
 }
 
-sub zircon_server_protocol_command {
-    my ($self, $command, $view_id, $request_body) = @_;
+Readonly my %_dispatch_table => (
+    processed => { method => \&_processed, key_entity => qw( columns ) },
+    );
 
-    # FIXME: dup with process_hits, Zircon::ZMap (and below, in processed())
-    my $tag_entity_hash = { };
-    $tag_entity_hash->{$_->[0]} = $_ for @{$request_body};
-
-    for ($command) {
-
-        when ('processed') {
-            return $self->processed($tag_entity_hash);
-        }
-
-        default {
-            my $reason = "Unknown process_hits command: '${command}'";
-            return $self->protocol->message_command_unknown($reason);
-        }
-    }
-    return;
+sub command_dispatch {
+    my ($self, $command) = @_;
+    return $_dispatch_table{$command};
 }
 
-sub processed {
-    my ($self, $tag_entity_hash) = @_;
+sub _processed {
+    my ($self, $view_handler, $columns_entity) = @_;
 
-    my $columns_entity = $tag_entity_hash->{'columns'};
-    $columns_entity or die "missing columns entity";
     my (undef, undef, @columns) = @{$columns_entity};
     @columns = grep { $_ } @columns;
 
