@@ -99,7 +99,7 @@ my %result_hash   = ();
 
 if(! @input_ids) {
     warn "No input IDs\n";
-    return '';
+    return $server->otter_wrap_response('');
 }
 
 my $input_id_str = join ',', qw(?) x @input_ids;
