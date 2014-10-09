@@ -30,7 +30,7 @@ use MenuCanvasWindow::TranscriptWindow;
 use MenuCanvasWindow::GenomicFeaturesWindow;
 use Text::Wrap qw{ wrap };
 
-use Zircon::TkZMQ::Context;
+use Zircon::Context::ZMQ::Tk;
 use Zircon::ZMap;
 
 use Bio::Otter::Lace::Client;
@@ -2550,7 +2550,7 @@ sub zmap_configs_dir {
 
 sub new_zircon_context {
     my ($self) = @_;
-    return Zircon::TkZMQ::Context->new(
+    return Zircon::Context::ZMQ::Tk->new(
             '-widget'       => $self->menu_bar,
             '-trace_prefix' => sprintf('SW=[%s]', $self->AceDatabase->name),
         );
