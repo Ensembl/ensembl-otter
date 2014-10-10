@@ -1560,7 +1560,12 @@ sub recover_session {
     my $adb = $self->new_AceDatabase;
     $adb->error_flag(1);
     my $home = $adb->home;
-    rename($dir, $home) or $self->logger->logdie("Cannot move '$dir' to '$home'; $!");
+
+    if (rename($dir, $home)) {
+        $self->logger->info("recover_session: renamed $dir -> $home");
+    } else {
+        $self->logger->logdie("Cannot move '$dir' to '$home'; $!");
+    }
 
     unless ($adb->db_initialized) {
         try { $adb->recover_slice_from_region_xml; }
