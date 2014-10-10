@@ -17,6 +17,15 @@ sub object_class    { return 'Bio::Otter::Lace::Chooser::Item::Column'; }
 
 my $all_columns = __PACKAGE__->all_columns;
 
+sub new_object {
+    my ($self, %attribs) = @_;
+    my $obj = $self->SUPER::new_object;
+    foreach my $method ( $self->columns ) {
+        $obj->$method($attribs{$method});
+    }
+    return $obj;
+}
+
 sub SQL {
     return {
     store =>            qq{ INSERT INTO otter_column ( ${all_columns} )
