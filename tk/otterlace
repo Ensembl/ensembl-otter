@@ -13,6 +13,7 @@ use Bio::Otter::Lace::Client;
 use Bio::Otter::Git;
 use Bio::Otter::Error;
 use Bio::Otter::Utils::RipVanWinkle;
+use Bio::Otter::Utils::GDCanary; # makes one instance
 
 use CanvasWindow::MainWindow;
 use MenuCanvasWindow::SpeciesListWindow;
