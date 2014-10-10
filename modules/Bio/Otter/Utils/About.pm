@@ -137,6 +137,10 @@ sub tools_versions {
 
     push @v, sprintf('ensembl-otter from %s', $INC{'Bio/Otter/Version.pm'});
 
+    push @v, sprintf('ZMQ::LibZMQ3 v%s from %s',
+                     $ZMQ::LibZMQ3::VERSION, $INC{'ZMQ/LibZMQ3.pm'})
+      if defined $ZMQ::LibZMQ3::VERSION;
+
     push @v, sprintf('Client EnsEMBL %s from %s',
                      Bio::EnsEMBL::ApiVersion::software_version(),
                      $INC{'Bio/EnsEMBL/ApiVersion.pm'});
