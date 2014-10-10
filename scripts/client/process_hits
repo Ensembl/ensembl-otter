@@ -117,16 +117,29 @@ sub process {
         return $_protocol->message_ok('no columns', [ data => { busy => 0 } ]);
     }
 
+    my $db_filter_adaptor = Bio::Otter::Lace::DB::ColumnAdaptor->new($self->local_db->dbh);
+
     foreach my $column (@columns) {
+
+        # Check we can do this
+        my $db_column = $db_filter_adaptor->fetch_by_key($column);
+        unless ($db_column) {
+            my $reason = "No entry in otter_column for '$column'";
+            $self->log_message($reason);
+            return $_protocol->message_command_failed($reason);
+        }
+
         $self->log_message("Scheduling process_hits for '$column'");
-        $_cb_handle{$column} = AnyEvent->idle( cb => sub { $self->_process_hits($column); } );
+        $_cb_handle{$column} = AnyEvent->idle( cb => sub { $self->_process_hits($db_column); } );
     }
     return $_protocol->message_ok('processing', [ data => { busy => 1 } ]);
 }
 
 sub _process_hits {
-    my ($self, $column) = @_;
-    delete $_cb_handle{$column};
+    my ($self, $db_column) = @_;
+
+    my $column = $db_column->name;
+    delete $_cb_handle{$column}; # so we don't get called again
 
     $self->log_message("_process_hits for '$column'");
 
