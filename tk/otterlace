@@ -19,7 +19,8 @@ use CanvasWindow::MainWindow;
 use MenuCanvasWindow::SpeciesListWindow;
 use EditWindow::Password;
 
-{
+my $logger;
+sub run_gui {
     # Become leader of process group so that "kill -$$" at end works
     setpgrp();
 
@@ -38,7 +39,7 @@ use EditWindow::Password;
     my $client = Bio::Otter::Lace::Defaults::make_Client();
     $client->make_log_file('otterlace');
     # After this, we are writing logfile
-    my $logger = Log::Log4perl->get_logger('otter.main');
+    $logger = Log::Log4perl->get_logger('otter.main');
 
     Bio::Otter::Git->dump($logger);
 
@@ -111,7 +112,7 @@ use EditWindow::Password;
     } catch {
         my $msg = "Cannot start: $_";
         $passwarn_sub->($client, $msg);
-        die $msg;
+        die 'Cannot start';
     };
 
     # postpone slow checks, for improved responsiveness
@@ -125,18 +126,34 @@ use EditWindow::Password;
     Tk::MainLoop();
 
     $logger->info("GUI exit");
-    Bio::Otter::LogFile->unmake_log;
-    local $SIG{'TERM'} = 'IGNORE';
-
-    # Sending signal to negative of our PID sends
-    # signal to all the processes in our process
-    # group, ie: all of the children. This cleans
-    # up any stray processes we have launched.
-    kill TERM => -$$;
-
-    # NB. we are still here, and so is our logger.  Session recovery
-    # may be blocked until we are gone.
+    return;
 }
+
+sub main {
+    my $exit = 0;
+    try {
+        run_gui();
+    } catch {
+        $logger->error("GUI shutdown: $_");
+        $exit = 20;
+    } finally {
+        Bio::Otter::LogFile->unmake_log;
+        local $SIG{'TERM'} = 'IGNORE';
+
+        # Sending signal to negative of our PID sends
+        # signal to all the processes in our process
+        # group, ie: all of the children. This cleans
+        # up any stray processes we have launched.
+        kill TERM => -$$;
+
+        # NB. we are still here, and so is our logger.  Session recovery
+        # may be blocked until we are gone.
+    };
+
+    return $exit;
+}
+
+exit main();
 
 __END__
 
