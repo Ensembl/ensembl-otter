@@ -14,6 +14,7 @@ sub new {
 sub DESTROY {
     my ($self) = @_;
     warn "Global destruction canary gone"; # loggers may already be gone
+    return;
 }
 
 __PACKAGE__->new;
