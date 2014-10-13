@@ -1,5 +1,5 @@
-# line 2 B:O:U:GDCanary
 package Bio::Otter::Utils::GDCanary;
+# line 3 B:O:U:GDCanary
 use strict;
 use warnings;
 
