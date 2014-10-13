@@ -1143,9 +1143,10 @@ sub ColumnCollection {
     my ($self) = @_;
 
     return $self->{'_ColumnCollection'} ||=
-      Bio::Otter::Lace::Chooser::Collection->new_from_Filter_list(
-          @{ $self->DataSet->filters },
-          (map { $self->_bam_filter_list($_) } @{ $self->DataSet->bam_list }));
+        Bio::Otter::Lace::Chooser::Collection->new_from_Filter_list(
+            @{ $self->DataSet->filters },
+            (map { $self->_bam_filter_list($_) } @{ $self->DataSet->bam_list }),
+        );
 }
 
 my @coverage_param_list = (
