@@ -32,8 +32,6 @@ my @options_specs = qw(
 
 my @options_required = qw(
     file
-    csver_remote
-    dataset
     chr
     start
     end
@@ -139,17 +137,9 @@ sub _print_feature {
     return;
 }
 
-# get the mapping from the Otter server
-my $client = Bio::Otter::Lace::Defaults::make_Client();
-my $mapping_xml = $client->otter_response_content(
-    'GET', 'get_mapping', {
-        dataset => $dataset,
-        cs      => $csver_remote,
-        chr     => $chr,
-        start   => $start,
-        end     => $end,
-    });
-my $mapping = Bio::Otter::Mapping->new_from_xml($mapping_xml);
+my $mapping =
+    Bio::Otter::Mapping->new_from_otter(
+        $dataset, $csver_remote, $chr, $start, $end);
 
 # map and print the features
 _print_header;

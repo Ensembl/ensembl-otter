@@ -20,6 +20,36 @@ sub _map_new { ## no critic (Subroutines::RequireArgUnpacking)
     return Bio::Otter::Mapping::Map->new(@_);
 }
 
+sub new_from_otter {
+    my ($pkg, $dataset, $csver_remote, $chr, $start, $end) = @_;
+    if (defined $dataset && defined $csver_remote) {
+        # get the mapping from the Otter server
+        require Bio::Otter::Lace::Defaults;
+        my $client = Bio::Otter::Lace::Defaults::make_Client();
+        my $mapping_xml = $client->otter_response_content(
+            'GET', 'get_mapping', {
+                dataset => $dataset,
+                cs      => $csver_remote,
+                chr     => $chr,
+                start   => $start,
+                end     => $end,
+            });
+        my $mapping = $pkg->new_from_xml($mapping_xml);
+        return $mapping;
+    }
+    if (! defined $dataset && ! defined $csver_remote) {
+        my $mapping = _equiv_new('-chr' => $chr);
+        return $mapping;
+    }
+    if (defined $dataset) {
+        die "&new_from_otter: the '--dataset' parameter requires the '--csver_remote' parameter";
+    }
+    if (defined $csver_remote) {
+        die "&new_from_otter: the '--csver_remote' parameter requires the '--dataset' parameter";
+    }
+    die "&new_from_otter: bug: should not reach this line";
+}
+
 sub new_from_xml {
     my ($pkg, $xml) = @_;
 
