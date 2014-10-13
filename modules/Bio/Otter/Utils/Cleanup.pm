@@ -4,6 +4,7 @@ use warnings;
 
 use File::Path qw{ remove_tree };
 use POSIX ();
+use Try::Tiny;
 
 use Bio::Otter::Lace::Client;
 use MenuCanvasWindow::SessionWindow;
