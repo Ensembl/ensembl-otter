@@ -717,10 +717,6 @@ sub blixem_config {
             'user-fetch'            => 'variation-fetch',
         },
 
-        # Hard coded links for OTF data types - no longer required
-        'source-data-types' => {
-        },
-
         # Fetch methods
 
         'pfetch-socket-embl'  => {
