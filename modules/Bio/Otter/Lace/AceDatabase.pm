@@ -601,7 +601,6 @@ sub ace_config {
 sub _ace_slice_config {
     my ($self, @args) = @_;
     return {
-        writeback   => 'false',
         sequence    => 'true',
         group       => 'always',
         stylesfile  => $self->stylesfile,
