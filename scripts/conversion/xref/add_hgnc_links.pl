@@ -77,12 +77,14 @@ $support->parse_extra_options(
   'hgncfixfile=s',
   'anacode_file=s',
   'jel_file=s',
+  'elsepth_file=s',
   'prune');
 $support->allowed_params(
   $support->get_common_params,
   'hgncfixfile',
   'anacode_file',
   'jel_file',
+  'elspeth_file',
   'prune');
 
 if ($support->param('help') or $support->error) {
@@ -91,8 +93,9 @@ if ($support->param('help') or $support->error) {
 }
 
 my $date = strftime "%Y-%m-%d", localtime;
-$support->param('anacode_file',($support->param('logpath')."/hgnc_names_to_fix_${date}.txt")) unless $support->param('anacode_file');
-$support->param('jel_file',($support->param('logpath')."/hgnc_links_to_review_${date}.txt")) unless $support->param('jel_file');
+$support->param('anacode_file',($support->param('logpath')."/hgnc_names_to_fix_${date}.txt"))       unless $support->param('anacode_file');
+$support->param('jel_file',    ($support->param('logpath')."/hgnc_biotypes_to_review_${date}.txt")) unless $support->param('jel_file');
+$support->param('elspeth_file',($support->param('logpath')."/hgnc_names_to_review_${date}.txt"))    unless $support->param('elspeth_file');
 
 $support->confirm_params;
 $support->init_log;
@@ -105,6 +108,7 @@ my $ea  = $dba->get_DBEntryAdaptor();
 
 my $anacode_fh = $support->filehandle('>', $support->param('anacode_file'));
 my $jel_fh     = $support->filehandle('>', $support->param('jel_file'));
+my $elspeth_fh = $support->filehandle('>', $support->param('elspeth_file'));
 
 #get info from HGNC
 my $records;
@@ -144,17 +148,18 @@ if ($support->param('prune') and $support->user_proceed('Would you really like t
   $dbh->do(qq(INSERT INTO object_xref SELECT * FROM backup_uhgncl_object_xref));
 }
 
-my (@potential_names_script_2,@potential_names_script,@potential_biotype_mismatches,@ignored_new_names,@hgnc_errors);
+my (@potential_names_script_2,@potential_names_script,@potential_biotype_mismatches,@ignored_new_names,@hgnc_errors_easy,@hgnc_errors_hard);
 my $add_c = 0;
 foreach my $gsi (keys %$records) {
   my $gene = $ga->fetch_by_stable_id($gsi);
   my $hgnc_rec = $records->{$gsi}[0];
-  my $new_hgnc_name = $hgnc_rec->{'hgnc_symbol'};
+  my $hgnc_name = $hgnc_rec->{'hgnc_symbol'};
+  my $hgnc_biotype = $hgnc_rec->{'type'};
 
   #warn where a gene in the HGNC record is not in Vega
   if (!$gene) {
     my $pot_hgnc_matches;
-     foreach my $pot_g (@{$ga->fetch_all_by_display_label($new_hgnc_name)}) {
+     foreach my $pot_g (@{$ga->fetch_all_by_display_label($hgnc_name)}) {
        my $other_gsi = $pot_g->stable_id;
        my $slice = $pot_g->slice;
        my $sr = $slice->seq_region_name;
@@ -163,20 +168,22 @@ foreach my $gsi (keys %$records) {
        }
      }
     if ($pot_hgnc_matches) {
-      $support->log("Gene $gsi is not in Vega, but based on name ($new_hgnc_name), Vega suggests using $pot_hgnc_matches\n");
+      $support->log("Gene $gsi is not in Vega, but based on name ($hgnc_name), Vega suggests using $pot_hgnc_matches\n");
+      push @hgnc_errors_easy, [$gsi,$hgnc_biotype,$hgnc_name,$pot_hgnc_matches];
     }
     else {
-      $support->log("Gene $gsi is not in Vega, no suggestions ie the name ($new_hgnc_name) doesn't exist in Vega\n");
+      $support->log("Gene $gsi is not in Vega, no suggestions ie the name ($hgnc_name) doesn't exist in Vega\n");
+      push @hgnc_errors_easy, [$gsi,$hgnc_biotype,$hgnc_name];
     }
     next;
   }
   my $display_name = $gene->display_xref->display_id;
   my $disp_xref_dbname = $gene->display_xref->dbname;
   my @vega_genes = @{$ga->fetch_all_by_display_label($display_name)};
-  my @hgnc_genes = @{$ga->fetch_all_by_display_label($new_hgnc_name)};
+  my @hgnc_genes = @{$ga->fetch_all_by_display_label($hgnc_name)};
 
   #warn if something's gone wrong (when adding HGNC xrefs earlier?)
-  if ($display_name eq $new_hgnc_name) {
+  if ($display_name eq $hgnc_name) {
     if ($disp_xref_dbname ne 'HGNC') {
       $support->log_warning("Gene $gsi has an HGNC name but not an HGNC xref - you should update HGNC xrefs if they were done a while ago\n");
     }
@@ -191,13 +198,13 @@ foreach my $gsi (keys %$records) {
         my $slice = $g->slice;
         my $sr = $slice->seq_region_name;
         if ($slice->is_reference()) {
-          $support->log("Vega gene $other_gsi has the same name ($new_hgnc_name) that HGNC has attached to $gsi\n");
+          $support->log("Vega gene $other_gsi has the same name ($hgnc_name) that HGNC has attached to $gsi\n");
         }
       }
     }
   }
 
-  $support->log_verbose("Gene $gsi ($display_name) has a name at HGNC ($new_hgnc_name), need to add an xref\n");
+  $support->log_verbose("Gene $gsi ($display_name) has a name at HGNC ($hgnc_name), need to add an xref\n");
   my ($existing_xref,$dbID);
   my $hgnc_pid = $hgnc_rec->{'hgnc_pid'};
 
@@ -205,7 +212,7 @@ foreach my $gsi (keys %$records) {
   my $gid = $gene->dbID;
   my $dbID;
   my $existing_xref = $ea->fetch_by_db_accession('HGNC',$hgnc_pid);
-  if ($existing_xref && $existing_xref->display_id eq $new_hgnc_name) {
+  if ($existing_xref && $existing_xref->display_id eq $hgnc_name) {
     my $old_dbID = $existing_xref->dbID;
     $support->log_verbose("Using previous xref ($old_dbID) for gene $display_name ($gsi).\n", 3);
     $gene->add_DBEntry($existing_xref);
@@ -217,7 +224,7 @@ foreach my $gsi (keys %$records) {
     $support->log_verbose("Creating new HGNC xref for gene $display_name ($gsi).\n", 3);
     my $dbentry = Bio::EnsEMBL::DBEntry->new(
       -primary_id => $hgnc_pid,
-      -display_id => $new_hgnc_name,
+      -display_id => $hgnc_name,
       -version    => 1,
       -dbname     => 'HGNC',
 #      -description => $hgnc_rec->{'description'}, #could add description here if we wished to
@@ -230,7 +237,7 @@ foreach my $gsi (keys %$records) {
   #was the store succesfull ?
   if ($dbID) {
     $add_c++;
-    $support->log("Stored HGNC xref (display_id = $new_hgnc_name, pid = $hgnc_pid) for gene $display_name ($gsi)\n", 2);
+    $support->log("Stored HGNC xref (display_id = $hgnc_name, pid = $hgnc_pid) for gene $display_name ($gsi)\n", 2);
   }
   elsif (! $support->param('dry_run')) {
     $support->log_warning("Failed to store HGNC xref for gene $display_name ($gsi)\n");
@@ -242,7 +249,7 @@ foreach my $gsi (keys %$records) {
 
   #log non protein coding genes but only report verbosely
   if ($biotype ne 'protein_coding') {
-    push @ignored_new_names, [$gsi,$display_name,$new_hgnc_name,$desc,$biotype,$sr];
+    push @ignored_new_names, [$gsi,$display_name,$hgnc_name,$desc,$biotype,$sr];
   }
   else {
     if ( $hgnc_rec->{'type'} eq 'gene with protein product') {
@@ -250,13 +257,13 @@ foreach my $gsi (keys %$records) {
       if (    ($display_name =~ /^C[XY\d]{1,2}orf/)
            || ($display_name =~ /^A[BCFLP]\d+\.\d{1,2}$/)
            || ($display_name =~ /^RP\d{1,2}-/) ) {
-        $support->log_verbose("Consider this name ($new_hgnc_name) for an automatic name update\n",1);
+        $support->log_verbose("Consider this name ($hgnc_name) for an automatic name update\n",1);
         $manual = 0;
-        push @potential_names_script, [$gsi,$biotype,$sr,$display_name,$new_hgnc_name,$desc];
+        push @potential_names_script, [$gsi,$biotype,$sr,$display_name,$hgnc_name,$desc];
       }
       else {
-        $support->log_verbose("Consider this name ($new_hgnc_name) for an update\n",1);
-        push @potential_names_script_2, [$gsi,$biotype,$sr,$display_name,$new_hgnc_name,$desc];
+        $support->log_verbose("Consider this name ($hgnc_name) for an update\n",1);
+        push @potential_names_script_2, [$gsi,$biotype,$sr,$display_name,$hgnc_name,$desc];
       }
 
       #look for other genes that share the same name and are on non-reference slices, ie should have their names updated as well
@@ -270,8 +277,8 @@ foreach my $gsi (keys %$records) {
             $support->log_warning("Gene $gsi shares a name ($display_name) with $other_gsi, but the latter is on region $sr, a reference slice\n");
           }
           else {
-            $support->log_verbose("Consider this other gene ($other_gsi on $sr) for an update to $new_hgnc_name\n",1);
-            my $rec = [$other_gsi,$biotype,$sr,$display_name,$new_hgnc_name,$desc];
+            $support->log_verbose("Consider this other gene ($other_gsi on $sr) for an update to $hgnc_name\n",1);
+            my $rec = [$other_gsi,$biotype,$sr,$display_name,$hgnc_name,$desc];
             if ($manual) {
               push @potential_names_script_2,$rec;
             }
@@ -283,9 +290,8 @@ foreach my $gsi (keys %$records) {
       }
     }
     else {
-      my $hgnc_biotype = $hgnc_rec->{'type'};
-      $support->log_verbose("Biotype mismatch as well as name mismatch between Vega and HGNC ($hgnc_biotype) for $gsi ($new_hgnc_name)\n",1);
-      push @potential_biotype_mismatches, [$gsi,$biotype,$hgnc_biotype,$sr,$display_name,$new_hgnc_name,$desc];
+      $support->log_verbose("Biotype mismatch as well as name mismatch between Vega and HGNC ($hgnc_biotype) for $gsi ($hgnc_name)\n",1);
+      push @potential_biotype_mismatches, [$gsi,$biotype,$hgnc_biotype,$sr,$display_name,$hgnc_name,$desc];
     }
   }
 }
@@ -304,7 +310,7 @@ else {
   $support->log("\nThere are $c ignored names (because the Vega gene is not protein_coding), to see these rerun in verbose mode\n\n");
 }
 
-my $c = scalar(@potential_biotype_mismatches);
+$c = scalar(@potential_biotype_mismatches);
 $support->log("\nBiotype mismatches to consider ($c):\n\n");
 $support->log(sprintf("%-25s%-25s%-25s%-20s%-20s%-20s%-20s\n", qw(STABLE_ID VEGA_BIOTYPE HGNC_BIOTYPE SEQ_REGION OLD_NAME NEW_NAME NEW_DESC)));
 print $jel_fh sprintf("%s\t%s\t%s\t%s\t%s\t%s\t%s\n", qw(STABLE_ID VEGA_BIOTYPE HGNC_BIOTYPE SEQ_REGION OLD_NAME NEW_NAME NEW_DESC));
@@ -313,7 +319,7 @@ foreach my $rec (sort { $a->[3] <=> $b->[3] } @potential_biotype_mismatches) {
   print $jel_fh sprintf("%s\t%s\t%s\t%s\t%s\t%s\t%s\n",$rec->[0], $rec->[1], $rec->[2], $rec->[3], $rec->[4], $rec->[5], $rec->[6]);
 }
 
-my $c = scalar(@potential_names_script);
+$c = scalar(@potential_names_script);
 $support->log("\nClone based names to update by script ($c):\n\n");
 $support->log(sprintf("%-25s%-30s%-20s%-20s%-20s%-20s\n", qw(STABLE_ID VEGA_BIOTYPE SEQ_REGION OLD_NAME NEW_NAME NEW_DESC)));
 print $anacode_fh sprintf("%s\t%s\t%s\t%s\t%s\t%s\n", qw(STABLE_ID VEGA_BIOTYPE SEQ_REGION OLD_NAME NEW_NAME NEW_DESC));
@@ -323,14 +329,31 @@ foreach my $rec (sort { $a->[2] <=> $b->[2] } @potential_names_script) {
   print $anacode_fh sprintf("%s\t%s\t%s\t%s\t%s\t%s\n", $rec->[0], $rec->[1], $rec->[2], $rec->[3], $rec->[4], $rec->[5]);
 }
 
-my $c = scalar(@potential_names_script_2);
+$c = scalar(@potential_names_script_2);
 $support->log("\nOther names to update by script ($c):\n\n");
 $support->log(sprintf("%-25s%-30s%-20s%-20s%-20s%-20s\n", qw(STABLE_ID VEGA_BIOTYPE SEQ_REGION OLD_NAME NEW_NAME NEW_DESC)));
 print $anacode_fh sprintf("\n#Other names to update by script\n");
-#print $anacode_fh sprintf("\n%s\t%s\t%s\t%s\t%s\t%s\n",qw(STABLE_ID VEGA_BIOTYPE SEQ_REGION OLD_NAME NEW_NAME NEW_DESC));
 foreach my $rec (sort { $a->[2] <=> $b->[2] } @potential_names_script_2) {
   $support->log(sprintf("%-25s%-30s%-20s%-20s%-20s%-20s\n", $rec->[0], $rec->[1], $rec->[2], $rec->[3], $rec->[4], $rec->[5]));
   print $anacode_fh sprintf("%s\t%s\t%s\t%s\t%s\t%s\n",$rec->[0], $rec->[1], $rec->[2], $rec->[3], $rec->[4], $rec->[5]);
+}
+
+$c = scalar(@hgnc_errors_easy);
+$support->log("\nVega stable IDs in HGNC but not in Vega that should be easy to update ($c):\n\n");
+$support->log(sprintf("%-25s%-30s%-20s%-20s\n", qw(STABLE_ID BIOTYPE NAME POSSIBLES)));
+print $elspeth_fh sprintf("\n#HGNC Stable IDs to rename\n");
+foreach my $rec (sort { $a->[2] <=> $b->[2] } @hgnc_errors_easy) {
+  $support->log(sprintf("%-25s%-30s%-20s%-20s\n", $rec->[0], $rec->[1], $rec->[2], $rec->[3]));
+  print $elspeth_fh sprintf("%s\t%s\t%s\t%s\n",$rec->[0], $rec->[1], $rec->[2], $rec->[3]);
+}
+
+$c = scalar(@hgnc_errors_hard);
+$support->log("\nVega stable IDs in HGNC ut not in Vega that will be harder to update ($c):\n\n");
+$support->log(sprintf("%-25s%-30s%-20s%-20s\n", qw(STABLE_ID BIOTYPE NAME)));
+print $elspeth_fh sprintf("\n#HGNC Stable IDs to work out how rename\n");
+foreach my $rec (sort { $a->[2] <=> $b->[2] } @hgnc_errors_hard) {
+  $support->log(sprintf("%-25s%-30s%-20s\n", $rec->[0], $rec->[1], $rec->[2]));
+  print $elspeth_fh sprintf("%s\t%s\t%s\n",$rec->[0], $rec->[1], $rec->[2]);
 }
 
 $support->finish_log;
