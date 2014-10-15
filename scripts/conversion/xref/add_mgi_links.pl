@@ -65,6 +65,7 @@ BEGIN {
 }
 
 use Getopt::Long;
+use LWP::UserAgent;
 use Pod::Usage;
 use Bio::EnsEMBL::Utils::ConversionSupport;
 use Data::Dumper;
@@ -251,27 +252,40 @@ $support->finish_log;
 
 sub parse_mgi {
   my $records;
-  $support->log_stamped("Parsing MGI for descriptions...\n", 1);
 
-  # read input file
-  my $mgifile = $support->param('mgifixfile');
-  open(MGI, "< $mgifile")
-    or $support->throw("Couldn't open $mgifile for reading: $!\n");
+  #try and download direct
+  my $ua = LWP::UserAgent->new;
+  $ua->proxy(['http'], 'http://webcache.sanger.ac.uk:3128');
+  my $url = 'ftp://ftp.informatics.jax.org/pub/reports/MRK_VEGA.rpt';
+  my $resp = $ua->get($url);
+  my $page = $resp->content;
+  if ($page) {
+    $support->log("$url downloaded from MGI\n",1);
+  } else {
+    if($support->param('nolocal')) {
+      $support->log_error("Couldn't retrieve file and --nolocal given");
+    }
+    my $mgifile = $support->param('mgifixfile');
+    open(MGI, "< $mgifile")
+      or $support->throw("Couldn't open $mgifile for reading: $!\n");
+    my $page = do { local $/; <MGI> };
+    close MGI;
+  }
+  my @recs = split "\n", $page;
 
-  #parse input file
-  while (<MGI>) {
-    my (@fields) = split /\t/;
+  #parse input
+  foreach my $rec (@recs) {
+    my (@fields) = split /\t/, $rec;
     my $mgi_pid = $fields[0];
     my $symbol  = $fields[1];
     my $desc    = $fields[2];
     my $ottid   = $fields[5]; 
-    
+
     push @{$records->{$ottid}},{ symbol  => $symbol,
                                  mgi_pid => $mgi_pid,
                                  desc    => $desc,
                                };
-    }
-
+  }
   return $records;
 }
 
