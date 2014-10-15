@@ -173,6 +173,8 @@ sub resource_bin_from_uri {
     return $resource_bin;
 }
 
+sub is_seq_data { return 0; }
+
 1;
 
 __END__
