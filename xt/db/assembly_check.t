@@ -8,6 +8,15 @@ use Test::Otter qw( ^db_or_skipall get_BOSDatasets diagdump );
 use Try::Tiny;
 
 
+=head1 SYNOPSIS
+
+ # default is to run on all datasets
+
+ prove xt/db/assembly_check.t :: human mouse
+
+ PROVE_DATASETS='human mouse' prove xt/db/assembly_check.t
+
+
 =head1 DESCRIPTION
 
 This test can run on all datasets (default), or those named in @ARGV
@@ -148,7 +157,7 @@ sub main {
 }
 
 
-sub old_check_tt {
+sub old_check_tt { # currently unused
     my ($ds) = @_;
 
     my $maxrow = 2;
@@ -217,6 +226,7 @@ sub old_check_tt {
           or diagdump(R => $R);
     }
 
+    return;
 }
 
 sub fuzz {
@@ -248,13 +258,20 @@ sub trilemma_tt {
         my $proj = try {
             local $TODO = @trashy ? "not expected to project (@trashy)" : undef;
             my $fuzz = $fuzzh->{ join ':', $pair->col(qw( asm_name cmp_name )) };
+            $pair->lenfuzz($fuzz || 0);
             push @no_project, $pair
-              unless can_project($dba, $pair, $fuzz || 0) || $TODO;
+              unless can_project($dba, $pair) || $TODO;
         } catch {
             fail 'Caught exception on '.$pair->as_txt;
             note $_;
         };
     }
+
+### do something to explain why.  further fail if we don't know?
+#
+#    foreach my $pair (@no_project) {
+#        fail("no project: ".$pair->as_txt)
+#    }
 
     return;
 }
@@ -265,7 +282,7 @@ sub linkage_tt {
     my $name = $dba->dbc->dbname;
     plan tests => 1;
     local $TODO = 'not implemented';
-    return fail();
+    return fail('how to figure out what should be linked?');
 }
 
 
@@ -312,9 +329,7 @@ sub interesting_select {
 }
 
 sub can_project {
-    my ($dba, $pair, $lenfuzz) = @_;
-    my $dbname = $dba->dbc->dbname;
-    my $dbh = $dba->dbc->db_handle;
+    my ($dba, $pair) = @_;
     my $SA = $dba->get_SliceAdaptor;
     my $pairname = $pair->as_txt;
 
@@ -342,57 +357,66 @@ sub can_project {
     foreach my $dir (sort keys %proj) { SKIP: {
         skip "no $dir projection for $pairname", 1 unless defined $proj{$dir};
 
-        my $proj = $proj{$dir};
-        my ($to_nbase, $to_nseg, $badproj) = (0) x 3;
-        for (my $i=0; $i < @$proj; $i++) {
-            my $seg = $proj->[$i];
-            $to_nbase += abs($seg->from_end - $seg->from_start) + 1;
-            $to_nseg ++;
-            if (my $to_srid = $proj_to{$dir.'_srid'}) {
-                my $got_to_srid = $SA->get_seq_region_id($seg->to_Slice);
-                $badproj ||= "#$i: ".$seg->to_Slice->display_id
-                  if $to_srid != $got_to_srid;
-            } else {
-                my $got_cs = $seg->to_Slice->coord_system;
-                $got_cs = join ':', undef_dash($got_cs->name, $got_cs->version);
-                $badproj ||= "#$i: ".$seg->to_Slice->display_id
-                  if $proj_to{$dir.'_cs'} ne $got_cs;
-            }
-        }
-
-        # Now we know how it projects OK.  Summarise.
-        my %projection =
-          (name => "$pairname ($dir)",
-           got_nbase => $to_nbase,
-           got_nseg => $to_nseg,
-           want_nbase => $pair->col('nbase'),
-           want_nseg => $pair->col('nseg'));
-        $projection{badproj} = $badproj if $badproj;
-
-        my @bad;
-        push @bad, 'badproj' if $badproj;
-        push @bad, 'noseg' unless $to_nseg;
-        my $nbase_diff = $to_nbase - $projection{want_nbase};
-        my $nseg_diff  = $to_nseg  - $projection{want_nseg};
-        if ($to_nseg) {
-            push @bad, "shortlen:$nbase_diff" unless abs($nbase_diff) <= $lenfuzz;
-            push @bad, "nseg:$nseg_diff"      unless $nseg_diff == 0;
-        }
-        $projection{bad} = \@bad if @bad;
-
-        if ("@bad" eq 'noseg') {
-            # spare the noise for an outright non-projection
-            fail("$dbname $pairname projects $dir to no segments");
-            $ok = 0;
-        } elsif (ok(!@bad, "$dbname $pairname projects $dir")) {
-            # good
-        } else {
-            diagdump(projection => \%projection);
-            $ok = 0;
-        }
+        $ok = 0 unless check_projected($dba, $pair, $dir, $proj{$dir}, \%proj_to);
     } }
 
     return $ok;
+}
+
+sub check_projected {
+    my ($dba, $pair, $dir, $proj, $proj_to) = @_;
+    my $dbname = $dba->dbc->dbname;
+    my $SA = $dba->get_SliceAdaptor;
+    my $pairname = $pair->as_txt;
+
+    my ($to_nbase, $to_nseg, $badproj) = (0) x 3;
+    for (my $i=0; $i < @$proj; $i++) {
+        my $seg = $proj->[$i];
+        $to_nbase += abs($seg->from_end - $seg->from_start) + 1;
+        $to_nseg ++;
+        if (my $to_srid = $proj_to->{$dir.'_srid'}) {
+            my $got_to_srid = $SA->get_seq_region_id($seg->to_Slice);
+            $badproj ||= "#$i: ".$seg->to_Slice->display_id
+              if $to_srid != $got_to_srid;
+        } else {
+            my $got_cs = $seg->to_Slice->coord_system;
+            $got_cs = join ':', undef_dash($got_cs->name, $got_cs->version);
+            $badproj ||= "#$i: ".$seg->to_Slice->display_id
+              if $proj_to->{$dir.'_cs'} ne $got_cs;
+        }
+    }
+
+    # Now we know how it projects OK.  Summarise.
+    my %projection =
+      (name => "$pairname ($dir)",
+       got_nbase => $to_nbase,
+       got_nseg => $to_nseg,
+       want_nbase => $pair->col('nbase'),
+       want_nseg => $pair->col('nseg'));
+    $projection{badproj} = $badproj if $badproj;
+
+    my @bad;
+    push @bad, 'badproj' if $badproj;
+    push @bad, 'noseg' unless $to_nseg;
+    my $nbase_diff = $to_nbase - $projection{want_nbase};
+    my $nseg_diff  = $to_nseg  - $projection{want_nseg};
+    if ($to_nseg) {
+        push @bad, "shortlen:$nbase_diff" unless abs($nbase_diff) <= $pair->lenfuzz;
+        push @bad, "nseg:$nseg_diff"      unless $nseg_diff == 0;
+    }
+    $projection{bad} = \@bad if @bad;
+
+    if ("@bad" eq 'noseg') {
+        # spare the noise for an outright non-projection
+        fail("$dbname $pairname projects $dir to no segments");
+        return 0;
+    } elsif (ok(!@bad, "$dbname $pairname projects $dir")) {
+        # good
+        return 1;
+    } else {
+        diagdump(projection => \%projection);
+        return 0;
+    }
 }
 
 sub undef_dash {
@@ -409,30 +433,40 @@ exit main(@ARGV);
 
 package _Interesting; # a blessed SQL row
 
-my %F;
+my %fld; ## no critic (ControlStructures::ProhibitUnreachableCode)
 sub new {
     my ($pkg, $row) = @_;
-    $pkg->_classinit unless keys %F;
+    $pkg->_classinit unless keys %fld;
+    push @$row, {}; # _config
     return bless $row, $pkg;
 }
 
 sub _classinit {
-    my @F =
+    my @f =
       qw( asmcs.name asmcs.version  asm_name
           cmpcs.name cmpcs.version  cmp_name
           nbase nseg n_cmp_region
           min_asm_start max_asm_end
-          min_cmp_start max_cmp_end );
-    @F{@F} = (0 .. $#F);
+          min_cmp_start max_cmp_end
+          _config );
+    @fld{@f} = (0 .. $#f);
+    return;
 }
 
 sub col {
     my ($self, @field) = @_;
-    my @x = @F{@field};
+    my @x = @fld{@field};
     die "Unknown field(s)  (@field) => (@x)" if grep {!defined} @x;
     return $self->[$x[0]] if 1==@x;
     die 'wantarray' unless wantarray;
     return @{$self}[@x];
+}
+
+# post-SQL-fetch configured nbase fuzz
+sub lenfuzz {
+    my ($self, @set) = @_;
+    ($self->col('_config')->{lenfuzz}) = @set if @set;
+    return $self->col('_config')->{lenfuzz};
 }
 
 sub _CVR {
