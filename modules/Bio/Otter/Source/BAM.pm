@@ -110,6 +110,8 @@ sub init_resource_bin {
     return $self->resource_bin($resource_bin);
 }
 
+sub is_seq_data { return 1; }
+
 # NB: the following subroutines are *not* methods
 
 sub _query_string {

@@ -132,6 +132,8 @@ sub _add_zmap_source_config {
 
     for my $source (@$sources) {
 
+        push @{$config->{ZMap}{'seq-data'}}, $source->name if $source->is_seq_data;
+
         $config->{$source->name} = {
             url         => $source->url($session),
             featuresets => $source->featuresets,
@@ -171,8 +173,6 @@ sub _add_zmap_bam_config {
 
     for my $bam ( @{$self->bam_list} ) {
         my $bam_column = $bam->name;
-
-        push @{$config->{ZMap}{'seq-data'}}, $bam_column;
 
         # coverage columns and featuresets
         my $coverage_column = $bam->parent_column;
