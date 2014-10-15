@@ -124,33 +124,40 @@ sub _add_zmap_source_config {
     my ($self, $config, $session) = @_;
 
     my $sources = $self->sources;
-    my $stylesfile = $session->stylesfile;
 
-    $config->{ZMap}{sources} =
-        [ sort map { $_->name } @{$sources} ]
-        if @${sources};
+    $self->_add_zmap_source_config_one($config, $session, $_) for @{$sources};
 
-    for my $source (@$sources) {
+    $config->{'ZMap'}{'sources'} =
+        [ sort @{$config->{'ZMap'}{'sources'}} ]
+        if @{$sources};
 
-        push @{$config->{ZMap}{'seq-data'}}, $source->name if $source->is_seq_data;
+    return;
+}
 
-        $config->{$source->name} = {
-            url         => $source->url($session),
-            featuresets => $source->featuresets,
-            delayed     => 'true',
-            stylesfile  => $stylesfile,
-            group       => 'always',
-        };
+sub _add_zmap_source_config_one {
+    my ($self, $config, $session, $source) = @_;
 
-        my $zmap_column = $source->zmap_column;
-        push @{$config->{'columns'}{$zmap_column}}, @{$source->featuresets} if $zmap_column;
+    my $name = $source->name;
 
-        my $zmap_style = $source->zmap_style;
-        $config->{'featureset-style'}{$source->name} = $zmap_style if $zmap_style;
+    push @{$config->{'ZMap'}{'sources'}}, $name;
+    push @{$config->{'ZMap'}{'seq-data'}}, $name if $source->is_seq_data;
 
-        my $description = $source->description;
-        $config->{'featureset-description'}->{$source->name} = $description if $description;
-    }
+    $config->{$name} = {
+        url         => $source->url($session),
+        featuresets => $source->featuresets,
+        delayed     => 'true',
+        stylesfile  => $session->stylesfile,
+        group       => 'always',
+    };
+
+    my $zmap_column = $source->zmap_column;
+    push @{$config->{'columns'}{$zmap_column}}, @{$source->featuresets} if $zmap_column;
+
+    my $zmap_style = $source->zmap_style;
+    $config->{'featureset-style'}{$name} = $zmap_style if $zmap_style;
+
+    my $description = $source->description;
+    $config->{'featureset-description'}->{$name} = $description if $description;
 
     return;
 }
