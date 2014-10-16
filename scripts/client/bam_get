@@ -109,7 +109,7 @@ my %query_command = map { $_ => 1 } qw( M I ); # these contribute to the query s
 sub _print_feature {
     my ($feature, $fstart, $fend) = @_;
 
-    # the -gff_source flag overrides the source from the BAM file
+    my $seq_id = $gff_seqname || $chr;
     my $source = $gff_source || $feature->source_tag;
     my ($score) = $feature->get_tag_values('AS');
 
@@ -151,7 +151,7 @@ sub _print_feature {
     my $phase = $feature->phase;
 
     print $gff_format->gff_line(
-        $chr, $source, 'read',
+        $seq_id, $source, 'read',
         $fstart, $fend, $score, $strand, $phase,
         $attribute_hash);
 

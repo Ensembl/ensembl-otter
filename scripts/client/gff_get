@@ -81,7 +81,7 @@ sub gff_escape_seqid {
     return;
 }
 
-my $chr_field = $chr;
+my $chr_field = $gff_seqname || $chr;
 gff_escape_seqid for $chr_field;
 
 sub _print_header {
