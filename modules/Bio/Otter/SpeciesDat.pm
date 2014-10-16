@@ -71,6 +71,14 @@ sub all_datasets {
     return @{ $self->{_datasets} };
 }
 
+# The datasets which can benefit an otter_config config sections
+sub all_datasets_no_alias {
+    my ($self) = @_;
+    my @ds = $self->all_datasets;
+    @ds = grep { !defined $_->ALIAS } @ds; # exclude those which ALIAS another
+    return @ds;
+}
+
 sub _dataset_hash {
     my ($filename) = @_;
 
