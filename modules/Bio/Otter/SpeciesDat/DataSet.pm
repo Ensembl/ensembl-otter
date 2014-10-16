@@ -11,19 +11,35 @@ use Bio::Otter::Server::Config;
 use Bio::Otter::Utils::RequireModule qw(require_module);
 
 
-=head1 METHODS
+=head1 NAME
 
-Read accessors are named like C<HOST>, C<READONLY> or C<DNA_DBSPEC>.
+Bio::Otter::SpeciesDat::DataSet - represent a species, server side
+
+=head1 METHODS
 
 =head2 new
 
 This class is not intended for construction directly.
+
+(For a counter-example, see F<xt/db/assembly_check.t> which imagines
+up a TEST dataset.)
 
 Use L<Bio::Otter::Server::Config/SpeciesDat>, or where access control
 is needed L<Bio::Otter::Server::Support::Web/allowed_datasets>, or if
 you have a writable dataset L</clone_readonly>.
 
 (Immediate callers C<catch> to put debug info in the error text.)
+
+=head2 Property read accessors
+
+Methods are provided to read (not write) all the usual properties
+
+ ALIAS READONLY
+ HOST     PORT     USER     PASS     DBSPEC     DBNAME
+ DNA_HOST DNA_PORT DNA_USER DNA_PASS DNA_DBSPEC DNA_DBNAME
+
+Note that the RESTRICTED property has no method, and is deprecated
+(since 9795a05e, to disappear with v84).
 
 =cut
 
@@ -45,9 +61,9 @@ sub new {
 
 Returns a readonly dataset.
 
-The caller should prevent writing by inspecting L</READONLY>, but also
-the configuration should provide alternative database parameters (for
-slave or readonly user).
+The caller I<should> prevent writing by inspecting L</READONLY>, but
+also this returned configuration should provide alternative database
+parameters (for slave or readonly user).
 
 =cut
 
@@ -227,6 +243,13 @@ sub pipeline_dba {
 
     return $self->satellite_dba($meta_key, $adaptor_class);
 }
+
+
+=head2 satellite_dba($metakey, $adaptor_class)
+
+Return DBAdaptor for any satellite database.
+
+=cut
 
 sub satellite_dba {
     my ($self, $metakey, $adaptor_class) = @_;
