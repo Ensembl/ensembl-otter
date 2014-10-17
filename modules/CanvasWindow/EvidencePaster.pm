@@ -57,13 +57,10 @@ sub initialise {
                     -expand => 1,
                 );
 
-            my $doing_align = 0; # capture by closure...
             my $align = sub {
-                if ($doing_align) {
-                    $self->logger->warn('Already aligning, ignoring click.');
-                    return;
-                }
-                $doing_align = 1;
+
+                $self->align_button->configure(-state => 'disabled');
+
                 try {
                     $self->align_to_transcript;
                 }
@@ -77,8 +74,10 @@ sub initialise {
                         );
                     $self->logger->error('Error running align_to_transcript: ', $err);
                 };
-                $doing_align = 0;
+
+                $self->align_button->configure(-state => 'normal');
             };
+
             $top->bind('<Control-t>', $align);
             $top->bind('<Control-T>', $align);
             my $align_button = $otf_ts_frame->Button(
