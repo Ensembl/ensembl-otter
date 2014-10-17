@@ -72,7 +72,8 @@ sub wanted_default {
         confess "wanted_default is a read-only method";
     }
     elsif (! defined $self->{'_wanted_default'}) {
-        confess "Error: wanted must be set before wanted_default is called";
+        my $name = $self->name;
+        confess "Error: wanted must be set before wanted_default is called, for '$name'";
     }
     else {
         return $self->{'_wanted_default'};
