@@ -189,6 +189,12 @@ processing.
 See L</inc_modified_count> and L</may_modify> methods for supporting
 infrastructure.
 
+=head3 no_aliases
+
+If set, when L<Bio:Otter::Utils::Script> iterates over all databases,
+it will skip species which are aliases for others (i.e. test and dev
+species).
+
 =cut
 
 sub ottscript_options {
@@ -241,7 +247,8 @@ sub execute {
 
     my @ds_names = $self->_datasets;
     unless (@ds_names) {
-        @ds_names = map { $_->name } $species_dat->all_datasets;
+        my @datasets = $self->_option('no_aliases') ? $species_dat->all_datasets_no_alias : $species_dat->all_datasets;
+        @ds_names = map { $_->name } @datasets;
     }
 
     foreach my $ds_name (sort @ds_names) {
