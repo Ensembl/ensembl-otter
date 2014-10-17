@@ -16,7 +16,10 @@ use Bio::Otter::Source::Filter;
 use Bio::Otter::Version;
 
 sub ottscript_options {
-    return ( dataset_mode => 'one_or_all' );
+    return (
+        dataset_mode => 'one_or_all',
+        no_aliases   => 1,
+        );
 }
 
 sub ottscript_validate_args {
@@ -45,11 +48,6 @@ sub process_dataset {
   my $ds_name = $dataset->name;
 
   my $server_ds = $dataset->otter_sd_ds;
-  if ($server_ds->ds_all_params->{RESTRICTED}) {
-      say "Skipping (since RESTRICTED): ", $ds_name if $self->verbose;
-      return;
-  }
-
   my $client_ds = $self->client->get_DataSet_by_name($ds_name);
   $client_ds->load_client_config;
 
