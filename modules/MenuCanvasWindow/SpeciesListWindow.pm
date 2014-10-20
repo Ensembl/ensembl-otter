@@ -305,22 +305,17 @@ sub open_dataset_by_name {
     my $canvas = $self->canvas;
     my $busy = Tk::ScopedBusy->new($canvas);
 
-    my $ssc = $self->{'_sequence_set_chooser'}{$name};
-    if ($ssc && Tk::Exists($ssc->top_window)) {
-        $ssc->deiconify_and_raise;
-    } else {
-        my $top = $canvas->Toplevel(-title => $Bio::Otter::Lace::Client::PFX.
-                                 "Assembly List $name");
-        $ssc = CanvasWindow::SequenceSetChooser->new($top);
+    my $ssc = CanvasWindow::SequenceSetChooser->in_Toplevel
+      (-title => "Assembly List $name",
+       { from => $canvas,
+         reuse_ref => \$self->{'_sequence_set_chooser'}{$name},
+         raise => 1,
+         init => { name => $name,
+                   Client => $client,
+                   DataSet => $ds,
+                   SpeciesListWindow => $self },
+       });
 
-        $ssc->name($name);
-        $ssc->Client($client);
-        $ssc->DataSet($ds);
-        $ssc->SpeciesListWindow($self);
-        $ssc->draw;
-
-        $self->{'_sequence_set_chooser'}{$name} = $ssc;
-    }
     return $ssc;
 }
 
