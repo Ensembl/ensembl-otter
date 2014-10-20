@@ -538,7 +538,17 @@ sub exclwork_tt {
     my ($ds) = @_;
     plan tests => 6;
 
-    local $SIG{__WARN__} = sub { fail("warning seen: @_") };
+    local $SIG{__WARN__} = sub {
+        my ($msg) = @_;
+        # During the exclusive_work tests, we expect everything to
+        # succeed with no hint of trouble.
+        if ($msg =~ m{there is a difference in the software release \(\d+\) and the database release \(\d+\)}) {
+            warn "[ ignored a warning ] $msg";
+        } else {
+            fail("warning seen: $msg");
+        }
+        return;
+    };
 
     my $BVSLB = 'Bio::Vega::SliceLockBroker';
     my $SLdba = $ds->get_cached_DBAdaptor->get_SliceLockAdaptor;
