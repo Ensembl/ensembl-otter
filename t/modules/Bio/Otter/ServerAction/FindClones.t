@@ -42,9 +42,9 @@ RP11-420G6.2\tgene_synonym\tAL139092.12\tchr6-38
 __EO_RESULT__
 
             'ENST00000380773,ENSG00000124535' => <<"__EO_RESULT__",
-ENSG00000124535\tEnsEMBL:ensembl_havana_gene:gene_stable_id\tAL139092.12\tchr6-18
-ENST00000380773\tCCDS_db:Ens_Hs_transcript:\tAL139092.12\tchr6-18
-ENST00000380773\tEnsEMBL:ensembl_havana_transcript:transcript_stable_id\tAL139092.12\tchr6-18
+ENSG00000124535\tEnsEMBL:ensembl_havana_gene:gene_stable_id\tAL139092.12\tchr6-38
+ENST00000380773\tCCDS_db:Ens_Hs_transcript:\tAL139092.12\tchr6-38
+ENST00000380773\tEnsEMBL:ensembl_havana_transcript:transcript_stable_id\tAL139092.12\tchr6-38
 __EO_RESULT__
                     'ACOT4' =>
 "ACOT4\tgene_name\tAC005225.2\tchr14-38\n",
@@ -54,6 +54,7 @@ __EO_RESULT__
         dataset => 'zebrafish',
         queries => {
             ENSDARG00000086319 => <<"__EO_RESULT__",
+ENSDARG00000086319\tEnsEMBL:ensembl:gene_stable_id\tCR847984.14\tchr11_20140314
 ENSDARG00000086319\tEnsEMBL:ensembl:gene_stable_id\tFQ482077.1\tchr11_20110419
 ENSDARG00000086319\tEnsEMBL:ensembl:gene_stable_id\tFQ482077.1,CR847984.14\tchr11_20110419
 __EO_RESULT__
