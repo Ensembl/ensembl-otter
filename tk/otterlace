@@ -128,6 +128,7 @@ sub run_gui {
         my $opener = Bio::Otter::Utils::AutoOpen->new($SpeciesListWindow, $open);
         # Failure will kill the app, we assume the caller is reading
         # the terminal.  Else job done, just wait.
+        $opener->hide_after(1);
     }
 
     Tk::MainLoop();
