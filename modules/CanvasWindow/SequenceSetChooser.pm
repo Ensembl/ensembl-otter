@@ -313,10 +313,10 @@ sub open_sequence_set_by_ssname_subset {
         # RT#275972 but state storage still supports it.
         $sn->draw_subset($subset_name);
     } elsif(! $sn->canvas->find('withtag', 'all')) {
-        $sn->draw_all();    
+        $sn->draw_all();
     }
 
-    return;
+    return $sn;
 }
 
 # brings up a window for searching for loci / clones

@@ -294,6 +294,7 @@ sub open_dataset {
     return 0;
 }
 
+# Returns the CW:SequenceSetChooser
 sub open_dataset_by_name {
     my ($self, $name) = @_;
 
@@ -304,14 +305,13 @@ sub open_dataset_by_name {
     my $canvas = $self->canvas;
     my $busy = Tk::ScopedBusy->new($canvas);
 
-    my $top = $self->{'_sequence_set_chooser'}{$name};
-    if (Tk::Exists($top)) {
-        $top->deiconify;
-        $top->raise;
+    my $ssc = $self->{'_sequence_set_chooser'}{$name};
+    if ($ssc && Tk::Exists($ssc->top_window)) {
+        $ssc->deiconify_and_raise;
     } else {
-        $top = $canvas->Toplevel(-title => $Bio::Otter::Lace::Client::PFX.
+        my $top = $canvas->Toplevel(-title => $Bio::Otter::Lace::Client::PFX.
                                  "Assembly List $name");
-        my $ssc = CanvasWindow::SequenceSetChooser->new($top);
+        $ssc = CanvasWindow::SequenceSetChooser->new($top);
 
         $ssc->name($name);
         $ssc->Client($client);
@@ -319,9 +319,9 @@ sub open_dataset_by_name {
         $ssc->SpeciesListWindow($self);
         $ssc->draw;
 
-        $self->{'_sequence_set_chooser'}{$name} = $top;
+        $self->{'_sequence_set_chooser'}{$name} = $ssc;
     }
-    return;
+    return $ssc;
 }
 
 sub draw {
