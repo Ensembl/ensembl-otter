@@ -27,6 +27,12 @@ sub new {
     return $self;
 }
 
+sub hide_after {
+    my ($self, @set) = @_;
+    ($self->{hide_after}) = @set if @set;
+    return $self->{hide_after};
+}
+
 sub _SLW {
     my ($self) = @_;
     return $self->{_SLW};
@@ -67,8 +73,13 @@ sub _init {
 
 sub _hook {
     my ($self) = @_;
-    $self->_SLW->top_window->afterIdle([ $self, 'do_open' ])
-      if $self->_more_work;
+    my $mw = $self->_SLW->top_window;
+    if ($self->_more_work) {
+        $mw->afterIdle([ $self, 'do_open' ]);
+    } else {
+        # we leave the mainwindow visible until we're done opening
+        $mw->iconify if $self->hide_after;
+    }
     return;
 }
 
@@ -86,7 +97,6 @@ sub do_open {
 # --open human_dev
 sub open_dataset_by_name {
     my ($self, $ds) = @_;
-    $self->_SLW->top_window->iconify;
     my $ssc = $self->_SLW->open_dataset_by_name($ds);
     $self->{ssc} = $ssc; # a CanvasWindow::SequenceSetChooser
     $ssc->top_window->iconify if $self->_more_work;
