@@ -541,6 +541,11 @@ sub bind_item_selection{
 sub make_matcher {
     my ($self, $str) = @_;
 
+    # Detect ZMap contig selection e.g.
+    # "AC092469.10.1.104395-2001-104395-plus"    152160 254554 (102395)
+    $str = $1 if $str =~
+      m{^"([A-Z0-9+]{3,16}\.\d{1,3})\.\d+.*"};
+
     # Escape non word characters
     $str =~ s{(\W)}{\\$1}g;
 
