@@ -64,14 +64,9 @@ sub new {
     $top->Tk::bind('<Control-p>', $prefs_command);
     $top->Tk::bind('<Control-P>', $prefs_command);
 
-    my $quit_command = sub{
-        $self->zircon_delete; # we *must* do this explicitly before the next line
-        $self->canvas->toplevel->destroy;
-        $self = undef;  # $self gets nicely DESTROY'd with this
-    };
+    my $quit_command = $self->bind_WM_DELETE_WINDOW('quit_command');
     $top->Tk::bind('<Control-q>',    $quit_command);
     $top->Tk::bind('<Control-Q>',    $quit_command);
-    $top->protocol('WM_DELETE_WINDOW',  $quit_command);
 
 
     # FILE MENU
@@ -124,6 +119,13 @@ sub new {
        -command => [ $self, 'show_log' ]);
 
     return $self;
+}
+
+sub quit_command {
+    my ($self) = @_;
+    $self->zircon_delete; # we *must* do this explicitly before the next line
+    $self->canvas->toplevel->destroy;
+    return;
 }
 
 
