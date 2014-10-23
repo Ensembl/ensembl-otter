@@ -125,14 +125,13 @@ sub initialise {
     $top->bind('<Control-s>', $save);
     $top->bind('<Control-S>', $save);
 
-    my $close_window = sub { $self->close_window };
+    my $close_window = $self->bind_WM_DELETE_WINDOW('close_window');
     $button_frame->Button(
         -text       => 'Close',
         -command    => $close_window,
         )->pack( -side => 'right' );
     $top->bind('<Control-w>', $close_window);
     $top->bind('<Control-W>', $close_window);
-    $top->protocol('WM_DELETE_WINDOW', $close_window);
 
     $top->bind('<Destroy>', sub{ my $self = undef });
 
@@ -268,6 +267,7 @@ sub close_window {
             -buttons        => [qw{ Yes No Cancel }],
             );
         my $ans = $dialog->Show;
+        $self->delete_window_dialog($dialog);
 
         if ($ans eq 'Cancel') {
             return; # Abandon window close

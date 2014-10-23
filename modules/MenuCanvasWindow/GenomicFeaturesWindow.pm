@@ -629,14 +629,13 @@ sub initialise {
     $top_window->bind('<Control-S>', $save);
     $top_window->bind('<Control-s>', $save);
 
-    my $close_command = sub { $self->try2save_and_quit() };
+    my $close_command = $self->bind_WM_DELETE_WINDOW('try2save_and_quit');
     $file_menu->command(
         -label          => 'Close',
         -command        => $close_command,
         -accelerator    => 'Ctrl+W',
         -underline      => 1,
     );
-    $top_window->protocol('WM_DELETE_WINDOW', $close_command);
     $top_window->bind('<Control-W>', $close_command);
     $top_window->bind('<Control-w>', $close_command);
 

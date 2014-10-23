@@ -89,14 +89,14 @@ sub initialize { # deprecated
     return $self->initialise(@arg);
 }
 
-# Requires methods: top_window, name.
+# Requires methods: top, name.
 # Expects these methods to return false to prevent destroy.
 sub bind_WM_DELETE_WINDOW {
     my ($self, $method) = @_;
 
     my $closer = sub {
         if (my $d = $self->{_window_closing}) {
-            my $name = $self->name;
+            my $name = try { $self->name } catch { '?' };
             warn "Dodged nesting call to $method($self) for $name";
             if (Tk::Exists($d)) { # maybe we have the confirmation dialog
                 $d->deiconify;
@@ -108,7 +108,7 @@ sub bind_WM_DELETE_WINDOW {
         return $self->$method;
     };
 
-    $self->top_window->protocol(WM_DELETE_WINDOW => $closer);
+    $self->top->protocol(WM_DELETE_WINDOW => $closer);
 
     return $closer; # for binding to KeyPress
 }
