@@ -60,8 +60,13 @@ sub _init {
     push @work, [ open_dataset_by_name => $ds ];
     push @work, [ open_sequenceseq_by_name => $seq_region ] if defined $seq_region;
 
+    push @work, [ 'open_region_readonly' ]
+      if defined $pos && $pos =~ s{^v(iew)?:}{};
+
     if (defined $pos && $pos =~ m{^(\d[0-9_]*):(\d[0-9_]*)$}) {
-        push @work, [ open_region_by_coords => (0+$1), (0+$2) ];
+        my @n = ($1, $2);
+        foreach (@n) { s/_//g }
+        push @work, [ open_region_by_coords => @n ];
     } elsif (defined $pos && $pos =~ m{^#(\d+)\.\.(\d+)$}) {
         push @work, [ open_region_by_index => $1, $2 ];
     } elsif (defined $pos) {
@@ -112,6 +117,24 @@ sub open_sequenceseq_by_name {
     my $sn = $ssc->open_sequence_set_by_ssname_subset($seq_region, undef);
     $self->{sn} = $sn; # a CanvasWindow::SequenceNotes
     $sn->top_window->iconify if $self->_more_work;
+    return;
+}
+
+# --open human_dev/chr12-38/view:...
+sub open_region_readonly {
+    my ($self, $start, $end) = @_;
+    my $sn = $self->{sn}
+      or die "Cannot open_region_readonly without CanvasWindow::SequenceNotes";
+    $sn->set_read_only;
+    return;
+}
+
+# --open human_dev/chr12-38/1_000_000:2_000_000
+sub open_region_by_coords {
+    my ($self, $start, $end) = @_;
+    my $sn = $self->{sn}
+      or die "Cannot open_region_by_coords without CanvasWindow::SequenceNotes";
+    $sn->run_lace_on_slice($start, $end);
     return;
 }
 
