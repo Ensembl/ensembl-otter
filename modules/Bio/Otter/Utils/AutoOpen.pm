@@ -2,6 +2,7 @@ package Bio::Otter::Utils::AutoOpen;
 use strict;
 use warnings;
 use Try::Tiny;
+use Time::HiRes qw( gettimeofday tv_interval );
 
 
 =head1 NAME
@@ -52,6 +53,7 @@ sub _init {
     my ($self) = @_;
     my @work;
     $self->{_work} = \@work;
+    my $t0 = $self->{t0} = [ gettimeofday() ];
 
     my ($ds, $seq_region, $pos) = split '/', $self->{open}, 3;
     # later, should take a 4th part to specify ColumnChooser options
@@ -73,18 +75,35 @@ sub _init {
         push @work, [ open_region_by_hunt => $pos ];
     }
 
+    $self->logger->info(sprintf("Queued %s at \$^T+%.2fs",
+                                $self->{open}, tv_interval([$^T,0], $t0)));
     return $self->_hook;
+}
+
+sub logger {
+    return Log::Log4perl->get_logger('AutoOpen');
 }
 
 sub _hook {
     my ($self) = @_;
-    my $mw = $self->_SLW->top_window;
     if ($self->_more_work) {
+        my $mw = $self->_SLW->top_window;
         $mw->afterIdle([ $self, 'do_open' ]);
     } else {
-        # we leave the mainwindow visible until we're done opening
-        $mw->iconify if $self->hide_after;
+        $self->_done;
     }
+    return;
+}
+
+sub _done {
+    my ($self) = @_;
+
+    # we leave the mainwindow visible until we're done opening
+    my $mw = $self->_SLW->top_window;
+    $mw->iconify if $self->hide_after;
+
+    $self->logger->info(sprintf("Finished %s in %.2fs",
+                                $self->{open}, tv_interval($self->{t0})));
     return;
 }
 
@@ -94,6 +113,7 @@ sub do_open {
     my $next = $self->_take_work;
     my ($method, @arg) = @$next;
     die "Don't know how to ($method, @arg) yet" unless $self->can($method);
+    $self->logger->debug("$method(@arg)");
     $self->$method(@arg);
 
     return $self->_hook;
