@@ -318,6 +318,12 @@ sub write_access_var_ref {
     return \$self->{'_write_access_var'};
 }
 
+sub set_read_only {
+    my ($self) = @_;
+    ${ $self->write_access_var_ref } = 0;
+    return;
+}
+
 sub initialise {
     my ($self) = @_;
 
