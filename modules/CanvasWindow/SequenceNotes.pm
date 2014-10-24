@@ -312,10 +312,16 @@ sub write_access_var_ref {
     my ($self) = @_;
 
     unless(exists($self->{'_write_access_var'})) {
-        $self->{'_write_access_var'} =
-            $self->Client->write_access && $self->SequenceSet->write_access;
+        $self->set_write_ifposs;
     }
     return \$self->{'_write_access_var'};
+}
+
+sub set_write_ifposs {
+    my ($self) = @_;
+    my $w = $self->{'_write_access_var'} =
+      $self->Client->write_access && $self->SequenceSet->write_access;
+    return $w;
 }
 
 sub set_read_only {
