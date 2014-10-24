@@ -24,8 +24,9 @@ sub run_gui {
     # Become leader of process group so that "kill -$$" at end works
     setpgrp();
 
-    my $do_recover;
-    Bio::Otter::Lace::Defaults::do_getopt('recover!' => \$do_recover);
+    my ($do_recover, @open);
+    Bio::Otter::Lace::Defaults::do_getopt('recover!' => \$do_recover,
+                                          'open|o=s' => \@open);
     if (@ARGV) {
         my $name = $ENV{OTTERLACE_RAN_AS};
         if (defined $name) {
@@ -121,6 +122,13 @@ sub run_gui {
     if ($do_recover) { # otterlace --recover
         $main_window->iconify;
         $main_window->afterIdle([ $SpeciesListWindow, 'recover_some_sessions', 'no_wait']);
+    }
+    foreach my $open (@open) {
+        require Bio::Otter::Utils::AutoOpen; # load iff needed
+        my $opener = Bio::Otter::Utils::AutoOpen->new($SpeciesListWindow, $open);
+        # Failure will kill the app, we assume the caller is reading
+        # the terminal.  Else job done, just wait.
+        $opener->hide_after(1);
     }
 
     Tk::MainLoop();

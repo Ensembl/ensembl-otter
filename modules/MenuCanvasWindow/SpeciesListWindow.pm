@@ -285,36 +285,40 @@ sub open_dataset {
     return 0 unless $obj;
 
     my $canvas = $self->canvas;
-    my $busy = Tk::ScopedBusy->new($canvas);
     foreach my $tag ($canvas->gettags($obj)) {
         if ($tag =~ /^DataSet=(.+)/) {
             my $name = $1;
-            my $client = $self->Client;
-            my $ds = $client->get_DataSet_by_name($name);
-            $ds->load_client_config;
-
-            my $top = $self->{'_sequence_set_chooser'}{$name};
-            if (Tk::Exists($top)) {
-                $top->deiconify;
-                $top->raise;
-            } else {
-                $top = $canvas->Toplevel(-title => $Bio::Otter::Lace::Client::PFX.
-                                         "Assembly List $name");
-                my $ssc = CanvasWindow::SequenceSetChooser->new($top);
-
-                $ssc->name($name);
-                $ssc->Client($client);
-                $ssc->DataSet($ds);
-                $ssc->SpeciesListWindow($self);
-                $ssc->draw;
-
-                $self->{'_sequence_set_chooser'}{$name} = $top;
-            }
+            $self->open_dataset_by_name($name);
             return 1;
         }
     }
 
     return 0;
+}
+
+# Returns the CW:SequenceSetChooser
+sub open_dataset_by_name {
+    my ($self, $name) = @_;
+
+    my $client = $self->Client;
+    my $ds = $client->get_DataSet_by_name($name);
+    $ds->load_client_config;
+
+    my $canvas = $self->canvas;
+    my $busy = Tk::ScopedBusy->new($canvas);
+
+    my $ssc = CanvasWindow::SequenceSetChooser->in_Toplevel
+      (-title => "Assembly List $name",
+       { from => $canvas,
+         reuse_ref => \$self->{'_sequence_set_chooser'}{$name},
+         raise => 1,
+         init => { name => $name,
+                   Client => $client,
+                   DataSet => $ds,
+                   SpeciesListWindow => $self },
+       });
+
+    return $ssc;
 }
 
 sub draw {

@@ -312,10 +312,22 @@ sub write_access_var_ref {
     my ($self) = @_;
 
     unless(exists($self->{'_write_access_var'})) {
-        $self->{'_write_access_var'} =
-            $self->Client->write_access && $self->SequenceSet->write_access;
+        $self->set_write_ifposs;
     }
     return \$self->{'_write_access_var'};
+}
+
+sub set_write_ifposs {
+    my ($self) = @_;
+    my $w = $self->{'_write_access_var'} =
+      $self->Client->write_access && $self->SequenceSet->write_access;
+    return $w;
+}
+
+sub set_read_only {
+    my ($self) = @_;
+    ${ $self->write_access_var_ref } = 0;
+    return;
 }
 
 sub initialise {
@@ -535,6 +547,11 @@ sub bind_item_selection{
 sub make_matcher {
     my ($self, $str) = @_;
 
+    # Detect ZMap contig selection e.g.
+    # "AC092469.10.1.104395-2001-104395-plus"    152160 254554 (102395)
+    $str = $1 if $str =~
+      m{^"([A-Z0-9+]{3,16}\.\d{1,3})\.\d+.*"};
+
     # Escape non word characters
     $str =~ s{(\W)}{\\$1}g;
 
@@ -666,7 +683,7 @@ sub run_lace {
         $self->name,
         $self->selected_clones_string,
         );
-    $self->_open_SequenceSet($name) ;
+    $self->open_SequenceSet($name) ;
 
     return;
 }
@@ -705,13 +722,13 @@ sub run_lace_on_slice{
     my $name =
         sprintf "lace for SLICE %d - %d %s",
         $start, $end, $self->name;
-    $self->_open_SequenceSet($name);
+    $self->open_SequenceSet($name);
 
     return;
 }
 
 ## allows Searched SequenceNotes.pm to inherit the main part of the run_lace method
-sub _open_SequenceSet {
+sub open_SequenceSet {
     my ($self, $name) = @_;
 
     my $cl = $self->Client;
