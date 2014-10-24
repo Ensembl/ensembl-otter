@@ -176,6 +176,7 @@ sub open_sequenceseq_by_name {
 
     my $sn = $ssc->open_sequence_set_by_ssname_subset($seq_region, undef);
     $self->{sn} = $sn; # a CanvasWindow::SequenceNotes
+    $sn->set_write_ifposs;
     $sn->top_window->iconify if $self->_more_work;
     return;
 }
