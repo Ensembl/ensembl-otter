@@ -677,7 +677,7 @@ sub run_lace {
         $self->name,
         $self->selected_clones_string,
         );
-    $self->_open_SequenceSet($name) ;
+    $self->open_SequenceSet($name) ;
 
     return;
 }
@@ -716,13 +716,13 @@ sub run_lace_on_slice{
     my $name =
         sprintf "lace for SLICE %d - %d %s",
         $start, $end, $self->name;
-    $self->_open_SequenceSet($name);
+    $self->open_SequenceSet($name);
 
     return;
 }
 
 ## allows Searched SequenceNotes.pm to inherit the main part of the run_lace method
-sub _open_SequenceSet {
+sub open_SequenceSet {
     my ($self, $name) = @_;
 
     my $cl = $self->Client;

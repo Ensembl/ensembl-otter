@@ -18,14 +18,52 @@ complete.  If it fails, the error will go to the MainLoop handler.
 There isn't much public API, because the internals should be expected
 to change with the GUI.
 
+=head2 Open syntax
+
+By example,
+
+ --open human_dev                                 Dataset
+ --open human_dev/chr12-38                        SequenceSet
+ --open human_dev/chr12-38/1_000_000:2_000_000    Region, by coords
+ --open human_dev/chr12-38/1_000_000+1_000_000    Region, by start + length
+ --open 'human_dev/chr12-38/#5'                   Region, by clone index
+ --open 'human_dev/chr12-38/#5..8'                Region, by clone indices
+ --open human_dev/chr12-38/AC004803               Region, by name
+ --open human_dev/chr12-38/AC004803-KC877505.1    Region, by start-end names
+
+ --open human_dev/chr12-38/view:...               Region, read-only
+ --open human_dev/chr12-38/v:...                  Region, read-only
+
+For matches by clone name, C<.SV> is optional and ignored.
+
+For coordinates, underscores to mark digit groups are optional and
+ignored.
+
+Currently for chromosome coordinates, the range will be rounded to
+clone boundaries.
+
+
+=head1 CAVEATS
+
+This bypasses some parts of the UI to get the job done, hence those
+parts are not tested by this route.
+
+If multiple regions are opened, currently they will run in parallel.
+Might be better to chain them on L</_done>.
+
 =cut
 
 sub new {
     my ($pkg, $SpeciesListWindow, $openspec) = @_;
-    my $self = { _SLW => $SpeciesListWindow, open => $openspec };
+    my $self = { _SLW => $SpeciesListWindow, name => $openspec };
     bless $self, $pkg;
     $self->_init;
     return $self;
+}
+
+sub name {
+    my ($self) = @_;
+    return $self->{name};
 }
 
 sub hide_after {
@@ -55,7 +93,7 @@ sub _init {
     $self->{_work} = \@work;
     my $t0 = $self->{t0} = [ gettimeofday() ];
 
-    my ($ds, $seq_region, $pos) = split '/', $self->{open}, 3;
+    my ($ds, $seq_region, $pos) = split '/', $self->name, 3;
     # later, should take a 4th part to specify ColumnChooser options
 
     die "Open shortcut syntax: --open dataset[:seq_region]\n" unless $ds;
@@ -65,18 +103,22 @@ sub _init {
     push @work, [ 'open_region_readonly' ]
       if defined $pos && $pos =~ s{^v(iew)?:}{};
 
-    if (defined $pos && $pos =~ m{^(\d[0-9_]*):(\d[0-9_]*)$}) {
-        my @n = ($1, $2);
+    if (defined $pos && $pos =~ m{^(\d[0-9_]*)(:|\+)(\d[0-9_]*)$}) {
+        my @n = ($1, $3);
+        my $op = $2;
         foreach (@n) { s/_//g }
+        $n[1] += $n[0] if $op eq '+';
         push @work, [ open_region_by_coords => @n ];
+    } elsif (defined $pos && $pos =~ m{^#(\d+)$}) {
+        push @work, [ open_region_by_index => $1, $1 ];
     } elsif (defined $pos && $pos =~ m{^#(\d+)\.\.(\d+)$}) {
         push @work, [ open_region_by_index => $1, $2 ];
     } elsif (defined $pos) {
-        push @work, [ open_region_by_hunt => $pos ];
+        push @work, [ open_region_by_names => split '-', $pos, 2 ];
     }
 
     $self->logger->info(sprintf("Queued %s at \$^T+%.2fs",
-                                $self->{open}, tv_interval([$^T,0], $t0)));
+                                $self->name, tv_interval([$^T,0], $t0)));
     return $self->_hook;
 }
 
@@ -103,7 +145,7 @@ sub _done {
     $mw->iconify if $self->hide_after;
 
     $self->logger->info(sprintf("Finished %s in %.2fs",
-                                $self->{open}, tv_interval($self->{t0})));
+                                $self->name, tv_interval($self->{t0})));
     return;
 }
 
@@ -119,7 +161,6 @@ sub do_open {
     return $self->_hook;
 }
 
-# --open human_dev
 sub open_dataset_by_name {
     my ($self, $ds) = @_;
     my $ssc = $self->_SLW->open_dataset_by_name($ds);
@@ -128,7 +169,6 @@ sub open_dataset_by_name {
     return;
 }
 
-# --open human_dev/chr12-38
 sub open_sequenceseq_by_name {
     my ($self, $seq_region) = @_;
     my $ssc = $self->{ssc}
@@ -140,7 +180,6 @@ sub open_sequenceseq_by_name {
     return;
 }
 
-# --open human_dev/chr12-38/view:...
 sub open_region_readonly {
     my ($self, $start, $end) = @_;
     my $sn = $self->{sn}
@@ -149,12 +188,48 @@ sub open_region_readonly {
     return;
 }
 
-# --open human_dev/chr12-38/1_000_000:2_000_000
 sub open_region_by_coords {
     my ($self, $start, $end) = @_;
     my $sn = $self->{sn}
       or die "Cannot open_region_by_coords without CanvasWindow::SequenceNotes";
     $sn->run_lace_on_slice($start, $end);
+    return;
+}
+
+sub open_region_by_index {
+    my ($self, $first, $last) = @_;
+    my $sn = $self->{sn}
+      or die "Cannot open_region_by_index without CanvasWindow::SequenceNotes";
+    my $cs_list = $sn->get_CloneSequence_list; # ensures it is fetched
+    my $ss = $sn->SequenceSet;
+    my $max = @$cs_list; # indices are 1-based
+    my $name = $sn->name; # or $ss->name?
+    die "Invalid clone index range #$first..$last (incl.) on $name, valid is 1..$max\n"
+      if $first < 1 || $first > $last || $first > $max || $last > $max;
+
+    my @selected = @{$cs_list}[$first-1 .. $last-1];
+    $ss->selected_CloneSequences(\@selected);
+    return $self->_open_region_selected($sn);
+}
+
+sub open_region_by_names {
+    my ($self, $start, $end) = @_;
+    my $sn = $self->{sn}
+      or die "Cannot open_region_by_hunt without CanvasWindow::SequenceNotes";
+    my $ss = $sn->SequenceSet;
+
+    foreach ($start, $end) { s{\.\d+$}{} }
+    # this API matches ACC without .SV
+
+    $ss->select_CloneSequences_by_start_end_accessions($start, $end);
+    # can fail to find
+
+    return $self->_open_region_selected($sn);
+}
+
+sub _open_region_selected {
+    my ($self, $sn) = @_;
+    $sn->open_SequenceSet($self->name);
     return;
 }
 
