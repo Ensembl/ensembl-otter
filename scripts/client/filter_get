@@ -12,17 +12,6 @@ use Bio::Otter::Utils::AccessionInfo::Serialise qw(unescape_fasta_description);
 
 use base 'Bio::Otter::Utils::GetScript';
 
-sub do_requires {
-    my ($self) = @_;
-
-    require LWP::UserAgent;
-    require HTTP::Request;
-    require HTTP::Cookies::Netscape;
-    $self->SUPER::do_requires;
-
-    return;
-}
-
 sub version      { return 'filter_get 0.5'; }
 sub log_filename { return 'gff_log.txt'; }
 
@@ -34,10 +23,7 @@ sub do_it {
     my $args = $self->args;
 
     # pull off arguments meant for us
-    my     ($url_root, $server_script, $cookie_jar)
-        = $self->read_delete_args(
-        qw ( url_root   server_script   cookie_jar )
-        );
+    my ($server_script) = $self->read_delete_args( qw( server_script ) );
 
     $args->{log} = 1 if $LOG; # enable logging on the server
 
@@ -65,95 +51,34 @@ sub do_it {
     # cache miss
 
     # only require these packages now, so we don't take the import hit on a cache hit
-    do_requires($self);
+    $self->do_requires;
     $self->log_incs('After do_requires');
 
     $self->log_message("cache file: $gff_filename: cache miss");
 
-    my $request = HTTP::Request->new;
+    my $gff = $self->do_http_request('GET', $server_script, $params, $gff_source);
 
-    $request->method('GET');
-
-    #$request->accept_decodable(HTTP::Message::Decodable);
-
-    my $url = $url_root . '/' . $server_script . '?' . $params;
-
-    $self->log_message("http: URL: $url");
-
-    $request->uri($url);
-
-    # create a user agent to send the request
-
-    my $ua = LWP::UserAgent->new(
-        timeout             => 9000,
-        env_proxy           => 1,
-        agent               => $0,
-        cookie_jar          => HTTP::Cookies::Netscape->new(file => $cookie_jar),
-        protocols_allowed   => [qw(http https)],
-        );
-
-    # do the request
-    my $response;
+    # cache the result
     $self->time_diff_for(
-        'http', sub {
-            $response = $ua->request($request);
-            die "No response for $gff_source\n" unless $response;
-            $self->log_message(
-                sprintf("http: bytes: %d (decoded), %d (raw)  status: %s",
-                        length($response->decoded_content),
-                        length($response->content),
-                        $response->status_line)
-                );
+        'caching', sub {
+            open my $cache_file_h, '>', $cache_file
+                or die "Cannot write to cache file '$cache_file'; $!\n";
+            print $cache_file_h $gff;
+            close $cache_file_h
+                or die "Error writing to '$cache_file'; $!";
         });
 
-    if ($response->is_success) {
+    # update the SQLite db
+    $self->update_local_db($gff_source, $cache_file, 1);
 
-        my $gff = $response->decoded_content;
+    # if (rand() < 0.5) {
+    #     die "Horribly";
+    # }
 
-        # cache the result
-        $self->time_diff_for(
-            'caching', sub {
-                open my $cache_file_h, '>', $cache_file
-                    or die "Cannot write to cache file '$cache_file'; $!\n";
-                print $cache_file_h $gff;
-                close $cache_file_h
-                    or die "Error writing to '$cache_file'; $!";
-            });
+    # Send data to zmap on STDOUT
+    open my $gff_string_fh, '<', \$gff or die "Failed to open GFF string as file handle: $!\n";
+    $self->_spool_gff($gff_string_fh);
 
-        # update the SQLite db
-        $self->update_local_db($gff_source, $cache_file, 1);
-
-        # if (rand() < 0.5) {
-        #     die "Horribly";
-        # }
-
-        # Send data to zmap on STDOUT
-        open my $gff_string_fh, '<', \$gff or die "Failed to open GFF string as file handle: $!\n";
-        $self->_spool_gff($gff_string_fh);
-    }
-    else {
-
-        my $res = $response->content;
-        $self->log_chunk('http: error', $res);
-
-        my $err_msg;
-
-        if (my ($err) = $res =~ /ERROR:[[:space:]]*(.+)/s) {
-            $err =~ s/\A(^-+[[:blank:]]*EXCEPTION[[:blank:]]*-+\n)+//m; # remove boring initial lines
-            $err =~ s/\n.*//s; # keep only the first line
-            $err_msg = $err;
-        }
-        elsif ($res =~ /The Sanger Institute Web service you requested is temporarily unavailable/) {
-            my $code = $response->code;
-            my $message = $response->message;
-            $err_msg = "This Sanger web service is temporarily unavailable: status = ${code} ${message}";
-        }
-        else {
-            $err_msg = $res;
-        }
-
-        die "Webserver error for $gff_source: $err_msg\n";
-    }
     return;
 }
 
