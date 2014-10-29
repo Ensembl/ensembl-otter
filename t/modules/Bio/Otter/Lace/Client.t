@@ -8,6 +8,9 @@ use Test::MockObject;
 use Test::MockObject::Extends;
 use Try::Tiny;
 
+use lib "${ENV{ANACODE_TEAM_TOOLS}}/t/tlib";
+use Test::SetupLog4perl;
+
 use Test::Otter qw( OtterClient try_err );
 
 use Bio::Otter::Lace::Defaults;
