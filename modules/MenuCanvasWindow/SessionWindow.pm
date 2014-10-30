@@ -1566,11 +1566,15 @@ sub add_external_SubSeqs {
 sub process_and_update_columns {
     my ($self, @columns) = @_;
 
-    my $alignment_result  = $self->AceDatabase->process_alignment_Columns(@columns);
-    my $transcript_result = $self->AceDatabase->process_transcript_Columns(@columns);
+    my @alignment_cols  = Bio::Otter::Lace::Chooser::Collection::columns_by_content_type('alignment_feature', @columns);
+    @alignment_cols     = grep { $_->process_gff } @alignment_cols;
 
-    $self->_process_hits_proc->process_columns(@columns); # FIXME: WIP!!
+    $self->_process_hits_proc->process_columns(@alignment_cols) if @alignment_cols;
 
+    my @transcript_cols = Bio::Otter::Lace::Chooser::Collection::columns_by_content_type('transcript',        @columns);
+    return unless @transcript_cols;
+
+    my $transcript_result = $self->AceDatabase->process_transcript_Columns(@transcript_cols);
     my ($transcripts, $failed) = @{$transcript_result}{qw( -results -failed )};
 
     if ($transcripts and @$transcripts) {
@@ -1580,8 +1584,7 @@ sub process_and_update_columns {
 
     if ($failed and @$failed) {
         my $message = sprintf
-            'Failed to load any transcripts or alignment features from column(s): %s'
-            , join ', ', sort map { $_->name } @{$failed};
+            'Failed to load any transcripts from column(s): %s', join ', ', sort map { $_->name } @{$failed};
         $self->message($message);
     }
     return;
@@ -2724,7 +2727,7 @@ sub zircon_zmap_view_features_loaded {
         sub{
             $self->exonerate_done_callback(@otf_loaded) if @otf_loaded;
 
-            $self->process_and_update_columns(@columns_to_process);
+            $self->process_and_update_columns(@columns_to_process) if @columns_to_process;
 
             # These were all set to 'Processing' above
             foreach my $column (@columns_to_process) {
