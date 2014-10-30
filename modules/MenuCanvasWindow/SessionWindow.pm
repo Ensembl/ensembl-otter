@@ -4,6 +4,8 @@ package MenuCanvasWindow::SessionWindow;
 use strict;
 use warnings;
 
+use feature 'switch';
+
 use Carp;
 use Scalar::Util 'weaken';
 
@@ -1567,27 +1569,58 @@ sub add_external_SubSeqs {
 sub process_and_update_columns {
     my ($self, @columns) = @_;
 
-    my @alignment_cols  = Bio::Otter::Lace::Chooser::Collection::columns_by_content_type('alignment_feature', @columns);
-    @alignment_cols     = grep { $_->process_gff } @alignment_cols;
+    my (@alignment_cols, @transcript_cols, @other_cols);
 
-    $self->_process_hits_proc->process_columns(@alignment_cols) if @alignment_cols;
-
-    my @transcript_cols = Bio::Otter::Lace::Chooser::Collection::columns_by_content_type('transcript',        @columns);
-    return unless @transcript_cols;
-
-    my $transcript_result = $self->AceDatabase->process_transcript_Columns(@transcript_cols);
-    my ($transcripts, $failed) = @{$transcript_result}{qw( -results -failed )};
-
-    if ($transcripts and @$transcripts) {
-        $self->add_external_SubSeqs(@{$transcripts});
-        $self->draw_subseq_list;
+    foreach my $col ( @columns ) {
+        for (my $ct = $col->Filter->content_type) {
+            when ($ct eq 'alignment_feature' and $col->process_gff) { push @alignment_cols,  $col; }
+            when ($ct eq 'transcript'                             ) { push @transcript_cols, $col; }
+            default                                                 { push @other_cols,      $col; }
+        }
     }
 
-    if ($failed and @$failed) {
-        my $message = sprintf
-            'Failed to load any transcripts from column(s): %s', join ', ', sort map { $_->name } @{$failed};
-        $self->message($message);
+    if (@alignment_cols) {
+        $self->_process_hits_proc->process_columns(@alignment_cols);
     }
+
+    if (@transcript_cols) {
+
+        my $transcript_result = $self->AceDatabase->process_transcript_Columns(@transcript_cols);
+        my ($transcripts, $failed) = @{$transcript_result}{qw( -results -failed )};
+
+        if ($transcripts and @$transcripts) {
+            $self->add_external_SubSeqs(@{$transcripts});
+            $self->draw_subseq_list;
+        }
+
+        if ($failed and @$failed) {
+            my $message = sprintf
+                'Failed to load any transcripts from column(s): %s', join ', ', sort map { $_->name } @{$failed};
+            $self->message($message);
+        }
+    }
+
+    foreach my $col ( @transcript_cols, @other_cols ) {
+        $self->_update_column_status($col, 'Visible');
+    }
+
+    return;
+}
+
+sub _processed_column {
+    my ($self, $column) = @_;
+    $self->logger->debug("_processed_column for '", $column->name, "'");
+    # Unset flag so that we don't reprocess this file if we recover the session.
+    $column->process_gff(0);
+    $self->_update_column_status($column, 'Visible');
+    return;
+}
+
+sub _update_column_status {
+    my ($self, $column, $status) = @_;
+    my $col_aptr = $self->AceDatabase->DB->ColumnAdaptor;
+    $column->status($status);
+    $col_aptr->store_Column_state($column);
     return;
 }
 
@@ -1606,6 +1639,9 @@ sub _process_hits_proc {
                 "session_dir=$home",
                 "url_root=$url_root",
             ],
+            '-processed_callback' => sub { $self->_processed_column(@_) },
+            '-update_callback'    => sub { $self->_update_column_status(@_) },
+            '-log_name' => $self->AceDatabase->log_name,
             );
         $_process_hits_proc = $self->{'_process_hits_proc'} = $proc;
     }
@@ -2733,15 +2769,9 @@ sub zircon_zmap_view_features_loaded {
     $self->top_window->afterIdle(
         sub{
             $self->exonerate_done_callback(@otf_loaded) if @otf_loaded;
-
             $self->process_and_update_columns(@columns_to_process) if @columns_to_process;
-
-            # These were all set to 'Processing' above
-            foreach my $column (@columns_to_process) {
-                $column->status('Visible');
-                $col_aptr->store_Column_state($column);
-            }
-            return $self->RequestQueuer->features_loaded_callback(@featuresets);
+            $self->RequestQueuer->features_loaded_callback(@featuresets);
+            return;
         });
 
     return;
