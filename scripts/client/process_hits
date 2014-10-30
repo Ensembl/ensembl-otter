@@ -157,11 +157,6 @@ sub _process_hits {
         );
     $process_gff->store_hit_data_from_gff($self->accession_type_cache);
 
-    # FIXME: where should this be - back in the main process on receipt of command?
-    # Unset flag so that we don't reprocess this file if we recover the session.
-    $db_column->process_gff(0);
-    $self->_column_adaptor->store_Column_state($db_column);
-
     $_protocol->send_command('processed', undef, [ columns => {}, $column ]);
     return;
 }
