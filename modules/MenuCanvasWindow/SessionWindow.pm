@@ -678,6 +678,7 @@ sub delete_window {
     my ($self) = @_;
     $self->exit_save_data or return;
     $self->_delete_zmap_view;
+    $self->_shutdown_process_hits_proc;
     $self->ColumnChooser->top_window->destroy;
     return 1;
 }
@@ -1609,6 +1610,12 @@ sub _process_hits_proc {
         $_process_hits_proc = $self->{'_process_hits_proc'} = $proc;
     }
     return $_process_hits_proc;
+}
+
+sub _shutdown_process_hits_proc {
+    my ($self) = @_;
+    delete $self->{'_process_hits_proc'}; # should trigger shutdown via DESTROY
+    return;
 }
 
 sub delete_subsequences {
