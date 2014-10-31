@@ -1639,9 +1639,10 @@ sub _process_hits_proc {
                 "session_dir=$home",
                 "url_root=$url_root",
             ],
-            '-processed_callback' => sub { $self->_processed_column(@_) },
-            '-update_callback'    => sub { $self->_update_column_status(@_) },
-            '-log_name' => $self->AceDatabase->log_name,
+            '-session_window'     => $self,
+            '-processed_callback' => \&_processed_column,
+            '-update_callback'    => \&_update_column_status,
+            '-log_name'           => $self->AceDatabase->log_name,
             );
         $_process_hits_proc = $self->{'_process_hits_proc'} = $proc;
     }
@@ -2978,6 +2979,8 @@ sub DESTROY {
     $self->zmap_select_destroy;
 
     $self->_delete_zmap_view;
+    $self->_shutdown_process_hits_proc;
+
     delete $self->{'_AceDatabase'};
 
     return;
