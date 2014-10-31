@@ -5,6 +5,7 @@ use strict;
 use warnings;
 
 use Readonly;
+use Scalar::Util 'weaken';
 
 use Bio::Otter::Log::WithContext;
 
@@ -21,6 +22,7 @@ sub new {
         -peer_socket_opt => 'peer_socket',
         %arg_hash,
         );
+    $new->_session_window(    $arg_hash{'-session_window'});
     $new->_processed_callback($arg_hash{'-processed_callback'});
     $new->_update_callback(   $arg_hash{'-update_callback'});
     $new->log_name( $arg_hash{'-log_name'});
@@ -46,7 +48,7 @@ sub process_columns {
 sub _queue_columns {
     my ($self, @columns) = @_;
     push @{$self->_queue}, @columns;
-    $self->_update_callback->($_, 'HitsQueued') foreach @columns;
+    $self->_update_callback->($self->_session_window, $_, 'HitsQueued') foreach @columns;
     $self->logger->debug('Queued: ', join(',', map { $_->name } @columns));
     return;
 }
@@ -70,7 +72,7 @@ sub _send_queued_column {
     $self->logger->debug("_send_queued_column: sending '$name'");
 
     $self->_busy($next_col);
-    $self->_update_callback->($next_col, 'HitsProcess');
+    $self->_update_callback->($self->_session_window, $next_col, 'HitsProcess');
     $self->send_command('process', undef, [ columns => {}, $name ]);
 
     return;
@@ -105,7 +107,7 @@ sub _processed {
             next;
         }
 
-        $self->_processed_callback->($expected);
+        $self->_processed_callback->($self->_session_window, $expected);
         $self->_busy(undef);
     }
 
@@ -126,6 +128,16 @@ sub _busy {
     ($self->{'_busy'}) = @args if @args;
     my $_busy = $self->{'_busy'};
     return $_busy;
+}
+
+sub _session_window {
+    my ($self, @args) = @_;
+    if (@args) {
+        ($self->{'_session_window'}) = @args if @args;
+        weaken $self->{'_session_window'};
+    }
+    my $_session_window = $self->{'_session_window'};
+    return $_session_window;
 }
 
 sub _processed_callback {
