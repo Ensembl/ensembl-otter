@@ -452,13 +452,6 @@ sub set_search_entry {
 }
 
 
-# Not a method!!
-
-sub columns_by_content_type {
-    my ($content_type, @columns) = @_;
-    return grep { my $ct = $_->Filter->content_type; $ct and $ct eq $content_type; } @columns;
-}
-
 1;
 
 __END__
