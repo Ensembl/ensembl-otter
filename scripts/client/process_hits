@@ -1,0 +1,218 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+
+use feature 'switch';
+
+package Bio::Otter::GetScript::ProcessHits;
+
+use AnyEvent::Impl::Perl;       # (try to) ensure pure-perl loop is used
+use AnyEvent;
+
+use Bio::Otter::Lace::ProcessGFF;
+
+use Zircon::Context::ZMQ::AnyEvent;
+use Zircon::Protocol;
+
+use base qw(
+    Bio::Otter::Utils::GetScript::LocalDB
+    Zircon::Protocol::Server
+);
+
+sub version { return 'process_hits 0.1'; };
+sub log_filename { return 'process_hits.txt'; }
+
+sub do_it {
+    my ($self) = @_;
+
+    $self->do_requires;
+
+    $self->log_message('starting zircon');
+    $self->_setup_zircon;
+
+    my $args = $self->args;
+    AnyEvent::Impl::Perl::loop;
+
+    return;
+}
+
+# GetScript objects are singletons, hence these class members are simple variables.
+my $_protocol;
+my $_column_adaptor;
+
+sub _setup_zircon {
+    my ($self) = @_;
+
+    my $peer_socket = $self->require_arg('peer_socket');
+
+    my $context = Zircon::Context::ZMQ::AnyEvent->new(-trace_prefix => 'PHP');
+    $_protocol   = Zircon::Protocol->new(
+        -app_id     => 'process_hits',
+        -app_tag    => 'otter_hits',
+        -serialiser => 'JSON',
+        -context    => $context,
+        -server     => $self,
+        );
+
+    $_protocol->send_handshake(
+        $peer_socket,
+        sub {
+            my ($result) = @_;
+            $self->log_message(sprintf 'handshake: %s', _zircon_message($result));
+        },
+        );
+
+    return;
+}
+
+# FIXME: code dup with zircon/utterloss/bin/zapmop
+#
+sub _zircon_message {
+    my ($result) = @_;
+    for ($result) {
+        when ($_->isa('Zircon::Protocol::Result::Reply')) {
+            return $result->success ? 'succeeded' : 'failed';
+        }
+        when ($_->isa('Zircon::Protocol::Result::Timeout')) {
+            return 'timeout';
+        }
+        when (ref) {
+            return sprintf 'unknown result: class: %s', ref;
+        }
+    }
+    return 'unknown result';
+}
+
+sub zircon_server_protocol_command {
+    my ($self, $command, $view_id, $request_body) = @_;
+
+    # FIXME: some dup with Zircon::Protocol::Server::AppLauncher (and below, in process())
+    my $tag_entity_hash = { };
+    $tag_entity_hash->{$_->[0]} = $_ for @{$request_body};
+
+    for ($command) {
+
+        when ('process') {
+            return $self->process($tag_entity_hash);
+        }
+
+        default {
+            my $reason = "Unknown process_hits command: '${command}'";
+            return $_protocol->message_command_unknown($reason);
+        }
+    }
+    return;
+}
+
+my %_cb_handle;
+
+sub process {
+    my ($self, $tag_entity_hash) = @_;
+
+    my $columns_entity = $tag_entity_hash->{'columns'};
+    $columns_entity or die "missing columns entity";
+    my (undef, undef, @columns) = @{$columns_entity};
+    @columns = grep { $_ } @columns;
+
+    unless (@columns) {
+        $self->log_message('No columns so nothing to do');
+        return $_protocol->message_ok('no columns', [ data => { busy => 0 } ]);
+    }
+
+    foreach my $column (@columns) {
+
+        # Check we can do this
+        my $reason;
+        my $db_column = $self->_column_adaptor->fetch_by_key($column);
+        if ($db_column) {
+            $db_column->gff_file or $reason = "No gff_file for '$column'";
+        }
+        else {
+            $reason = "No entry in otter_column for '$column'";
+        }
+        if ($reason) {
+            $self->log_message($reason);
+            return $_protocol->message_command_failed($reason) if $reason;
+        }
+
+        $self->log_message("Scheduling process_hits for '$column'");
+        $_cb_handle{$column} = AnyEvent->idle( cb => sub { $self->_process_hits($db_column); } );
+    }
+    return $_protocol->message_ok('processing', [ data => { busy => 1 } ]);
+}
+
+sub _process_hits {
+    my ($self, $db_column) = @_;
+
+    my $column = $db_column->name;
+    delete $_cb_handle{$column}; # so we don't get called again by AnyEvent->idle().
+
+    $self->log_message("_process_hits for '$column'");
+
+    my $process_gff = Bio::Otter::Lace::ProcessGFF->new(
+        gff_path    => $db_column->gff_file,
+        column_name => $column,
+        log_name    => $column,
+        );
+    $process_gff->store_hit_data_from_gff($self->accession_type_cache);
+
+    $_protocol->send_command('processed', undef, [ columns => {}, $column ]);
+    return;
+}
+
+sub _column_adaptor {
+    my ($self) = @_;
+    return $_column_adaptor if $_column_adaptor;
+
+    return $_column_adaptor = Bio::Otter::Lace::DB::ColumnAdaptor->new($self->local_db->dbh);
+}
+
+# Called via accession_type_cache->Client
+# FIXME: duplication with B:O:L:Client
+#
+sub get_taxonomy_info {
+    my ($self, @ids) = @_;
+
+    my $response = $self->do_http_request(
+        'POST',
+        'get_taxonomy_info',
+        sprintf('id=%s', join ',', @ids),
+        'get_taxonomy_info',
+        );
+    return $response;
+}
+
+sub log_context {
+    return 'process_hits';
+}
+
+sub DESTROY {
+    my ($self) = @_;
+    $self->log_message(      'DESTROY()');
+    $self->zircon_server_log('DESTROY()');
+
+    $_protocol       = undef;
+    $_column_adaptor = undef;
+
+    return;
+}
+
+## no critic (Modules::ProhibitMultiplePackages)
+
+package main;
+
+use Log::Log4perl::Level;
+
+Bio::Otter::GetScript::ProcessHits
+    ->new(log4perl => $DEBUG)
+    ->run;
+
+exit;
+
+__END__
+
+=head1 AUTHOR
+
+Ana Code B<email> anacode@sanger.ac.uk
+

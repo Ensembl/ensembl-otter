@@ -187,7 +187,7 @@ sub initialise {
                       -underline => 0,
         );
 
-    foreach my $status (qw( Queued Loading Processing Empty Error )) {
+    foreach my $status (qw( Queued Loading Processing HitsQueued HitsProcess Empty Error )) {
         $status_menu->add(
             'command',
             -label      => $status,
@@ -669,7 +669,7 @@ sub load_filters {
     $self->AceDatabase->save_filter_state;
 
     my @statuses =  qw( Selected );
-    push @statuses, qw( Queued Loading Processing Visible ) if $is_recover;
+    push @statuses, qw( Queued Loading Processing HitsQueued HitsProcess Visible ) if $is_recover;
 
     my @to_fetch = $cllctn->list_Columns_with_status(@statuses);
     foreach my $col (@to_fetch) {

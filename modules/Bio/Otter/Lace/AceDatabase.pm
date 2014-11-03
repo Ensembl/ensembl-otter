@@ -1199,55 +1199,15 @@ sub DataSet {
 
 sub process_transcript_Columns {
     my ($self, @columns) = @_;
-    return $self->_process_Columns('transcript', 1, \&_process_transcripts, @columns);
-}
 
-sub _process_transcripts {
-    my ($self, $column, $gff_processor) = @_;
-    return $gff_processor->make_ace_transcripts_from_gff($self->slice->start, $self->slice->end);
-}
-
-sub process_alignment_Columns {
-    my ($self, @columns) = @_;
-    return $self->_process_Columns('alignment_feature', undef, \&_process_alignment_features, @columns);
-}
-
-sub _process_alignment_features {
-    my ($self, $column, $gff_processor) = @_;
-    $gff_processor->store_hit_data_from_gff($self->AccessionTypeCache);
-    # Unset flag so that we don't reprocess this file if we recover the session.
-    $column->process_gff(0);
-    $self->DB->ColumnAdaptor->store_Column_state($column);
-    return;
-}
-
-sub _process_Columns {
-    my ($self, $content_type, $process_always, $processor_sub, @columns) = @_;
-
-    my $log_columns = sub {
-        my ($stage, @cols) = @_;
-        $self->logger->debug("_process_Columns[$content_type]: $stage {", join(',', map { $_->name } @columns), "}");
-        return;
-    };
-
-    $log_columns->('all ', @columns);
-
-    @columns = grep { my $ct = $_->Filter->content_type; $ct and $ct eq $content_type; } @columns;
-    $log_columns->('ct  ', @columns);
-    return unless @columns;
-
-    unless ($process_always) {
-        @columns = grep { $_->process_gff } @columns;
-        $log_columns->('proc', @columns);
-        return unless @columns;
-    }
+    $self->logger->debug("process_transcript_Columns: {", join(',', map { $_->name } @columns), "}");
 
     my $results = [ ];
     my $failed  = [ ];
 
     foreach my $col (@columns) {
         try {
-            push @$results, $self->_process_Column($processor_sub, $col);
+            push @$results, $self->_process_transcript_Column($col);
         }
         catch {
             $self->logger->error($_);
@@ -1263,8 +1223,8 @@ sub _process_Columns {
     return $result;
 }
 
-sub _process_Column {
-    my ($self, $processor_sub, $column) = @_;
+sub _process_transcript_Column {
+    my ($self, $column) = @_;
 
     my $logger = $self->logger;
 
@@ -1273,7 +1233,7 @@ sub _process_Column {
     my $gff_processor = $self->_new_ProcessGFF_for_column($column);
 
     try {
-        @transcripts = $self->$processor_sub($column, $gff_processor);
+        @transcripts = $gff_processor->make_ace_transcripts_from_gff($self->slice->start, $self->slice->end);
     }
     catch {
         $logger->logdie(sprintf "%s: %s: $_", $column->Filter->name, $column->gff_file);
