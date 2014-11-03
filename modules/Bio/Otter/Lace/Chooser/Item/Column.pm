@@ -19,6 +19,8 @@ my (@valid_status, %status_color);
         Queued      #e8cba4         #fbebd5
         Loading     #ffbf49         #ffe5b6
         Processing  #ffbf49         #ffe5b6
+        HitsQueued  #ffbf49         #ffe5b6
+        HitsProcess #ffbf49         #ffe5b6
         Visible     #a6dd33         #ccf37c
         Hidden      #d4f68d         #effed1
         Empty       #c0d4ee         #e2edfc

@@ -29,6 +29,7 @@ sub log_incs {
 
 # Deferred until needed on cache miss.
 # Augment in child if necessary.
+# Less general modules may be require'd by methods as required below.
 #
 sub do_requires {
     require DBI;
@@ -51,6 +52,8 @@ my $getscript_log_context = 'not-set';
 my $getscript_session_dir;
 my $getscript_local_db;
 my $getscript_log4perl_level;
+my $getscript_user_agent;
+my $getscript_url_root;
 
 my %getscript_args;
 
@@ -273,6 +276,120 @@ sub update_local_db {
     return;
 }
 
+sub user_agent {
+    my ($self) = @_;
+    return $getscript_user_agent if $getscript_user_agent;
+
+    require LWP::UserAgent;
+    require HTTP::Request;      # although we use it below, not here.
+
+    $getscript_user_agent = LWP::UserAgent->new(
+        timeout             => 9000,
+        env_proxy           => 1,
+        agent               => $0,
+        protocols_allowed   => [qw(http https)],
+        );
+
+    my ($cookie_jar) = $self->read_delete_args( qw( cookie_jar ) );
+    if ($cookie_jar) {
+        require HTTP::Cookies::Netscape;
+        $getscript_user_agent->cookie_jar(HTTP::Cookies::Netscape->new(file => $cookie_jar));
+    }
+
+    return $getscript_user_agent;
+}
+
+# FIXME: duplication with B:O:L:Client->do_http_request()
+#
+sub do_http_request {
+    my ($self, $method, $scriptname, $params, $context) = @_;
+
+    # create a user agent to send the request
+    # (side-effect: require's HTTP::Request on first use)
+    #
+    my $ua = $self->user_agent;
+
+    my $request = HTTP::Request->new;
+    $request->method($method);
+
+    #$request->accept_decodable(HTTP::Message::Decodable);
+
+    # FIXME: params if POST
+    my $url = $self->url_root . '/' . $scriptname;
+
+    if ($method eq 'GET') {
+        $url = $url . ($params ? "?$params" : '');
+    }
+    elsif ($method eq 'POST') {
+        $request->content($params);
+    }
+    else {
+        die "method '$method' is not supported";
+    }
+    $self->log_message("http: URL: $url");
+
+    $request->uri($url);
+
+    # do the request
+    my $response;
+    $self->time_diff_for(
+        'http', sub {
+            $response = $ua->request($request);
+            die "No response for $context\n" unless $response;
+            $self->log_message(
+                sprintf("http: bytes: %d (decoded), %d (raw)  status: %s",
+                        length($response->decoded_content),
+                        length($response->content),
+                        $response->status_line)
+                );
+        });
+
+    if ($response->is_success) {
+
+        return $self->_json_content($response)
+            if $response->content_type =~ m{^application/json($|;)}; # charset ignored
+
+        return $response->decoded_content;
+    }
+    else {
+
+        my $res = $response->content;
+        $self->log_chunk('http: error', $res);
+
+        my $err_msg;
+
+        if (my ($err) = $res =~ /ERROR:[[:space:]]*(.+)/s) {
+            $err =~ s/\A(^-+[[:blank:]]*EXCEPTION[[:blank:]]*-+\n)+//m; # remove boring initial lines
+            $err =~ s/\n.*//s; # keep only the first line
+            $err_msg = $err;
+        }
+        elsif ($res =~ /The Sanger Institute Web service you requested is temporarily unavailable/) {
+            my $code = $response->code;
+            my $message = $response->message;
+            $err_msg = "This Sanger web service is temporarily unavailable: status = ${code} ${message}";
+        }
+        else {
+            $err_msg = $res;
+        }
+
+        die "Webserver error for $context: $err_msg\n";
+    }
+}
+
+sub _json_content {
+    my ($self, $response) = @_;
+    require JSON;
+    return JSON->new->decode($response->decoded_content);
+}
+
+sub url_root {
+    my ($self) = @_;
+    return $getscript_url_root if $getscript_url_root;
+
+    ($getscript_url_root) = $self->read_delete_args( qw( url_root ) );
+    return $getscript_url_root;
+}
+
 # Primarily for the benefit of tests
 sub DESTROY {
     undef $me;
@@ -280,6 +397,8 @@ sub DESTROY {
     undef $getscript_session_dir;
     undef $getscript_local_db;
     undef $getscript_log4perl_level;
+    undef $getscript_user_agent;
+    undef $getscript_url_root;
 
     $getscript_log_context = 'not-set';
     %getscript_args = ();

@@ -4,6 +4,8 @@ package MenuCanvasWindow::SessionWindow;
 use strict;
 use warnings;
 
+use feature 'switch';
+
 use Carp;
 use Scalar::Util 'weaken';
 
@@ -36,6 +38,7 @@ use Zircon::ZMap;
 use Bio::Otter::Lace::Client;
 use Bio::Otter::Log::WithContext;
 use Bio::Otter::RequestQueuer;
+use Bio::Otter::Zircon::ProcessHits;
 use Bio::Otter::ZMap::XML;
 use Bio::Vega::Transform::Otter::Ace;
 
@@ -130,6 +133,7 @@ sub initialise {
     delete $self->{'_zmap'};
 
     $self->RequestQueuer(Bio::Otter::RequestQueuer->new($self));
+    my $proc = $self->_process_hits_proc; # launches process_hits_proc, ready for action
 
     return;
 }
@@ -676,6 +680,7 @@ sub delete_window {
     my ($self) = @_;
     $self->exit_save_data or return;
     $self->_delete_zmap_view;
+    $self->_shutdown_process_hits_proc;
     $self->ColumnChooser->top_window->destroy;
     return 1;
 }
@@ -1564,22 +1569,89 @@ sub add_external_SubSeqs {
 sub process_and_update_columns {
     my ($self, @columns) = @_;
 
-    my $alignment_result  = $self->AceDatabase->process_alignment_Columns(@columns);
-    my $transcript_result = $self->AceDatabase->process_transcript_Columns(@columns);
+    my (@alignment_cols, @transcript_cols, @other_cols);
 
-    my ($transcripts, $failed) = @{$transcript_result}{qw( -results -failed )};
-
-    if ($transcripts and @$transcripts) {
-        $self->add_external_SubSeqs(@{$transcripts});
-        $self->draw_subseq_list;
+    foreach my $col ( @columns ) {
+        for (my $ct = $col->Filter->content_type) {
+            when ($ct eq 'alignment_feature' and $col->process_gff) { push @alignment_cols,  $col; }
+            when ($ct eq 'transcript'                             ) { push @transcript_cols, $col; }
+            default                                                 { push @other_cols,      $col; }
+        }
     }
 
-    if ($failed and @$failed) {
-        my $message = sprintf
-            'Failed to load any transcripts or alignment features from column(s): %s'
-            , join ', ', sort map { $_->name } @{$failed};
-        $self->message($message);
+    if (@alignment_cols) {
+        $self->_process_hits_proc->process_columns(@alignment_cols);
     }
+
+    if (@transcript_cols) {
+
+        my $transcript_result = $self->AceDatabase->process_transcript_Columns(@transcript_cols);
+        my ($transcripts, $failed) = @{$transcript_result}{qw( -results -failed )};
+
+        if ($transcripts and @$transcripts) {
+            $self->add_external_SubSeqs(@{$transcripts});
+            $self->draw_subseq_list;
+        }
+
+        if ($failed and @$failed) {
+            my $message = sprintf
+                'Failed to load any transcripts from column(s): %s', join ', ', sort map { $_->name } @{$failed};
+            $self->message($message);
+        }
+    }
+
+    foreach my $col ( @transcript_cols, @other_cols ) {
+        $self->_update_column_status($col, 'Visible');
+    }
+
+    return;
+}
+
+sub _processed_column {
+    my ($self, $column) = @_;
+    $self->logger->debug("_processed_column for '", $column->name, "'");
+    # Unset flag so that we don't reprocess this file if we recover the session.
+    $column->process_gff(0);
+    $self->_update_column_status($column, 'Visible');
+    return;
+}
+
+sub _update_column_status {
+    my ($self, $column, $status) = @_;
+    my $col_aptr = $self->AceDatabase->DB->ColumnAdaptor;
+    $column->status($status);
+    $col_aptr->store_Column_state($column);
+    return;
+}
+
+sub _process_hits_proc {
+    my ($self) = @_;
+    my $_process_hits_proc = $self->{'_process_hits_proc'};
+    unless ($_process_hits_proc) {
+
+        my $home     = $self->AceDatabase->home;
+        my $url_root = $self->AceDatabase->Client->url_root;
+
+        my $proc = Bio::Otter::Zircon::ProcessHits->new(
+            '-app_id'   => $self->zircon_app_id,
+            '-context'  => $self->new_zircon_context('PHO'),
+            '-arg_list' => [
+                "session_dir=$home",
+                "url_root=$url_root",
+            ],
+            '-session_window'     => $self,
+            '-processed_callback' => \&_processed_column,
+            '-update_callback'    => \&_update_column_status,
+            '-log_name'           => $self->AceDatabase->log_name,
+            );
+        $_process_hits_proc = $self->{'_process_hits_proc'} = $proc;
+    }
+    return $_process_hits_proc;
+}
+
+sub _shutdown_process_hits_proc {
+    my ($self) = @_;
+    delete $self->{'_process_hits_proc'}; # should trigger shutdown via DESTROY
     return;
 }
 
@@ -2560,10 +2632,11 @@ sub zmap_configs_dir {
 ### BEGIN: ZMap control interface
 
 sub new_zircon_context {
-    my ($self) = @_;
+    my ($self, $prefix) = @_;
+    $prefix //= 'SW';
     my $context = Zircon::Context::ZMQ::Tk->new(
             '-widget'       => $self->menu_bar,
-            '-trace_prefix' => sprintf('SW=[%s]', $self->AceDatabase->name),
+            '-trace_prefix' => sprintf('%s=[%s]', $prefix, $self->AceDatabase->name),
         );
     $self->logger->debug(sprintf('New context: %s', $context));
     return $context;
@@ -2697,15 +2770,9 @@ sub zircon_zmap_view_features_loaded {
     $self->top_window->afterIdle(
         sub{
             $self->exonerate_done_callback(@otf_loaded) if @otf_loaded;
-
-            $self->process_and_update_columns(@columns_to_process);
-
-            # These were all set to 'Processing' above
-            foreach my $column (@columns_to_process) {
-                $column->status('Visible');
-                $col_aptr->store_Column_state($column);
-            }
-            return $self->RequestQueuer->features_loaded_callback(@featuresets);
+            $self->process_and_update_columns(@columns_to_process) if @columns_to_process;
+            $self->RequestQueuer->features_loaded_callback(@featuresets);
+            return;
         });
 
     return;
@@ -2912,6 +2979,8 @@ sub DESTROY {
     $self->zmap_select_destroy;
 
     $self->_delete_zmap_view;
+    $self->_shutdown_process_hits_proc;
+
     delete $self->{'_AceDatabase'};
 
     return;

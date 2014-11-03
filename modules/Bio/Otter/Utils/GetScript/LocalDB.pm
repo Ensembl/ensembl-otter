@@ -54,7 +54,7 @@ sub get_features {
     return $features;
 }
 
-sub _accession_type_cache {
+sub accession_type_cache {
     my ($self) = @_;
     return $getscript_atc if $getscript_atc;
 
@@ -62,6 +62,7 @@ sub _accession_type_cache {
 
     my $atc = Bio::Otter::Lace::AccessionTypeCache->new;
     $atc->DB($self->local_db);
+    $atc->Client($self);        # BIG HACK but lets us fake Client methods if necessary. (scripts/client/process_hits)
 
     return $getscript_atc = $atc;
 }
@@ -84,7 +85,7 @@ sub _accession_type_cache {
 sub augment_feature_info {
     my ($self, $features) = @_;
 
-    my $atc = $self->_accession_type_cache;
+    my $atc = $self->accession_type_cache;
     foreach my $feature (@$features) {
         my $info = $atc->feature_accession_info($feature->hseqname);
         if ($info) {
