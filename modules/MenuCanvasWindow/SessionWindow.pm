@@ -1573,6 +1573,7 @@ sub process_and_update_columns {
 
     foreach my $col ( @columns ) {
         for (my $ct = $col->Filter->content_type) {
+            $ct //= '';
             when ($ct eq 'alignment_feature' and $col->process_gff) { push @alignment_cols,  $col; }
             when ($ct eq 'transcript'                             ) { push @transcript_cols, $col; }
             default                                                 { push @other_cols,      $col; }
