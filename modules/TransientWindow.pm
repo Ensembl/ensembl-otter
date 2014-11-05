@@ -82,6 +82,16 @@ sub window {
     return $self->{'_window'};
 }
 
+# XXX:DUP copy, awaiting inheritance from BaseWindow
+sub balloon {
+    my ($self) = @_;
+
+    $self->{'_balloon'} ||= $self->window->Balloon(
+        -state  => 'balloon',
+        );
+    return $self->{'_balloon'};
+}
+
 sub title {
     my ($self, $title) = @_;
     $self->{'_win_title'} = $title if $title;
