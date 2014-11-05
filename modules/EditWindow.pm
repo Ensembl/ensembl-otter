@@ -28,15 +28,6 @@ sub top {
     return $self->{'_top'};
 }
 
-sub balloon {
-    my ($self) = @_;
-
-    $self->{'_balloon'} ||= $self->top->Balloon(
-        -state  => 'balloon',
-        );
-    return $self->{'_balloon'};
-}
-
 sub colour_init {
     my ($self, @widg) = @_;
     my $sw = $self->can('SessionWindow') && $self->SessionWindow;

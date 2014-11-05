@@ -120,5 +120,14 @@ sub delete_window_dialog {
     return;
 }
 
+sub balloon {
+    my ($self) = @_;
+
+    $self->{'_balloon'} ||= $self->top->Balloon(
+        -state  => 'balloon',
+        );
+    return $self->{'_balloon'};
+}
+
 
 1;

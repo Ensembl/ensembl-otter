@@ -115,11 +115,17 @@ sub initialise {
     )->pack(-side => 'right');
 
     my $copy_dest = Bio::Otter::Lace::Client->the->config_value('log_rsync');
-    $but_frame->Button(
+    my $rsbut = $but_frame->Button(
         -text    => 'rsync logfiles',
         -command => [ $self, 'sync' ],
         -state => $copy_dest ? 'normal' : 'disabled',
     )->pack(-side => 'right');
+    $self->balloon->attach
+      ($rsbut,
+       -balloonmsg => "Copy all Otterlace logfiles to your network-home.\n".
+       ($copy_dest
+        ? 'May require ssh tunnel / VPN to be up.'
+        : 'For laptops used by staff; requires configuration.'));
 
     $lw->Tk::bind('<Escape>', [ $self, 'hide_me' ]);
     $lw->Tk::bind('<Control-w>', [ $self, 'hide_me' ]);
