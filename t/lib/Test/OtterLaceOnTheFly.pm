@@ -203,6 +203,9 @@ sub run_otf_test {
     @new_features = feature_sort @new_features;
     note("n(new_features): ", scalar(@new_features));
 
+    unlink $request->query_file;
+    unlink $request->target_file;
+
     return $result_set, @new_features;
 }
 
