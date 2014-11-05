@@ -35,7 +35,7 @@ sub _build_fasta_file {         ## no critic (Subroutines::ProhibitUnusedPrivate
     return $file;
 }
 
-sub _build_fasta_dir {
+sub _build_fasta_dir {          ## no critic (Subroutines::ProhibitUnusedPrivateSubroutines)
     my $self = shift;
     my $tmp  = File::Spec->tmpdir;
     my $user = getpwuid($<);
