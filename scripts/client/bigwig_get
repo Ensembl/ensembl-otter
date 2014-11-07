@@ -36,7 +36,6 @@ my @options_required = qw(
     chr
     start
     end
-    strand
     gff_source
     );
 
@@ -84,7 +83,9 @@ my (
     ) = @{$options}{@keys};
 
 my $strand_field =
-    ( $strand == 1 ) ? '+' : ( $strand == -1 ) ? '-' : '.';
+    ( defined $strand && $strand == +1 ) ? '+' :
+    ( defined $strand && $strand == -1 ) ? '-' :
+    '.';
 
 my $bigwig = Bio::DB::BigWig->new( -bigwig => $file );
 
