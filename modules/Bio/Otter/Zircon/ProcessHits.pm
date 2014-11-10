@@ -7,9 +7,10 @@ use warnings;
 use Readonly;
 use Scalar::Util 'weaken';
 
-use Bio::Otter::Log::WithContext;
-
-use parent qw( Zircon::Protocol::Server::AppLauncher );
+use parent qw(
+    Zircon::Protocol::Server::AppLauncher
+    Bio::Otter::Log::WithContextMixin
+);
 
 our $ZIRCON_TRACE_KEY = 'ZIRCON_PROCESS_HITS_TRACE';
 
@@ -25,7 +26,7 @@ sub new {
     $new->_session_window(    $arg_hash{'-session_window'});
     $new->_processed_callback($arg_hash{'-processed_callback'});
     $new->_update_callback(   $arg_hash{'-update_callback'});
-    $new->log_name( $arg_hash{'-log_name'});
+    $new->log_context(        $arg_hash{'-log_context'});
 
     $new->_queue([]);
 
@@ -154,18 +155,8 @@ sub _update_callback {
     return $_update_callback;
 }
 
-# FIXME: duplication. Provide via a mix-in?
-sub logger {
-    my ($self, $category) = @_;
-    $category = scalar caller unless defined $category;
-    return Bio::Otter::Log::WithContext->get_logger($category, name => $self->log_name);
-}
-
-sub log_name {
-    my ($self, @args) = @_;
-    ($self->{'log_name'}) = @args if @args;
-    my $log_name = $self->{'log_name'};
-    return $log_name || '-B-O-Z-ProcessHits unnamed-';
+sub default_log_context {
+    return '-B-O-Z-ProcessHits unnamed-';
 }
 
 1;

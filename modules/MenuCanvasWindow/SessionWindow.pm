@@ -36,7 +36,6 @@ use Zircon::Context::ZMQ::Tk;
 use Zircon::ZMap;
 
 use Bio::Otter::Lace::Client;
-use Bio::Otter::Log::WithContext;
 use Bio::Otter::RequestQueuer;
 use Bio::Otter::Zircon::ProcessHits;
 use Bio::Otter::ZMap::XML;
@@ -49,6 +48,7 @@ use Bio::Vega::Utils::MacProxyConfig qw{ mac_os_x_set_proxy_vars };
 use base qw{
     MenuCanvasWindow
     Bio::Otter::UI::ZMapSelectMixin
+    Bio::Otter::Log::WithContextMixin
     };
 
 my $PROT_SCORE = 100;
@@ -164,14 +164,12 @@ sub colour_init {
     return;
 }
 
-sub logger {
-    my ($self, $category) = @_;
-    $category = scalar caller unless defined $category;
-
+sub default_log_context {
+    my ($self) = @_;
+    my $log_context;
     my $acedb = $self->AceDatabase;
-    return Bio::Otter::Log::WithContext->get_logger($category, '-no-acedb-') unless $acedb;
-
-    return $acedb->logger($category);
+    $log_context = $acedb->log_context if $acedb;
+    return $log_context || '-no-acedb-';
 }
 
 sub clone_menu {
@@ -1643,7 +1641,7 @@ sub _process_hits_proc {
             '-session_window'     => $self,
             '-processed_callback' => \&_processed_column,
             '-update_callback'    => \&_update_column_status,
-            '-log_name'           => $self->AceDatabase->log_name,
+            '-log_context'        => $self->AceDatabase->log_context,
             );
         $_process_hits_proc = $self->{'_process_hits_proc'} = $proc;
     }

@@ -7,7 +7,6 @@ use strict;
 use warnings;
 use Carp;
 
-use Bio::Otter::Log::WithContext;
 use Bio::Otter::Utils::AccessionInfo::Serialise qw(fasta_header_column_order unescape_fasta_description);
 use Bio::Otter::Utils::TimeDiff qw( time_diff_for );
 
@@ -16,6 +15,8 @@ use Hum::Ace::Method;
 use Hum::Ace::Locus;
 
 use Try::Tiny;
+
+use parent qw( Bio::Otter::Log::WithContextMixin );
 
 {
     ### Should add this to otter_config
@@ -46,9 +47,9 @@ use Try::Tiny;
 sub new {
     my ($pkg, %args) = @_;
 
-    my ($gff_path, $log_name, $column_name) = @args{qw( gff_path log_name column_name )};
+    my ($gff_path, $log_context, $column_name) = @args{qw( gff_path log_context column_name )};
     my $self = bless {}, $pkg;
-    $self->log_name($log_name);
+    $self->log_context($log_context);
     $self->column_name($column_name);
 
     unless ($gff_path) {
@@ -326,18 +327,9 @@ sub column_name {
     return $column_name || 'NOT-SET';
 }
 
-# FIXME: duplication. Provide via a mix-in?
-sub logger {
-    my ($self, $category) = @_;
-    $category = scalar caller unless defined $category;
-    return Bio::Otter::Log::WithContext->get_logger($category, name => $self->log_name);
-}
-
-sub log_name {
-    my ($self, @args) = @_;
-    ($self->{'log_name'}) = @args if @args;
-    my $log_name = $self->{'log_name'};
-    return $log_name || '-B-O-L-ProcessGFF unnamed-';
+# Required by Bio::Otter::Log::WithContextMixin
+sub default_log_context {
+    return '-B-O-L-ProcessGFF unnamed-';
 }
 
 sub _time_diff_log {

@@ -23,6 +23,7 @@ BEGIN {
        Bio::Otter::Log::Layout::UseSrcTimestamp
        Bio::Otter::Log::TieHandle
        Bio::Otter::Log::WithContext
+       Bio::Otter::Log::WithContextMixin
     );
 
     use_ok($_) foreach (@modules);
