@@ -153,7 +153,7 @@ sub _process_hits {
     my $process_gff = Bio::Otter::Lace::ProcessGFF->new(
         gff_path    => $db_column->gff_file,
         column_name => $column,
-        log_name    => $column,
+        log_context => $column,
         );
     $process_gff->store_hit_data_from_gff($self->accession_type_cache);
 

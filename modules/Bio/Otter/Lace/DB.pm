@@ -10,7 +10,8 @@ use DBI;
 
 use Bio::Otter::Lace::DB::ColumnAdaptor;
 use Bio::Otter::Lace::DB::OTFRequestAdaptor;
-use Bio::Otter::Log::WithContext;
+
+use parent qw( Bio::Otter::Log::WithContextMixin );
 
 my(
     %dbh,
@@ -19,7 +20,7 @@ my(
     %session_slice,
     %ColumnAdaptor,
     %OTFRequestAdaptor,
-    %log_name,
+    %log_context,
     );
 
 sub DESTROY {
@@ -31,7 +32,7 @@ sub DESTROY {
     delete($session_slice{$self});
     delete($ColumnAdaptor{$self});
     delete($OTFRequestAdaptor{$self});
-    delete($log_name{$self});
+    delete($log_context{$self});
 
     return;
 }
@@ -39,11 +40,11 @@ sub DESTROY {
 sub new {
     my ($pkg, %args) = @_;
 
-    my ($home, $client, $log_name) = @args{qw( home client log_name )};
+    my ($home, $client, $log_context) = @args{qw( home client log_context )};
 
     my $ref = "";
     my $self = bless \$ref, $pkg;
-    $self->log_name($log_name);
+    $self->log_context($log_context);
 
     unless ($home) {
         $self->logger->logconfess("Cannot create SQLite database without home parameter");
@@ -318,20 +319,16 @@ sub load_dataset_info {
     return;
 }
 
-sub logger {
-    my ($self, $category) = @_;
-    $category = scalar caller unless defined $category;
-    return Bio::Otter::Log::WithContext->get_logger($category, name => $self->log_name);
-}
-
-sub log_name {
+# Required by Bio::Otter::Log::WithContextMixin
+# (default version is not inside-out compatible!)
+sub log_context {
     my ($self, $arg) = @_;
 
     if ($arg) {
-        $log_name{$self} = $arg;
+        $log_context{$self} = $arg;
     }
 
-    return $log_name{$self} if $log_name{$self};
+    return $log_context{$self} if $log_context{$self};
     return '-B-O-L-DB unnamed-';
 }
 

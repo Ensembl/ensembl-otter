@@ -24,7 +24,6 @@ use Bio::Otter::Lace::Chooser::Collection;
 use Bio::Otter::Lace::DB;
 use Bio::Otter::Lace::Slice; # a new kind of Slice that knows how to get pipeline data
 use Bio::Otter::Lace::ProcessGFF;
-use Bio::Otter::Log::WithContext;
 use Bio::Otter::Utils::Config::Ini qw( config_ini_format );
 
 use Hum::Ace::LocalServer;
@@ -33,6 +32,7 @@ use Hum::ZMapStyleCollection;
 
 use Hum::Conf qw{ PFETCH_SERVER_LIST };
 
+use parent qw( Bio::Otter::Log::WithContextMixin );
 
 Bio::Otter::Debug->add_keys(qw(
     XRemote
@@ -72,7 +72,7 @@ sub DB {
     my ($self) = @_;
 
     my $db = $self->{'_sqlite_database'}
-        ||= Bio::Otter::Lace::DB->new(home => $self->home, client => $self->Client, log_name => $self->log_name);
+        ||= Bio::Otter::Lace::DB->new(home => $self->home, client => $self->Client, log_context => $self->log_context);
     return $db;
 }
 
@@ -108,7 +108,7 @@ sub name {
 
     if ($name) {
         $self->DB->set_tag_value('name', $name);
-        $self->DB->log_name($name);
+        $self->DB->log_context($name);
         return $name;
     }
     else {
@@ -1264,7 +1264,7 @@ sub _new_ProcessGFF_for_column {
     return Bio::Otter::Lace::ProcessGFF->new(
         gff_path    => $gff_path,
         column_name => $filter_name,
-        log_name    => $self->log_name,
+        log_context => $self->log_context,
         );
 }
 
@@ -1370,13 +1370,8 @@ sub kill_ace_server {
     return;
 }
 
-sub logger {
-    my ($self, $category) = @_;
-    $category = scalar caller unless defined $category;
-    return Bio::Otter::Log::WithContext->get_logger($category, name => $self->log_name);
-}
-
-sub log_name {
+# Required by Bio::Otter::Log::WithContextMixin
+sub log_context {
     my ($self) = @_;
     return $self->name if $self->{_sqlite_database};
     return basename($self->home) if $self->home;
