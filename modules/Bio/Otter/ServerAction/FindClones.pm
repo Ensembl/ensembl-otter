@@ -182,10 +182,13 @@ sub register_local_slice {
         next if $hidden;
         my $chr_name = $chr_slice->seq_region_name;
         my $key = join ',', @component_names;
-        ++ $self->results->{uc($qname)}->{$chr_name}->{$qtype}->{$key};
+        my $valref = \$self->results->{uc($qname)}->{$chr_name}->{$qtype}->{$key};
 
-        die "Too many hits" # will be caught per find_by_*
-          if $self->result_count(1) > $MAX_HITS;
+        if (!$$valref) {
+            die "Too many hits" # will be caught per find_by_*
+              if $self->result_count(1) > $MAX_HITS;
+        } # else, already counted as a hit
+        $$valref ++;
     }
 
     return;
