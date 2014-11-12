@@ -154,7 +154,6 @@ sub make_map_value {
     my ($self, $key) = @_;
     my $getter =
         $map_keys_required->{$key} ? 'require_argument' : 'param';
-    warn sprintf "getter = '%s', key = '%s'\n", $getter, $key;
     my $val = $self->$getter($key);
     return defined($val) ? $val : '';
 }

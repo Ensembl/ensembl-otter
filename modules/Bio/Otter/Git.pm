@@ -59,7 +59,7 @@ our $WANT_MAJ_FEAT; # from Otter::Paths
 
 sub _hardwired_PATH {
     # this ugly bodge is needed for the symlinked-dev corner case
-    return join ':', qw( /bin /usr/bin ), # standard
+    return join ':', qw( /usr/bin /bin ), # standard
       grep { -d $_ }
         qw( /usr/local/git/bin /opt/local/bin ); # for local laptops
 }
@@ -481,7 +481,8 @@ sub _projdir {
 sub _reset_PATH {
     my ($pkg) = @_;
     my $new_path = $pkg->_hardwired_PATH;
-    warn "Resetting \$ENV{PATH}\n  old PATH=$ENV{PATH}\n  new PATH=$new_path\n";
+    warn "Resetting \$ENV{PATH}\n  old PATH=$ENV{PATH}\n  new PATH=$new_path\n"
+      unless $ENV{PATH} eq $new_path;
     $ENV{PATH} = $new_path;
     return;
 }
