@@ -6,7 +6,7 @@ use warnings;
 ### otterlace
 
 use POSIX ();
-use Log::Log4perl;
+use Bio::Otter::Log::Log4perl;
 use Try::Tiny;
 
 use Bio::Otter::Lace::Client;
@@ -40,7 +40,7 @@ sub run_gui {
     my $client = Bio::Otter::Lace::Defaults::make_Client();
     $client->make_log_file('otterlace');
     # After this, we are writing logfile
-    $logger = Log::Log4perl->get_logger('otter.main');
+    $logger = Bio::Otter::Log::Log4perl->get_logger('otter.main');
 
     Bio::Otter::Git->dump($logger);
 

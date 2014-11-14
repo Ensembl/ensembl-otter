@@ -5,7 +5,7 @@ package CanvasWindow::EvidencePaster;
 
 use strict;
 use warnings;
-use Log::Log4perl;
+use Bio::Otter::Log::Log4perl 'logger';
 use Readonly;
 use Scalar::Util 'weaken';
 use Hum::Sort 'ace_sort';
@@ -629,10 +629,6 @@ sub delete_alignment_window {
     my ($self, $type) = @_;
     $self->{_alignment_window}->{$type} = undef;
     return;
-}
-
-sub logger {
-    return Log::Log4perl->get_logger;
 }
 
 sub DESTROY {

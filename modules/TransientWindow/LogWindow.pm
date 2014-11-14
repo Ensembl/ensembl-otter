@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use IO::Handle;
-use Log::Log4perl;
+use Bio::Otter::Log::Log4perl;
 
 use Try::Tiny;
 use POSIX ();
@@ -183,7 +183,7 @@ sub current_logfile {
 
 sub logger {
     my ($self) = @_;
-    return Log::Log4perl->get_logger('TW.LogWindow');
+    return Bio::Otter::Log::Log4perl->get_logger('TW.LogWindow');
 }
 
 sub readonly_text {

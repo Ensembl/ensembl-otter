@@ -11,7 +11,7 @@ use Bio::Otter::GappedAlignment::Element;
 use Bio::EnsEMBL::DnaDnaAlignFeature;
 use Bio::EnsEMBL::DnaPepAlignFeature;
 
-use Log::Log4perl;
+use Bio::Otter::Log::Log4perl 'logger';
 
 use parent 'Bio::Otter::Vulgar';
 
@@ -796,10 +796,6 @@ sub consolidate_introns {
     }
 
     return $copy;
-}
-
-sub logger {
-    return Log::Log4perl->get_logger;
 }
 
 1;

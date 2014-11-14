@@ -7,7 +7,7 @@ use Carp;
 use POSIX ();
 use URI;
 use Try::Tiny;
-use Log::Log4perl;
+use Bio::Otter::Log::Log4perl;
 
 use Tk::ProgressBar;
 use Bio::Otter::Lace::Pfam;
@@ -466,7 +466,7 @@ sub open_url {
 }
 
 sub logger {
-    return Log::Log4perl->get_logger('otter.pfam'); # shared with Bio::Otter::Lace::Pfam
+    return Bio::Otter::Log::Log4perl->get_logger('otter.pfam'); # shared with Bio::Otter::Lace::Pfam
 }
 
 sub DESTROY {

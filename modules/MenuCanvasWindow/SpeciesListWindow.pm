@@ -7,7 +7,7 @@ use strict;
 use warnings;
 
 use Carp;
-use Log::Log4perl;
+use Bio::Otter::Log::Log4perl 'logger';
 use Try::Tiny;
 use Tk::DialogBox;
 
@@ -462,9 +462,6 @@ sub zircon_delete {
     return;
 }
 
-sub logger {
-    return Log::Log4perl->get_logger;
-}
 
 1;
 

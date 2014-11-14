@@ -15,7 +15,7 @@ use warnings;
 
 use File::Basename;
 use File::Temp 'tempfile';
-use Log::Log4perl;
+use Bio::Otter::Log::Log4perl 'logger';
 
 # pipeline configuration
 # this must come before Bio::EnsEMBL::Analysis::Runnable::Finished::Exonerate
@@ -40,16 +40,6 @@ use Bio::EnsEMBL::Analysis::Runnable::Finished::Exonerate;
 sub new {
     my ($pkg) = @_;
     return bless {}, $pkg;
-}
-
-# This returns a logger with category set for the actual calling class,
-# if a subclass of this parent.
-# (Not really needed here, but provided for reference.)
-#
-sub logger {
-    my $self = shift;
-    my $class = ref $self || $self;
-    return Log::Log4perl->get_logger($class);
 }
 
 sub initialise {

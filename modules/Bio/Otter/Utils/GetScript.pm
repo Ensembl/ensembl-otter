@@ -84,13 +84,13 @@ sub run {
     $self->_open_log($self->log_filename);
 
     if ($getscript_log4perl_level) {
-        require Log::Log4perl;
+        require Bio::Otter::Log::Log4perl;
         require Log::Log4perl::Layout::NoopLayout;
 
         my $appender = Log::Log4perl::Appender->new('Bio::Otter::Utils::GetScript::Log4perlAppender');
         $appender->layout(Log::Log4perl::Layout::NoopLayout->new());
 
-        my $log = Log::Log4perl->get_logger(''); # must specify '' for root logger
+        my $log = Bio::Otter::Log::Log4perl->get_logger(''); # must specify '' for root logger
         $log->add_appender($appender);
         $log->level($getscript_log4perl_level);
         $log->debug('Log4perl ready');

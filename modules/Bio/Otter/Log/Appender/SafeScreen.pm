@@ -5,7 +5,7 @@ use strict;
 
 use Data::Dumper;
 
-use Log::Log4perl;
+use Bio::Otter::Log::Log4perl;
 use base qw(Log::Log4perl::Appender);
 
 sub new {

@@ -6,6 +6,7 @@ use File::Path qw{ remove_tree };
 use POSIX ();
 use Try::Tiny;
 
+use Bio::Otter::Log::Log4perl 'logger';
 use Bio::Otter::Lace::Client;
 use MenuCanvasWindow::SessionWindow;
 
@@ -124,8 +125,5 @@ sub _read_dir { # want File::Slurp
     return @out;
 }
 
-sub logger {
-    return Log::Log4perl->get_logger;
-}
 
 1;

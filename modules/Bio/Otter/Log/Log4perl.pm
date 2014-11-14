@@ -41,6 +41,13 @@ sub import {
         *{"$caller_pkg\::get_logger"} = *get_logger;
     }
 
+    # Some code prefers to call it logger
+    if (delete $tags{logger}) {
+        my $caller_pkg = caller();
+        no strict qw(refs);
+        *{"$caller_pkg\::logger"} = *get_logger;
+    }
+
     @_ = ($class, keys %tags);
     goto &Log::Log4perl::import;
 }
@@ -48,6 +55,9 @@ sub import {
 # Called as class method or subroutine, with maybe a $category
 sub get_logger {
     my ($called, @arg) = @_;
+
+    # Called as an object method?  Classify.
+    $called = ref($called) if ref($called);
 
     # Called as subroutine?  Fix up @arg
     if (!$called || $called ne __PACKAGE__) {

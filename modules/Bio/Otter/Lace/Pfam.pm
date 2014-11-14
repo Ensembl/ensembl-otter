@@ -11,7 +11,7 @@ package Bio::Otter::Lace::Pfam;
 use strict;
 use warnings;
 use Try::Tiny;
-use Log::Log4perl;
+use Bio::Otter::Log::Log4perl;
 use LWP;
 use LWP::UserAgent;
 use HTTP::Request;
@@ -66,7 +66,7 @@ sub _ua_request {
 }
 
 sub logger {
-    return Log::Log4perl->get_logger('otter.pfam');
+    return Bio::Otter::Log::Log4perl->get_logger('otter.pfam');
 }
 
 sub _user_agent { # create and cache a user agent

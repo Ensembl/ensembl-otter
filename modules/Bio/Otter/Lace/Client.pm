@@ -12,6 +12,7 @@ use Net::Domain qw{ hostname hostfqdn };
 use Proc::ProcessTable;
 
 use List::MoreUtils qw( uniq );
+use Bio::Otter::Log::Log4perl 'logger';
 use Log::Log4perl::Level;
 use LWP;
 use URI::Escape qw{ uri_escape };
@@ -1602,15 +1603,11 @@ sub kill_old_sgifaceserver {
 
 ############## Session recovery methods end here ############################
 
-sub logger {
-    return Log::Log4perl->get_logger;
-}
-
 # This is under the control of $self->debug_client() and should match the corresponding
 # log4perl.logger.client in Bio::Otter::LogFile::make_log().
 #
 sub client_logger {
-    return Log::Log4perl->get_logger('otter.client');
+    return logger('otter.client');
 }
 
 1;
