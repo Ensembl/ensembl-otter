@@ -4,7 +4,7 @@ use warnings;
 use strict;
 
 use Carp;
-use Log::Log4perl;
+use Bio::Otter::Log::Log4perl;
 use Log::Log4perl::MDC;
 
 BEGIN {
@@ -66,6 +66,11 @@ sub _new {
     my ($pkg, $category, $key, $value) = @_;
     $value =~ s/:/../g;     # avoid : to keep logparser code happy
     my $logger = Log::Log4perl->get_logger($category);
+
+    Bio::Otter::Log::Log4perl->check_init($logger);
+    # This init will prevent "Forgot to call init()?" and log
+    # silencing, but it doesn't make the context visible.
+
     my $self = bless { logger => $logger, key => $key, value => $value }, $pkg;
     return $self;
 }

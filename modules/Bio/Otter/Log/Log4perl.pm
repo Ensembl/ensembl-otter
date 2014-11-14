@@ -69,6 +69,14 @@ sub get_logger {
     # by wrapper_register above
     my $logger = $called->SUPER::get_logger(@arg);
 
+    $called->check_init($logger);
+
+    return $logger;
+}
+
+sub check_init {
+    my ($called, $logger) = @_;
+
     # See L<Log::Log4perl/Initialize-once-and-only-once>
     unless ($called->initialized) {
         my ($prog) = $0 =~ m{([^/%{}]+)$};
@@ -80,7 +88,7 @@ sub get_logger {
         $logger->warn("$called did implicit init");
     }
 
-    return $logger;
+    return;
 }
 
 
