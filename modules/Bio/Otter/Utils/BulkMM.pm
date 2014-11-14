@@ -49,6 +49,9 @@ Readonly my %DEFAULT_OPTIONS => (
     db_categories => [ @DEFAULT_DB_CATEGORIES ],
     );
 
+my $BULK = 10;
+
+
 sub new {
     my ($class, @args) = @_;
 
@@ -142,8 +145,8 @@ sub dbh {
     return $self->{_dbhs}->{$category};
 }
 
-# We construct a matrix of queries: (plain, with-iso) x (with[exact], like)
-#
+# We construct a matrix of queries: (plain, with-iso) x (exact, like)
+# Each has $BULK number of placeholders.
 sub _build_sql {
     my ($self) = @_;
 
@@ -169,8 +172,10 @@ FROM entry e
 JOIN description d ON e.entry_id = d.entry_id
 JOIN taxonomy    t ON e.entry_id = t.entry_id };
 
-    my $with_sv_sql = sprintf( $common_sql, $join_sql, ' = ?' );
-    my $like_sv_sql = sprintf( $common_sql, $join_sql, ' LIKE ?' );
+    my $PHs = __bulk_ph();
+    my $LIKEs = join ' OR e.accession_version ', ('LIKE ?') x $BULK;
+    my $bulk_sv_sql = sprintf( $common_sql, $join_sql, $PHs );
+    my $like_sv_sql = sprintf( $common_sql, $join_sql, $LIKEs );
 
     # For uniprot_archive, we need to use the isoform table for splice variants
     my $join_iso_sql = q{
@@ -179,21 +184,27 @@ JOIN description d ON e.entry_id = d.entry_id
 JOIN isoform     i ON e.entry_id = i.isoform_entry_id
 JOIN taxonomy    t ON i.parent_entry_id = t.entry_id };
 
-    my $with_sv_iso_sql = sprintf( $common_sql, $join_iso_sql, ' = ?' );
-    my $like_sv_iso_sql = sprintf( $common_sql, $join_iso_sql, ' LIKE ?' );
+    my $bulk_sv_iso_sql = sprintf( $common_sql, $join_iso_sql, $PHs );
+    my $like_sv_iso_sql = sprintf( $common_sql, $join_iso_sql, $LIKEs );
 
     $self->{_sql} = {
         plain => {
-            with => $with_sv_sql,
+            bulk => $bulk_sv_sql,
             like => $like_sv_sql,
         },
         iso => {
-            with => $with_sv_iso_sql,
+            bulk => $bulk_sv_iso_sql,
             like => $like_sv_iso_sql,
         },
     };
+
     return;
 }
+
+sub __bulk_ph {
+    return join ',', " IN ( /* $BULK */ ?", ('?') x ($BULK - 2), '?)';
+}
+
 
 # Return and cache the statement handle based on db_name, iso-ness and search type
 #
@@ -217,11 +228,12 @@ sub _seq_sth_for {
     my $sth = $self->{_seq_sth}->{$dbh};
     return $sth if $sth;
 
-    my $sql = q{
-SELECT   sequence
+    my $PHs = __bulk_ph();
+    my $sql = qq{
+SELECT   entry_id, sequence
 FROM     sequence
-WHERE    entry_id = ?
-ORDER BY split_counter ASC
+WHERE    entry_id $PHs
+ORDER BY entry_id ASC, split_counter ASC
     };
 
     $sth = $dbh->prepare($sql);
@@ -250,6 +262,7 @@ sub _get_accessions {
 
     my %acc_hash = map { $_ => 1 } @{$opts{acc_list}};
     my $results = {};
+    my %get_seq; # $dbname => [ $row ]
 
   DB: for my $db_name (@{$opts{db_categories}}) {
 
@@ -268,7 +281,7 @@ sub _get_accessions {
 
           if ($self->_classify_result($row)) {
               $results->{$name} = $row;
-              $self->_get_sequence($db_name, $row);
+              push @{ $get_seq{$db_name} }, $row;
           }
 
           delete $acc_hash{$name}; # so we don't search for it in next DB if we already have it
@@ -282,6 +295,14 @@ sub _get_accessions {
 
   } # DB
 
+    while (my ($db_name, $rows) = each %get_seq) {
+        $rows = [ sort { $a->{entry_id} <=> $b->{entry_id} } @$rows ];
+        while (@$rows) {
+            my @chunk_of_rows = splice @$rows, 0, $BULK;
+            $self->_get_sequence($db_name, \@chunk_of_rows);
+        }
+    }
+
     return $results;
 }
 
@@ -289,7 +310,9 @@ sub _do_query {
     my ($self, $sth, $search_term) = @_;
 
     my @results;
-    $sth->execute($search_term);
+    my @search = ($search_term);
+    push @search, (undef) x ($BULK - 1);
+    $sth->execute(@search);
     while (my $row = $sth->fetchrow_hashref) {
         push @results, $row;
     }
@@ -305,7 +328,7 @@ sub _classify_search {
       my ($stem, $iso, $sv) = $self->_parse_accession($name);
   SWITCH: {
       if ($is_uniprot_archive and $iso and $sv) {
-          $sth = $self->_sth_for($db_name, 'iso', 'with');
+          $sth = $self->_sth_for($db_name, 'iso', 'bulk');
           $search_term = $name;
           last SWITCH;
       }
@@ -315,7 +338,7 @@ sub _classify_search {
           last SWITCH;
       }
       if ($sv) {
-          $sth = $self->_sth_for($db_name, 'plain', 'with');
+          $sth = $self->_sth_for($db_name, 'plain', 'bulk');
           $search_term = $name;
           last SWITCH;
       }
@@ -388,7 +411,7 @@ sub _set_currency {
 
       # Okay, we need to check whether the parent is in uniprot
       my $parent = "$name.$sv";
-      my $sth = $self->_sth_for('uniprot', 'plain', 'with');
+      my $sth = $self->_sth_for('uniprot', 'plain', 'bulk');
       my @results = $self->_do_query($sth, $parent);
 
       $currency = @results ? 'current' : 'archived';
@@ -412,26 +435,32 @@ sub _debug_result {
 }
 
 sub _get_sequence {
-    my ($self, $db_name, $row) = @_;
+    my ($self, $db_name, $rows) = @_;
 
     my $sth = $self->_seq_sth_for($db_name);
-    $sth->execute($row->{entry_id});
+    my @eid = map { $_->{entry_id} } @$rows;
+warn "_get_sequence( @eid )\n";
+    push @eid, (undef) x ($BULK - @eid);
+    $sth->execute(@eid);
 
-    my $seq;
-    while (my ($chunk) = $sth->fetchrow) {
-        $seq .= $chunk;
+    my %rows = map {( $_->{entry_id}, $_ )} @$rows;
+    while (my ($eid, $chunk) = $sth->fetchrow_array) {
+        die "Unexpected sequence for entry_id=$eid" unless $rows{$eid};
+        $rows{$eid}->{sequence} .= $chunk;
     }
 
-    my $name = $row->{name};
-    unless ($seq) {
-        warn "No sequence for '$name'\n";
-        return;
+    foreach my $row (@$rows) {
+        my $name = $row->{name};
+        if (!defined $row->{sequence}) {
+            warn "No sequence for '$name'\n";
+        } else {
+            my $got = length($row->{sequence});
+            my $want = $row->{sequence_length};
+            die "Seq length mismatch for '$name': db=$want, actual=$got\n"
+              unless $got == $want;
+        }
     }
-    unless (length($seq) == $row->{sequence_length}) {
-        warn("Seq length mismatch for '$name': db = ", $row->{sequence_length}, ", actual=", length($seq), "\n");
-        return;
-    }
-    return $row->{sequence} = $seq;
+    return;
 }
 
 my @tax_type_list = (
