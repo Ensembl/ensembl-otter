@@ -652,12 +652,24 @@ push @sql_fixes, "INSERT ignore into meta (meta_key,meta_value) VALUES (\'genebu
 push @sql_fixes, "UPDATE gene SET biotype = 'IG_gene' WHERE biotype = 'ig_gene';\n";
 push @sql_fixes, "UPDATE gene SET biotype = 'IG_pseudogene' WHERE biotype = 'ig_pseudogene';\n";
 push @sql_fixes, "UPDATE gene SET biotype = 'TEC' WHERE biotype = 'tec';\n";
+push @sql_fixes, "UPDATE gene SET biotype = 'macro_lncRNA' where biotype = 'macro_lncrna';\n";
+push @sql_fixes, "UPDATE gene SET biotype = 'vaultRNA' where biotype = 'vaultrna';\n";
+push @sql_fixes, "UPDATE gene SET biotype = 'snoRNA' where biotype = 'snorna';\n";
 push @sql_fixes, "UPDATE transcript SET biotype = 'IG_gene' WHERE biotype = 'ig_gene';\n";
 push @sql_fixes, "UPDATE transcript SET biotype = 'IG_pseudogene' WHERE biotype = 'ig_pseudogene';\n";
 push @sql_fixes, "UPDATE transcript SET biotype = 'TR_pseudogene' WHERE biotype = 'tr_pseudogene';\n";
 push @sql_fixes, "UPDATE transcript SET biotype = 'TR_gene' WHERE biotype = 'tr_gene';\n";
 push @sql_fixes, "UPDATE transcript SET biotype = 'TEC' WHERE biotype = 'tec';\n";
 push @sql_fixes, "UPDATE transcript SET biotype = 'lincRNA' WHERE biotype = 'lincrna';\n";
+push @sql_fixes, "UPDATE transcript SET biotype = 'macro_lncRNA' where biotype = 'macro_lncrna';\n";
+push @sql_fixes, "UPDATE transcript SET biotype = 'vaultRNA' where biotype = 'vaultrna';\n";
+push @sql_fixes, "UPDATE transcript SET biotype = 'snoRNA' where biotype = 'snorna';\n";
+push @sql_fixes, "UPDATE transcript SET biotype = 'miRNA' where biotype = 'miorna';\n";
+push @sql_fixes, "UPDATE transcript SET biotype = 'piRNA' where biotype = 'pirna';\n";
+push @sql_fixes, "UPDATE transcript SET biotype = 'rRNA' where biotype = 'rrna';\n";
+push @sql_fixes, "UPDATE transcript SET biotype = 'siRNA' where biotype = 'sirna';\n";
+push @sql_fixes, "UPDATE transcript SET biotype = 'snRNA' where biotype = 'snrna';\n";
+push @sql_fixes, "UPDATE transcript SET biotype = 'tRNA' where biotype = 'trna';\n";
 push @sql_fixes, qq(UPDATE transcript SET biotype = "3prime_overlapping_ncrna" where biotype = "3'_overlapping_ncrna";\n);
 
 #update some statuses
