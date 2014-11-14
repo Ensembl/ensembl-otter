@@ -6,7 +6,7 @@ package EditWindow::Exonerate;
 use strict;
 use warnings;
 
-use Log::Log4perl;
+use Bio::Otter::Log::Log4perl 'logger';
 use Try::Tiny;
 
 use Bio::Otter::Lace::OnTheFly::Genomic;
@@ -619,10 +619,6 @@ sub _tidy_pasted_sequence {
     }
     push @stripped, '';         # ensure trailing newline
     return join("\n", @stripped);
-}
-
-sub logger {
-    return Log::Log4perl->get_logger;
 }
 
 sub DESTROY {

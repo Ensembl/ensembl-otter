@@ -7,7 +7,7 @@ use 5.010;
 package Bio::Otter::Script::ConfigMetakeys;
 use parent 'Bio::Otter::Utils::Script';
 
-use Log::Log4perl qw(:easy);
+use Bio::Otter::Log::Log4perl qw(:easy);
 use Net::hostent;
 use Try::Tiny;
 
@@ -36,7 +36,7 @@ sub ottscript_validate_args {
 
 sub setup {
     my ($self) = @_;
-    Log::Log4perl->easy_init;
+    Bio::Otter::Log::Log4perl->easy_init;
     Bio::Otter::Lace::Defaults::do_getopt or die "do_getopt failed";
     $self->client->get_server_otter_config;
     return;

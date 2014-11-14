@@ -3,6 +3,7 @@ use strict;
 use warnings;
 use Try::Tiny;
 use Time::HiRes qw( gettimeofday tv_interval );
+use Bio::Otter::Log::Log4perl;
 
 
 =head1 NAME
@@ -123,7 +124,7 @@ sub _init {
 }
 
 sub logger {
-    return Log::Log4perl->get_logger('AutoOpen');
+    return Bio::Otter::Log::Log4perl->get_logger('AutoOpen');
 }
 
 sub _hook {

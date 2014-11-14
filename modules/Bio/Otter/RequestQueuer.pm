@@ -6,7 +6,6 @@ package Bio::Otter::RequestQueuer;
 use strict;
 use warnings;
 
-use Log::Log4perl;
 use Scalar::Util qw{ weaken };
 use Try::Tiny;
 

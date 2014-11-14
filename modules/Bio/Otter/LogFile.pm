@@ -9,7 +9,7 @@ use Carp;
 
 use POSIX ();
 use IO::Handle;
-use Log::Log4perl qw(:levels);
+use Bio::Otter::Log::Log4perl qw(:levels);
 use Try::Tiny;
 
 use Bio::Otter::Log::TieHandle;
@@ -48,7 +48,7 @@ sub make_log {
     Log::Log4perl::MDC->put('name' => '-'); # default for %X{name}, set by B:O:Log::WithContext->get_logger().
     Log::Log4perl->init($config);
 
-    my $logger = Log::Log4perl->get_logger;
+    my $logger = Bio::Otter::Log::Log4perl->get_logger;
     $logger->info('In parent, pid ', $$);
 
     # Unbuffer STDOUT
@@ -83,7 +83,7 @@ sub make_log {
             return;
         };
 
-        my $child_logger = Log::Log4perl->get_logger('otter.children');
+        my $child_logger = Bio::Otter::Log::Log4perl->get_logger('otter.children');
 
         my $maxline = 4096; # RT#422965 limit unbroken line length
         my $buff = '';

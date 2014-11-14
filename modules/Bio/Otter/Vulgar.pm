@@ -8,7 +8,7 @@ use warnings;
 
 use feature 'switch';
 
-use Log::Log4perl;
+use Bio::Otter::Log::Log4perl 'logger';
 use Readonly;
 
 Readonly our @SUGAR_ORDER => qw(
@@ -334,9 +334,6 @@ sub align_comps_string {
     return join(' ', @align_comps);
 }
 
-sub logger {
-    return Log::Log4perl->get_logger;
-}
 
 1;
 

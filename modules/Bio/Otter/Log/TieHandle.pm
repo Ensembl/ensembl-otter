@@ -3,7 +3,7 @@ package Bio::Otter::Log::TieHandle;
 use strict;
 use warnings;
 
-use Log::Log4perl qw(:levels get_logger);
+use Bio::Otter::Log::Log4perl qw(:levels get_logger);
 
 sub TIEHANDLE {
    my($class, %options) = @_;

@@ -7,7 +7,7 @@ use strict;
 use warnings;
 
 use List::Util qw(max);
-use Log::Log4perl;
+use Bio::Otter::Log::Log4perl 'logger';
 use Readonly;
 
 use Bio::Otter::GappedAlignment::ElementTypes;
@@ -149,10 +149,6 @@ sub is_match {
     return;
 }
 
-sub logger {
-    my $self = shift;
-    return Log::Log4perl->get_logger(ref($self));
-}
 
 1;
 

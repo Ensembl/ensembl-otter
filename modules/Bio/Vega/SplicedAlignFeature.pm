@@ -9,7 +9,7 @@ use warnings;
 use feature 'switch';
 
 use List::MoreUtils;
-use Log::Log4perl;
+use Bio::Otter::Log::Log4perl 'logger';
 
 use Bio::EnsEMBL::Exon;
 use Bio::EnsEMBL::Intron;
@@ -646,9 +646,6 @@ sub to_gff {
     return $gff;
 }
 
-sub logger {
-    return Log::Log4perl->get_logger;
-}
 
 1;
 

@@ -13,7 +13,7 @@ use File::Temp;
 use FindBin qw($Script);
 use Time::HiRes qw( gettimeofday tv_interval );
 
-use Log::Log4perl;
+use Bio::Otter::Log::Log4perl;
 
 my @modules;
 BEGIN {
@@ -36,7 +36,7 @@ my $fname = $fh->filename;
 my $pid = Bio::Otter::LogFile::make_log($fname, 'DEBUG');
 ok($pid, 'make_log');
 
-my $logger = Log::Log4perl->get_logger('Test.LogFile');
+my $logger = Bio::Otter::Log::Log4perl->get_logger('Test.LogFile');
 isa_ok($logger, 'Log::Log4perl::Logger');
 
 ok($logger->info('Stand by for an information broadcast'), 'info');
