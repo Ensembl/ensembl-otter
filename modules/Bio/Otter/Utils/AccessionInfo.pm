@@ -8,6 +8,7 @@ use warnings;
 
 use Readonly;
 
+use Time::HiRes qw( gettimeofday tv_interval );
 use Bio::Otter::Utils::RequireModule qw(require_module);
 
 =pod
@@ -32,11 +33,35 @@ sub new {
     return bless { _driver => $driver }, $class;
 }
 
-sub get_accession_info  { my ($self, @args) = @_; return $self->{_driver}->get_accession_info(@args);  }
-sub get_accession_types { my ($self, @args) = @_; return $self->{_driver}->get_accession_types(@args); }
-sub get_taxonomy_info   { my ($self, @args) = @_; return $self->{_driver}->get_taxonomy_info(@args);   }
-sub db_categories       { my ($self, @args) = @_; return $self->{_driver}->db_categories(@args);       }
-sub debug               { my ($self, @args) = @_; return $self->{_driver}->debug(@args);               }
+sub _init {
+    foreach my $method (qw( get_accession_info get_accession_types get_taxonomy_info db_categories debug )) {
+        my $code = sub {
+            my ($self, @args) = @_;
+            # all calls are scalar
+            my $t0 = [gettimeofday()];
+            my $out = $self->{_driver}->$method(@args);
+            if ($method =~ /^get/) {
+                my $dt = tv_interval($t0);
+                my $n = @{$args[0]};
+                $self->_report($method, $dt, $n);
+            }
+            return $out;
+        };
+        no strict 'refs';
+        *{$method} = $code;
+    }
+    return;
+}
+
+sub _report {
+    my ($self, $method, $dt, $count) = @_;
+    my $driver_class = ref($self->{_driver});
+    warn sprintf("[d] %s->%s fetched %d in %.3fs\n",
+                 $driver_class, $method, $count, $dt);
+    return;
+}
+
+__PACKAGE__->_init;
 
 1;
 
