@@ -49,7 +49,7 @@ Readonly my %DEFAULT_OPTIONS => (
     db_categories => [ @DEFAULT_DB_CATEGORIES ],
     );
 
-my $BULK = 10;
+my $BULK = 100;
 
 
 sub new {
@@ -266,32 +266,48 @@ sub _get_accessions {
 
   DB: for my $db_name (@{$opts{db_categories}}) {
 
+      my %search;
     NAME: foreach my $name (keys %acc_hash) {
+        my ($sth_type, $search_term) =
+          $self->_classify_search($db_name, $name, $opts{sv_search});
+        next NAME unless $sth_type;
 
-        my ($sth, $search_term) = $self->_classify_search($db_name, $name, $opts{sv_search});
-        next NAME unless $sth;
-
-        my @search_results = $self->_do_query($sth, $search_term);
-
-      RESULT: foreach my $row (@search_results) {
-
-          $row->{name} = $name;
-          $self->_set_currency($db_name, $row);
-          $self->_debug_result($db_name, $row) if $self->debug;
-
-          if ($self->_classify_result($row)) {
-              $results->{$name} = $row;
-              push @{ $get_seq{$db_name} }, $row;
-          }
-
-          delete $acc_hash{$name}; # so we don't search for it in next DB if we already have it
-
-      } # RESULT
-
-        # We don't need to search any further databases if we've found everything
-        last unless keys %acc_hash;
-
+        $search{$sth_type}{$name} = $search_term;
     } # NAME
+
+      while (my ($sth_type, $terms) = each %search) {
+          my @terms = sort { $a cmp $b } keys %$terms;
+
+          my ($iso_key, $search_key) = split /,/, $sth_type;
+          my $sth = $self->_sth_for($db_name, $iso_key, $search_key);
+
+          while (@terms) {
+              my @chunk_of_terms = splice @terms, 0, $BULK;
+              my @search_results = $self->_do_query($sth, \@chunk_of_terms);
+
+            RESULT: foreach my $row (@search_results) {
+                  # we have to reconstruct $name
+                  my $name = $row->{acc_sv};
+                  $name =~ s{\.\d+$}{} if $search_key eq 'like';
+                  $row->{name} = $name;
+
+                  $self->_set_currency($db_name, $row);
+                  $self->_debug_result($db_name, $row) if $self->debug;
+
+                  if ($self->_classify_result($row)) {
+                      $results->{$name} = $row;
+                      push @{ $get_seq{$db_name} }, $row;
+                  }
+
+                  delete $acc_hash{$name}; # so we don't search for it in next DB if we already have it
+
+              } # RESULT
+
+          } # chunk of terms
+      } # search type
+
+      # We don't need to search any further databases if we've found everything
+      last unless keys %acc_hash;
 
   } # DB
 
@@ -307,11 +323,11 @@ sub _get_accessions {
 }
 
 sub _do_query {
-    my ($self, $sth, $search_term) = @_;
+    my ($self, $sth, $search_terms) = @_;
 
     my @results;
-    my @search = ($search_term);
-    push @search, (undef) x ($BULK - 1);
+    my @search = @$search_terms;
+    push @search, (undef) x ($BULK - @search);
     $sth->execute(@search);
     while (my $row = $sth->fetchrow_hashref) {
         push @results, $row;
@@ -328,22 +344,22 @@ sub _classify_search {
       my ($stem, $iso, $sv) = $self->_parse_accession($name);
   SWITCH: {
       if ($is_uniprot_archive and $iso and $sv) {
-          $sth = $self->_sth_for($db_name, 'iso', 'bulk');
+          $sth = 'iso,bulk';
           $search_term = $name;
           last SWITCH;
       }
       if ($is_uniprot_archive and $iso and $sv_search) {
-          $sth = $self->_sth_for($db_name, 'iso', 'like');
+          $sth = 'iso,like';
           $search_term = "$name.%";
           last SWITCH;
       }
       if ($sv) {
-          $sth = $self->_sth_for($db_name, 'plain', 'bulk');
+          $sth = 'plain,bulk';
           $search_term = $name;
           last SWITCH;
       }
       if ($sv_search) {
-          $sth = $self->_sth_for($db_name, 'plain', 'like');
+          $sth = 'plain,like';
           $search_term = "$name.%";
           last SWITCH;
       }
@@ -412,7 +428,7 @@ sub _set_currency {
       # Okay, we need to check whether the parent is in uniprot
       my $parent = "$name.$sv";
       my $sth = $self->_sth_for('uniprot', 'plain', 'bulk');
-      my @results = $self->_do_query($sth, $parent);
+      my @results = $self->_do_query($sth, [ $parent ]);
 
       $currency = @results ? 'current' : 'archived';
     }
@@ -439,7 +455,6 @@ sub _get_sequence {
 
     my $sth = $self->_seq_sth_for($db_name);
     my @eid = map { $_->{entry_id} } @$rows;
-warn "_get_sequence( @eid )\n";
     push @eid, (undef) x ($BULK - @eid);
     $sth->execute(@eid);
 
