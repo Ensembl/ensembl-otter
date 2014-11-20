@@ -262,11 +262,11 @@ sub _get_accessions {
 
     my %acc_hash = map { $_ => 1 } @{$opts{acc_list}};
     my $results = {};
-    my %get_seq; # $dbname => [ $row ]
 
   DB: for my $db_name (@{$opts{db_categories}}) {
 
       my %search;
+      my @get_seq; # ($row)s to fill in
     NAME: foreach my $name (keys %acc_hash) {
         my ($sth_type, $search_term) =
           $self->_classify_search($db_name, $name, $opts{sv_search});
@@ -296,7 +296,7 @@ sub _get_accessions {
 
                   if ($self->_classify_result($row)) {
                       $results->{$name} = $row;
-                      push @{ $get_seq{$db_name} }, $row;
+                      push @get_seq, $row;
                   }
 
                   delete $acc_hash{$name}; # so we don't search for it in next DB if we already have it
@@ -306,18 +306,16 @@ sub _get_accessions {
           } # chunk of terms
       } # search type
 
+      @get_seq = sort { $a->{entry_id} <=> $b->{entry_id} } @get_seq;
+      while (@get_seq) {
+          my @chunk_of_rows = splice @get_seq, 0, $BULK;
+          $self->_get_sequence($db_name, \@chunk_of_rows);
+      }
+
       # We don't need to search any further databases if we've found everything
       last unless keys %acc_hash;
 
   } # DB
-
-    while (my ($db_name, $rows) = each %get_seq) {
-        $rows = [ sort { $a->{entry_id} <=> $b->{entry_id} } @$rows ];
-        while (@$rows) {
-            my @chunk_of_rows = splice @$rows, 0, $BULK;
-            $self->_get_sequence($db_name, \@chunk_of_rows);
-        }
-    }
 
     return $results;
 }
