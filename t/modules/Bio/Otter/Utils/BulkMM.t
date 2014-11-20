@@ -15,9 +15,15 @@ my $t_budget = 45 / 5000;
 # have seen recently.  It may need changing.
 
 sub main {
-    plan tests => 2;
+    plan tests => 3;
     subtest compare_and_time_tt => __PACKAGE__->can('compare_and_time_tt');
     subtest time_budget_tt => __PACKAGE__->can('time_budget_tt');
+
+    {
+        local $TODO = 'untested';
+        fail('deSV - accession search not tested');
+    }
+
     return 0;
 }
 
@@ -149,5 +155,20 @@ sub random_accessions {
 
     return [ sort keys %out ];
 }
+
+# Strip the .SV off some (returns modified copy)
+sub deSV {
+    my ($noSV_frac, $accs) = @_;
+
+    my $N = my @accs = @$accs;
+    my $deSV = int($N * $noSV_frac);
+    while ($deSV) {
+        my $i = int(rand($N));
+        $deSV -- if $accs[$i] =~ s{\.\d+$}{};
+    }
+
+    return \@accs;
+}
+
 
 exit main();
