@@ -404,7 +404,7 @@ sub _classify_result {
       }
 
       warn "Cannot classify '$name': type '$type', class '$class'\n";
-      last SWITCH;
+      return ();
 
   } # SWITCH
 
