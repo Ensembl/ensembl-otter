@@ -5,6 +5,9 @@ use warnings;
 
 use DBI;
 use Readonly;
+use Time::HiRes qw( gettimeofday tv_interval );
+use List::Util 'shuffle';
+
 
 =pod
 
@@ -49,19 +52,38 @@ Readonly my %DEFAULT_OPTIONS => (
     db_categories => [ @DEFAULT_DB_CATEGORIES ],
     );
 
-my $BULK = 100;
+my $BULK = 1000; # how many placeholders in SQL == max fetch chunk size
+my $SLOW_FETCH = 0.6; # estimated worst-case fetch time, sec/each
 
 
 sub new {
     my ($class, @args) = @_;
 
     my %options = ( %DEFAULT_OPTIONS, @args );
+    $options{t_budget} ||= 604800; # default = 1 week, in seconds
 
     my $self = bless \%options, $class;
+    $self->t_reset;
     $self->_build_sql;
 
     return $self;
 }
+
+sub t_reset {
+    my ($self) = @_;
+    return $self->{t0} = [ gettimeofday() ];
+}
+
+sub t_used {
+    my ($self) = @_;
+    return tv_interval($self->{t0});
+}
+
+sub t_budget {
+    my ($self) = @_;
+    return $self->{t_budget};
+}
+
 
 sub _get_connection {
     my ($self, $category) = @_;
@@ -240,6 +262,19 @@ ORDER BY entry_id ASC, split_counter ASC
     return $self->{_seq_sth}->{$dbh} = $sth;
 }
 
+# How many can we fetch, hoping to stay inside the time budget?
+sub _chunk_size {
+    my ($self, $n_fetched) = @_;
+    my $t_used = $self->t_used;
+    my $t_ea_avg = $n_fetched ? ($t_used / $n_fetched) : $SLOW_FETCH;
+    my $t_left = $self->t_budget - $t_used;
+    $t_left -= 2 * $SLOW_FETCH; # avoid overrun due to a couple of slow
+    my $max = int($t_left / $t_ea_avg);
+    $max = $BULK if $max > $BULK;
+    $max = 0 if $max < 0;
+    return $max;
+}
+
 sub get_accession_types {
     my ($self, $accs) = @_;
     return $self->_get_accessions(
@@ -251,17 +286,35 @@ sub get_accession_types {
 
 sub get_accession_info {
     my ($self, $accs) = @_;
-    return $self->_get_accessions(
+    return $self->_get_accessions_managed(
         acc_list      => $accs,
         db_categories => $self->db_categories,
         );
 }
 
+sub _get_accessions_managed {
+    my ($self, %opts) = @_;
+    my $results = $opts{existing_results} = {};
+    my @want = shuffle @{ delete $opts{acc_list} };
+    # Shuffle to avoid accidentally saving the slow ones for last
+
+    my $n_wanted = @want;
+    while (@want) {
+        my $already_asked = $n_wanted - @want;
+        my @ask = splice @want, 0, $self->_chunk_size($already_asked);
+        last if !@ask; # out of time
+        $self->_get_accessions(%opts, acc_list => \@ask);
+    }
+
+    return $results;
+}
+
+
 sub _get_accessions {
     my ($self, %opts) = @_;
 
     my %acc_hash = map { $_ => 1 } @{$opts{acc_list}};
-    my $results = {};
+    my $results = $opts{existing_results} || {};
 
   DB: for my $db_name (@{$opts{db_categories}}) {
 

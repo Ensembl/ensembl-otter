@@ -10,7 +10,7 @@ use Bio::Otter::Utils::AccessionInfo;
 use Test::Otter qw( ^db_or_skipall get_BOSDatasets );
 
 
-my $t_budget = 45 / 5000;
+my $T_BUDGET = 45 / 5000;
 # Budget of 45sec per 5k-accession fetch is based on regions I
 # have seen recently.  It may need changing.
 
@@ -68,7 +68,7 @@ sub compare_and_time_tt {
         # Times
         local $TODO = 'times are awry';
         my $t_ea = $time[$i] / $N;
-        cmp_ok($t_ea, '<', $t_budget,
+        cmp_ok($t_ea, '<', $T_BUDGET,
                sprintf('%s.  time[ %s ] = %.1fs/%s = %.4fs/ea',
                        $i,       $drv, $time[$i],$N, $t_ea));
     }
@@ -77,14 +77,17 @@ sub compare_and_time_tt {
 }
 
 sub time_budget_tt {
-    my ($N, $T) = (3, 5); # $N tests of $T sec each
+    my ($N, $T) = (2, 10);
+    # $N tests of $T sec each.  There can be a large fraction of a
+    # second of slop, so don't expect short tests to be accurate.
+
     plan tests => 3 * $N;
 
     my ($ds) = get_BOSDatasets('human_test');
     my $pipe_dbh = $ds->pipeline_dba->dbc->db_handle;
 
     # ask for enough to blow our local time budget $T
-    my $accs = int(($T / $t_budget) * 10);
+    my $accs = int(($T / $T_BUDGET) * 10);
 
     for (my $i=0; $i<$N; $i++) {
         my $acc_list = random_accessions($pipe_dbh, $accs);
@@ -112,13 +115,16 @@ sub time_budget_tt {
                          $accs);
             $i --; # again!
         } else {
-            cmp_ok($t_used_pct,  '>',  90,
-                   sprintf("(t_used == %.2fs) / (t_budget == %.1fs) should be >90%%",
+            # Percentage constraints are somewhat arbitrary, the
+            # workload*1% limit should pass if fetches are faster than
+            # 10x $T_BUDGET
+            cmp_ok($t_used_pct,  '>',  85,
+                   sprintf("(t_used == %.2fs) / (t_budget == %.1fs) should be >85%%",
                            $t_used, $T));
             cmp_ok($t_used_pct, '<=', 100,
                    "t_used / t_budget should be <=100%");
-            cmp_ok($fetch_pct,  '>=',   2,
-                   "(fetch count == $fetch_n) / (workload == $accs accs) should be >=2%") or diag explain $fetch;
+            cmp_ok($fetch_pct,  '>=',   1,
+                   "(fetch count == $fetch_n) / (workload == $accs accs) should be >=1%");
         }
     }
     return;
