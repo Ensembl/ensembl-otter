@@ -6,6 +6,7 @@ package Bio::Otter::Lace::ProcessGFF;
 use strict;
 use warnings;
 use Carp;
+use Readonly;
 
 use Bio::Otter::Utils::AccessionInfo::Serialise qw(fasta_header_column_order unescape_fasta_description);
 use Bio::Otter::Utils::TimeDiff qw( time_diff_for );
@@ -17,6 +18,8 @@ use Hum::Ace::Locus;
 use Try::Tiny;
 
 use parent qw( Bio::Otter::Log::WithContextMixin );
+
+Readonly my $BATCH_SIZE => 500;
 
 {
     ### Should add this to otter_config
@@ -122,7 +125,7 @@ sub _store_hit_data_from_gff {
             source          => $attrib->{'db_name'},
             sequence_length => $attrib->{'length'},
         };
-        if (++$count >= 500) {
+        if (++$count >= $BATCH_SIZE) {
             _save_accession_info($accession_type_cache, \%batch, 'gff features');
             %batch = ();
             $count = 0;
@@ -149,7 +152,7 @@ sub _store_hit_data_from_gff {
             $acc_info{description} = unescape_fasta_description($acc_info{description});
             $acc_info{sequence} = $sequence;
             $batch{$acc_info{acc_sv}} = \%acc_info;
-            if (++$count >= 500) {
+            if (++$count >= $BATCH_SIZE) {
                 _save_accession_info($accession_type_cache, \%batch, 'gff fasta');
                 %batch = ();
                 $count = 0;
