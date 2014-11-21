@@ -2774,6 +2774,7 @@ sub zircon_zmap_view_features_loaded {
             return;
         });
 
+    $self->logger->debug($cllctn->debug_counts_by_status);
     return;
 }
 

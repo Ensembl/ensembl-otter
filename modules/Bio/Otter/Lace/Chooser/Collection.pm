@@ -167,6 +167,27 @@ sub list_Columns_with_status {
     return @columns;
 }
 
+sub segment_Columns_by_status {
+    my ($self) = @_;
+    my %by_status;
+    map { push @{$by_status{$_->status} ||= []}, $_ } $self->list_Columns;
+    return \%by_status;
+}
+
+sub count_Columns_by_status {
+    my ($self) = @_;
+    my %count_by_status;
+    my $by_status = $self->segment_Columns_by_status;
+    map { $count_by_status{$_} = scalar(@{$by_status->{$_}}) } keys %$by_status;
+    return \%count_by_status;
+}
+
+sub debug_counts_by_status {
+    my ($self) = @_;
+    my $counts = $self->count_Columns_by_status;
+    return join(',', map { sprintf('%s=%s', $_, $counts->{$_}) } sort keys %$counts);
+}
+
 sub list_Columns_with_internal_type {
     my ($self, @internal_types) = @_;
 
