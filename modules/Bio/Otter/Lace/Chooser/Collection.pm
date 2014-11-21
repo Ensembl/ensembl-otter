@@ -182,12 +182,6 @@ sub count_Columns_by_status {
     return \%count_by_status;
 }
 
-sub debug_counts_by_status {
-    my ($self) = @_;
-    my $counts = $self->count_Columns_by_status;
-    return join(',', map { sprintf('%s=%s', $_, $counts->{$_}) } sort keys %$counts);
-}
-
 sub list_Columns_with_internal_type {
     my ($self, @internal_types) = @_;
 
