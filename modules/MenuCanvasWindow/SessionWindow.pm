@@ -2830,7 +2830,6 @@ sub zircon_zmap_view_features_loaded {
             return;
         });
 
-    $self->logger->debug($cllctn->debug_counts_by_status);
     $self->_update_status_bar;
 
     return;
