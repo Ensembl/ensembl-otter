@@ -38,6 +38,10 @@ sub VALID_STATUS_LIST {
     return @valid_status;
 }
 
+sub STATUS_COLORS_HASHREF {
+    return \%status_color;
+}
+
 sub new {
     my ($pkg) = @_;
 
