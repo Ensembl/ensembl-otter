@@ -11,6 +11,7 @@ use Scalar::Util 'weaken';
 
 use Try::Tiny;
 use File::Path (); # for make_path;
+use Readonly;
 
 require Tk::Dialog;
 require Tk::Balloon;
@@ -35,12 +36,14 @@ use Text::Wrap qw{ wrap };
 use Zircon::Context::ZMQ::Tk;
 use Zircon::ZMap;
 
+use Bio::Otter::Lace::Chooser::Item::Column;
 use Bio::Otter::Lace::Client;
 use Bio::Otter::RequestQueuer;
 use Bio::Otter::Zircon::ProcessHits;
 use Bio::Otter::ZMap::XML;
 use Bio::Vega::Transform::Otter::Ace;
 
+use Tk::ArrayBar;
 use Tk::Screens;
 use Tk::ScopedBusy;
 use Bio::Vega::Utils::MacProxyConfig qw{ mac_os_x_set_proxy_vars };
@@ -63,6 +66,7 @@ sub new {
     $self->zmap_select_initialize;
 
     $self->populate_menus;
+    $self->make_status_panel;
     $self->make_search_panel;
     $self->bind_events;
     $self->minimum_scroll_bbox(0,0, 380,200);
@@ -1111,6 +1115,56 @@ sub shift_left_button_handler {
     return;
 }
 
+Readonly my @display_statuses =>
+    qw( Selected Queued Loading Processing HitsQueued HitsProcess Visible Hidden Empty Error );
+
+sub make_status_panel {
+    my ($self) = @_;
+
+    my $status_colors = Bio::Otter::Lace::Chooser::Item::Column->STATUS_COLORS_HASHREF();
+    my @colors = map { $status_colors->{$_}->[1] } @display_statuses;
+
+    my $top = $self->top_window();
+    my $status_frame = $top->Frame(Name => 'status_frame');
+
+    $status_frame->pack(
+        -side => 'top',
+        -fill => 'x',
+        );
+
+    my $status_bar = $status_frame->ArrayBar(
+        -width => 20,
+        -colors => \@colors,
+        );
+    $status_bar->pack(
+        -side => 'top',
+        -fill => 'x',
+        -padx => 2,
+        -pady => 2,
+        );
+
+    $status_bar->value((0) x @display_statuses);
+
+    $self->_status_bar($status_bar);
+    return;
+}
+
+sub _update_status_bar {
+    my ($self) = @_;
+    my $cllctn = $self->AceDatabase->ColumnCollection;
+    my $counts = $cllctn->count_Columns_by_status;
+    my @values = @$counts{@display_statuses};
+    $self->_status_bar->value(@values);
+    return;
+}
+
+sub _status_bar {
+    my ($self, @args) = @_;
+    ($self->{'_status_bar'}) = @args if @args;
+    my $_status_bar = $self->{'_status_bar'};
+    return $_status_bar;
+}
+
 sub make_search_panel {
     my ($self) = @_;
 
@@ -1286,6 +1340,7 @@ sub resync_with_db {
     $self->Assembly;
     my @visible_columns = $self->AceDatabase->ColumnCollection->list_Columns_with_status('Visible');
     $self->process_and_update_columns(@visible_columns);
+    $self->_update_status_bar;
 
     return;
 }
@@ -1620,6 +1675,7 @@ sub _update_column_status {
     my $col_aptr = $self->AceDatabase->DB->ColumnAdaptor;
     $column->status($status);
     $col_aptr->store_Column_state($column);
+    $self->_update_status_bar;
     return;
 }
 
@@ -2775,6 +2831,8 @@ sub zircon_zmap_view_features_loaded {
         });
 
     $self->logger->debug($cllctn->debug_counts_by_status);
+    $self->_update_status_bar;
+
     return;
 }
 
