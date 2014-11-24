@@ -683,9 +683,7 @@ sub run_lace {
         $self->name,
         $self->selected_clones_string,
         );
-    $self->open_SequenceSet($name) ;
-
-    return;
+    return $self->open_SequenceSet($name) ;
 }
 
 sub run_lace_on_slice{
@@ -722,9 +720,7 @@ sub run_lace_on_slice{
     my $name =
         sprintf "lace for SLICE %d - %d %s",
         $start, $end, $self->name;
-    $self->open_SequenceSet($name);
-
-    return;
+    return $self->open_SequenceSet($name);
 }
 
 ## allows Searched SequenceNotes.pm to inherit the main part of the run_lace method
@@ -779,7 +775,7 @@ sub open_SequenceSet {
                    SpeciesListWindow => $specieslist },
          from => $self->canvas });
 
-    return;
+    return $cc;
 }
 
 # creates a string based on the selected clones
@@ -1667,7 +1663,9 @@ sub slice_window{
         $slice_window->action('runLace', sub{
             my ($sw) = @_;
             $sw->hide_me;
-            $self->run_lace_on_slice(${$sw->text_variable_ref('slice_start')}, ${$sw->text_variable_ref('slice_end')});
+            my $cc =$self->run_lace_on_slice
+              (${$sw->text_variable_ref('slice_start')},
+               ${$sw->text_variable_ref('slice_end')});
         });
         $slice_window->initialise();
         $slice_window->draw();

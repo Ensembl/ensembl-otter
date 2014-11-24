@@ -19,9 +19,16 @@ complete.  If it fails, the error will go to the MainLoop handler.
 There isn't much public API, because the internals should be expected
 to change with the GUI.
 
-=head2 Open syntax
+=head1 OPEN SYNTAX
 
-By example,
+The region opening syntax is similar to a filename path, but each
+level has its own syntax variations and shortcuts.
+
+In addition to the canonical syntax there are some shortcuts and
+variations which may be easier to type.  These may need to change in
+future.
+
+=head2 By example
 
  --open human_dev                                 Dataset
  --open human_dev/chr12-38                        SequenceSet
@@ -35,13 +42,42 @@ By example,
  --open human_dev/chr12-38/view:...               Region, read-only
  --open human_dev/chr12-38/v:...                  Region, read-only
 
+ --open human_dev/chr12-38/AC004803/              As above + Load default columns
+
+=head2 Dataset
+
+First element must name a dataset.
+
+Other non-dataset features (Preference, LogWindow) could be linked.
+Not implemented.
+
+=head2 Chromosome
+
+Second element should name a chromosome or subregion.
+
+=head2 Clone
+
+Clone numbers are given in the form shown in the SessionWindow
+C<#5..8> .
+
 For matches by clone name, C<.SV> is optional and ignored.
 
 For coordinates, underscores to mark digit groups are optional and
-ignored.
+ignored.  They may be given as C<start:end> or C<start+length> .
 
 Currently for chromosome coordinates, the range will be rounded to
 clone boundaries.
+
+The prefix C<view:> makes the session read-only, the default is as
+configured in the C<~/.otter/config.ini> file.  C<v:> is a shortcut
+for this.
+
+=head2 Columns
+
+Currently it is not possible to change the selected columns before
+starting the load.  Suggestions for syntax would be useful.
+
+The third C</> delimits an empty fourth element, which causes loading.
 
 
 =head1 CAVEATS
@@ -94,8 +130,9 @@ sub _init {
     $self->{_work} = \@work;
     my $t0 = $self->{t0} = [ gettimeofday() ];
 
-    my ($ds, $seq_region, $pos) = split '/', $self->name, 3;
-    # later, should take a 4th part to specify ColumnChooser options
+    my $name = $self->name;
+    my ($ds, $seq_region, $pos, $load) = split '/', $name, 4;
+    # take a 5th part to zoom / hunt?
 
     die "Open shortcut syntax: --open dataset[:seq_region]\n" unless $ds;
     push @work, [ open_dataset_by_name => $ds ];
@@ -118,8 +155,14 @@ sub _init {
         push @work, [ open_region_by_names => split '-', $pos, 2 ];
     }
 
+    if (defined $load) {
+        die "$self($name): Load Columns syntax is not yet defined"
+          if $load ne '';
+        push @work, [ load_columns => $load ], [ 'load_columns_hide' ];
+    }
+
     $self->logger->info(sprintf("Queued %s at \$^T+%.2fs",
-                                $self->name, tv_interval([$^T,0], $t0)));
+                                $name, tv_interval([$^T,0], $t0)));
     return $self->_hook;
 }
 
@@ -231,7 +274,25 @@ sub open_region_by_names {
 
 sub _open_region_selected {
     my ($self, $sn) = @_;
-    $sn->open_SequenceSet($self->name);
+    my $cc = $sn->open_SequenceSet($self->name);
+    $self->{cc} = $cc; # a MenuCanvasWindow::ColumnChooser
+    return;
+}
+
+
+sub load_columns {
+    my ($self, $load) = @_;
+    my $cc = $self->{cc}
+      or die "Cannot load_columns without MenuCanvasWindow::ColumnChooser";
+    $cc->load_filters; # XXX: get hold of the SessionWindow
+    return;
+}
+
+sub load_columns_hide {
+    my ($self) = @_;
+    my $cc = $self->{cc};
+    my $cctw = $cc && $cc->top_window;
+    $cctw->withdraw if $cctw && Tk::Exists($cctw);
     return;
 }
 
