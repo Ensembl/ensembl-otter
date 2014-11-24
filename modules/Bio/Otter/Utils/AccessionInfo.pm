@@ -20,7 +20,7 @@ such as one which uses EBI dbfetch.
 
 =cut
 
-Readonly my $DEFAULT_DRIVER_CLASS => 'Bio::Otter::Utils::MM';
+Readonly my $DEFAULT_DRIVER_CLASS => 'Bio::Otter::Utils::BulkMM';
 
 sub new {
     my ($class, @args) = @_;
