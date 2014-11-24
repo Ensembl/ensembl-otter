@@ -151,7 +151,7 @@ sub session_colour {
 
 sub _colour_init {
     my ($self) = @_;
-    return $self->colour_init($self->top_window, 'search_frame', 'search_frame.filler');
+    return $self->colour_init($self->top_window);
 }
 
 # called by various windows, to set their widgets to our session_colour
@@ -1171,7 +1171,9 @@ sub make_search_panel {
     my $top = $self->top_window();
     my $search_frame = $top->Frame(Name => 'search_frame');
 
-    $search_frame->pack(-side => 'top');
+    $search_frame->Frame(Name => 'filler_L', -width => 1)->pack(-side => 'left', -expand => 1);
+
+    $search_frame->pack(-side => 'top', -fill => 'x');
 
     my $search_box = $search_frame->Entry(
         -width => 22,
@@ -1210,6 +1212,8 @@ sub make_search_panel {
     $button->bind('<Destroy>', sub{
         $self = undef;
         });
+
+    $search_frame->Frame(Name => 'filler_R', -width => 1)->pack(-side => 'left', -expand => 1);
 
     return;
 }
