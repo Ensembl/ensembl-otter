@@ -11,16 +11,19 @@ use Test::Otter::Accessions;
 use Data::Dumper;
 use Test::More;
 
-my ($module, $driver_module);
+my ($module, $driver_module, $bulk_driver_module);
 BEGIN {
     $module        = 'Bio::Otter::Utils::AccessionInfo';
     $driver_module = 'Bio::Otter::Utils::MM';
+    $bulk_driver_module = 'Bio::Otter::Utils::BulkMM';
     use_ok($module);
     use_ok($driver_module);
+    use_ok($bulk_driver_module);
 }
 
 critic_module_ok($module);
 critic_module_ok($driver_module);
+critic_module_ok($bulk_driver_module);
 
 my $ai = new_ok($module);
 
