@@ -30,21 +30,21 @@ by doing an implicit init when necessary.
 =cut
 
 
-sub import {
+sub import { ## no critic( Subroutines::RequireArgUnpacking ) # needed because we reset @_ later
     my ($class, @tag) = @_;
     my %tags = map { $_ => 1 } @tag;
 
     # Export our get_logger, leave everything else to SUPER
     if (delete $tags{get_logger}) {
         my $caller_pkg = caller();
-        no strict qw(refs);
+        no strict qw(refs); ## no critic( TestingAndDebugging::ProhibitNoStrict )
         *{"$caller_pkg\::get_logger"} = *get_logger;
     }
 
     # Some code prefers to call it logger
     if (delete $tags{logger}) {
         my $caller_pkg = caller();
-        no strict qw(refs);
+        no strict qw(refs); ## no critic( TestingAndDebugging::ProhibitNoStrict )
         *{"$caller_pkg\::logger"} = *get_logger;
     }
 
