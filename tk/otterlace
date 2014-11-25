@@ -74,31 +74,7 @@ sub run_gui {
     my $SpeciesListWindow = MenuCanvasWindow::SpeciesListWindow->new($main_window);
     $SpeciesListWindow->Client($client);
 
-    my $prompt_sub = sub {
-        my ($self) = @_;
-        my $user = $self->author;
-
-        my $pass = '';
-        my $pass_win = EditWindow::Password->in_Toplevel
-          (-title => 'Enter Password',
-           { from => $main_window });
-        $pass_win->prompt_string("Enter web password for '$user'");
-        $pass_win->passref(\$pass);
-        $pass_win->initialise;
-        $pass_win->get_password;
-        return $pass;
-    };
-    my $passwarn_sub = sub {
-        my ($self, $msg) = @_;
-        $logger->warn("passwarn: $msg");
-        my $dialog = $main_window->DialogBox
-          (-title => $Bio::Otter::Lace::Client::PFX.'Problem logging in',
-           -buttons => ['Ok'],);
-        $dialog->add(qw( Label -justify left -text ), $msg)->pack;
-        $dialog->Show;
-        return;
-    };
-
+    my ($prompt_sub, $passwarn_sub) = curried_pass_subs($main_window);
     $client->password_prompt($prompt_sub);
     $client->password_problem($passwarn_sub);
 
@@ -136,6 +112,48 @@ sub run_gui {
     $logger->info("GUI exit");
     return;
 }
+
+
+sub curried_pass_subs {
+    my ($main_window) = @_;
+
+    my $prompt_sub = sub { return _prompt_sub($main_window, @_) };
+    my $passwarn_sub = sub { return _passwarn_sub($main_window, @_) };
+
+    return ($prompt_sub, $passwarn_sub);
+}
+
+sub _prompt_sub {
+    my ($main_window,
+        $self) # the B:O:L:Client
+      = @_;
+    my $user = $self->author;
+
+    my $pass = '';
+    my $pass_win = EditWindow::Password->in_Toplevel
+      (-title => 'Enter Password',
+       { from => $main_window });
+    $pass_win->prompt_string("Enter web password for '$user'");
+    $pass_win->passref(\$pass);
+    $pass_win->initialise;
+    $pass_win->get_password;
+    return $pass;
+}
+
+sub _passwarn_sub {
+    my ($main_window,
+        $self, $msg) # the B:O:L:Client and message
+      = @_;
+
+    $logger->warn("passwarn: $msg");
+    my $dialog = $main_window->DialogBox
+      (-title => $Bio::Otter::Lace::Client::PFX.'Problem logging in',
+       -buttons => ['Ok'],);
+    $dialog->add(qw( Label -justify left -text ), $msg)->pack;
+    $dialog->Show;
+    return;
+}
+
 
 sub main {
     my $exit = 0;
