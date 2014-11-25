@@ -148,22 +148,7 @@ sub _init {
     push @work, [ open_dataset_by_name => $ds ];
     push @work, [ open_sequenceseq_by_name => $seq_region ] if defined $seq_region;
 
-    push @work, [ 'open_region_readonly' ]
-      if defined $pos && $pos =~ s{^v(iew)?:}{};
-
-    if (defined $pos && $pos =~ m{^(\d[0-9_]*)(:|\+)(\d[0-9_]*)$}) {
-        my @n = ($1, $3);
-        my $op = $2;
-        foreach (@n) { s/_//g }
-        $n[1] += $n[0] if $op eq '+';
-        push @work, [ open_region_by_coords => @n ];
-    } elsif (defined $pos && $pos =~ m{^#(\d+)$}) {
-        push @work, [ open_region_by_index => $1, $1 ];
-    } elsif (defined $pos && $pos =~ m{^#(\d+)\.\.(\d+)$}) {
-        push @work, [ open_region_by_index => $1, $2 ];
-    } elsif (defined $pos) {
-        push @work, [ open_region_by_names => split '-', $pos, 2 ];
-    }
+    push @work, $self->_init_pos($pos) if defined $pos;
 
     if (defined $load) {
         die "$self($name): Load Columns syntax is not yet defined"
@@ -175,6 +160,33 @@ sub _init {
                                 $name, tv_interval([$^T,0], $t0)));
     return $self->_hook;
 }
+
+sub _init_pos {
+    my ($self, $pos) = @_;
+
+    my @ro;
+    push @ro, [ 'open_region_readonly' ]
+      if $pos =~ s{^v(iew)?:}{};
+
+    if ($pos =~ m{^(\d[0-9_]*)(:|\+)(\d[0-9_]*)$}) {
+        my @n = ($1, $3);
+        my $op = $2;
+        foreach (@n) { s/_//g }
+        $n[1] += $n[0] if $op eq '+';
+        return (@ro, [ open_region_by_coords => @n ]);
+    }
+
+    if ($pos =~ m{^#(\d+)$}) {
+        return (@ro, [ open_region_by_index => $1, $1 ]);
+    }
+
+    if ($pos =~ m{^#(\d+)\.\.(\d+)$}) {
+        return (@ro, [ open_region_by_index => $1, $2 ]);
+    }
+
+    return (@ro, [ open_region_by_names => split '-', $pos, 2 ]);
+}
+
 
 sub logger {
     return Bio::Otter::Log::Log4perl->get_logger('AutoOpen');
