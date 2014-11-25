@@ -40,13 +40,20 @@ future.
  --open human_dev/chr12-38/AC004803-KC877505.1    Region, by start-end names
 
  --open human_dev/chr12-38/view:...               Region, read-only
- --open human_dev/chr12-38/v:...                  Region, read-only
 
  --open human_dev/chr12-38/AC004803/              As above + Load default columns
 
+ -o D/12/v:AC004803/                              Using shortcut; read-only
+
 =head2 Dataset
 
-First element must name a dataset.
+First element must name a dataset.  Shortcuts are
+
+ h  human
+ m  mouse
+ z  zebrafish
+ T  human_test
+ D  human_dev
 
 Other non-dataset features (Preference, LogWindow) could be linked.
 Not implemented.
@@ -54,6 +61,9 @@ Not implemented.
 =head2 Chromosome
 
 Second element should name a chromosome or subregion.
+
+A plain number N will be taken to mean a shortcut to chrC<N>-<vv>, for
+the latest version C<vv> where there is a choice.
 
 =head2 Clone
 
@@ -196,17 +206,25 @@ sub _done {
 sub do_open {
     my ($self) = @_;
 
-    my $next = $self->_take_work;
-    my ($method, @arg) = @$next;
-    die "Don't know how to ($method, @arg) yet" unless $self->can($method);
-    $self->logger->debug("$method(@arg)");
-    $self->$method(@arg);
+    try {
+        my $next = $self->_take_work;
+        my ($method, @arg) = @$next;
+        die "Don't know how to ($method, @arg) yet" unless $self->can($method);
+        $self->logger->debug("$method(@arg)");
+        $self->$method(@arg);
+    } catch {
+        my $name = try { $self->name } catch { "$self" };
+        die "While trying to AutoOpen '$name', $_";
+    };
 
     return $self->_hook;
 }
 
 sub open_dataset_by_name {
     my ($self, $ds) = @_;
+    my %shortcut =
+      qw( h human  m mouse  z zebrafish  T human_test  D human_dev );
+    $ds = $shortcut{$ds} if defined $shortcut{$ds};
     my $ssc = $self->_SLW->open_dataset_by_name($ds);
     $self->{ssc} = $ssc; # a CanvasWindow::SequenceSetChooser
     $ssc->top_window->iconify if $self->_more_work;
@@ -217,6 +235,21 @@ sub open_sequenceseq_by_name {
     my ($self, $seq_region) = @_;
     my $ssc = $self->{ssc}
       or die "Cannot open_sequenceseq_by_name without a CanvasWindow::SequenceSetChooser";
+
+    if (my ($N) = $seq_region =~ /^(\d+)$/) {
+        # want a shortcut to chr$N-$vv for largest $vv
+        my $re = qr{^chr$N-(\d{2})$};
+        my $ds = $ssc->DataSet;
+        my $ss_list  = $ds->get_all_visible_SequenceSets;
+        my ($take) = my @match = sort( grep { $_->name =~ $re } @$ss_list );
+        die sprintf('Wanted %s => %s but found no match', $seq_region, $re)
+          unless $take;
+        $self->logger->info('For %s, took %s to be %s (options were %s)',
+                            $self->name, $seq_region, $take->name,
+                            join ', ', map { $_->name } @match)
+          if @match > 1;
+        $seq_region = $take->name;
+    }
 
     my $sn = $ssc->open_sequence_set_by_ssname_subset($seq_region, undef);
     $self->{sn} = $sn; # a CanvasWindow::SequenceNotes
