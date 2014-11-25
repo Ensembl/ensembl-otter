@@ -47,7 +47,7 @@ sub _init {
             }
             return $out;
         };
-        no strict 'refs';
+        no strict 'refs'; ## no critic( TestingAndDebugging::ProhibitNoStrict )
         *{$method} = $code;
     }
     return;
