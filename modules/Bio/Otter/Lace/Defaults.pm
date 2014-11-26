@@ -679,6 +679,7 @@ debug=Client,Zircon,XRemote
 log_level=INFO
 short_window_title_prefix=1
 session_colourset = cadetblue firebrick goldenrod #f80 #ff00ff chartreuse2
+password_timeout = 15
 
 [Peer]
 # what we pass to Zircon-0MQ & to ZMap
