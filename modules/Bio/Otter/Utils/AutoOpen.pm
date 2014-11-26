@@ -253,13 +253,15 @@ sub open_sequenceseq_by_name {
         my $re = qr{^chr$N-(\d{2})$};
         my $ds = $ssc->DataSet;
         my $ss_list  = $ds->get_all_visible_SequenceSets;
-        my ($take) = my @match = sort( grep { $_->name =~ $re } @$ss_list );
+        my @match = sort( grep { $_->name =~ $re } @$ss_list );
+        my ($take) = reverse @match;
         die sprintf('Wanted %s => %s but found no match', $seq_region, $re)
           unless $take;
-        $self->logger->info('For %s, took %s to be %s (options were %s)',
-                            $self->name, $seq_region, $take->name,
-                            join ', ', map { $_->name } @match)
-          if @match > 1;
+        $self->logger->info
+          (sprintf('For %s, took %s to be %s (options were %s)',
+                   $self->name, $seq_region, $take->name,
+                   join ', ', map { $_->name } @match))
+            if @match > 1;
         $seq_region = $take->name;
     }
 
