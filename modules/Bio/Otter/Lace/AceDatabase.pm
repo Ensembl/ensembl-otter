@@ -1328,7 +1328,7 @@ sub DESTROY {
         return;
     }
     my $client = $self->Client;
-    try {
+    return if try {
         if ($self->ace_server_registered) {
             # $self->ace_server->kill_server; # this may hang...
             $self->kill_ace_server;           # ...so do this instead
@@ -1336,8 +1336,12 @@ sub DESTROY {
         if ($client) {
             $self->unlock_otter_slice() if $self->write_access;
         }
-    }
-    catch { $logger->error("Error in AceDatabase::DESTROY : $_"); };
+        0;
+    } catch {
+        $logger->error("Error in AceDatabase::DESTROY : $_");
+        $self->error_flag(1); # don't delete
+        1;
+    };
 
     my $writable = try { $self->write_access } catch { "unknown: $_" };
     if ($writable eq '0') {
@@ -1352,7 +1356,7 @@ sub DESTROY {
         $callback->();
     }
 
-    return;
+    return; # not the only return
 }
 
 #  This is basically $self->ace_server->kill_server except that it
