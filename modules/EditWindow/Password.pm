@@ -8,6 +8,28 @@ use warnings;
 use Carp;
 use base 'EditWindow';
 
+use Bio::Otter::Log::Log4perl 'logger';
+
+sub client {
+    my ($self, @set) = @_;
+    my ($client) = @set ? @set : ($self->{client});
+
+    if (@set) {
+        ($self->{client}) = @set;
+
+        my $prompt_sub = sub { return $self->_prompt_sub(@_) };
+        my $passwarn_sub = sub { return $self->_passwarn_sub(@_) };
+
+        $client->password_prompt($prompt_sub);
+        $client->password_problem($passwarn_sub);
+
+        my $user = $client->author;
+        $self->prompt_string("Enter web password for '$user'");
+    }
+
+    return $client;
+}
+
 sub initialise {
     my ($self) = @_;
 
@@ -39,20 +61,18 @@ sub initialise {
         -width => $pad,
         )->pack(-side => 'left');
 
+    my $submit = [ $self, 'Done', 'send' ];
+    my $abort  = [ $self, 'Done', 'abort' ];
     my $button = $entry_frame->Button(
         -default    => 'active',
         -text       => 'Send',
-        -command    => sub {
-            $top->toplevel->Unbusy;
-            $top->destroy if Tk::Exists($top);
-            },
+        -command    => $submit,
         )->pack( -side => 'left' );
     $self->submit_button($button);
 
-    my $submit = sub{ $button->focus; $button->invoke };
     $top->bind('<Return>',                  $submit);
     $top->bind('<KP_Enter>',                $submit);
-    $top->protocol('WM_DELETE_WINDOW' =>    $submit);
+    $top->protocol('WM_DELETE_WINDOW' =>    $abort);
 
     $entry_frame->bind('<Destroy>', sub { $self = undef });
 
@@ -60,10 +80,27 @@ sub initialise {
     return;
 }
 
+sub Done {
+    my ($self, $val) = @_;
+    my $top = $self->top;
+    $self->forget if $val eq 'abort';
+    if (Tk::Exists($top)) {
+        ${ $self->finref } = "done:$val";
+        $top->toplevel->Unbusy;
+        $top->withdraw;
+    }
+    return;
+}
+
 sub get_password {
     my ($self) = @_;
+    my $finref = $self->finref;
 
-    my $pass = '';
+    if ($self->{showing}) {
+        $self->Done('abort');
+        confess "Re-entrant password request, rejecting both";
+    }
+    local $self->{showing} = 1;
 
     # Check to see if another window has grabbed input
     # (or the user won't be able to type their password
@@ -80,23 +117,41 @@ sub get_password {
     $self->top->toplevel->Busy;
     $self->password_field->focus;
     $self->set_minsize;     # Does an "update"
-    $self->submit_button->waitWindow;
+
+    $$finref = '';
+    $self->logger->info("get_password: prewait (${$self->finref})");
+    $self->top->waitVariable($self->finref);
+    $self->logger->info("get_password: postwait (${$self->finref})");
 
     # Restore input grab to original window
     if ($grab_window) {
         $grab_window->grab;
     }
 
+    my $out = ${ $self->passref };
+    $self->forget;
+
+    return $out;
+}
+
+sub forget {
+    my ($self) = @_;
+    my $passref = $self->passref;
+    my $l = defined $$passref ? length($$passref) : 0;
+    substr($$passref, 0, $l) = '*' x $l if $l;
+    $$passref = undef;
     return;
 }
 
 sub passref {
-    my ($self, $passref) = @_;
+    my ($self) = @_;
+    return ($self->{'_passref'} ||= do { my $pass; \$pass });
+}
 
-    if ($passref) {
-        $self->{'_passref'} = $passref;
-    }
-    return $self->{'_passref'};
+# Values qw( done:send done:abort ) or empty
+sub finref {
+    my ($self) = @_;
+    return ($self->{'_finref'} ||= do { my $var=''; \$var });
 }
 
 sub prompt_string {
@@ -124,6 +179,28 @@ sub password_field {
         $self->{'_password_field'} = $password_field;
     }
     return $self->{'_password_field'};
+}
+
+
+
+sub _prompt_sub {
+    my ($self, $bolc) = @_;
+    return $self->get_password;
+}
+
+sub _passwarn_sub {
+    my ($self,
+        $bolc, $msg) # the B:O:L:Client and message
+      = @_;
+
+    $self->logger->warn("passwarn: $msg");
+    my $dialog = $self->top->DialogBox
+      (-title => $Bio::Otter::Lace::Client::PFX.'Problem logging in',
+       -buttons => ['Ok'],);
+    $dialog->add(qw( Label -justify left -text ), $msg)->pack;
+    $dialog->Show;
+    $self->logger->info('passwarn [ok]d');
+    return;
 }
 
 1;
