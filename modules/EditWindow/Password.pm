@@ -30,6 +30,12 @@ sub client {
     return $client;
 }
 
+sub running {
+    my ($self, @set) = @_;
+    ($self->{_running}) = @set if @set;
+    return $self->{_running};
+}
+
 sub initialise {
     my ($self) = @_;
 
@@ -100,7 +106,7 @@ sub get_password {
         $self->Done('abort');
         confess "Re-entrant password request, rejecting both";
     }
-    local $self->{showing} = 1;
+    local $self->{showing} = time();
 
     # Check to see if another window has grabbed input
     # (or the user won't be able to type their password
@@ -119,6 +125,8 @@ sub get_password {
     $self->set_minsize;     # Does an "update"
 
     $$finref = '';
+    ${ $self->passref } = '';
+    $self->nagSoon;
     $self->logger->info("get_password: prewait (${$self->finref})");
     $self->top->waitVariable($self->finref);
     $self->logger->info("get_password: postwait (${$self->finref})");
@@ -134,11 +142,54 @@ sub get_password {
     return $out;
 }
 
+sub nagSoon {
+    my ($self) = @_;
+    my $top = $self->top;
+    return unless Tk::Exists($top);
+    return $top->after(2500, [ $self, 'nag', length(${ $self->passref }) ]);
+}
+
+sub nag {
+    my ($self, $oldlen) = @_;
+    my $passref = $self->passref;
+
+    return if !defined $$passref; # we're done
+    my $lp = length($$passref);
+
+    if ($lp == $oldlen) {
+        # no activity
+        my $top = $self->top;
+        $top->deiconify;
+        $top->raise;
+        $self->timeout_check;
+    }
+
+    return $self->nagSoon($lp);
+}
+
+sub timeout_check {
+    my ($self) = @_;
+    my $showing = $self->{showing};
+    my $timeout = # set -1 to prevent (it cannot be reset to 0)
+      $self->client->config_value('password_timeout');
+
+    return unless $self->running; # no timeout on initial login
+    return unless $showing; # it has gone (then why are we here?)
+    return if $timeout <= 0;
+
+    if (time() - $showing > $timeout) {
+        # we have no activity now, and a long delay
+        $self->logger->warn('timeout on password entry');
+        $self->Done('abort');
+    }
+    return;
+}
+
 sub forget {
     my ($self) = @_;
     my $passref = $self->passref;
     my $l = defined $$passref ? length($$passref) : 0;
-    substr($$passref, 0, $l) = '*' x $l if $l;
+    substr($$passref, 0, $l, '*' x $l) if $l;
     $$passref = undef;
     return;
 }
