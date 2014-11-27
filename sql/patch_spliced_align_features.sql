@@ -28,7 +28,7 @@ CREATE TABLE dna_spliced_align_feature (
   KEY seq_region_idx_2 (seq_region_id, seq_region_start),
   KEY hit_idx (hit_name),
   KEY analysis_idx (analysis_id),
-  KEY external_db_idx (external_db_id),
+  KEY external_db_idx (external_db_id)
 
 ) TYPE=InnoDB;
 
