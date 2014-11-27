@@ -179,7 +179,7 @@ CREATE TABLE contig_attrib (
 
    contig_info_id    INT(10) UNSIGNED NOT NULL DEFAULT '0' REFERENCES contig_info(contig_info_id),
    attrib_type_id    SMALLINT(5) UNSIGNED NOT NULL DEFAULT '0' REFERENCES attrib_type(attrib_type_id),
-   value         TEXT NOT NULL DEFAULT '',
+   value         TEXT NOT NULL,
 
    KEY ( contig_info_id,attrib_type_id )
 
@@ -221,7 +221,7 @@ CREATE TABLE assembly_tag (
   tag_info          TEXT,
 
   PRIMARY KEY  ( tag_id ),
-  UNIQUE ( seq_region_id, seq_region_start, seq_region_end, seq_region_strand, tag_type, tag_info(500))
+  UNIQUE ( seq_region_id, seq_region_start, seq_region_end, seq_region_strand, tag_type, tag_info(250))
 ) ENGINE=InnoDB ;
 
 
@@ -267,7 +267,7 @@ CREATE TABLE sequence_note (
 
 CREATE TABLE sequence_set_access (
 
-  seq_region_id int unsigned NOT NULL default '',
+  seq_region_id int unsigned NOT NULL default '0',
   author_id int(10) unsigned NOT NULL default '0',
   access_type enum('','R','RW') NOT NULL default 'R',
 
