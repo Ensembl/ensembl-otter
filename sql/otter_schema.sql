@@ -14,7 +14,7 @@ CREATE TABLE gene_stable_id_pool (
 
    PRIMARY KEY(gene_pool_id)
 
-) TYPE=InnoDB;
+) ENGINE=InnoDB;
 
 ################################################################################
 #
@@ -30,7 +30,7 @@ CREATE TABLE gene_author (
    PRIMARY KEY ( gene_id ),
    KEY ( author_id )
 
-) TYPE=InnoDB;
+) ENGINE=InnoDB;
 
 ################################################################################
 #
@@ -45,7 +45,7 @@ CREATE TABLE transcript_stable_id_pool (
 
    PRIMARY KEY ( transcript_pool_id )
 
-) TYPE=InnoDB;
+) ENGINE=InnoDB;
 
 ################################################################################
 #
@@ -61,7 +61,7 @@ CREATE TABLE transcript_author (
    PRIMARY KEY (transcript_id),
    KEY (author_id)
 
-) TYPE=InnoDB;
+) ENGINE=InnoDB;
 
 ################################################################################
 #
@@ -78,7 +78,7 @@ CREATE TABLE evidence (
 
    PRIMARY KEY ( transcript_id,name,type )
 
-) TYPE=InnoDB;
+) ENGINE=InnoDB;
 
 ################################################################################
 #
@@ -93,7 +93,7 @@ CREATE TABLE translation_stable_id_pool (
 
   PRIMARY KEY ( translation_pool_id )
 
-) TYPE=InnoDB;
+) ENGINE=InnoDB;
 
 ################################################################################
 #
@@ -108,7 +108,7 @@ CREATE TABLE exon_stable_id_pool (
 
   PRIMARY KEY ( exon_pool_id )
 
-) TYPE=InnoDB;
+) ENGINE=InnoDB;
 
 ################################################################################
 #
@@ -128,7 +128,7 @@ CREATE TABLE author (
   UNIQUE (author_name,author_email),
   UNIQUE ( author_email,group_id )
 
-) TYPE=InnoDB;
+) ENGINE=InnoDB;
 
 ################################################################################
 #
@@ -146,7 +146,7 @@ CREATE TABLE author_group (
    PRIMARY KEY ( group_id ),
    UNIQUE gn_idx ( group_name )
 
-) TYPE=InnoDB;
+) ENGINE=InnoDB;
 
 ################################################################################
 #
@@ -165,7 +165,7 @@ CREATE TABLE contig_info (
 
   PRIMARY KEY ( contig_info_id )
 
-) TYPE=InnoDB;
+) ENGINE=InnoDB;
 
 ################################################################################
 #
@@ -183,7 +183,7 @@ CREATE TABLE contig_attrib (
 
    KEY ( contig_info_id,attrib_type_id )
 
-) TYPE=InnoDB;
+) ENGINE=InnoDB;
 
 ################################################################################
 #
@@ -203,7 +203,7 @@ CREATE TABLE contig_lock (
   PRIMARY KEY ( contig_lock_id ),
   UNIQUE KEY seq_region_id (seq_region_id)
 
-) TYPE=InnoDB;
+) ENGINE=InnoDB;
 
 #################################################################################
 # Table structure for table 'assembly_tag'
@@ -222,7 +222,7 @@ CREATE TABLE assembly_tag (
 
   PRIMARY KEY  ( tag_id ),
   UNIQUE ( seq_region_id, seq_region_start, seq_region_end, seq_region_strand, tag_type, tag_info(500))
-) TYPE=InnoDB ;
+) ENGINE=InnoDB ;
 
 
 #################################################################################
@@ -237,7 +237,7 @@ CREATE TABLE assembly_tagged_contig (
 
   UNIQUE KEY seq_region_id (seq_region_id)
 
-) TYPE=InnoDB ;
+) ENGINE=InnoDB ;
 
 
 #################################################################################
@@ -256,7 +256,7 @@ CREATE TABLE sequence_note (
   PRIMARY KEY  ( seq_region_id,author_id,note_time ),
   KEY ( seq_region_id,is_current )
 
-) TYPE=InnoDB ;
+) ENGINE=InnoDB ;
 
 
 
@@ -273,7 +273,7 @@ CREATE TABLE sequence_set_access (
 
   PRIMARY KEY  (`seq_region_id`,`author_id`)
 
-) TYPE=InnoDB;
+) ENGINE=InnoDB;
 ##################################################################################
 
 # all attributes in *_attrib tables are defined first in the file
