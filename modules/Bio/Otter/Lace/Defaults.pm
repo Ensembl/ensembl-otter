@@ -669,6 +669,15 @@ Ana Code B<email> anacode@sanger.ac.uk
 __DATA__
 
 # This is where the HARDWIRED ABSOLUTE DEFAULTS are stored
+#
+# Note that (at each layering of config) defaults will only be
+# overridden by true values, i.e. you cannot replace an existing true
+# value with zero or the empty string.  RT#321546
+#
+# This means that code interpreting the config must accept another
+# value to switch off, when the default it on
+# e.g. short_window_title_prefix and password_timeout accept -1 to
+# disable.
 
 [client]
 url=http://otter.sanger.ac.uk/cgi-bin/otter
