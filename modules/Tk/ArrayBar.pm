@@ -67,6 +67,8 @@ sub Populate {
         -padx               => [ PASSIVE => 'padX', 'Pad', 0          ],
         -pady               => [ PASSIVE => 'padY', 'Pad', 0          ],
         -colors             => [ PASSIVE => undef, undef, undef       ],
+        -balloon            => [ PASSIVE => undef, undef, undef       ],
+        -labels             => [ PASSIVE => undef, undef, undef       ],
         -relief             => [ SELF => 'relief', 'Relief', 'sunken' ],
         -value              => [ METHOD  => undef, undef, undef       ],
         -variable           => [ PASSIVE  => undef, undef, [ 0 ]      ],
@@ -175,6 +177,19 @@ sub _arrange {
         );
 	$curx+=$horz?$lr:0;
 	$cury+=$horz?0:$ud;
+    }
+
+    my $labels = $c->{Configure}{'-labels'};
+    my $balloon = $c->{Configure}{'-balloon'};
+    if ($labels && $balloon) {
+        # apply label
+        my $rects = $c->{cover};
+        my %msg = map {($rects->[$_], $labels->[$_])} (0 .. $#{$labels});
+        $balloon->attach
+          ($c,
+           -initwait => 0,
+           -balloonposition => 'mouse',
+           -msg => \%msg);
     }
 }
 

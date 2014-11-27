@@ -1135,6 +1135,8 @@ sub make_status_panel {
     my $status_bar = $status_frame->ArrayBar(
         -width => 20,
         -colors => \@colors,
+        -labels => \@display_statuses,
+        -balloon => $self->balloon,
         );
     $status_bar->pack(
         -side => 'top',
