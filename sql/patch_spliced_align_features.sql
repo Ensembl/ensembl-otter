@@ -30,7 +30,7 @@ CREATE TABLE dna_spliced_align_feature (
   KEY analysis_idx (analysis_id),
   KEY external_db_idx (external_db_id)
 
-) TYPE=InnoDB;
+) ENGINE=InnoDB;
 
 CREATE TABLE protein_spliced_align_feature (
 
@@ -58,6 +58,6 @@ CREATE TABLE protein_spliced_align_feature (
   KEY analysis_idx (analysis_id),
   KEY external_db_idx (external_db_id)
 
-) TYPE=InnoDB;
+) ENGINE=InnoDB;
 
 # EOF
