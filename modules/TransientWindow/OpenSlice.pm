@@ -13,6 +13,7 @@ sub initialise{
     my $slice_start = ${$self->text_variable_ref('slice_start')};
     my $slice_end ||= $slice_start + $DEFAULT_SLICE_SIZE;
     $self->text_variable_ref('slice_end', $slice_end, 1);
+    $self->text_variable_ref('slice_len', $DEFAULT_SLICE_SIZE, 1);
     return;
 }
 
@@ -36,7 +37,15 @@ sub draw{
             -padx =>  5,
             -pady =>  5,
             -fill => 'x'
-        );   
+        );
+    my $len_frame =
+        $slice_window->Frame()->pack(
+            -side => 'top', 
+            -padx =>  5,
+            -pady =>  5,
+            -expand => 1,
+        );
+
     my $min_label =
         $entry_frame->Label(
             -text => "Slice:  start"
@@ -53,13 +62,28 @@ sub draw{
             -padx => 5,
             -fill => 'x',
         );
+    my $len_entry;
+    my $update_len = sub {
+        my $sref = $self->text_variable_ref('slice_start');
+        my $eref = $self->text_variable_ref('slice_end');
+        my $lref = $self->text_variable_ref('slice_len');
+        $$lref = $$eref - $$sref + 1;
+        my $bg = 'white';
+        $bg = 'orange' if $$lref > 5E6; # vague and arbitrary size limit warnings
+        $bg = 'red' if $$lref < 10000 || $$lref > 20E6;
+        $len_entry->configure(-disabledbackground => $bg);
+        return;
+    };
     my $auto_slice_end = sub {
         my $min = ${$self->text_variable_ref('slice_start')};
         my $max = ${$self->text_variable_ref('set_end')};
-        my $default =
-            $min + $DEFAULT_SLICE_SIZE > $max
-            ? $max : $min + $DEFAULT_SLICE_SIZE;
+        my $len = ${$self->text_variable_ref('slice_len')};
+        $len = $DEFAULT_SLICE_SIZE if $len < 10000;
+        my $default = $min + $len - 1;
+        $default = $max if $default > $max;
         $self->text_variable_ref('slice_end', $default, 1);
+        $update_len->();
+        return;
     };
     $slice_min_entry->bind('<FocusOut>', $auto_slice_end);
 
@@ -80,6 +104,20 @@ sub draw{
             -padx => 5,
             -fill => 'x',
         );
+    $slice_max_entry->bind('<FocusOut>', $update_len);
+
+    my $len_label =
+      $len_frame->Label(-text => ' len ')->pack(-side => 'left');
+    $len_entry =
+      $len_frame->Entry
+        (-width        => 15,
+         -relief       => 'sunken',
+         -borderwidth  => 2,
+         -state        => 'disabled',
+         -textvariable => $self->text_variable_ref('slice_len'),
+        )->pack(-side => 'left', -padx => 5);
+    $update_len->();
+
     $entry_frame->bind('<Destroy>' , sub { $self = undef }  );
 
     my $run_cancel_frame =
