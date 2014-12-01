@@ -146,7 +146,7 @@ sub _init {
 
     die "Open shortcut syntax: --open dataset[:seq_region]\n" unless $ds;
     push @work, [ open_dataset_by_name => $ds ];
-    push @work, [ open_sequenceseq_by_name => $seq_region ] if defined $seq_region;
+    push @work, [ open_sequenceset_by_name => $seq_region ] if defined $seq_region;
 
     push @work, $self->_init_pos($pos) if defined $pos;
 
@@ -243,10 +243,10 @@ sub open_dataset_by_name {
     return;
 }
 
-sub open_sequenceseq_by_name {
+sub open_sequenceset_by_name {
     my ($self, $seq_region) = @_;
     my $ssc = $self->{ssc}
-      or die "Cannot open_sequenceseq_by_name without a CanvasWindow::SequenceSetChooser";
+      or die "Cannot open_sequenceset_by_name without a CanvasWindow::SequenceSetChooser";
 
     if (my ($N) = $seq_region =~ /^(\d+)$/) {
         # want a shortcut to chr$N-$vv for largest $vv
@@ -284,7 +284,8 @@ sub open_region_by_coords {
     my ($self, $start, $end) = @_;
     my $sn = $self->{sn}
       or die "Cannot open_region_by_coords without CanvasWindow::SequenceNotes";
-    $sn->run_lace_on_slice($start, $end);
+    my $cc = $sn->run_lace_on_slice($start, $end);
+    $self->{cc} = $cc; # a MenuCanvasWindow::ColumnChooser
     return;
 }
 
