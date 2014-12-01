@@ -282,6 +282,7 @@ sub process_contig_locks {
     my $lock_count = scalar keys %lock_id;
 
     if ($do_delete and scalar keys %lock_id) {
+        warn "\n *** -delete operate on the old contig_lock rows\n *** use -interrupt or -expire for slice_lock rows\n\n";
         if (q_del("delete")) {
             my $del_sth = $otter_db->dbc->prepare(q{
                 DELETE FROM contig_lock
