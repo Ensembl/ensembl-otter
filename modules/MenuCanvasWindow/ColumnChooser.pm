@@ -720,7 +720,7 @@ sub load_filters {
         my $rq = $self->SessionWindow->RequestQueuer;
         $rq->flush_current_requests; # in case of Zircon message loss
         $rq->request_features(map { $_->Filter } @to_fetch);
-        $self->SessionWindow->_update_status_bar;
+        $self->SessionWindow->_update_status_bar; ## no critic(Subroutines::ProtectPrivateSubs)
     }
 
     undef $busy; # i.e. Unbusy
