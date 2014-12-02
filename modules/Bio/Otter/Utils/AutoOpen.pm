@@ -84,10 +84,18 @@ for this.
 
 =head2 Columns
 
-Currently it is not possible to change the selected columns before
-starting the load.  Suggestions for syntax would be useful.
+The third C</> delimits a fourth element, which causes loading.
 
-The third C</> delimits an empty fourth element, which causes loading.
+If the column specification is empty (trailing slash), load the
+default columns for the species.
+
+There is one other column specification C<=none> which switches
+everything off for fastest load.
+
+Suggestions for further syntax would be useful.
+
+Beware that using this other than at the start of a session could
+clear the user's column choice.
 
 
 =head1 CAVEATS
@@ -152,7 +160,7 @@ sub _init {
 
     if (defined $load) {
         die "$self($name): Load Columns syntax is not yet defined"
-          if $load ne '';
+          unless $load =~ /^(|=none)$/;
         push @work, [ load_columns => $load ], [ 'load_columns_hide' ];
     }
 
@@ -332,7 +340,13 @@ sub load_columns {
     my ($self, $load) = @_;
     my $cc = $self->{cc}
       or die "Cannot load_columns without MenuCanvasWindow::ColumnChooser";
-    $cc->load_filters; # XXX: get hold of the SessionWindow
+    if ($load eq '=none') {
+        $cc->change_selection('select_none');
+    } else {
+        $cc->change_selection('select_default');
+    }
+    $cc->load_filters;
+    $self->{sw} = $cc->SessionWindow;
     return;
 }
 
