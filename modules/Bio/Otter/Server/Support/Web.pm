@@ -298,7 +298,10 @@ sub send_response {
 
     # Do DBI::Profiler writes even if response cannot be sent.
     # In production it's undef; see webvm.git ad6e5e26031afd66
-    try { $DBI::shared_profile->flush_to_disk }; ## no critic(Variables::ProhibitPackageVars)
+    {
+        no warnings qw( once ); ## no critic( TestingAndDebugging::ProhibitNoWarnings )
+        try { $DBI::shared_profile->flush_to_disk }; ## no critic(Variables::ProhibitPackageVars)
+    }
 
     # content_type may be set by $sub, so we don't choose encoding until here:
     my ($encode_response, $encode_error);
