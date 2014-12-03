@@ -153,6 +153,7 @@ sub prep_and_store_request_for_each_type {
     }
 
     $session_window->RequestQueuer->request_features(@method_names) if @method_names;
+    $session_window->update_status_bar;
 
     return @method_names;
 }
