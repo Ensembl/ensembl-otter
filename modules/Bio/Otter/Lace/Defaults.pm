@@ -21,7 +21,7 @@ my $CONFIG_INIFILES; # arrayref of config object
 my $UCFG_POS;        # array index for user's config (present or absent)
 my $GETOPT;          # config object for the GetOptions variables
 my $DONE_GETOPT;     # tristate bool
-my $_USERCFG_FN;     # for testing
+my $_USERCFG_FN;     # for testing code & config
 {
     my $hardwired;
     sub __init {
@@ -220,7 +220,7 @@ sub user_config_filename {
         $fn = __rename_user_config($fn[1], $fn[0], $user_home);
     } # else we have it
 
-    return $_USERCFG_FN if defined $_USERCFG_FN; # for testing
+    return $_USERCFG_FN if defined $_USERCFG_FN; # for testing code & config
     return $fn;
 }
 
@@ -571,6 +571,28 @@ sub _section_key {
     return unless my ( $key1, $key2 ) = $section =~ /^([^\.]*\.[^\.]*)\.(.*)$/;
     return unless $key1 eq $key;
     return $key2;
+}
+
+sub config_sections {
+    __ready();
+    my %sec;
+    foreach my $ini (@$CONFIG_INIFILES) {
+        my @sec = $ini->Sections;
+        @sec{@sec} = ();
+    }
+    my @out; # ( \@mono_key, \@di_key, \%tri_key, \@filenames )
+    foreach my $sec (keys %sec) {
+        my @part = split /\./, $sec, 3;
+        if (1 == @part) {
+            push @{ $out[0] }, $part[0];
+        } elsif (2 == @part) {
+            push @{ $out[1] }, $sec;
+        } else {
+            my $di = join '.', @part[0,1];
+            push @{ $out[2]->{$di} }, $part[2];
+        }
+    }
+    return @out;
 }
 
 sub config_filenames { # useful for debug
