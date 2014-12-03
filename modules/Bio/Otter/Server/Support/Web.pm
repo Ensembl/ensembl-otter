@@ -302,6 +302,7 @@ sub send_response {
         no warnings qw( once ); ## no critic( TestingAndDebugging::ProhibitNoWarnings )
         try { $DBI::shared_profile->flush_to_disk }; ## no critic(Variables::ProhibitPackageVars)
     }
+    warn "outputting\n"; # so when the request fails, we know if it reached
 
     # content_type may be set by $sub, so we don't choose encoding until here:
     my ($encode_response, $encode_error);
