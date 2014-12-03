@@ -1151,7 +1151,7 @@ sub make_status_panel {
     return;
 }
 
-sub _update_status_bar {
+sub update_status_bar {
     my ($self) = @_;
     my $cllctn = $self->AceDatabase->ColumnCollection;
     my $counts = $cllctn->count_Columns_by_status;
@@ -1346,7 +1346,7 @@ sub resync_with_db {
     $self->Assembly;
     my @visible_columns = $self->AceDatabase->ColumnCollection->list_Columns_with_status('Visible');
     $self->process_and_update_columns(@visible_columns);
-    $self->_update_status_bar;
+    $self->update_status_bar;
 
     return;
 }
@@ -1681,7 +1681,7 @@ sub _update_column_status {
     my $col_aptr = $self->AceDatabase->DB->ColumnAdaptor;
     $column->status($status);
     $col_aptr->store_Column_state($column);
-    $self->_update_status_bar;
+    $self->update_status_bar;
     return;
 }
 
@@ -2833,7 +2833,7 @@ sub zircon_zmap_view_features_loaded {
             return;
         });
 
-    $self->_update_status_bar;
+    $self->update_status_bar;
 
     return;
 }
