@@ -29,9 +29,11 @@ my $_USERCFG_FN;     # for testing
             $hardwired = Config::IniFiles->new(-file => \*DATA)
               or die "Builtin config fail";
             close DATA; # avoids ", <DATA> line 8." on errors
+            $hardwired->SetFileName(__PACKAGE__);
         }
         $CONFIG_INIFILES = [ $hardwired ];
         $GETOPT = Config::IniFiles->new;
+        $GETOPT->SetFileName('GETOPT');
         undef $DONE_GETOPT;
         return ();
     }
@@ -569,6 +571,12 @@ sub _section_key {
     return unless my ( $key1, $key2 ) = $section =~ /^([^\.]*\.[^\.]*)\.(.*)$/;
     return unless $key1 eq $key;
     return $key2;
+}
+
+sub config_filenames { # useful for debug
+    __ready();
+    my @fn = map { $_->GetFileName } @$CONFIG_INIFILES;
+    return @fn;
 }
 
 1;
