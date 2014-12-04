@@ -72,6 +72,7 @@ sub _init {
 
 sub DESTROY {
     Bio::Otter::Lace::Defaults::testmode_redirect_reset();
+    return;
 }
 
 
