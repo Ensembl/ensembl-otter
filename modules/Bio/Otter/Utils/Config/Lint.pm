@@ -183,10 +183,20 @@ sub check_species {
     my $order = Bio::Otter::Lace::Defaults::config_value_list_merged
       ($species, 'zmap_config', 'columns');
     # [$species.zmap_config] and [default.zmap_config] columns
+    my %order;
+    @order{@$order} = ();
 
     my @comp_in_order = grep { defined $comp_col{$_} } (sort @$order);
-    push @bad, "Component column (@comp_in_order) found in [*.zmap_config]columns"
-      if @comp_in_order;
+    my @comp_replace = uniq(map { $comp_col{$_} } @comp_in_order);
+    my @comp_replace_ordered = grep { exists $order{$_} } @comp_replace;
+    @comp_replace = grep { !exists $order{$_} } @comp_replace;
+    push @bad, sprintf
+      ("Component column%s (%s) found in [*.zmap_config]columns%s%s",
+       (@comp_in_order == 1 ? '' : 's'), (join '|', @comp_in_order),
+       (@comp_replace ? ", replace with (@comp_replace)" : ''),
+       (@comp_replace_ordered
+        ? ", note (@comp_replace_ordered) already present" : ''))
+        if @comp_in_order;
 
 #use YAML 'Dump';
 #print Dump({ species => $species,
