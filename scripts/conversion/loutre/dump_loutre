@@ -365,9 +365,11 @@ foreach my $line (split(/\n/,$txt)){
   my ($table,@constraints) = split(/\s+/,$line);
 
   #sanity check
-  if (! exists($constraints{$table}) ) {
-    $support->log_warning("You have definitions for a table ($table) that is not found in the loutre database. Skipping\n\n");
-    next TABLE;
+  if (! $support->param('live_update')) {
+    if (! exists($constraints{$table})) {
+      $support->log_warning("You have definitions for a table ($table) that is not found in the loutre database. Skipping\n\n");
+      next TABLE;
+    }
   }
 	
   #tables to dump structure
@@ -693,7 +695,7 @@ foreach my $name (@{$chr_names_wanted}) {
           $support->log("Skipping gene $gname ($lgsi) because of incorrect source\n",1);
           next GENE;
         }
-      }	
+      }
       #filter on biotype
       if ($support->param('filter_biotype') ) {
         if (grep {lc($lgene->biotype) eq lc($_)} $support->param('filter_biotype') ) {
@@ -777,7 +779,7 @@ foreach my $name (@{$chr_names_wanted}) {
         }
         else {
           my $gene_loc = $lgene->seq_region_name.':'.$lgene->seq_region_start.'-'.$lgene->seq_region_end;
-          $support->log("Would previously have skipped gene gene $gname ($lgsi;$gene_loc) because no annotation flag present but taking now\n",1); 
+          $support->log("Would previously have skipped gene gene $gname ($lgsi;$gene_loc) because no annotation flag present but taking now\n",1);
           $non_fsv++;
         }
       }		
@@ -795,9 +797,9 @@ foreach my $name (@{$chr_names_wanted}) {
       }
       else {
         $support->log("Taking new gene $gname ($lgsi) (version ".$lgene->version.").\n",1);
-        if (my $dets = $annotrack_genes->{'Genes'}{$lgsi}) {
-          $support->log_verbose("Dumping gene $lgsi although it has previously resolved QC issues" . Data::Dumper::Dumper($dets) . "\n",2);
-        }
+#        if (my $dets = $annotrack_genes->{'Genes'}{$lgsi}) {
+#          $support->log_verbose("Dumping gene $lgsi with has previously resolved QC issues" . Data::Dumper::Dumper($dets) . "\n",2);
+#        }
       }
     }
 
@@ -890,7 +892,7 @@ sub transfer_gene {
     return 0;
   }
 
-  if(!$v_gene_slice) {		
+  if(!$v_gene_slice) {
     $support->log_warning("Couldn't fetch vega gene slice\n");
     return 0;
   }
@@ -999,10 +1001,10 @@ sub transfer_gene {
     @transcripts = @{$lgene->get_all_Transcripts};
     foreach my $transcript (@transcripts){
       if ($transcript->start <  $lgene->start){
-        $lgene->start($transcript->start);
+        $lgene->start=$transcript->start;
       }
       if ($transcript->end >  $lgene->end){
-        $lgene->end($transcript->end);
+        $lgene->end=$transcript->end;
       }
     }
   }
@@ -1342,7 +1344,6 @@ gene_name_update              i
 align_session                 i
 align_stage                   i
 tmp_align                     i
-tmp_align_region              i
 tmp_mask                      i
 tmp_assembly                  i
 test_contig_info              i
@@ -1350,9 +1351,10 @@ misc_feature_misc_set__bak    i
 misc_set__bak                 i
 intron_supporting_evidence    i
 transcript_intron_supporting_evidence i
+genome_statistics             i
 slice_lock                    i
-
 ENDOFTEXT
   return $txt;
 }
+
 
