@@ -7,7 +7,7 @@ use Moose;
 
 with 'MooseX::Log::Log4perl';
 
-use Readonly;
+use Digest::MD5;
 
 use Bio::Otter::Lace::OnTheFly::Utils::ExonerateFormat qw( ryo_format );
 use Bio::Otter::Lace::OnTheFly::Utils::SeqList;
@@ -32,6 +32,9 @@ has default_options    => ( is => 'ro', isa => 'HashRef', init_arg => undef,
                             lazy => 1, builder => '_build_default_options' );
 has default_qt_options => ( is => 'ro', isa => 'HashRef', init_arg => undef,
                             lazy => 1, builder => '_build_default_qt_options' );
+
+has _fingerprint       => ( is => 'ro', isa => 'Str', init_arg => undef,
+                            lazy => 1, builder => '_build_fingerprint' );
 
 sub _default_options    { return { '--bestn' => 1 }; };
 sub _default_qt_options { return { dna => {}, protein => {} }; };
@@ -105,6 +108,7 @@ sub prepare_run {
         command     => $command,
         logic_name  => $self->analysis_name,
         target_start=> $self->target->start,
+        fingerprint => $self->_fingerprint,
         args        => \%args,
         );
 
@@ -119,6 +123,16 @@ sub analysis_name {
     if    ($type =~ /^OTF_AdHoc_/) { return $type;       }
     elsif ($type eq 'cDNA')        { return "${prefix}mRNA";  }
     else                           { return "${prefix}${type}"; }
+}
+
+sub _build_fingerprint {
+    my $self = shift;
+    my $ctx = Digest::MD5->new;
+    foreach my $file ($self->target->fasta_file, $self->fasta_file) {
+        open(my $fh, '<', $file) or $self->log->logdie("opening '$file': $!");
+        $ctx->addfile($fh);
+    }
+    return $ctx->hexdigest;
 }
 
 1;
