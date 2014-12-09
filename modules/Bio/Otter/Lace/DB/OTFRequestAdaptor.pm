@@ -12,7 +12,18 @@ use Bio::Otter::Lace::DB::OTFRequest;
 
 use base 'Bio::Otter::Lace::DB::Adaptor';
 
-sub columns { return qw( id logic_name target_start command status n_hits transcript_id caller_ref raw_result ); }
+sub columns { return qw(
+                  id
+                  logic_name
+                  target_start
+                  command
+                  fingerprint
+                  status
+                  n_hits
+                  transcript_id
+                  caller_ref
+                  raw_result
+                  ); }
 
 sub key_column_name       { return 'id'; }
 sub key_is_auto_increment { return 1;    }
@@ -24,13 +35,14 @@ my $all_columns = __PACKAGE__->all_columns;
 sub SQL {
     return {
     store =>            qq{ INSERT INTO otter_otf_request ( ${all_columns} )
-                                                   VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ? )
+                                                   VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ?, ? )
                           },
     update =>            q{ UPDATE otter_otf_request
                                SET id           = ?
                                  , logic_name   = ?
                                  , target_start = ?
                                  , command      = ?
+                                 , fingerprint  = ?
                                  , status       = ?
                                  , n_hits       = ?
                                  , transcript_id = ?
@@ -45,6 +57,8 @@ sub SQL {
                           },
     fetch_by_logic_name_status => qq{ SELECT ${all_columns} FROM otter_otf_request WHERE logic_name = ? AND status = ?
                              },
+    already_running =>   q{ SELECT id FROM otter_otf_request WHERE fingerprint = ? AND STATUS IN ('new','running')
+                          },
     store_arg =>         q{ INSERT INTO otter_otf_args ( request_id, key, value ) VALUES ( ?, ?, ? )
                           },
     fetch_args =>        q{ SELECT key, value FROM otter_otf_args WHERE request_id = ?
@@ -123,6 +137,18 @@ sub fetch_by_logic_name_status {
 }
 
 sub _fetch_by_logic_name_status_sth { return shift->_prepare_canned('fetch_by_logic_name_status'); }
+
+sub already_running {
+    my ($self, $object) = @_;
+
+    my $sth = $self->_already_running_sth;
+    $sth->execute($object->fingerprint);
+    my $rowref = $sth->fetchall_arrayref;
+    return unless @$rowref;
+    return map { $_->[0] } @$rowref;
+}
+
+sub _already_running_sth { return shift->_prepare_canned('already_running'); }
 
 sub _fetch_args {
     my ($self, $object) = @_;

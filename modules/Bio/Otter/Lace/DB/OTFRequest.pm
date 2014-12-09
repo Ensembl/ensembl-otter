@@ -41,6 +41,13 @@ sub command {
     return $command;
 }
 
+sub fingerprint {
+    my ($self, @args) = @_;
+    ($self->{'fingerprint'}) = @args if @args;
+    my $fingerprint = $self->{'fingerprint'};
+    return $fingerprint;
+}
+
 sub status {
     my ($self, @args) = @_;
     ($self->{'status'}) = @args if @args;
