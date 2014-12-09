@@ -32,6 +32,7 @@ $req[0] = $obj_class->new(
     logic_name  => 'OTFRequestAdaptorTest_EST',
     target_start=> 12446,
     command     => 'exonerate',
+    fingerprint => '9ac07f39640ae2c8d35c1edefbcb0c14',
     transcript_id=>78088,
     caller_ref  => "Test:$$:A",
     args        => { '--opt' => 'THIS', '--flag' => undef },
@@ -39,6 +40,7 @@ $req[0] = $obj_class->new(
 $req[1] = $obj_class->new(
     logic_name  => 'OTFRequestAdaptorTest_Protein',
     command     => 'crossmatch',
+    fingerprint => '323403a62188728c93056251af899912',
     transcript_id=>78089,
     caller_ref  => "Test:$$:B",
     args        => { foo => 1, baa => undef, },
@@ -50,9 +52,14 @@ foreach my $i ( 0..1 ) {
     note("id for $i is ", $req[$i]->id);
 }
 
+my $dummy_req = $obj_class->new(fingerprint => 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb');
+
 my $rbln = $ra->fetch_by_logic_name_status('OTFRequestAdaptorTest_Protein', 'new');
 isa_ok($rbln, $obj_class, 'fetch_by_logic_name_status (exists)');
 request_ok($rbln, $req[1], 'fetch_by_logic_name_status (matches)');
+
+ok($ra->already_running($req[0]), '0 already running');
+ok(not($ra->already_running($dummy_req)), 'dummy not already running');
 
 $req[0]->n_hits(3);
 $req[0]->status('completed');
@@ -63,6 +70,7 @@ ok($ra->update($req[0]), "update");
 $rbln = $ra->fetch_by_logic_name_status('OTFRequestAdaptorTest_EST', 'completed');
 isa_ok($rbln, $obj_class, 'after_update (exists)');
 request_ok($rbln, $req[0], 'after_update (matches)');
+ok(not($ra->already_running($req[0])), '0 no longer running');
 
 $req[0]->status('reported');
 ok($ra->update_status($req[0]), "update_status");
@@ -70,6 +78,7 @@ ok($ra->update_status($req[0]), "update_status");
 $rbln = $ra->fetch_by_logic_name_status('OTFRequestAdaptorTest_EST', 'reported');
 isa_ok($rbln, $obj_class, 'after_update_status (exists)');
 request_ok($rbln, $req[0], 'after_update_status (matches)');
+ok(not($ra->already_running($req[0])), '0 no longer running, still');
 
 done_testing;
 
