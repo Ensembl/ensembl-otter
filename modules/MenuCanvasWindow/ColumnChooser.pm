@@ -378,7 +378,8 @@ sub update_snail_trail {
         $step->pack(-side => 'left', -padx => 2);
         $step->configure(
             -text => $trail[$i],
-            -font   => ['Helvetica', 12, $i == $I ? ('bold', 'underline') : ('normal')],
+            -font   => ['Helvetica', $self->font_size,
+                        $i == $I ? ('bold', 'underline') : ('normal')],
             );
     }
 

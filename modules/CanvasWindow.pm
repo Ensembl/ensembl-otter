@@ -140,7 +140,7 @@ sub font_size {
         $self->{'_font_size'} = $font_size;
         $self->clear_font_caches;
     }
-    return $self->{'_font_size'} || 14;
+    return $self->{'_font_size'} ||= 12; # match CanvasWindow*font
 }
 
 sub clear_font_caches {

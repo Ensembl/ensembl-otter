@@ -103,11 +103,12 @@ sub widg {
 
 sub font {
     my ($self, $which) = @_;
+    # CanvasWindow has centralised font control, but we're not one
     my $font =
-      { head => [qw[ Helvetica 20 bold ]],
-        opt => [qw[ Helvetica 14 normal ]],
-        help => [qw[ Helvetica 14 normal ]],
-        entry => [qw[ Courier 16 normal ]] }->{$which};
+      { head => [qw[ Helvetica 14 bold ]],
+        opt => [qw[ Helvetica 11 normal ]],
+        help => [qw[ Helvetica 11 normal ]],
+        entry => [qw[ Courier 12 normal ]] }->{$which};
     confess "bad font '$which'" unless $font;
     return $font;
 }
