@@ -141,6 +141,8 @@ sub tools_versions {
                      $ZMQ::LibZMQ3::VERSION, $INC{'ZMQ/LibZMQ3.pm'})
       if defined $ZMQ::LibZMQ3::VERSION;
 
+    push @v, sprintf('Tk v%s from %s', $Tk::VERSION, $INC{'Tk.pm'});
+
     push @v, sprintf('Client EnsEMBL %s from %s',
                      Bio::EnsEMBL::ApiVersion::software_version(),
                      $INC{'Bio/EnsEMBL/ApiVersion.pm'});
