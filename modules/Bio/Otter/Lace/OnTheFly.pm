@@ -143,6 +143,11 @@ sub prep_and_store_request_for_each_type {
         # Set up a request for the filter script
         my $request = $builder->prepare_run;
         $request->caller_ref($caller_key);
+        if ($request_adaptor->already_running($request)) {
+            $self->logger->warn("Already running an exonerate with this fingerprint, type: ", $builder->type);
+            next;
+        }
+
         $request_adaptor->store($request);
 
         my $analysis_name = $builder->analysis_name;
@@ -152,8 +157,10 @@ sub prep_and_store_request_for_each_type {
         $ace_db->select_column_by_name($analysis_name);
     }
 
-    $session_window->RequestQueuer->request_features(@method_names) if @method_names;
-    $session_window->update_status_bar;
+    if (@method_names) {
+        $session_window->RequestQueuer->request_features(@method_names);
+        $session_window->update_status_bar;
+    }
 
     return @method_names;
 }
