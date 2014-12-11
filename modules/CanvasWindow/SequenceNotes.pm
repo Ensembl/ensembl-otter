@@ -767,13 +767,18 @@ sub open_SequenceSet {
     warn "Making ColumnChooser";
 
     my $specieslist = $self->SequenceSetChooser->SpeciesListWindow;
+
+    # hang it off $mw else it and the SessionWindow will be destroyed
+    # with the CW:SequenceSetChooser or CW:SN windows.  RT#425244
+    my $mw = $self->top_window->Widget(".");
+
     my $cc = MenuCanvasWindow::ColumnChooser->in_Toplevel
       (-title  => 'Select column data to load',
        { init => { init_flag => 1,
                    AceDatabase => $adb,
                    SequenceNotes => $self,
                    SpeciesListWindow => $specieslist },
-         from => $self->canvas });
+         from => $mw });
 
     return $cc;
 }
