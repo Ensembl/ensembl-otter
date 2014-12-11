@@ -193,12 +193,14 @@ sub show_about {
             $x = length($ln) if length($ln) > $x;
         }
 
+        my $font = $self->canvas->optionGet('font', 'CanvasWindow');
+        my $mono = $self->canvas->optionGet('fontFixed', 'CanvasWindow');
         my $txt = $A->ROText
           (-bg => 'white',
            -height => $y, -width => $x,
            -selectborderwidth => 0,
            -borderwidth => 0,
-           -font => [qw[ Helvetica 20 normal ]])->pack
+           -font => $font)->pack
             (-side => 'top', -fill => 'both', -expand => 1);
 
         foreach my $seg (split m{(\w+://\S+)}, $content) {
@@ -207,7 +209,7 @@ sub show_about {
             $txt->insert(end => $seg, @tag);
         }
 
-        $txt->tagConfigure(link => -foreground => 'blue', -underline => 1, -font => [qw[ Courier 16 normal ]]);
+        $txt->tagConfigure(link => -foreground => 'blue', -underline => 1, -font => $mono);
         $txt->tagBind(link => '<Button-1>', [ $self, 'about_hyperlink', $txt, Tk::Ev('@') ]);
         $txt->configure(-state => 'disabled');
 
