@@ -13,6 +13,9 @@ $Data::Dumper::Terse = 1;
 use Bio::Otter::Lace::Defaults;
 use Bio::Vega::SliceLockBroker;
 
+use Log::Log4perl qw(:easy);
+Log::Log4perl->easy_init;
+
 {
     # Parse gene name + description + gene stable ID input file
     # Search database for genes, and group by seq_region
@@ -67,6 +70,7 @@ use Bio::Vega::SliceLockBroker;
     my @gene_data;
     while (<>) {
         next if /^#/;
+        next if /^\s*$/;
         chomp;
         my @values = split /\t/, $_;
         unless (@values == @fields) {
