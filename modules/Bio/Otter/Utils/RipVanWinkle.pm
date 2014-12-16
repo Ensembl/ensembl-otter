@@ -29,16 +29,25 @@ sub new {
 }
 
 {
+    my $have_cpuload;
     my $have_loadavg;
     sub _init {
+        $have_cpuload = try { require Sys::CpuLoad };
+        return if $have_cpuload;
         $have_loadavg = try { require Sys::LoadAvg };
         return;
     }
 
     sub __load_info {
-        return 'load(unknown)' unless $have_loadavg;
-        my @load = Sys::LoadAvg::loadavg();
-        return "load(@load)";
+        if ($have_cpuload) {
+            my @load = Sys::CpuLoad::load();
+            return "load(@load)";
+        }
+        if ($have_loadavg) {
+            my @load = Sys::LoadAvg::loadavg();
+            return "load(@load)";
+        }
+        return 'load(unknown)';
     }
 }
 
