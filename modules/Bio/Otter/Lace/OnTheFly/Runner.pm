@@ -5,8 +5,6 @@ use Moose;
 
 with 'MooseX::Log::Log4perl';
 
-use Readonly;
-
 use Bio::Otter::Lace::OnTheFly::Utils::ExonerateFormat qw( ryo_order sugar_order );
 use Bio::Otter::Lace::OnTheFly::Utils::SeqList;
 use Bio::Otter::Lace::OnTheFly::Utils::Types;
