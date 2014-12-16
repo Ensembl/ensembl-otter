@@ -8,7 +8,6 @@ use warnings;
 
 use List::Util qw(max);
 use Bio::Otter::Log::Log4perl 'logger';
-use Readonly;
 
 use Bio::Otter::GappedAlignment::ElementTypes;
 
