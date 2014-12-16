@@ -6,6 +6,8 @@ use Try::Tiny;
 use Scalar::Util 'weaken';
 use Carp;
 
+use Tk::Font;
+use Tk::Config; # do we have XFT=1 ?
 use Bio::Otter::Lace::Client;
 
 
@@ -129,5 +131,82 @@ sub balloon {
     return $self->{'_balloon'};
 }
 
+
+# Fonts are controlled
+#   named_font -- here
+#   in CW:MainWindow::add_default_options -- Tk uses *font for menus
+#   in CW::font* methods -- to become wrappers on this
+#   independently by some scripts & modules
+sub _bw_fonts {
+    my ($self) = @_;
+
+    # fonts exist on the MainWindow, so store ours there
+    my $mw = $self->top->Widget('.');
+    my $bwf = $mw->{_bw_fonts} ||= {};
+    return $bwf if keys %$bwf;
+
+    my $xft = __have_XFT();
+
+    my %font = map {( shift @$_, { @$_ } )}
+      ($xft
+       ? ([qw[ prop     -family Arial -size  11 ]],
+          [qw[ mono     -family Lucida_Sans_Typewriter -size 11 ]],
+          [qw[ menu     -family Arial -size 11 -weight normal ]],
+          [qw[ head1    -family Arial -size 16 -weight bold ]])
+       : ([qw[ prop     -family helvetica        -size 12 -weight normal ]],
+          [qw[ mono     -family lucidatypewriter -size 15 ]],
+          [qw[ menu     -family helvetica        -size 14 -weight normal ]],
+          [qw[ head1    -family helvetica        -size 18 -weight bold ]]));
+    # "menu" should match CanvasWindow*font
+
+    # Add variants
+    $font{prop_ubold} = { %{$font{prop}}, qw{ -weight bold -underline 1 -size 20 } };
+    $font{listbold}   = { %{$font{mono}}, qw{ -weight bold } };
+
+    while (my ($fontname, $opts) = each %font) {
+        $opts->{'-family'} =~ s/_/ /g; # convenience for qw[] above
+        my $font = $bwf->{$fontname} = $mw->fontCreate($fontname => %$opts);
+
+        # Check it
+        my %cfg = $font->configure;
+        my %got = $font->actual;
+        delete $cfg{-size};
+        delete $got{-size}; # may be -ve (a pixel size), so cannot compare
+        my $cfg = join ' ', map {"$_:$cfg{$_}"} sort keys %cfg;
+        my $got = join ' ', map {"$_:$got{$_}"} sort keys %got;
+        warn "$fontname: ask ($cfg),\n      got ($got)  XFT=$xft\n"
+          unless "$cfg" eq "$got";
+    }
+
+    return $bwf;
+}
+
+sub __have_XFT {
+    my $have_XFT =
+      # comp.lang.perl.tk 4/5/2004 3:46:27 PM
+      $Tk::Config::xlib =~ m{-lXft\b} ? 1 : 0;
+    # alternatively,
+    #   try { my $e = $win->Entry(-font => 'Mumble Jumble:style=Regular:pixelsize=36'); $e->destroy; 1 } catch { 0 }
+    die "Tk::Config::xlib missing" unless defined $Tk::Config::xlib;
+    return $have_XFT;
+}
+
+sub named_font {
+    my ($self, $fontname, @info) = @_;
+    my $font = $self->_bw_fonts->{$fontname};
+    confess "Font name '$fontname' not defined" unless $font;
+    my @out = ($font, map { $self->_font_prop($font, $_) } @info);
+    return @out if wantarray;
+    croak "info needs list context" unless 1 == @out;
+    return $out[0];
+}
+
+sub _font_prop {
+    my ($self, $font, $prop) = @_;
+    if ($prop eq 'linegap') {
+        return $self->_font_prop($font, 'linespace') * (__have_XFT() ? 1.16 : 1.4);
+    }
+    return $font->metrics("-$prop");
+}
 
 1;

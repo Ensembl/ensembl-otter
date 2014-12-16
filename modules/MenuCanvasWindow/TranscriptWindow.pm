@@ -1128,7 +1128,7 @@ sub add_locus_editing_widgets {
         -exportselection    => 1,
         -background         => 'white',
         -selectbackground   => 'gold',
-        -font               => $self->font_fixed,
+        -font               => $self->named_font('mono'),
         )->pack(-side => 'left');
     #$be->bind('<Leave>', sub{ warn "Variable now: ", ${$self->{'_locus_name_var'}}, "\n"; });
 
@@ -1164,7 +1164,7 @@ sub add_locus_editing_widgets {
     my $de = $de_frame->Entry(
         -width              => 38,
         -exportselection    => 1,
-        -font               => $de_frame->optionGet('font', 'CanvasWindow'),
+        -font               => $self->named_font('menu'),
         );
     $de->pack(-side => 'left');
     $de->insert(0, $locus_description);
@@ -2254,7 +2254,7 @@ sub _coord_matrix {
     my( $m );
     unless ($m = $self->{'_coord_matrix'}) {
         my $uw      = $self->font_unit_width;
-        my $size    = $self->font_size;
+        my (undef, $size) = $self->named_font('mono', 'linespace');
         my $max_chars = 8;  # For coordinates up to 99_999_999
         my $text_len = $max_chars * $uw;
         my $half = int($size / 2);
@@ -2297,11 +2297,11 @@ sub update_splice_strings {
     }
 
     my @good = (
-        -font => $self->font_fixed,
+        -font => $self->named_font('mono'),
         -fill => 'YellowGreen',
         );
     my @bad  = (
-        -font => $self->font_fixed_bold,
+        -font => $self->named_font('listbold'),
         -fill => "#ee2c2c",     # firebrick2
         );
 
@@ -2383,7 +2383,7 @@ sub add_exon_holder {
     }
 
     my $canvas  = $self->canvas;
-    my $font    = $self->font_fixed;
+    my $font    = $self->named_font('mono');
     my $exon_id = 'exon_id-'. $self->next_exon_number;
     my( $size, $half, $pad, $text_len,
         $x1, $y1, $x2, $y2 ) = $self->next_exon_holder_coords;
@@ -2451,7 +2451,8 @@ sub position_mobile_elements {
 
     my $canvas = $self->canvas;
     return unless $canvas->find('withtag', 'mobile');
-    my $size = $self->font_size;
+    my ($font, # as in add_exon_holder
+        $size) = $self->named_font('mono', 'linespace');
     my $pad  = int($size / 2);
 
     my $mobile_top   = ($canvas->bbox( 'mobile'))[1];
@@ -2464,6 +2465,11 @@ sub position_mobile_elements {
 
 sub draw_plus {
     my ($self, $x, $y, $size, @tags) = @_;
+
+    # size is now entire line height
+    $x += $size / 9;
+    $y += $size / 9;
+    $size *= 7/9;
 
     my $third = $size / 3;
 
@@ -2491,6 +2497,11 @@ sub draw_plus {
 
 sub draw_minus {
     my ($self, $x, $y, $size, @tags) = @_;
+
+    # size is now entire line height
+    $x += $size / 9;
+    $y += $size / 9;
+    $size *= 7/9;
 
     my $third = $size / 3;
 
@@ -2574,7 +2585,7 @@ sub strand_from_tk {
         return unless $meth->coding;
 
         my( $size, $half, $pad, $text_len, $x1, $y1, $x2, $y2 ) = $self->_coord_matrix;
-        my $font = $self->font_fixed_bold;
+        my $font = $self->named_font('listbold');
 
         if ($strand == -1) {
             @trans = reverse @trans;

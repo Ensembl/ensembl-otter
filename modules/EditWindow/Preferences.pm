@@ -101,19 +101,6 @@ sub widg {
 }
 
 
-sub font {
-    my ($self, $which) = @_;
-    # CanvasWindow has centralised font control, but we're not one
-    my $font =
-      { head => [qw[ Helvetica 14 bold ]],
-        opt => [qw[ Helvetica 11 normal ]],
-        help => [qw[ Helvetica 11 normal ]],
-        entry => [qw[ Courier 12 normal ]] }->{$which};
-    confess "bad font '$which'" unless $font;
-    return $font;
-}
-
-
 # opt_frame.(widget).grid has this layout
 #
 # 0(fixed)    1(fixed)   2(grows)
@@ -130,7 +117,7 @@ sub opt_head {
     # gap above
     $f->gridRowconfigure($r++, -minsize => 14) if $r;
 
-    my $l = $f->Label(-text => $label, -font => $self->font('head'));
+    my $l = $f->Label(-text => $label, -font => $self->named_font('head1'));
     $l->grid(-row => $r, -column => 0, -columnspan => 2, -pady => 8);
 
     # <hr/>
@@ -145,7 +132,9 @@ sub opt_add {
     my $f = $self->opt_frame;
     my (undef, $rows) = $f->gridSize;
 
-    $f->Label(-text => $label, -font => $self->font('opt'))
+    my $f_prop = $self->named_font('prop');
+
+    $f->Label(-text => $label, -font => $f_prop)
       ->grid(-row => $rows, -column => 0,
              -sticky => 'w', -pady => 4);
 
@@ -153,10 +142,10 @@ sub opt_add {
     $w->grid(-row => $rows, -column => 1,
              -sticky => 'ew', -pady => 4, -padx => 4);
 
-    my $st_w = $f->Label(-text => '');
+    my $st_w = $f->Label(-text => '', -font => $f_prop);
     $st_w->grid(-row => $rows, -column => 2, -sticky => 'w');
 
-    $f->Label(-text => $help, -font => $self->font('help'),
+    $f->Label(-text => $help, -font => $f_prop,
               -wraplength => 420, -justify => 'left')
       ->grid(-row => $rows+1, -column => 1, -columnspan => 2,
              -sticky => 'w', -padx => 4);
@@ -171,7 +160,7 @@ sub opt_add {
                              type => $type };
 
     if ($type eq 'Entry') {
-        $w->configure(-font => $self->font('entry'),
+        $w->configure(-font => $self->named_font('mono'),
                       -textvariable => \$var,
                       -validatecommand => sub { $w->afterIdle($chk); return 1 },
                       -validate => 'all');
@@ -251,7 +240,7 @@ sub opt_banner {
     $f->Label(-text => $msg,
               -wraplength => 500,
               -justify => 'left',
-              -font => $self->font('help'),
+              -font => $self->named_font('prop'),
              )->grid(-row => $r, -column => 0, -columnspan => 3,
                      -pady => 12, -sticky => 'nsew');
     return ();

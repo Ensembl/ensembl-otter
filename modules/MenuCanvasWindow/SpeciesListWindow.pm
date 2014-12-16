@@ -193,8 +193,8 @@ sub show_about {
             $x = length($ln) if length($ln) > $x;
         }
 
-        my $font = $self->canvas->optionGet('font', 'CanvasWindow');
-        my $mono = $self->canvas->optionGet('fontFixed', 'CanvasWindow');
+        my $font = $self->named_font('prop');
+        my $mono = $self->named_font('mono');
         my $txt = $A->ROText
           (-bg => 'white',
            -height => $y, -width => $x,
@@ -334,9 +334,8 @@ sub draw {
     $canvas->toplevel->raise;
     $canvas->toplevel->focus;
 
-    my $font = $self->font_fixed_bold;
-    my $size = $self->font_size;
-    my $row_height = int $size * 1.5;
+    my ($font, $size, $row_height) =
+      $self->named_font(listbold => 'linespace', 'linegap');
     for (my $i = 0; $i < @dsl; $i++) {
         my $data_set = $dsl[$i];
         my $x = $size;

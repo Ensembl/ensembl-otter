@@ -94,8 +94,8 @@ sub balloon { # see also EditWindow.pm, which we are not one of
 
 sub row_height {
     my ($self) = @_;
-
-    return int 1.5 * $self->font_size;
+    my (undef, $linegap) = $self->named_font('prop', 'linegap');
+    return $linegap;
 }
 
 sub initialise {
@@ -105,7 +105,6 @@ sub initialise {
     my $view_menu   = $self->make_menu('View');
     my $select_menu = $self->make_menu('Select');
 
-    $self->font_size(12);
     my @button_pack = qw{ -side left -padx 4 };
 
     my $cllctn = $self->AceDatabase->ColumnCollection;
@@ -378,8 +377,7 @@ sub update_snail_trail {
         $step->pack(-side => 'left', -padx => 2);
         $step->configure(
             -text => $trail[$i],
-            -font   => ['Helvetica', $self->font_size,
-                        $i == $I ? ('bold', 'underline') : ('normal')],
+            -font   => $self->named_font($i == $I ? 'prop_ubold' : 'prop'),
             );
     }
 
@@ -455,7 +453,7 @@ sub draw_Item {
 
     my $canvas = $self->canvas;
     my $row_height = $self->row_height;
-    my $pad = int $self->font_size * 0.4;
+    my $pad = 0; # int $self->font_size * 0.4; # linespace includes some padding
     my $x = $row_height * $item->indent;
     my $y = $row * ($row_height + $pad);
 
@@ -497,7 +495,7 @@ sub draw_Item {
 sub normal_font {
     my ($self) = @_;
 
-    return ['Helvetica', $self->font_size, 'normal'],
+    return $self->named_font('prop'),
 }
 
 sub draw_status_indicator {

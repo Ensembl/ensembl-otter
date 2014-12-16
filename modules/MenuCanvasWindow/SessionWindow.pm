@@ -2331,8 +2331,8 @@ sub draw_sequence_list {
     $self->update_SubSeq_locus_level_errors;
 
     my $canvas = $self->canvas;
-    my $size = $self->font_size;
-    my $pad  = int($size / 6);
+    my (undef, $size) = $self->named_font('mono', 'linespace');
+    my $pad  = 0; # int($size / 6); # linespace includes some padding
     my $half = int($size / 2);
 
     my $rows = $self->row_count($slist);
@@ -2380,7 +2380,7 @@ sub draw_sequence_list {
                 $x, $y,
                 -anchor     => 'nw',
                 -text       => $sub->name,
-                -font       => $style eq 'bold' ? $self->font_fixed_bold : $self->font_fixed,
+                -font       => $self->named_font($style eq 'bold' ? 'listbold' : 'mono'),
                 -tags       => ['subseq', 'searchable'],
                 -fill       => $color,
                 );
