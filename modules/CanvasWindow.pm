@@ -128,7 +128,7 @@ sub font {
 
     if ($font) {
         $self->{'_font'} = $font;
-        $self->clear_font_caches;
+        $self->_clear_font_caches;
     }
     return $self->{'_font'} || $self->canvas->optionGet('fontFixed', 'CanvasWindow');
 }
@@ -138,12 +138,16 @@ sub font_size {
 
     if ($font_size) {
         $self->{'_font_size'} = $font_size;
-        $self->clear_font_caches;
+        $self->_clear_font_caches;
     }
-    return $self->{'_font_size'} ||= 12; # match CanvasWindow*font
+    return $self->{'_font_size'} ||= do {
+        # match CanvasWindow*font
+        my (undef, $size) = $self->named_font('menu', 'linespace');
+        $size;
+    };
 }
 
-sub clear_font_caches {
+sub _clear_font_caches {
     my ($self) = @_;
 
     $self->{'_font_fixed'}      = undef;
@@ -153,7 +157,7 @@ sub clear_font_caches {
     return;
 }
 
-sub xlfd_array {
+sub _xlfd_array {
     #           0 1    2      3 4      5 6    7
     return qw{  * font weight r normal * size width * * * * * * };
 }
@@ -162,7 +166,7 @@ sub font_fixed {
     my ($self) = @_;
 
     unless ($self->{'_font_fixed'}) {
-        my @xlfd = $self->xlfd_array;
+        my @xlfd = $self->_xlfd_array;
         $xlfd[1] = $self->font;
         $xlfd[2] = 'medium';
         $xlfd[6] = $self->font_size;
@@ -176,7 +180,7 @@ sub font_fixed_bold {
     my ($self) = @_;
 
     unless ($self->{'_font_fixed_bold'}) {
-        my @xlfd = $self->xlfd_array;
+        my @xlfd = $self->_xlfd_array;
         $xlfd[1] = $self->font;
         $xlfd[2] = 'bold';
         $xlfd[6] = $self->font_size;
@@ -193,9 +197,7 @@ sub font_unit_width {
     unless ($uw = $self->{'_font_unit_width'}) {
         my $string_length = 1000;
         my $test_string = '0' x $string_length;
-        my $font    = $self->font;
-        my $size    = $self->font_size;
-        my $width   = $self->canvas->fontMeasure($self->font_fixed, $test_string);
+        my $width   = $self->named_font('mono')->measure($test_string);
         $uw = $width / $string_length;
         $self->{'_font_unit_width'} = $uw;
     }
