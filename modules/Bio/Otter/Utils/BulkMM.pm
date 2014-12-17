@@ -329,7 +329,7 @@ sub _get_accessions {
     } # NAME
 
       while (my ($sth_type, $terms) = each %search) {
-          my @terms = sort { $a cmp $b } keys %$terms;
+          my @terms = sort { $a cmp $b } values %$terms;
 
           my ($iso_key, $search_key) = split /,/, $sth_type;
           my $sth = $self->_sth_for($db_name, $iso_key, $search_key);
@@ -378,7 +378,7 @@ sub _do_query {
 
     my @results;
     my @search = @$search_terms;
-    push @search, (undef) x ($BULK - @search);
+    push @search, ('') x ($BULK - @search);
     $sth->execute(@search);
     while (my $row = $sth->fetchrow_hashref) {
         push @results, $row;
@@ -505,14 +505,21 @@ sub _get_sequence {
     my ($self, $db_name, $rows) = @_;
 
     my $sth = $self->_seq_sth_for($db_name);
-    my @eid = map { $_->{entry_id} } @$rows;
+    my %rows; # key=entry_id, value=\@row
+    # possibility of dup entry_id comes from query hits, one without .SV
+    foreach my $row (@$rows) {
+        push @{ $rows{ $row->{entry_id} } }, $row;
+    }
+
+    my @eid = sort { $a <=> $b } keys %rows;
     push @eid, (undef) x ($BULK - @eid);
     $sth->execute(@eid);
 
-    my %rows = map {( $_->{entry_id}, $_ )} @$rows;
     while (my ($eid, $chunk) = $sth->fetchrow_array) {
         die "Unexpected sequence for entry_id=$eid" unless $rows{$eid};
-        $rows{$eid}->{sequence} .= $chunk;
+        foreach my $row (@{ $rows{$eid} }) {
+            $row->{sequence} .= $chunk;
+        }
     }
 
     foreach my $row (@$rows) {

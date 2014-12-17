@@ -18,18 +18,33 @@ sub main {
     plan tests => 3;
     subtest compare_and_time_tt => __PACKAGE__->can('compare_and_time_tt');
     subtest time_budget_tt => __PACKAGE__->can('time_budget_tt');
-
-    {
-        local $TODO = 'untested';
-        fail('deSV - accession search not tested');
-    }
+    subtest acc_type_tt => __PACKAGE__->can('acc_type_tt');
 
     return 0;
 }
 
-sub compare_and_time_tt {
+sub walltime(&) {
+    my ($code) = @_;
+    my $t0 = [ gettimeofday() ];
+    my @out = $code->();
+    unshift @out, tv_interval($t0);
+    return @out;
+}
+
+sub _ai_per_driver {
     my @drv = ('Bio::Otter::Utils::BulkMM', 'Bio::Otter::Utils::MM');
-    plan tests => 2 * @drv - 1; # D timings, D-1 comparisons
+
+    # Set up the drivers to compare
+    my @ai = map {
+        Bio::Otter::Utils::AccessionInfo->new(driver_class => $_);
+    } @drv;
+    return @ai;
+}
+
+sub compare_and_time_tt {
+    my @ai = _ai_per_driver();
+    plan tests => 2*( 2 * @ai - 1 );
+    # D timings, D-1 comparisons; for ACC.SV and again for ACC (deSV)
 
     my ($ds) = get_BOSDatasets('human_test');
     my $pipe_dbh = $ds->pipeline_dba->dbc->db_handle;
@@ -37,40 +52,39 @@ sub compare_and_time_tt {
     my $N = 150;
     # N must be big enough that fetching overheads are not "too high"
 
-    my @acc = map {            # a random set of accessions per driver
-        random_accessions($pipe_dbh, $N)
-    } @drv;
-
-    # Set up the drivers to compare
-    my @ai = map {
-        Bio::Otter::Utils::AccessionInfo->new(driver_class => $_);
-    } @drv;
-
     # Fetch the set for each driver, then re-fetch the first set.
     # Can only make timings per driver on disjoint sets, due to caching.
-    my (@fetch, @time, @refetch);
-    for (my $i=0; $i<@drv; $i++) {
-        my $t0 = [ gettimeofday() ];
-        $fetch[$i] = $ai[$i]->get_accession_info($acc[$i]);
-        $time[$i] = tv_interval($t0);
+    foreach my $mode (qw( ACC.SV ACC_deSV )) {
 
-        $refetch[$i] = $i
-          ? $ai[$i]->get_accession_info($acc[0]) : $fetch[0];
+        my @acc = map {        # a random set of accessions per driver
+            random_accessions($pipe_dbh, $N)
+        } @ai;
+        deSV(\@acc) if $mode eq 'ACC_deSV';
 
-        # Compare.  They're hashrefs, so this is easy.
-        my $drv = $drv[$i];
-        if ($i) {
-            is_deeply($refetch[0], $refetch[$i],
-                      "$i. refetch[ $drv[0] ] == refetch[ $drv ]")
-              ;# or diag explain \@fetch; # may be large
+        my (@fetch, @time, @refetch);
+        for (my $i=0; $i<@ai; $i++) {
+            ($time[$i], $fetch[$i]) = walltime
+              { $ai[$i]->get_accession_info($acc[$i]) };
+
+            $refetch[$i] = $i
+              ? $ai[$i]->get_accession_info($acc[0]) : $fetch[0];
+
+            # Compare.  They're hashrefs, so this is easy.
+            my $drv0 = ref($ai[0]);
+            my $drv  = ref($ai[$i]);
+            if ($i) {
+                is_deeply($refetch[0], $refetch[$i],
+                          "$mode: refetch[ $drv0 ] == refetch[ $drv ]")
+                  ;# or diag explain \@fetch; # may be large
+            }
+
+            # Times
+            local $TODO = 'times are awry';
+            my $t_ea = $time[$i] / $N;
+            cmp_ok($t_ea, '<', $T_BUDGET,
+                   sprintf('%s:  time[ %s ] = %.1fs/%s = %.4fs/ea = %.2fx',
+                           $mode,    $drv, $time[$i],$N, $t_ea, $t_ea/$T_BUDGET));
         }
-
-        # Times
-        local $TODO = 'times are awry';
-        my $t_ea = $time[$i] / $N;
-        cmp_ok($t_ea, '<', $T_BUDGET,
-               sprintf('%s.  time[ %s ] = %.1fs/%s = %.4fs/ea',
-                       $i,       $drv, $time[$i],$N, $t_ea));
     }
 
     return 0;
@@ -91,12 +105,12 @@ sub time_budget_tt {
 
     for (my $i=0; $i<$N; $i++) {
         my $acc_list = random_accessions($pipe_dbh, $accs);
-        my $t0 = [ gettimeofday() ];
-        my $ai = Bio::Otter::Utils::AccessionInfo->new
-          (driver_class => 'Bio::Otter::Utils::BulkMM',
-           t_budget => $T);
-        my $fetch = $ai->get_accession_info($acc_list);
-        my $t_used = tv_interval($t0);
+        my ($t_used, $fetch) = walltime {
+            my $ai = Bio::Otter::Utils::AccessionInfo->new
+              (driver_class => 'Bio::Otter::Utils::BulkMM',
+               t_budget => $T);
+            return $ai->get_accession_info($acc_list);
+        };
 
         my $t_used_pct = 100 * $t_used / $T;
         my $fetch_n = keys %$fetch;
@@ -128,6 +142,34 @@ sub time_budget_tt {
         }
     }
     return;
+}
+
+sub acc_type_tt {
+    plan tests => 3;
+
+    my ($ds) = get_BOSDatasets('human_test');
+    my $pipe_dbh = $ds->pipeline_dba->dbc->db_handle;
+    my @ai = _ai_per_driver();
+
+    my $N = 723; # non-round number, aim to leave some blank placeholders RT#439215
+    my $acc_list = random_accessions($pipe_dbh, $N);
+    deSV($acc_list);
+    my (@fetch, @time);
+    for (my $i=0; $i<@ai; $i++) {
+        ($time[$i], $fetch[$i]) = walltime
+          { $ai[$i]->get_accession_types($acc_list) };
+
+        local $TODO = 'times are awry';
+        my $t_ea = $time[$i] / $N;
+        cmp_ok($t_ea, '<', $T_BUDGET,
+               sprintf('get_accession_types: time[ %s ] = %.1fs/%s = %.4fs/ea = %.2fx',
+                       ref($ai[$i]), $time[$i],$N, $t_ea, $t_ea/$T_BUDGET));
+    }
+    is_deeply($fetch[0], $fetch[1],
+              "get_accession_types: fetch[ $ai[0] ] == fetch[ $ai[1] ]")
+       or diag explain \@fetch; # may be large
+
+    return 0;
 }
 
 # Return arrayref of $N accessions
@@ -162,18 +204,13 @@ sub random_accessions {
     return [ sort keys %out ];
 }
 
-# Strip the .SV off some (returns modified copy)
+# Strip off the .SVs (in place)
 sub deSV {
-    my ($noSV_frac, $accs) = @_;
-
-    my $N = my @accs = @$accs;
-    my $deSV = int($N * $noSV_frac);
-    while ($deSV) {
-        my $i = int(rand($N));
-        $deSV -- if $accs[$i] =~ s{\.\d+$}{};
+    my ($acc_list) = @_;
+    foreach (@$acc_list) {
+        s{\.\d+$}{};
     }
-
-    return \@accs;
+    return;
 }
 
 
