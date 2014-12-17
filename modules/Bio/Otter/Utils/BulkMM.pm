@@ -329,7 +329,7 @@ sub _get_accessions {
     } # NAME
 
       while (my ($sth_type, $terms) = each %search) {
-          my @terms = sort { $a cmp $b } keys %$terms;
+          my @terms = sort { $a cmp $b } values %$terms;
 
           my ($iso_key, $search_key) = split /,/, $sth_type;
           my $sth = $self->_sth_for($db_name, $iso_key, $search_key);
@@ -378,7 +378,7 @@ sub _do_query {
 
     my @results;
     my @search = @$search_terms;
-    push @search, (undef) x ($BULK - @search);
+    push @search, ('') x ($BULK - @search);
     $sth->execute(@search);
     while (my $row = $sth->fetchrow_hashref) {
         push @results, $row;
