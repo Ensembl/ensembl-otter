@@ -63,6 +63,7 @@ chr18	18	Chromosome 18	18
 chrX-11	X	Chromosome X	X
 chrX-17	X-WTSI	Chromosome X-WTSI
 chrY	Y-WTSI	Chromosome Y-WTSI	
+chrY_Un	U_Y	Chromosome U
 --end--
 
 --human--
@@ -171,24 +172,26 @@ MHC	4-MHC	MHC region of Chromosome 4
 --end--
 
 --rat--
-chr1-50	1	Chromosome 1	1
-chr2-50	2	Chromosome 2	2
-chr3-50	3	Chromosome 3	3
-chr4-50	4	Chromosome 4	4
-chr5-50	5	Chromosome 5	5
-chr6-50	6	Chromosome 6	6
-chr7-50	7	Chromosome 7	7
-chr8-50	8	Chromosome 8	8
-chr9-50	9	Chromosome 9	9
-chr10-50	10	Chromosome 10	10
-chr11-50	11	Chromosome 11	11
-chr12-50	12	Chromosome 12	12
-chr13-50	13	Chromosome 13	13
-chr14-50	14	Chromosome 14	14
-chr15-50	15	Chromosome 15	15
-chr16-50	16	Chromosome 16	16
-chr17-50	17	Chromosome 17	17
-chr18-50	18	Chromosome 18	18
-chr19-50	19	Chromosome 19	19
-chr20-50	20	Chromosome 20	20
-chrX-50	X	Chromosome X	X
+chr1-60	1	Chromosome 1	1
+chr2-60	2	Chromosome 2	2
+chr3-60	3	Chromosome 3	3
+chr4-60	4	Chromosome 4	4
+chr5-60	5	Chromosome 5	5
+chr6-60	6	Chromosome 6	6
+chr7-60	7	Chromosome 7	7
+chr8-60	8	Chromosome 8	8
+chr9-60	9	Chromosome 9	9
+chr10-60	10	Chromosome 10	10
+chr11-60	11	Chromosome 11	11
+chr12-60	12	Chromosome 12	12
+chr13-60	13	Chromosome 13	13
+chr14-60	14	Chromosome 14	14
+chr15-60	15	Chromosome 15	15
+chr16-60	16	Chromosome 16	16
+chr17-60	17	Chromosome 17	17
+chr18-60	18	Chromosome 18	18
+chr19-60	19	Chromosome 19	19
+chr20-60	20	Chromosome 20	20
+chrX-60	Y	Chromosome Y	Y
+chrX-60	X	Chromosome X	X
+
