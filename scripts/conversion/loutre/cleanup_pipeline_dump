@@ -226,6 +226,12 @@ if ($pipe_sp ne $loutre_sp) {
   exit;
 }
 
+#sanity check to make sure no genes present
+my $gene_c = $pddbh->selectrow_array("SELECT COUNT(*) FROM gene");
+if ($gene_c) {
+  $support->log_error("DB for cleaning contains $gene_c genes when it shouldn't have any, please check\n");
+}
+
 #these are tables that will be cleaned up (defined here just for logging, nothing else)
 @target_tables = qw(analysis
 		       assembly
