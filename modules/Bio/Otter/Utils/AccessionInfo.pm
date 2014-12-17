@@ -42,8 +42,11 @@ sub _init {
             my $out = $self->{_driver}->$method(@args);
             if ($method =~ /^get/) {
                 my $dt = tv_interval($t0);
-                my $n = @{$args[0]};
-                $self->_report($method, $dt, $n);
+                my $N = @{$args[0]};
+                my $n = ref($out) eq 'HASH' ? keys %$out
+                  : @$out; # get_taxonomy_info
+                $N = "$n of $N" if $n != $N;
+                $self->_report($method, $dt, $N);
             }
             return $out;
         };
@@ -54,10 +57,10 @@ sub _init {
 }
 
 sub _report {
-    my ($self, $method, $dt, $count) = @_;
+    my ($self, $method, $dt, $many) = @_;
     my $driver_class = ref($self->{_driver});
-    warn sprintf("[d] %s->%s fetched %d in %.3fs\n",
-                 $driver_class, $method, $count, $dt);
+    warn sprintf("[d] %s->%s fetched %s in %.3fs\n",
+                 $driver_class, $method, $many, $dt);
     return;
 }
 
