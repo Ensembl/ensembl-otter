@@ -320,6 +320,27 @@ sub evidence_type_and_name_from_accession_list {
     }
 }
 
+{
+    my %latest_acc_sv_sth;
+
+    my $latest_acc_sv_sql = q{
+        SELECT MAX(accession_sv) FROM otter_accession_info WHERE accession_sv LIKE ?
+    };
+
+    sub latest_acc_sv_for_stem {
+        my ($self, $stem) = @_;
+
+        my $sth = $latest_acc_sv_sth{$self} ||= $DB{$self}->dbh->prepare($latest_acc_sv_sql);
+
+        my $pattern = "${stem}%";
+        $sth->execute($pattern);
+        my ($result) = $sth->fetchrow;
+
+        $sth->finish;
+        return $result;
+    }
+}
+
 sub begin_work { my ($self) = @_; return $DB{$self}->dbh->begin_work; }
 sub commit     { my ($self) = @_; return $DB{$self}->dbh->commit;     }
 sub rollback   { my ($self) = @_; return $DB{$self}->dbh->rollback;   }

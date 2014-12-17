@@ -7,6 +7,7 @@ use strict;
 use warnings;
 
 use Bio::Otter::Log::Log4perl 'logger';
+use Readonly;
 use Try::Tiny;
 
 use Bio::Otter::Lace::OnTheFly::Genomic;
@@ -473,10 +474,12 @@ sub launch_exonerate {
     my $maxintron = $self->get_entry('max_intron_length') || 0;
 
     my $top = $self->top;
+    my $atc = $SessionWindow->AceDatabase->AccessionTypeCache;
+    my $latest_acc_sv_sub = sub { return $atc->latest_acc_sv_for_stem(@_) };
 
     my $otf = Bio::Otter::Lace::OnTheFly::Genomic->new(
 
-        seqs       => $self->entered_seqs,
+        seqs       => $self->entered_seqs($latest_acc_sv_sub),
         accessions => $self->entered_accessions,
 
         full_seq        => $SessionWindow->Assembly->Sequence,
@@ -493,7 +496,7 @@ sub launch_exonerate {
         problem_report_cb => sub { $self->problem_box($top, 'Accessions Supplied', @_) },
         long_query_cb     => sub { $self->long_query_confirm($top, @_)  },
 
-        accession_type_cache => $SessionWindow->AceDatabase->AccessionTypeCache,
+        accession_type_cache => $atc,
 
         logic_names          => $SessionWindow->OTF_Genomic_columns,
         );
@@ -552,19 +555,27 @@ sub display_request_feedback {
     return;
 }
 
-my $seq_tag = 1;
+Readonly my $SEQ_TAG_STEM => 'OTF_seq_';
 
 # get seqs from fasta file and text box
 #
 sub entered_seqs {
-    my ($self) = @_;
+    my ($self, $latest_acc_sv_sub) = @_;
     my @seqs;
 
     if (my $string = $self->fasta_txt->get('1.0', 'end')) {
         if ($string =~ /\S/ and $string !~ />/) {
-            $self->logger->warn("creating new seq tag num: $seq_tag");
-            $string = ">OTF_seq_$seq_tag\n" . $string;
-            $seq_tag++;
+            my $seq_tag = &$latest_acc_sv_sub($SEQ_TAG_STEM);
+            my $n;
+            if ($seq_tag) {
+                ($n) = $seq_tag =~ /${SEQ_TAG_STEM}(\d+)$/;
+                ++$n;
+            } else {
+                $n = 1;
+            }
+            $seq_tag = "${SEQ_TAG_STEM}$n";
+            $self->logger->warn("creating new seq tag: $seq_tag");
+            $string = ">$seq_tag\n" . $string;
         }
         $string = $self->_tidy_pasted_sequence($string);
         push @seqs, Hum::FastaFileIO->new(\$string)->read_all_sequences;
