@@ -82,8 +82,8 @@ sub compare_and_time_tt {
             local $TODO = 'times are awry';
             my $t_ea = $time[$i] / $N;
             cmp_ok($t_ea, '<', $T_BUDGET,
-                   sprintf('%s:  time[ %s ] = %.1fs/%s = %.4fs/ea',
-                           $mode,    $drv, $time[$i],$N, $t_ea));
+                   sprintf('%s:  time[ %s ] = %.1fs/%s = %.4fs/ea = %.2fx',
+                           $mode,    $drv, $time[$i],$N, $t_ea, $t_ea/$T_BUDGET));
         }
     }
 
@@ -151,7 +151,7 @@ sub acc_type_tt {
     my $pipe_dbh = $ds->pipeline_dba->dbc->db_handle;
     my @ai = _ai_per_driver();
 
-    my $N = 3; # non-round number, aim to leave some blank placeholders RT#439215
+    my $N = 723; # non-round number, aim to leave some blank placeholders RT#439215
     my $acc_list = random_accessions($pipe_dbh, $N);
     deSV($acc_list);
     my (@fetch, @time);
@@ -159,10 +159,11 @@ sub acc_type_tt {
         ($time[$i], $fetch[$i]) = walltime
           { $ai[$i]->get_accession_types($acc_list) };
 
+        local $TODO = 'times are awry';
         my $t_ea = $time[$i] / $N;
         cmp_ok($t_ea, '<', $T_BUDGET,
-               sprintf('get_accession_types: time[ %s ] = %.1fs/%s = %.4fs/ea',
-                       ref($ai[$i]), $time[$i],$N, $t_ea));
+               sprintf('get_accession_types: time[ %s ] = %.1fs/%s = %.4fs/ea = %.2fx',
+                       ref($ai[$i]), $time[$i],$N, $t_ea, $t_ea/$T_BUDGET));
     }
     is_deeply($fetch[0], $fetch[1],
               "get_accession_types: fetch[ $ai[0] ] == fetch[ $ai[1] ]")
