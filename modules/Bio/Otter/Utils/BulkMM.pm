@@ -505,14 +505,21 @@ sub _get_sequence {
     my ($self, $db_name, $rows) = @_;
 
     my $sth = $self->_seq_sth_for($db_name);
-    my @eid = map { $_->{entry_id} } @$rows;
+    my %rows; # key=entry_id, value=\@row
+    # possibility of dup entry_id comes from query hits, one without .SV
+    foreach my $row (@$rows) {
+        push @{ $rows{ $row->{entry_id} } }, $row;
+    }
+
+    my @eid = sort { $a <=> $b } keys %rows;
     push @eid, (undef) x ($BULK - @eid);
     $sth->execute(@eid);
 
-    my %rows = map {( $_->{entry_id}, $_ )} @$rows;
     while (my ($eid, $chunk) = $sth->fetchrow_array) {
         die "Unexpected sequence for entry_id=$eid" unless $rows{$eid};
-        $rows{$eid}->{sequence} .= $chunk;
+        foreach my $row (@{ $rows{$eid} }) {
+            $row->{sequence} .= $chunk;
+        }
     }
 
     foreach my $row (@$rows) {
