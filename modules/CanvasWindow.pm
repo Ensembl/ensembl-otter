@@ -5,7 +5,7 @@ package CanvasWindow;
 
 use strict;
 use warnings;
-use Carp qw{ confess cluck };
+use Carp;
 
 use Try::Tiny;
 
