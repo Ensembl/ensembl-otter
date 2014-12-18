@@ -183,12 +183,13 @@ sub _bw_fonts {
 }
 
 sub __have_XFT {
+    my $xlib = $Tk::Config::xlib; ## no critic( Variables::ProhibitPackageVars )
+    die "Tk::Config::xlib missing" unless defined $xlib;
     my $have_XFT =
       # comp.lang.perl.tk 4/5/2004 3:46:27 PM
-      $Tk::Config::xlib =~ m{-lXft\b} ? 1 : 0;
+      $xlib =~ m{-lXft\b} ? 1 : 0;
     # alternatively,
     #   try { my $e = $win->Entry(-font => 'Mumble Jumble:style=Regular:pixelsize=36'); $e->destroy; 1 } catch { 0 }
-    die "Tk::Config::xlib missing" unless defined $Tk::Config::xlib;
     return $have_XFT;
 }
 
