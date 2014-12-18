@@ -6,6 +6,7 @@ use Try::Tiny;
 use Scalar::Util 'weaken';
 use Carp;
 
+use Tk;
 use Tk::Font;
 use Tk::Config; # do we have XFT=1 ?
 use Bio::Otter::Lace::Client;
