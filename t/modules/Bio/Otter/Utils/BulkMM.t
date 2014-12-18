@@ -23,7 +23,7 @@ sub main {
     return 0;
 }
 
-sub walltime(&) {
+sub walltime(&) { ## no critic( Subroutines::ProhibitSubroutinePrototypes )
     my ($code) = @_;
     my $t0 = [ gettimeofday() ];
     my @out = $code->();
