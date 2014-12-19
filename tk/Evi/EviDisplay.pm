@@ -54,6 +54,7 @@ use Evi::ScaleFitwidth;     # a scaler that fits everything into given width
 
 use Tk::ROText;             # for the status line
 use MenuCanvasWindow;       # recommended self-resizing window mgr
+use Tk::HeadedCanvas;
 
 use Evi::Tictoc;            # a simple stopwatch
 
