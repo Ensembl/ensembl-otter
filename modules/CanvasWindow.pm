@@ -11,7 +11,6 @@ use Try::Tiny;
 
 use CanvasWindow::MainWindow;
 use CanvasWindow::Utils 'expand_bbox';
-use Tk::HeadedCanvas;
 use Hum::Sort 'ace_sort';
 use Hum::ClipboardUtils 'integers_from_text';
 
@@ -24,7 +23,7 @@ sub new {
     if(!defined($where_scrollbars)) { # NB: not just empty, but undefined
         $where_scrollbars = 'se';
     }
-    $canvas_class ||= 'Canvas'; # or 'HeadedCanvas', for example
+    $canvas_class ||= 'Canvas';
 
     unless ($tk) {
         confess "Error usage: $pkg->new(<Tk::Widget object>)";
