@@ -185,15 +185,6 @@ sub clone_menu {
     return $self->{'_clone_menu'};
 }
 
-sub balloon {
-    my ($self) = @_;
-
-    $self->{'_balloon'} ||= $self->top_window->Balloon(
-        -state  => 'balloon',
-        );
-    return $self->{'_balloon'};
-}
-
 sub set_known_GeneMethods {
     my ($self) = @_;
 
