@@ -1117,6 +1117,8 @@ sub make_status_panel {
 
     my $top = $self->top_window();
     my $status_frame = $top->Frame(Name => 'status_frame');
+    my @status_text = @display_statuses;
+    $self->{_status_text} = \@status_text;
 
     $status_frame->pack(
         -side => 'top',
@@ -1126,7 +1128,7 @@ sub make_status_panel {
     my $status_bar = $status_frame->ArrayBar(
         -width => 20,
         -colors => \@colors,
-        -labels => \@display_statuses,
+        -labels =>  $self->{_status_text},
         -balloon => $self->balloon,
         );
     $status_bar->pack(
@@ -1147,6 +1149,7 @@ sub update_status_bar {
     my $cllctn = $self->AceDatabase->ColumnCollection;
     my $counts = $cllctn->count_Columns_by_status;
     my @values = @$counts{@display_statuses};
+    @{ $self->{_status_text} } = map {"$_ ($$counts{$_})"} @display_statuses;
     $self->_status_bar->value(@values);
     return;
 }
