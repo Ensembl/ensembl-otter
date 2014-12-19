@@ -15,7 +15,7 @@ $Tk::encodeFallback = 1; ## no critic (Variables::ProhibitPackageVars)
 use base qw( MainWindow );
 
 sub new {
-    my ($pkg, $title, @command_line) = @_;
+    my ($pkg, $title) = @_;
 
     $title ||= 'Canvas Window';
 
@@ -31,12 +31,6 @@ sub new {
                         # This is important. Without it text and objects
                         # on the canvas are rendered with different
                         # relative sizes on screen and when printed.
-
-    if (@command_line) {
-        $mw->command([@command_line]);
-        #$mw->protocol('WM_SAVE_YOURSELF', sub{ warn "Saving myself..."; sleep 2; $mw->destroy });
-        $mw->protocol('WM_SAVE_YOURSELF', "");
-    }
 
     #warn "Scaling = ", $mw->scaling, "\n";
 
