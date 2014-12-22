@@ -687,6 +687,7 @@ sub misc_fixes {
   push @sql_fixes, "UPDATE coord_system set attrib = \'default_version\' WHERE version = \'VEGA$release_no\';\n";
   push @sql_fixes, "UPDATE coord_system set version = NULL WHERE version = \'none\' and name = \'contig\';\n";
   push @sql_fixes, "INSERT into meta (meta_key,meta_value) VALUES (\'assembly.default\',\'VEGA$release_no\');\n";
+  push @sql_fixes, "INSERT into meta (meta_key,meta_value) VALUES (\'assembly.name\',\'VEGA$release_no\');\n";
   push @sql_fixes, "UPDATE meta set meta_value = \'chromosome:VEGA$release_no#contig\' WHERE meta_value = \'chromosome:Otter#contig\';\n";
   push @sql_fixes, "UPDATE meta set meta_value = \'chromosome:VEGA$release_no#contig#clone\' WHERE meta_value = \'chromosome:Otter#contig#clone\';\n";
 
