@@ -199,9 +199,7 @@ sub _write_region_exclusive { # runs under $slb->exclusive_work
     # update all contig_info and contig_info_attrib
     while (my ($contig_name, $pair) = each %$ci_hash) {
         my ($db_ctg_slice, $xml_ci_attribs) = @$pair;
-        $self->_assert_contig_locked($db_ctg_slice, $db_region->slice, $slb);
-        $self->_insert_ContigInfo_Attributes($author_obj, $db_ctg_slice, $xml_ci_attribs, $time_now);
-        warn "Updating contig info-attrib for '$contig_name'\n";
+        warn "Ignoring contig info-attrib for '$contig_name'\n";
     }
 
     ## strip_incomplete_genes for the xml genes
@@ -439,23 +437,15 @@ sub _compare_region_create_ci_hash {
             }
         }
 
-        ## hash the [db_contig, new_ci_attribs] pairs for saving the attributes after the locks are obtained
+        ## hash the [db_contig, new_ci_attribs] pairs
+        # previously, for saving the attributes after the locks are obtained
+        # now just warn that they are ignored
         $contig_info_hash{$new_ctg_slice->seq_region_name()} = [ $db_ctg_slice, $new_ci_attribs ];
     }
 
     return \%contig_info_hash;
 }
 
-sub _insert_ContigInfo_Attributes {
-    my ($self, $ctg_author, $ctg_slice, $ctg_attrib_list, $time_uniseconds) = @_;
-    my $contig_info =  Bio::Vega::ContigInfo->new(
-                        -author     => $ctg_author,
-                        -slice      => $ctg_slice,
-                        -attributes => $ctg_attrib_list,
-    );
-    $self->server->otter_dba->get_ContigInfoAdaptor->store($contig_info, $time_uniseconds);
-    return;
-}
 
 sub _strip_incomplete_genes {
     my ($self, $gene_list) = @_;
