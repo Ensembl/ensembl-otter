@@ -166,6 +166,11 @@ sub pipeline_chromosome {
 # --------------------------------------------------------------------
 
 
+# write_region requires that the client describe the region, to
+# ensure it is the correct one, but then ignores ContigInfo.
+#
+# ContigInfo is still provided to the client, and inserted into AceDB.
+# Other than that, it should be no longer used on the client.
 sub ContigInfo {
     my ($self, $ContigInfo) = @_;
 

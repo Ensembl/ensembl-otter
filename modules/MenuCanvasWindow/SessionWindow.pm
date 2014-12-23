@@ -27,7 +27,6 @@ use Hum::XmlWriter;
 
 use EditWindow::Dotter;
 use EditWindow::Exonerate;
-use EditWindow::Clone;
 use EditWindow::LocusName;
 use MenuCanvasWindow::TranscriptWindow;
 use MenuCanvasWindow::GenomicFeaturesWindow;
@@ -127,7 +126,6 @@ sub initialise {
     }
 
     $self->Assembly;
-    $self->populate_clone_menu;
     # Drawing the sequence list can take a long time the first time it is
     # called (QC checks not yet cached), so do it before zmap is launched.
     $self->draw_subseq_list;
@@ -174,15 +172,6 @@ sub default_log_context {
     my $acedb = $self->AceDatabase;
     $log_context = $acedb->log_context if $acedb;
     return $log_context || '-no-acedb-';
-}
-
-sub clone_menu {
-    my ($self, $clone_menu) = @_;
-
-    if ($clone_menu) {
-        $self->{'_clone_menu'} = $clone_menu;
-    }
-    return $self->{'_clone_menu'};
 }
 
 sub set_known_GeneMethods {
@@ -567,9 +556,6 @@ sub populate_menus {
     $top->bind('<Control-d>', $delete_command);
     $top->bind('<Control-D>', $delete_command);
 
-    my $clone_menu = $self->make_menu("Clone");
-    $self->clone_menu($clone_menu);
-
     my $tools_menu = $self->make_menu("Tools");
 
     # Genomic Features editing window
@@ -707,27 +693,6 @@ sub show_subseq {
     } else {
         $self->message("Zoom to subsequence requires a selection of one item");
     }
-
-    return;
-}
-
-sub populate_clone_menu {
-    my ($self) = @_;
-
-    my $clone_menu = $self->clone_menu;
-    foreach my $clone ($self->Assembly->get_all_Clones) {
-        $clone_menu->add('command',
-            # NB: $clone->name ne $clone->clone_name
-            -label          => $clone->clone_name,
-            # Not an accelerator - just for formatting!
-            -accelerator    => $clone->accession_version,
-            -command        => sub{ $self->edit_Clone_by_name($clone->name) },
-            );
-    }
-
-    $clone_menu->bind('<Destroy>', sub{
-        $self = undef;
-    });
 
     return;
 }
@@ -1028,7 +993,6 @@ sub close_all_edit_windows {
     my ($self) = @_;
 
     $self->close_all_transcript_windows or return;
-    $self->close_all_clone_edit_windows or return;
     $self->close_GenomicFeaturesWindow;
     return 1;
 }
@@ -1948,55 +1912,6 @@ sub get_all_Subseq_clusters {
     return @clust;
 }
 
-sub save_Clone {
-    my ($self, $clone) = @_;
-
-    my $ace = $clone->ace_string;
-    $self->save_ace($ace);
-    $self->Assembly->replace_Clone($clone);
-
-    return;
-}
-
-sub edit_Clone {
-    my ($self, $clone) = @_;
-
-    my $name = $clone->name;
-
-    # show Clone EditWindow
-    my $cew = EditWindow::Clone->in_Toplevel
-      (-title => "Clone ".$clone->clone_name,
-       { from => $self->top_window,
-         reuse_ref => \$self->{'_clone_edit_window'}{$name},
-         init => { SessionWindow => $self,
-                   Clone => $clone },
-         raise => 1 });
-
-    return;
-}
-
-sub edit_Clone_by_name {
-    my ($self, $name) = @_;
-
-    my $clone = $self->Assembly->get_Clone($name);
-    $self->edit_Clone($clone);
-
-    return;
-}
-
-sub close_all_clone_edit_windows {
-    my ($self) = @_;
-
-    if (my $cew_hash = $self->{'_clone_edit_window'}) {
-        foreach my $win (values %$cew_hash) {
-            next unless $win;   # Already closed
-            $win->close_window or return;
-        }
-    }
-
-    return 1;
-}
-
 sub Assembly {
     my ($self) = @_;
 
@@ -2484,7 +2399,7 @@ sub rename_locus {
     $self->logger->info("Renaming locus '$locus_name'");
 
     unless ($self->close_all_transcript_windows) {
-        $self->message('Must close all clone editing windows before renaming locus');
+        $self->message('Must close all transcript editing windows before renaming locus');
         return;
     }
 
@@ -2846,8 +2761,7 @@ sub zircon_zmap_view_edit {
     if ($style && lc($style) eq 'genomic_canonical') {
         my ($accession_version) = $name =~ $name_pattern
             or $self->logger->logconfess("invalid name for a genomic_canonical feature: ${name}");
-        my $clone = $self->Assembly->get_Clone_by_accession_version($accession_version);
-        $self->edit_Clone($clone);
+        $self->logger->info("Ignored request to edit clone $accession_version");
         return 1;
     }
     else {
