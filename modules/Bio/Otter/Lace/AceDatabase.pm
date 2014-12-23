@@ -839,6 +839,9 @@ sub generate_XML_from_acedb {
     $region->genes(           @{$converter->genes          || []} );
     $region->seq_features(    @{$converter->seq_features   || []} );
 
+    # write_region requires that the client describe the region, to
+    # ensure it is the correct one, but then ignores ContigInfo.
+
     my $formatter = Bio::Vega::Transform::XML->new;
     $formatter->region($region);
     return $formatter->generate_OtterXML;
