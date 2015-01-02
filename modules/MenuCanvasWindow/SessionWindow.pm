@@ -1113,7 +1113,7 @@ sub update_status_bar {
     my $cllctn = $self->AceDatabase->ColumnCollection;
     my $counts = $cllctn->count_Columns_by_status;
     my @values = @$counts{@display_statuses};
-    @{ $self->{_status_text} } = map {"$_ ($$counts{$_})"} @display_statuses;
+    @{ $self->{_status_text} } = map {my $v = $$counts{$_} // 0; "$_ ($v)"} @display_statuses;
     $self->_status_bar->value(@values);
     return;
 }
