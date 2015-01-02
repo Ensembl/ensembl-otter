@@ -273,6 +273,13 @@ sub initialise {
     $top->bind('<Control-l>', $launch);
     $top->bind('<Control-L>', $launch);
 
+    # Progress
+    $button_frame->Label(
+        -width        => 45,
+        -height       =>  1,
+        -textvariable => \$self->{_progress},
+    )->pack(-side => 'left', -expand => 1, -fill => 'x', -padx => 6);
+
     # Manage window closes and destroys
     my $close_window = sub { $top->withdraw };
     $button_frame->Button(
@@ -477,6 +484,7 @@ sub launch_exonerate {
     my $atc = $SessionWindow->AceDatabase->AccessionTypeCache;
     my $latest_acc_sv_sub = sub { return $atc->latest_acc_sv_for_stem(@_) };
 
+    $self->progress('Building OTF session');
     my $otf = Bio::Otter::Lace::OnTheFly::Genomic->new(
 
         seqs       => $self->entered_seqs($latest_acc_sv_sub),
@@ -495,6 +503,7 @@ sub launch_exonerate {
 
         problem_report_cb => sub { $self->problem_box($top, 'Accessions Supplied', @_) },
         long_query_cb     => sub { $self->long_query_confirm($top, @_)  },
+        progress_cb       => sub { $self->progress(@_) },
 
         accession_type_cache => $atc,
 
@@ -503,6 +512,7 @@ sub launch_exonerate {
 
     # get marked region (if requested)
     if ($self->{_region_target} eq $REGION_TARGET_MARKED) {
+        $self->progress('Getting marked region');
         my ($mark_start, $mark_end) = $SessionWindow->get_mark_in_slice_coords;
         if ($mark_start && $mark_end) {
             $self->logger->warn("Setting exonerate genomic start & end to marked region: $mark_start - $mark_end");
@@ -521,12 +531,14 @@ sub launch_exonerate {
         return;
     }
 
+    $self->progress('Validating sequences');
     my $seq_list = $otf->confirmed_seqs();
     my $seqs = $seq_list->seqs;
 
     $self->logger->warn("Found ", scalar(@$seqs), " sequences");
 
     unless (@$seqs) {
+        $self->progress('No query sequence(s)');
         $top->messageBox(
             -title   => $Bio::Otter::Lace::Client::PFX.'No Sequence',
             -icon    => 'warning',
@@ -536,17 +548,31 @@ sub launch_exonerate {
         return;
     }
 
-    $top->withdraw;
-
     if ($self->{'_clear_existing'}) {
+        $self->progress('Deleting existing results from Zmap');
         $SessionWindow->delete_featuresets(@{$otf->logic_names});
     }
 
+    $self->progress('Passing OTF requests to ZMap');
     my $key = "$otf";
     $SessionWindow->register_exonerate_callback($key, $self, \&Bio::Otter::UI::OnTheFlyMixin::exonerate_callback);
     $otf->prep_and_store_request_for_each_type($SessionWindow, $key);
 
+    $self->progress('Done');
+    $top->withdraw;
+
     return 1;
+}
+
+
+sub progress {
+    my ($self, @args) = @_;
+    if (@args) {
+        ($self->{_progress}) = @args;
+        my $top = $self->top;
+        $top->toplevel->update if Tk::Exists($top);
+    }
+    return $self->{_progress};
 }
 
 sub display_request_feedback {

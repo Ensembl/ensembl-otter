@@ -2449,6 +2449,7 @@ sub run_exonerate {
         $ew->clear_accessions;
     }
     $ew->update_from_SessionWindow;
+    $ew->progress('');
 
     return 1;
 }

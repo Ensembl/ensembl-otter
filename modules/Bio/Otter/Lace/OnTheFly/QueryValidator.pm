@@ -23,6 +23,7 @@ has lowercase_poly_a_t_tails => ( is => 'ro', isa => 'Bool', default => undef );
 
 has problem_report_cb    => ( is => 'ro', isa => 'CodeRef', required => 1 );
 has long_query_cb        => ( is => 'ro', isa => 'CodeRef', required => 1 );
+has progress_cb          => ( is => 'ro', isa => 'CodeRef' );
 
 has max_query_length     => ( is => 'ro', isa => 'Int', default => 10000 );
 
@@ -70,6 +71,7 @@ sub _build_confirmed_seqs {     ## no critic (Subroutines::ProhibitUnusedPrivate
         # The populate method will fetch the latest version of
         # any accessions which are supplied without a SV into
         # the cache object.
+        &{$self->progress_cb}('Fetching accession info') if $self->progress_cb;
         $cache->populate(\@accessions);
     }
 
