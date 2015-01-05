@@ -335,26 +335,6 @@ sub _slice_lock_broker {
     return $slb;
 }
 
-sub _assert_contig_locked {
-    my ($self, $ctg, $chr, $slb) = @_;
-    my $to_cs = $chr->coord_system;
-    my $proj = $ctg->project($to_cs->name, $to_cs->version);
-
-    if (1 != @$proj) {
-        my $ctg_id = $ctg->dbID;
-        my $chr_id = $chr->dbID;
-        my $n = @$proj;
-        die "contig id=$ctg_id doesn't project cleanly (n=$n) to chromosome id=$chr_id";
-        # I expected that it should, so didn't consider $n != 1
-    }
-
-    foreach my $seg (@$proj) {
-        my $ctg_on_chr = $seg->[2]->sub_Slice($seg->[0], $seg->[1]);
-        $slb->assert_bumped($ctg_on_chr);
-    }
-    return;
-}
-
 sub _fetch_db_region {
     my ($self, $new_region) = @_;
 
