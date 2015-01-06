@@ -358,6 +358,7 @@ sub do_http_request {
 
         my $err_msg;
 
+        ## no critic ( RegularExpressions::ProhibitComplexRegexes )
         if (my ($err) = $res =~ /ERROR:[[:space:]]*(.+)/s) {
             $err =~ s/\A(^-+[[:blank:]]*EXCEPTION[[:blank:]]*-+\n)+//m; # remove boring initial lines
             $err =~ s/\n.*//s; # keep only the first line
