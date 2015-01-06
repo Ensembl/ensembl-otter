@@ -46,6 +46,7 @@ sub noDBI_tt {
 
     {
         local $ENV{'ANACODE_SERVER_CONFIG'} = '/absent';
+        local $ENV{'DOCUMENT_ROOT'} = '/absent/htdocs' if $ENV{'DOCUMENT_ROOT'};
         like(try_err { $BOSC->Database('human') },
              qr{Database passwords not available: data_dir /absent},
              'tell absence of DBI params');
