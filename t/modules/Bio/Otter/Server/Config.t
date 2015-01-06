@@ -43,7 +43,7 @@ sub main {
     }
 
   SKIP: {
-        skip 1, 'not internal' unless -d '/nfs/anacode';
+        skip 'not internal', 1 unless -d '/nfs/anacode';
         subtest fallback_tt => \&fallback_tt;
     }
 
@@ -98,11 +98,15 @@ sub priv_tt {
     like(try_err { $BOSC->data_filename('databases.yaml') },
          qr{^/.*/priv_tt/dev/databases\.yaml$}, 'test dirs mended');
 
+  SKIP: {
+    skip 'not internal', 1 unless -d '/nfs/anacode';
+
     # Access OK to (untouched) live config
     set_env();
     like(try_err { $BOSC->data_filename('databases.yaml') },
          qr{^/.*yaml$}, 'live dir mended');
-
+    }
+    
     return;
 }
 
