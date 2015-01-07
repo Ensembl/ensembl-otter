@@ -549,7 +549,7 @@ sub launch_exonerate {
     }
 
     if ($self->{'_clear_existing'}) {
-        $self->progress('Deleting existing results from Zmap');
+        $self->progress('Deleting existing results from ZMap');
         $SessionWindow->delete_featuresets(@{$otf->logic_names});
     }
 
