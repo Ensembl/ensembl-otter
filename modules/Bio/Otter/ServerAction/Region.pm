@@ -5,6 +5,7 @@ use warnings;
 
 use Readonly;
 use Try::Tiny;
+use Lingua::EN::Inflect qw( A NUMWORDS );
 
 use Bio::Otter::Lace::CloneSequence;
 use Bio::Vega::ContigInfo;
@@ -160,6 +161,231 @@ sub DE_region {
 sub _genes_DE {
     my ($self, @gene) = @_;
     return [ map { $_->display_id ." at ". $_->slice->display_id } @gene ];
+}
+
+sub __generate_desc_and_kws_for_clone {
+    my ( $self, $clone ) = @_;
+
+    my $DEBUG = 0;
+
+    # set to true to generate a description that specifies if the
+    # clone contains a central part or the 5' or 3' end of partial
+    # loci - but note that this can only work if the current assembly
+    # happens to contain the remainder of the locus. Otherwise the
+    # description will (rather boringly) just state that the clone
+    # contains 'part of' the locus, but will at least be consistent!
+    my $BE_CLEVER = 0;
+
+    my %locus_sub;
+
+    my %locus_is_transposon;
+    my %locus_start;
+    my %locus_end;
+    my %locus_strand;
+
+    # identify the loci in this assembly
+
+    foreach my $sub (sort { ace_sort($a->name, $b->name) } $self->get_all_SubSeqs) {
+
+        next unless $sub->Locus;
+
+        my $lname = $sub->Locus->name;
+
+        # ignore loci that are not havana annotated genes
+        next unless ($sub->Locus->is_truncated || $sub->GeneMethod->mutable);
+
+        my $tsct_list = $locus_sub{$lname} ||= [];
+        push(@$tsct_list, $sub);
+
+        # record if the locus is a transposon 
+
+        $locus_is_transposon{$lname} = 1 if $sub->GeneMethod->name =~ /transposon/i;
+
+        # track the start, end and strand of the locus
+
+        my $start = $sub->start;
+        my $end = $sub->end;
+        my $strand = $sub->strand;
+
+        $locus_start{$lname} ||= $start;
+        $locus_end{$lname} ||= $end;
+        $locus_strand{$lname} ||= $strand;
+
+        $locus_start{$lname} = $start if $start < $locus_start{$lname};
+        $locus_end{$lname} = $end if $end > $locus_end{$lname};
+        die "Mixed transcript strands on locus $lname" if $strand != $locus_strand{$lname};
+
+    }
+
+    print "clone_desc_cache miss\n" if $DEBUG;
+
+    my $cstart = $clone->assembly_start;
+    my $cend = $clone->assembly_end;
+
+    print "clone: $cstart-$cend\n" if $DEBUG;
+
+    my $clone_accession = $clone->accession;
+    my $clone_name = $clone->clone_name;
+
+    print "clone_accession: $clone_accession\n" if $DEBUG;
+    print "clone_name: $clone_name\n" if $DEBUG;
+
+    my $final_line = 'Contains ';
+    my @keywords;
+    my $novel_gene_count = 0;
+    my $part_novel_gene_count = 0;
+    my @DEline;
+
+    # loop through the loci in 5' -> 3' order 
+    foreach my $loc_name (sort {$locus_start{$a} <=> $locus_start{$b}} keys %locus_sub) {
+
+        print "checking next locus: $loc_name\n" if $DEBUG;
+
+        my $tsct_list = $locus_sub{$loc_name};
+        my $locus = $tsct_list->[0]->Locus;
+        my $lname = $locus->name;
+        my $lstrand = $tsct_list->[0]->strand;
+
+        # ignore loci with prefixes
+        next if $lname =~ /^.+:/;
+
+        my $desc = $locus->description;
+
+        print "desc: $desc\n" if $DEBUG;
+
+        # ignore loci without descriptions
+        next unless $desc;
+
+        # ignore transposons
+        next if $locus_is_transposon{$loc_name};
+
+        # get the start and end of the locus
+        my $lstart = $locus_start{$lname};
+        my $lend = $locus_end{$lname};
+
+        print "locus: $lstart-$lend\n" if $DEBUG;
+
+        # establish if any part of this locus lies on this clone
+        my $line;
+
+        my $partial_text = 'part of ';
+
+        if ($lstart >= $cstart && $lend <= $cend) {
+            # this locus lies entirely within this clone
+            $line = '';
+        }
+        elsif ($lstart < $cstart && $lend > $cend) {
+            # a central part of the locus lies in this clone
+            $line = $BE_CLEVER ?
+                'a central part of ' :
+                $partial_text;
+        }
+        elsif ($lend >= $cstart && $lend <= $cend) {
+            # the end of this locus lies in this clone
+            $line = $BE_CLEVER ?
+                'the '.($lstrand == 1 ? "3'" : "5'").' end of ' :
+                $partial_text;
+        }
+        elsif ($lstart >= $cstart && $lstart <= $cend) {
+            # the start of this locus lies in this clone
+            $line = $BE_CLEVER ?
+                'the '.($lstrand == 1 ? "5'" : "3'").' end of ' :
+                $partial_text;
+        }
+        else {
+            # no part of this locus lies on this clone
+            next;
+        }
+
+        $line = $partial_text if $locus->is_truncated;
+
+        $desc =~ s/\s+$//;
+
+        print "desc: $desc\n" if $DEBUG;
+
+        next if $desc =~ /artefact|artifact/i;
+
+        if ($desc =~ /novel\s+(protein|transcript|gene)\s+similar/i) {
+            $line .= "the gene for ".A($desc);
+            push @DEline, \$line;
+        }
+        elsif (($desc =~ /(novel|putative) (protein|transcript|gene)/i) ) {
+            if ($desc =~ /(zgc:\d+)/) {
+                $line .= "a gene for a novel protein ($1)";
+                push @DEline, \$line;
+            }
+            else {
+                $line ? $part_novel_gene_count++ : $novel_gene_count++;
+            }
+        }
+        elsif ($desc =~ /pseudogene/i) {
+            if ($locus->name !~ /$clone_accession/ &&
+                $locus->name !~ /$clone_name/) {
+                $line .= A($desc).' '.$locus->name;
+            }
+            else {
+                $line .= A($desc);
+            }
+            push @DEline, \$line ;
+        }
+        elsif ($lname !~ /\.\d/) {
+            $line .= "the $lname gene for $desc" ;
+            push @DEline,\$line;
+            push @keywords, $locus;
+        }
+        else {
+            $line .= "a gene for ".A($desc);
+            push @DEline, \$line;
+        }
+
+        print "line: $line\n" if $DEBUG;
+    }
+
+    if ($novel_gene_count) {
+        if ($novel_gene_count == 1) {
+            my $line = "a novel gene";
+            push @DEline, \$line;
+        }
+        else {
+            my $line = NUMWORDS($novel_gene_count)." novel genes";
+            push @DEline, \$line;
+        }
+    }
+
+    if ($part_novel_gene_count) {
+        if ($part_novel_gene_count == 1) {
+            my $line = "part of a novel gene";
+            push @DEline, \$line;
+        }
+        else {
+            my $line = "parts of ".NUMWORDS($part_novel_gene_count)." novel genes";
+            push @DEline, \$line;
+        }
+    }
+
+    my $range = scalar @DEline;
+    if ($range == 0) {
+        $final_line .= "no genes.";
+    }
+    elsif ($range == 1) {
+        $final_line .= ${$DEline[0]}.".";
+    }
+    elsif ($range == 2) {
+        $final_line .= ${$DEline[0]}. " and ".${$DEline[1]}.".";
+    }
+    else {
+        for (my $k = 0; $k < ($range - 2); $k++) {
+            $final_line .= ${$DEline[$k]}.", ";
+        }
+        $final_line .= ${$DEline[$range -2]}." and ".${$DEline[$range-1]}.".";
+    }
+
+    print $final_line."\n" if $DEBUG;
+
+    return {
+        keywords    => ( join "\n", @keywords ),
+        description => $final_line,
+    };
 }
 
 
