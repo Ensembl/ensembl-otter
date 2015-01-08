@@ -132,6 +132,37 @@ sub get_region {
 }
 
 
+=head2 DE_region
+
+Server-side generation of the "DE line" text, previously available in
+the EditWindow::Clone window and generated client-side by
+C<<$Assembly->generate_description_for_clone>> .
+
+=cut
+
+sub DE_region {
+    my $self = shift;
+
+    my $odba  = $self->server->otter_dba;
+    my $slice = $self->slice;
+
+    # XXX: inefficiency - we only need to fetch_Genes, but we also fetch_SimpleFeatures etc.
+    my $region = Bio::Vega::Region->new_from_otter_db(
+        otter_dba     => $odba,
+        slice         => $slice,
+        server_action => $self,
+        );
+
+    my $DE = $self->_genes_DE($region->genes);
+    return $DE;
+}
+
+sub _genes_DE {
+    my ($self, @gene) = @_;
+    return [ map { $_->display_id ." at ". $_->slice->display_id } @gene ];
+}
+
+
 =head2 write_region
 
 Input: region data, author, locknums.
