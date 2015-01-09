@@ -13,7 +13,6 @@ use YAML 'Dump';
 use Bio::Otter::Server::Support::Web;
 use Bio::Otter::Version;
 use Bio::Otter::Git;
-use Bio::Otter::Auth::Pagesmith;
 use Bio::Otter::Auth::SSO;
 use Bio::Otter::Utils::RequireModule qw(require_module);
 
@@ -145,7 +144,9 @@ sub generate {
 #        BOSSS => $server, # would leak users config & CGI internals
         internal_user => $server->internal_user };
 
-    foreach my $mod (qw( Bio::Otter::Auth::SSO Bio::Otter::Auth::Pagesmith )) {
+    foreach my $mod ('Bio::Otter::Auth::SSO',
+                     # 'Bio::Otter::Auth::Pagesmith', # broken, deleted
+                    ) {
         $out{ $mod->test_key } = { $mod->auth_user($web, $server->Access) };
     }
 

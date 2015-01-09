@@ -16,14 +16,13 @@ use Bio::Otter::Lace::Client;
 use Bio::Otter::Lace::Defaults;
 
 use Bio::Otter::Auth::SSO;
-use Bio::Otter::Auth::Pagesmith;
 
 
 our ($MODE, $CLASS);
 sub main {
     my @sso = qw( login_tt auth_tt external_tt lockout_tt );
-    my @ps  = qw( login_tt auth_tt external_tt );
-    plan tests => @sso + @ps;
+#    my @ps  = qw( login_tt auth_tt external_tt );
+    plan tests => @sso;
 
     $MODE = 'SSO';
     $CLASS = "Bio::Otter::Auth::$MODE";
@@ -31,11 +30,14 @@ sub main {
         subtest $subt => main->can($subt);
     }
 
-    $MODE = 'Pagesmith';
-    $CLASS = "Bio::Otter::Auth::$MODE";
-    foreach my $subt (@ps) {
-        subtest $subt => main->can($subt);
-    }
+### Bio::Otter::Auth::Pagesmith broke before we started using it.
+#   Code remains in the Git history (@ v87)
+#
+#    $MODE = 'Pagesmith';
+#    $CLASS = "Bio::Otter::Auth::$MODE";
+#    foreach my $subt (@ps) {
+#        subtest $subt => main->can($subt);
+#    }
 
     return;
 }
