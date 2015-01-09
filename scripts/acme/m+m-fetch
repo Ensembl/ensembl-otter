@@ -1,0 +1,144 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+
+use Time::HiRes qw( gettimeofday tv_interval );
+use Bio::Otter::Utils::AccessionInfo;
+# Derived from t/modules/Bio/Otter/Utils/BulkMM.t for RT#443036
+
+
+my $T_BUDGET = 45 / 5000;
+# Budget of 45sec per 5k-accession fetch is based on regions I
+# have seen recently.  It may need changing.
+
+my $LIST = '/nfs/anacode/mca/m+m-fetch/pipe_human.hit_name.RT443036.txt';
+
+sub main {
+    my ($op, $n) = @ARGV;
+
+    if ($op && $op eq 'listaccs') {
+        return listaccs(); # needs access to pipe_human
+    }
+
+    $op = '?' unless $n && $n =~ /^\d+($|:)/;
+    if ($op eq 'bulk') {
+        return runquery('Bio::Otter::Utils::BulkMM', $n);
+    } elsif ($op eq 'old') {
+        return runquery('Bio::Otter::Utils::MM', $n);
+    } else {
+        die "Syntax: $0  < bulk | old >  <n>\n"
+    }
+}
+
+# Compile (large!) list of accessions we might hit,
+# so we don't have to deal with another database connection
+sub listaccs {
+    require Test::Otter;
+    Test::Otter->import('get_BOSDatasets');
+    my ($ds) = get_BOSDatasets('human_test');
+    my $pipe_dbh = $ds->pipeline_dba->dbc->db_handle;
+
+    open my $fh, '>', $LIST
+      or die "Cannot write $LIST: $!";
+
+    # Removing duplicates within a fuzzy horizon
+    my %semi_uq;
+    my $uqlim = 10E6;
+    my $decimate = sub {
+        my $n = $uqlim / 10;
+        while (my ($k, $v) = each %semi_uq) {
+            delete $semi_uq{$k};
+            last unless --$n;
+        }
+        return;
+    };
+
+    foreach my $tbl (qw(dna_align_feature protein_align_feature)) {
+        # List all hit_name, preserving seq_region_id locality
+        my $sr_list = $pipe_dbh->selectcol_arrayref
+          ("SELECT DISTINCT seq_region_id FROM $tbl"); # order not important
+
+        while (@$sr_list) {
+            my $sr = shift @$sr_list;
+            my $acc = $pipe_dbh->selectcol_arrayref
+              ("SELECT DISTINCT hit_name FROM $tbl WHERE seq_region_id = ?",
+               {}, $sr);
+            warn "Got ".@$acc." from $tbl($sr)\n";
+            foreach my $a (@$acc) {
+                print {$fh} "$a\n" unless exists $semi_uq{$a};
+            }
+            $decimate->() if keys %semi_uq > $uqlim;
+            $semi_uq{@$acc} = ();
+        }
+    }
+
+    return 0;
+}
+
+sub walltime(&) { ## no critic( Subroutines::ProhibitSubroutinePrototypes )
+    my ($code) = @_;
+    my $t0 = [ gettimeofday() ];
+    my @out = $code->();
+    unshift @out, tv_interval($t0);
+    return @out;
+}
+
+
+sub runquery {
+    my ($class, $N) = @_;
+    my $ai = Bio::Otter::Utils::AccessionInfo->new(driver_class => $class);
+
+    my $jump = $N =~ s{:(-?\d+)$}{} ? $1 : undef;
+    my $acc = random_accessions($N, $jump);
+
+    my ($time, $fetch) = walltime { $ai->get_accession_info($acc) };
+
+    # Times
+    my $t_ea = $time / $N;
+    printf("time[ %s ] = %.1fs/%s = %.4fs/ea = %.2fx budget of %.4fs/ea\n",
+           $class, $time,$N, $t_ea, $t_ea/$T_BUDGET, $T_BUDGET);
+
+    return 0;
+}
+
+
+# Return arrayref of $N accessions
+# These come out of a pre-compiled text file, BulkMM.t took them from pipe_human
+sub random_accessions {
+    my ($N, $jump) = @_;
+    open my $fh, '<', $LIST or die "Reading $LIST: $!";
+
+    # Choose a place to start reading
+    $jump = int(rand( -1024 + -s $fh )) if !defined $jump;
+    $jump += -s $fh if $jump < 0;
+    warn "seek($LIST, $jump)\n";
+    seek $fh, $jump, 0 or die "seek($LIST, $jump): $!";
+    <$fh> unless $jump == 0; # incomplete_line
+
+    # gather some until we have enough
+    my %out;
+    while (keys %out < $N) {
+        my $ln = <$fh>;
+        if (eof $fh) {
+            warn "Wrap on $LIST";
+            seek $fh, 0, 0 or die "seek($LIST, 0): $!";
+        }
+        chomp $ln;
+        $out{$ln} = undef;
+    }
+
+    return [ sort keys %out ];
+}
+
+# Strip off the .SVs (in place)
+sub deSV {
+    my ($acc_list) = @_;
+    foreach (@$acc_list) {
+        s{\.\d+$}{};
+    }
+    return;
+}
+
+
+exit main();
