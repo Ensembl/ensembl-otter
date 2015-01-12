@@ -1309,19 +1309,7 @@ sub http_response_content {
 sub _query_hash {
     my ($self, @args) = @_;
 
-    my $slice = $self->slice;
-
-    my $hash = {
-            'dataset' => $slice->dsname(),
-            'chr'     => $slice->ssname(),
-
-            'cs'      => $slice->csname(),
-            'csver'   => $slice->csver(),
-            'name'    => $slice->seqname(),
-            'start'   => $slice->start(),
-            'end'     => $slice->end(),
-            @args,
-    };
+    my $hash = { $self->Client->_slice_query($self->slice), @args };
 
     return $hash;
 }

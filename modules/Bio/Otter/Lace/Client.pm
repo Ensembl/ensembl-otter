@@ -1244,6 +1244,21 @@ sub designate_this {
     return \%out;
 }
 
+# Give a B:O:L:Slice
+sub _slice_query {
+    my ($self, $slice) = @_;
+    die unless wantarray;
+    return ('dataset' => $slice->dsname(),
+            'chr'     => $slice->ssname(),
+
+            'cs'      => $slice->csname(),
+            'csver'   => $slice->csver(),
+            'name'    => $slice->seqname(),
+            'start'   => $slice->start(),
+            'end'     => $slice->end());
+}
+
+
 sub do_authentication {
     my ($self) = @_;
 
