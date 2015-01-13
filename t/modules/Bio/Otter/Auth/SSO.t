@@ -22,7 +22,7 @@ our ($MODE, $CLASS);
 sub main {
     my @sso = qw( login_tt auth_tt external_tt lockout_tt );
 #    my @ps  = qw( login_tt auth_tt external_tt );
-    plan tests => @sso;
+    plan tests => scalar @sso;
 
     $MODE = 'SSO';
     $CLASS = "Bio::Otter::Auth::$MODE";
