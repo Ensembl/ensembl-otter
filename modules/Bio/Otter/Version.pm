@@ -6,7 +6,7 @@ use warnings;
 
 use Readonly;
 
-Readonly::Scalar my $VERSION => 88;
+Readonly::Scalar my $VERSION => 89;
 
 sub version { return $VERSION };
 
