@@ -247,6 +247,7 @@ $support->log_stamped("Adjusting Vega seq_region_ids in tmp_assembly and tmp_seq
 $sth = $dbh->{'evega'}->prepare("SELECT MAX(seq_region_id) FROM $ensembl_db.seq_region");
 $sth->execute;
 my ($V_sri_adjust) = $sth->fetchrow_array;
+$V_sri_adjust += 1000000000;
 
 $support->log("Adjustment factors: $V_sri_adjust for Vega, $E_sri_adjust for Ensembl seq_region_ids.\n", 1);
 $sql = qq(
