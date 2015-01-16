@@ -43,7 +43,6 @@ Specific options:
                                         the insert statements of the
                                         entries of the external_db table
     --attribtypefile=FILE               read attribute type definition from FILE
-    --for_web                           transfer Ensembl repeats, calculate %GC
 
 =head1 DESCRIPTION
 
@@ -127,7 +126,6 @@ $support->parse_extra_options(
   'evegapass=s',
   'evegadbname=s',
   'assembly=s',
-  'for_web',
 );
 $support->allowed_params(
   $support->get_common_params,
@@ -143,7 +141,6 @@ $support->allowed_params(
   'evegapass',
   'evegadbname',
   'assembly',
-  'for_web',
 );
 
 if ($support->param('help') or $support->error) {
@@ -186,7 +183,6 @@ my $params = {
       'evegauser',
       'evegapass',
       'evegadbname',
-      'for_web',
       'assembly',
     ],
     'replace' => {
@@ -386,69 +382,6 @@ $sql = qq(
 $c = $dbh->{'ensembl'}->do($sql) unless ($support->param('dry_run'));
 $support->log_stamped("Done transfering $c dna entries.\n\n");
 
-if ($support->param('for_web')) {
-  # transfer repeat_consensus and repeat_feature from Ensembl db
-  $support->log_stamped("Transfering Ensembl repeat_consensus...\n");
-  $sql = qq(
-      INSERT INTO $evega_db.repeat_consensus
-      SELECT * FROM repeat_consensus
-);
-  $c = $dbh->{'ensembl'}->do($sql) unless ($support->param('dry_run'));
-  $support->log_stamped("Done transfering $c repeat_consensus entries.\n\n");
-  $support->log_stamped("Transfering Ensembl repeat_feature...\n");
-  $sql = qq(
-      INSERT INTO $evega_db.repeat_feature
-      SELECT repeat_feature_id, seq_region_id+$sri_adjust, seq_region_start,
-             seq_region_end, seq_region_strand, repeat_start, repeat_end,
-             repeat_consensus_id, analysis_id, score
-      FROM repeat_feature
-);
-  $c = $dbh->{'ensembl'}->do($sql) unless ($support->param('dry_run'));
-  $support->log_stamped("Done transfering $c repeat_feature entries.\n\n");
-}
-
-#not sure what to do with these - nice to have them for mart but no good for web display
-# - how can we switch them off for web ?
-while (0) {
-  # transfer Encode misc features from Ensembl db
-  $support->log_stamped("Transfering Ensembl encode misc_features...\n");
-  $sql = qq(
-    INSERT INTO $evega_db.misc_set
-    SELECT * from misc_set
-     WHERE misc_set.code = 'encode'
-);
-  $c = $dbh->{'ensembl'}->do($sql) unless ($support->param('dry_run'));
-  $sql = qq(
-    INSERT INTO $evega_db.misc_feature_misc_set
-    SELECT mfms.*
-      FROM misc_feature_misc_set mfms, misc_set ms
-     WHERE mfms.misc_set_id = ms.misc_set_id
-       AND ms.code = 'encode'
-);
-  $c = $dbh->{'ensembl'}->do($sql) unless ($support->param('dry_run'));
-  $sql = qq(
-    INSERT INTO $evega_db.misc_feature
-    SELECT mf.misc_feature_id, mf.seq_region_id+$sri_adjust, mf.seq_region_start,
-           mf.seq_region_end, mf.seq_region_strand
-      FROM misc_feature mf, misc_feature_misc_set mfms, misc_set ms
-     WHERE mf.misc_feature_id = mfms.misc_feature_id
-       AND mfms.misc_set_id = ms.misc_set_id
-       AND ms.code = 'encode'
-);
-  $c = $dbh->{'ensembl'}->do($sql) unless ($support->param('dry_run'));
-  $support->log_stamped("Transfered $c misc_features.\n\n");
-  $sql = qq(
-    INSERT INTO $evega_db.misc_attrib
-    SELECT ma.*
-      FROM misc_attrib ma, misc_feature_misc_set mfms, misc_set ms
-     WHERE ma.misc_feature_id = mfms.misc_feature_id
-       AND mfms.misc_set_id = ms.misc_set_id
-       AND ms.code = 'encode'
-);
-  $c = $dbh->{'ensembl'}->do($sql) unless ($support->param('dry_run'));
-  $support->log_stamped("Transfered $c misc_attribs.\n\n");
-}
-
 # transfer ensembl karyotype data
 $support->log_stamped("Transfering karyotype info from Ensembl...\n");
 $sql = qq(
@@ -602,18 +535,6 @@ if (! $support->param('dry_run') ) {
       or $support->warning("Error running update_external_dbs.pl: $!");
     $support->log_stamped("Done.\n\n");
   };
-
-  if ($support->param('for_web')) {
-    # run percent gc calc.pl
-    $params->{'replace'}{'logfile'} = 'make_ensembl_vega_percent_gc_calc.pl.log';
-    $options = $support->create_commandline_options($params);
-    $support->log_stamped("Calculating %GC for ".$support->param('evegadbname')."...\n");
-    eval {
-      system("../../../../sanger-plugins/vega/utils/vega_percent_gc_calc.pl $options") == 0
-        or $support->warning("Error running vega_percent_gc_calc.pl: $!");
-      $support->log_stamped("Done.\n\n");
-    };
-  }
 }
 
 # copy seq_region_mapping and mapping_set
