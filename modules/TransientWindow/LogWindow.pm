@@ -30,10 +30,10 @@ sub show_for {
         my $title = $Bio::Otter::Lace::Client::PFX.'log file - '.
           $pkg->current_logfile;
         $tw = TransientWindow::LogWindow->new($mw, $title);
-        $mw->{'__tw_log'} = $tw; # not yet initialised
         $tw->initialise();
         $tw->draw;
         $tw->show_me();
+        $mw->{'__tw_log'} = $tw; # not yet initialised
     } elsif (!$tw->{'_drawn'}) {
         # Window was being initialised but we recursed?
         # It will happen soon; show_output will be no-op
@@ -142,6 +142,8 @@ sub draw {
     return if $self->{'_drawn'};
 
     my $file      = $self->current_logfile;
+    die "No logfile" unless defined $file;
+    die "Logfile $file: cannot read" unless -f $file && -r _;
     my $tail_pipe = "tail -f -n 1000 $file";
     my $pid       = open my $fh, '-|', $tail_pipe
       or die "Can't open tail command '$tail_pipe': $!";
