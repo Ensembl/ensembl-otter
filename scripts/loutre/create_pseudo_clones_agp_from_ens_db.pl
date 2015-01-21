@@ -22,8 +22,10 @@ use Hum::AGP;
     my $dba = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
         -user   => 'ensro',
         -group  => 'ensembl',
-        -dbname => 'db8_rattus_norvegicus_core_70_5',
-        -host   => 'genebuild1',
+        # -dbname => 'db8_rattus_norvegicus_core_70_5',
+        # -host   => 'genebuild1',
+        -dbname => 'avullo_rattus_norvegicus_79_5',
+        -host   => 'ens-production',
         );
     my $assembly = $dba->get_CoordSystemAdaptor->fetch_by_name('chromosome')->version;
     my $chr_length = $dba->get_SliceAdaptor->fetch_by_region('chromosome', $chr_name)->length;
@@ -37,7 +39,8 @@ use Hum::AGP;
         $end = $chr_length if $end > $chr_length;
         my $agp_row_length = $end - $start + 1;
         my $ctg = $dba->get_SliceAdaptor->fetch_by_region('chromosome', $chr_name, $start, $end);
-        my $ctg_name = sprintf "Rn50_%s_%04d.1", $chr_name, $i;
+        # my $ctg_name = sprintf "Rn50_%s_%04d.1", $chr_name, $i;
+        my $ctg_name = sprintf "Rn60_%s_%04d.1", $chr_name, $i;
         my $dna = $ctg->seq;
 
         # If this region is entirely "n", add it as a gap.
@@ -56,7 +59,7 @@ use Hum::AGP;
 
         my $row = $prev_agp_row = $agp->new_Clone;
         $row->accession_sv($ctg_name);
-        $row->htgs_phase(3);
+        $row->phase_letter('W');
         $row->seq_start(1);
         $row->seq_end($agp_row_length);
         $row->strand(1);
