@@ -92,7 +92,8 @@ use Bio::EnsEMBL::DBSQL::DBAdaptor;
     # my @args = qw( -dbname vega_rattus_norvegicus_20130610_72_5a -host ensdb-web-17 -port 5317 );
     # my %args = qw( -dbname vega_sarcophilus_harrisii_20130909_72 -host ensdb-web-17 );
     # my %args = qw( -dbname vega_homo_sapiens_20140402_74_GRCh38 -host ensdb-web-17 );
-    my %args = qw( -dbname vega_mus_musculus_20140415_75_GRCm38 -host ensdb-web-17 );
+    # my %args = qw( -dbname vega_mus_musculus_20140415_75_GRCm38 -host ensdb-web-17 );
+    my %args = qw( -dbname vega_danio_rerio_20131007_74_Zv9 -host ensdb-web-17 );
 
     printf "%s fix_gene_biotypes.pl on (%s)\n", scalar(localtime), join(" ", %args);
 
