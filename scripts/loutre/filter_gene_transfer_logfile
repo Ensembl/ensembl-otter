@@ -1,0 +1,212 @@
+#!/usr/bin/env perl
+
+### filter_gene_transfer_logfile
+
+use strict;
+use warnings;
+
+use Bio::Otter::Lace::Defaults;
+use Bio::Otter::Lace::PipelineDB;
+use Hum::Sort qw{ ace_sort };
+
+{
+    my( $dataset_name );
+
+    my $show_damaged_genes = 1;
+    my $show_missed_genes  = 0;
+
+    my $usage = sub { exec('perldoc', $0) };
+    # This do_getopt() call is needed to parse the otter config files
+    # even if you aren't giving any arguments on the command line.
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'h|help!'       => $usage,
+        'dataset=s'     => \$dataset_name,
+        'damaged!'      => \$show_damaged_genes,
+        'missed!'       => \$show_missed_genes,
+        ) or $usage->();
+    $usage->() unless $dataset_name;
+    
+    # Client communicates with otter HTTP server
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    
+    # DataSet interacts directly with an otter database
+    my $ds = $cl->get_DataSet_by_name($dataset_name);
+    
+    my $otter_dba = $ds->get_cached_DBAdaptor;
+
+    my $sep = '=' x 40;
+    local $/ = $sep;
+    my (%ctg_pos);
+    my (%chr_ctg_misses, %chr_ctg_issues);
+    while (<>) {
+        s/\*Changes observed.+-{20,}//s;
+        my $chunk = $_;
+        if (/SKIP GENE/) {
+            # WARNING: SKIP GENE OTTHUMG00000013950 processed_transcript (RP11-353N4.1) (chr1-14:149590752-149591762 => chr1-38:0-0) with 1 missing transcripts
+            my ($chr, $start, $end) = /\(([-\w]+):(\d+)-(\d+)/
+                or next;
+            # print join("\t", $chr, $start, $end), "\n";
+            foreach my $ctg (get_overlapping_contigs($otter_dba, $chr, $start, $end, $chunk)) {
+                my ($ctg_name, $asm_start, $asm_end) = @$ctg;
+                my $list = $chr_ctg_misses{$chr}{$ctg_name} ||= [];
+                push(@$list, $chunk);
+            }
+        }
+        elsif (/WARNING/ or /successfully TRANSFERRED/) {
+            # GENE OTTHUMG00000074713 protein_coding successfully TRANSFERRED (chr1-14:1567474-1570639 => chr1-38:1632095-1635263)
+            my ($chr, $start, $end) = /TRANSFERRED .+ => ([-\w]+):(\d+)-(\d+)/
+                or next;
+            # OTTHUMT00000366026 nonsense_mediated_decay 1567557 1569850 transferred successfully:
+            #         transfer to 1 cDNA diffs and 0 protein diffs
+
+            if (! /complex-transfer/) {
+                my $protein_diffs = 0;
+                while (/(\d+) protein diffs/g) {
+                    $protein_diffs += $1;
+                }
+                next unless $protein_diffs;
+            }
+            
+            my ($region_start, $region_end);
+            foreach my $ctg (get_overlapping_contigs($otter_dba, $chr, $start, $end, $chunk)) {
+                my ($ctg_name, $asm_start, $asm_end) = @$ctg;
+                my $list = $chr_ctg_issues{$chr}{$ctg_name} ||= [];
+                push(@$list, $chunk);
+            }
+        }
+        elsif (/INFO/) {
+            print STDERR $_;
+        }
+    }
+    print_issues($otter_dba, 'WARNING',   \%chr_ctg_issues) if $show_damaged_genes;
+    print_issues($otter_dba, 'SKIP GENE', \%chr_ctg_misses) if $show_missed_genes;
+}
+
+
+sub print_issues {
+    my ($otter_dba, $err_type, $chr_ctg_hash) = @_;
+
+    my $last = 0;
+    foreach my $chr (sort {ace_sort($a, $b)} keys %$chr_ctg_hash) {
+        my $warnings = 0;
+        my $ctg_issues = $chr_ctg_hash->{$chr};
+        my $list_ctg = $otter_dba->dbc->prepare(q{
+            SELECT ctg.name
+            FROM seq_region chr
+            JOIN assembly asm
+              ON chr.seq_region_id = asm.asm_seq_region_id
+            JOIN seq_region ctg
+              ON asm.cmp_seq_region_id = ctg.seq_region_id
+            JOIN coord_system cs
+              ON ctg.coord_system_id = cs.coord_system_id
+              AND cs.name = 'contig'
+            WHERE chr.name = ?
+            ORDER BY asm.asm_start
+        });
+        $list_ctg->execute($chr);
+        my (%ctg_i_span, %i_ctg);
+        my $max_i = 0;
+        for (my $i = 1; my ($ctg_name) = $list_ctg->fetchrow; $i++) {
+            $ctg_i_span{$ctg_name}{'start'} ||= $i;
+            $ctg_i_span{$ctg_name}{'end'} = $i;
+            $i_ctg{$i} = $ctg_name;
+            $max_i = $i;
+        }
+
+        my $start_i = 0;
+        my $end_i = 0;
+        my $i = 0;
+        my(@issues, %seen_issue);
+        for (my $i = 1; $i <= $max_i; $i++) {
+            my $ctg_name = $i_ctg{$i};
+            my $issues_ref = $ctg_issues->{$ctg_name};
+            if ($issues_ref) {
+                $start_i ||= $i;
+                
+                my $ctg_start_i = $ctg_i_span{$ctg_name}{'start'};
+                if ($ctg_start_i > $i) {
+                    die "Reached $i without starting span for '$ctg_name' at $ctg_start_i";
+                }
+                my $ctg_end_i = $ctg_i_span{$ctg_name}{'end'};
+                if ($ctg_end_i > $end_i) {
+                    $end_i = $ctg_end_i;
+                }
+                foreach my $chunk (@$issues_ref) {
+                    unless ($seen_issue{$chunk}) {
+                        $warnings++;
+                        push(@issues, $chunk);
+                        $seen_issue{$chunk} = 1;
+                    }
+                }
+            }
+            elsif (@issues and $i > $end_i) {
+                # We are in a gap, so print chunk
+                print "\n\n          +++++++++++ $chr $start_i $end_i +++++++++++\n\n", @issues;
+                @issues = ();
+                $start_i = $end_i = 0;
+            }
+        }
+        if (@issues) {
+            print "\n\n          +++++++++++ $chr $start_i $end_i +++++++++++\n\n", @issues;
+        }
+        printf STDERR "  %4d genes with %s on %s\n", $warnings, $err_type, $chr;
+    }
+    # foreach my $region (sort { $a->[1] <=> $b->[1] } values %ctg_pos) {
+    #     my ($ctg_name, $asm_start, $asm_end) = @$region;
+    #     unless ($last + 1 == $asm_start) {
+    #         print "\n";
+    #     }
+    #     $last = $asm_end;
+    #     print join("\t", $ctg_name, $asm_start, $asm_end), "\n";
+    # }
+}
+
+{
+    my $overlapping_ctg;
+
+    sub get_overlapping_contigs {
+        my ($dba, $chr, $start, $end, $context) = @_;
+        
+        $overlapping_ctg ||= $dba->dbc->prepare(q{
+            SELECT ctg.name
+              , asm.asm_start
+              , asm.asm_end
+            FROM seq_region chr
+            JOIN assembly asm
+              ON chr.seq_region_id = asm.asm_seq_region_id
+            JOIN seq_region ctg
+              ON asm.cmp_seq_region_id = ctg.seq_region_id
+            JOIN coord_system cs
+              ON ctg.coord_system_id = cs.coord_system_id
+              AND cs.name = 'contig'
+            WHERE chr.name = ?
+              AND asm.asm_end >= ?
+              AND asm.asm_start <= ?
+            ORDER BY asm.asm_start
+        });
+        $overlapping_ctg->execute($chr, $start, $end);
+        unless ($overlapping_ctg->rows) {
+            warn "No overlapping contig found for '$chr $start $end' in context:\n$context";
+            return;
+        }
+        my @ctg_list;
+        while (my ($ctg_name, $asm_start, $asm_end) = $overlapping_ctg->fetchrow) {
+            push(@ctg_list, [$ctg_name, $asm_start, $asm_end]);
+        }
+        return @ctg_list;
+    }
+    
+}
+
+
+
+
+
+__END__
+
+=head1 NAME - filter_gene_transfer_logfile
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
