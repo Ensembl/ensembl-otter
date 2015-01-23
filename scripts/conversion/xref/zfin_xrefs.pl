@@ -100,8 +100,6 @@ $support->allowed_params(
   'prune',
 );
 
-$support->check_required_params('zfin_name_file','zfin_desc_file','zfin_alias_file');	
-
 if ($support->param('help') or $support->error) {
   warn $support->error if $support->error;
   pod2usage(1);

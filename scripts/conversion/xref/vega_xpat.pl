@@ -100,8 +100,6 @@ if ($support->param('help') or $support->error) {
 my $min_perc_ident = 97;
 my $min_hit_length = 150;
 
-$support->check_required_params('genbank_file');
-$support->check_required_params('xpat_file');
 $support->confirm_params;
 $support->init_log;
 
