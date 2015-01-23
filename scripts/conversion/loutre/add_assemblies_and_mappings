@@ -272,7 +272,7 @@ if ($alt_assembly) {
   ($alt_offset) = $vdbh->selectrow_array($sql); #offset e! seq_region ids to ensure no overlap with vega seq_region_ids
   $support->log("Using offset of $alt_offset for $alt_assembly seq_region_ids\n");
   $sql = qq(SELECT max(coord_system_id) FROM coord_system);
-  ($alt_coord_system_id) = $vdbh->selectrow_array($sql);
+  ($alt_coord_system_id) = $edbh->selectrow_array($sql);
   $alt_coord_system_id += 100;
   unless ($support->param('dry_run')) {
     $cs_rank_sth->execute;
