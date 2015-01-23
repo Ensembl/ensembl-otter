@@ -463,7 +463,7 @@ $c = $dbh->{'evega'}->do($sql);
 #remove unwanted ensembl ones
 $support->log_stamped("Deleting and updating meta table entries.\n\n");
 $sql = qq(DELETE from meta
-           WHERE meta_key in ('assembly.num_toplevel_seqs', 'genebuild.vega_merge_db','genebuild.version', 'removed_evidence_flag.ensembl_dbversion', 'removed_evidence_flag.uniprot_dbversion','sri_adjust','csi_adjust','marker.priority','liftover.mapping','assembly.web_accession_type','assembly.web_accession_source','xref.timestamp','repeat.analysis','assembly.date'));
+           WHERE meta_key in ('assembly.num_toplevel_seqs', 'genebuild.vega_merge_db','genebuild.version', 'removed_evidence_flag.ensembl_dbversion', 'removed_evidence_flag.uniprot_dbversion','sri_adjust','csi_adjust','marker.priority','liftover.mapping','assembly.web_accession_type','assembly.web_accession_source','xref.timestamp','repeat.analysis','assembly.date','pipeline.lock','gencode.version','assembly.overlapping_regions','assembly.coverage_depth' ));
 $c += $dbh->{'evega'}->do($sql);
 $sql = qq(DELETE from meta
            WHERE meta_key in ('genebuild.id','genebuild.method','genebuild.id','genebuild.start_date','genebuild.initial_release_date','genebuild.last_geneset_update','genebuild.havana_datafreeze_date'));
@@ -478,10 +478,6 @@ foreach my $meta ('genebuild.level','transcriptbuild.level','exonbuild.level') {
     SELECT meta_key,meta_value FROM $vega_db.meta WHERE meta_key = '$meta');
   $c = $dbh->{'evega'}->do($sql);
 }
-$sql = qq(
-    INSERT IGNORE INTO meta (meta_key,meta_value)
-    SELECT meta_key,meta_value FROM $vega_db.meta WHERE meta_key = 'genebuild.version');
-$c = $dbh->{'evega'}->do($sql);
 
 $sql = qq(
     INSERT IGNORE INTO meta (meta_key,meta_value)
