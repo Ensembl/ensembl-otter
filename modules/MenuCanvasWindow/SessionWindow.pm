@@ -2630,6 +2630,7 @@ sub zmap_new {
         push @$arg_list, Tk::Screens->nxt( $self->top_window )->gtk_arg;
     }
     my $handshake_to   = $client->config_section_value(Peer => 'handshake-timeout-secs');
+    my $delay          = $client->config_section_value(Peer => 'post-handshake-delay-msecs');
     my $to_list_config = $client->config_section_value(Peer => 'timeout-list');
     my @to_list = split(',', $to_list_config);
     my $zmap =
@@ -2637,8 +2638,9 @@ sub zmap_new {
             '-app_id'     => $self->zircon_app_id,
             '-context'    => $self->new_zircon_context,
             '-arg_list'   => $arg_list,
-            '-timeout_list'           => \@to_list,
-            '-handshake_timeout_secs' => $handshake_to,
+            '-timeout_list'               => \@to_list,
+            '-handshake_timeout_secs'     => $handshake_to,
+            '-post_handshake_delay_msecs' => $delay,
         );
     $self->logger->debug(sprintf('New zmap: %s', $zmap));
     return $zmap;
