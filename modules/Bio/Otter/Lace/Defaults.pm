@@ -723,7 +723,7 @@ password_timeout = 15
 [Peer]
 # what we pass to Zircon-0MQ & to ZMap
 timeout-list=333,1000,3000,9000
-handshake-timeout-secs=15
+handshake-timeout-secs=120
 
 [RequestQueue]
 concurrent=12
