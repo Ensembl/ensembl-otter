@@ -52,18 +52,7 @@ sub run_gui {
       ($Bio::Otter::Lace::Client::PFX."Species List");
 
     # Look for zombies every 5 seconds
-    $main_window->repeat(
-        5000,
-        sub {
-            while ((my $dead_pid = waitpid(-1, POSIX::WNOHANG)) > 0) {
-                my $rc = $?;
-                $rc .= ($rc & 127
-                        ? ' = signal '.($rc & 127)
-                        : ' = rc '.($rc >> 8)) if $rc != 0;
-                $logger->warn("Process $dead_pid exited $rc");
-            }
-        }
-    );
+    $main_window->repeat(5000, \&_do_waitpid);
 
     $main_window->repeat(8 * 3600 * 1000, # 8 hours; RT#317950
                          [ $logger, 'warn', 'Logfile keepalive (8h)' ]);
@@ -111,8 +100,8 @@ sub run_gui {
     }
 
     Tk::MainLoop();
-
     $logger->info("GUI exit");
+
     return;
 }
 
@@ -124,6 +113,9 @@ sub main {
         $logger->error("GUI shutdown: $_");
         $exit = 20;
     } finally {
+
+        try { _do_waitpid() }; # extra zombie check to assist debugging
+
         Bio::Otter::LogFile->unmake_log;
         local $SIG{'TERM'} = 'IGNORE';
 
@@ -135,9 +127,23 @@ sub main {
 
         # NB. we are still here, and so is our logger.  Session recovery
         # may be blocked until we are gone.
+
+        sleep 1;
+        _do_waitpid(); # extra zombie check to assist debugging
     };
 
     return $exit;
+}
+
+sub _do_waitpid {
+    while ((my $dead_pid = waitpid(-1, POSIX::WNOHANG)) > 0) {
+        my $rc = $?;
+        $rc .= ($rc & 127
+                ? ' = signal '.($rc & 127)
+                : ' = rc '.($rc >> 8)) if $rc != 0;
+        $logger->warn("Process $dead_pid exited $rc");
+    }
+    return;
 }
 
 exit main();
