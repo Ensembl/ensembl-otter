@@ -37,6 +37,16 @@ sub new {
     return bless $self, $pkg;
 }
 
+sub clone_near { # new from old, different coords
+    my ($old, $start, $end) = @_;
+    my $new =
+      { %$old,
+        _start => $start,
+        _end => $end,
+      };
+    return bless $new, ref($old);
+}
+
 sub Client {
     my ($self, $dummy) = @_;
 

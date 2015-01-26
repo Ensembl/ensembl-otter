@@ -12,7 +12,11 @@ use Test::More tests => 7;
 use Text::Diff;
 use Try::Tiny;
 
-use Test::Otter qw( ^db_or_skipall ^data_dir_or_skipall ); # may skip test
+use File::Temp qw( tempdir );
+use Bio::Otter::Lace::Slice;
+use Hum::Ace::Assembly;
+
+use Test::Otter qw( ^db_or_skipall ^data_dir_or_skipall OtterClient ); # may skip test
 
 use OtterTest::TestRegion qw( check_xml extra_gene add_extra_gene_xml region_is %test_region_params local_xml_copy );
 
@@ -31,6 +35,8 @@ BEGIN {
 sub main {
     subtest critic_tt => \&critic_tt;
     subtest test_regions_tt => \&test_regions_tt;
+    subtest DE_line_equiv_tt => \&DE_line_equiv_tt;
+    subtest DE_line_cases_tt => \&DE_line_cases_tt;
     return 0;
 }
 
@@ -212,5 +218,80 @@ sub try_unlock_region {
     };
     return ($ok, $err);
 }
+
+
+# Check the new server-side implementation (B:O:ServerAction::Region)
+# matches the old (Hum::*) one.
+#
+# Requires making an Ace database for each region.
+sub DE_line_equiv_tt {
+    my $tmpdir = tempdir('DE_line_equiv.XXXXXX', TMPDIR => 1, CLEANUP => 1);
+    my @r =
+      ([qw[ human_test chr12-38 chromosome Otter 12 30351955 34820185 ]], # 420..474
+      );
+
+    for (my $i=0; $i<@r; $i++) {
+        my $r = $r[$i];
+        diag "Next: $i : @$r";
+        _DE_region_equiv("$tmpdir/ace_$i", $i, @$r);
+    }
+
+    return;
+}
+
+sub _DE_region_equiv {
+    my ($acehome, $label, @region) = @_;
+    ### Get DE-line the old way
+    #
+    # B:O:L:C new_AceDatabase
+    my $client = OtterClient();
+    my $slice = Bio::Otter::Lace::Slice->new($client, @region);
+    my $adb = Bio::Otter::Lace::AceDatabase->new;
+    $adb->Client($client);
+    $adb->home($acehome);
+    #
+    # CW:SequenceNotes open_SequenceSet
+    $adb->error_flag(0);
+    $adb->make_database_directory;
+    $adb->write_access(0);
+    $adb->name("DE_line_cmp:$label");
+    $adb->slice($slice);
+    $adb->load_dataset_info;
+    #
+    # MCW:ColumnChooser load_filters
+    try { $adb->init_AceDatabase } finally { $adb->error_flag(0) };
+    #
+    # MCW:SessionWindow Assembly
+    my $ace  = $adb->aceperl_db_handle;
+    my $assembly = Hum::Ace::Assembly->new;
+    $assembly->name( $adb->slice_name );
+    $assembly->MethodCollection($adb->MethodCollection);
+    $assembly->express_data_fetch($ace);
+    # Do we need to load up all the SubSeqs from a GFF?
+    # Is it worth having a SessionWindow here to do that?
+
+    foreach my $clone ($assembly->get_all_Clones) {
+        my $ace_desc = $assembly->generate_description_for_clone($clone);
+        # may be false?  "I didn't find anything to describe"  (619b6039)
+
+        my $clone_slice = $slice->clone_near
+          ($clone->assembly_start,
+           $clone->assembly_end);
+        # untested, is this the right patch?
+
+        my $remote_desc = $client->get_slice_DE($clone_slice);
+        is($remote_desc, $ace_desc,
+           "desc for ".$clone->clone_name." vs. ".$clone_slice->name);
+    }
+
+    return;
+}
+
+# Check the new server-side implementation (B:O:ServerAction::Region)
+# produces expected output for some fixed input.
+sub DE_line_cases_tt {
+    fail('no test cases yet');
+}
+
 
 1;

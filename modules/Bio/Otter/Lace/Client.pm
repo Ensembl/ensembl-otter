@@ -1244,6 +1244,14 @@ sub designate_this {
     return \%out;
 }
 
+
+sub get_slice_DE {
+    my ($self, $slice) = @_;
+    my $resp = $self->otter_response_content
+      ('GET', 'DE_region', { $self->_slice_query($slice) });
+    return $resp->{description};
+}
+
 # Give a B:O:L:Slice
 sub _slice_query {
     my ($self, $slice) = @_;
