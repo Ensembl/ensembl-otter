@@ -154,17 +154,20 @@ sub DE_region {
         server_action => $self,
         );
 
-    my $DE = $self->_genes_DE($region->genes);
+    my $DE = $self->_genes_DE($region);
     return $DE;
 }
 
 sub _genes_DE {
-    my ($self, @gene) = @_;
-    return [ map { $_->display_id ." at ". $_->slice->display_id } @gene ];
+    my ($self, $region) = @_;
+    my $slice = $region->slice;
+    my @gene = $region->genes;
+
+    return $self->__generate_desc_and_kws_for_clone($slice, @gene);
 }
 
 sub __generate_desc_and_kws_for_clone {
-    my ( $self, $clone ) = @_;
+    my ($self, $region, @loci) = @_;
 
     my $DEBUG = 0;
 
@@ -176,7 +179,7 @@ sub __generate_desc_and_kws_for_clone {
     # contains 'part of' the locus, but will at least be consistent!
     my $BE_CLEVER = 0;
 
-    my %locus_sub;
+    my %locus_sub; # key = gene name, value = \@tsct
 
     my %locus_is_transposon;
     my %locus_start;
@@ -184,22 +187,42 @@ sub __generate_desc_and_kws_for_clone {
     my %locus_strand;
 
     # identify the loci in this assembly
+#    foreach my $sub (sort { ace_sort($a->name, $b->name) } $self->get_all_SubSeqs) {
 
-    foreach my $sub (sort { ace_sort($a->name, $b->name) } $self->get_all_SubSeqs) {
+    my $r_len = $region->length;
+    my (%g2ts, %ts2g, @ts, %g_trunc, %ts_name, %g_name);
+    foreach my $g (@loci) {
+        my @g_ts = @{ $g->get_all_Transcripts };
+        $g2ts{"$g"} = \@g_ts;
+        foreach my $ts (@g_ts) {
+            $ts2g{"$ts"} = $g;
+            my ($n) = @{ $ts->get_all_Attributes('name') };
+            $ts_name{"$ts"} = $n && $n->value;
+        }
+        $g_trunc{"$g"} = 1 if $g->start < 1 || $g->end > $r_len;
 
-        next unless $sub->Locus;
+        my ($n) = @{ $g->get_all_Attributes('name') };
+        $g_name{"$g"} = $n ? $n->value : $g->stable_id;
 
-        my $lname = $sub->Locus->name;
+        push @ts, @g_ts;
+    }
+
+    foreach my $sub (sort { (defined $ts_name{$a}) <=> (defined $ts_name{$b})
+                              || $ts_name{$a} cmp $ts_name{$b} } @ts) {
+        my $locus = $ts2g{$sub};
+
+        my $lname = $g_name{$locus};
 
         # ignore loci that are not havana annotated genes
-        next unless ($sub->Locus->is_truncated || $sub->GeneMethod->mutable);
+        next unless $locus->source eq 'havana';
+#        next unless ($sub->Locus->is_truncated || $sub->GeneMethod->mutable);
 
         my $tsct_list = $locus_sub{$lname} ||= [];
         push(@$tsct_list, $sub);
 
         # record if the locus is a transposon 
-
-        $locus_is_transposon{$lname} = 1 if $sub->GeneMethod->name =~ /transposon/i;
+# XXX: not translated
+#        $locus_is_transposon{$lname} = 1 if $sub->GeneMethod->name =~ /transposon/i;
 
         # track the start, end and strand of the locus
 
@@ -217,18 +240,19 @@ sub __generate_desc_and_kws_for_clone {
 
     }
 
-    print "clone_desc_cache miss\n" if $DEBUG;
+    warn "DE:clone_desc_cache miss\n" if $DEBUG;
 
-    my $cstart = $clone->assembly_start;
-    my $cend = $clone->assembly_end;
+    my $cstart = $region->start;
+    my $cend = $region->end;
 
-    print "clone: $cstart-$cend\n" if $DEBUG;
+    warn "DE:clone: $cstart-$cend\n" if $DEBUG;
 
-    my $clone_accession = $clone->accession;
-    my $clone_name = $clone->clone_name;
-
-    print "clone_accession: $clone_accession\n" if $DEBUG;
-    print "clone_name: $clone_name\n" if $DEBUG;
+my ($clone_accession, $clone_name) = ('XXX:nil') x 2; # for detecting un-named locus?
+#    my $clone_accession = $clone->accession;
+#    my $clone_name = $clone->clone_name;
+#
+#    warn "DE:clone_accession: $clone_accession\n" if $DEBUG;
+#    warn "DE:clone_name: $clone_name\n" if $DEBUG;
 
     my $final_line = 'Contains ';
     my @keywords;
@@ -239,19 +263,20 @@ sub __generate_desc_and_kws_for_clone {
     # loop through the loci in 5' -> 3' order 
     foreach my $loc_name (sort {$locus_start{$a} <=> $locus_start{$b}} keys %locus_sub) {
 
-        print "checking next locus: $loc_name\n" if $DEBUG;
+        warn "DE:  checking next locus: $loc_name\n" if $DEBUG;
 
         my $tsct_list = $locus_sub{$loc_name};
-        my $locus = $tsct_list->[0]->Locus;
-        my $lname = $locus->name;
-        my $lstrand = $tsct_list->[0]->strand;
+        my $locus = $ts2g{ $tsct_list->[0] };
+        my $lname = $g_name{$locus};
+        my $lstrand = $locus->strand;
 
         # ignore loci with prefixes
+# XXX: prefix would be in gene.source ?  already excluded
         next if $lname =~ /^.+:/;
 
         my $desc = $locus->description;
 
-        print "desc: $desc\n" if $DEBUG;
+        warn "DE:  desc: $desc\n" if $DEBUG;
 
         # ignore loci without descriptions
         next unless $desc;
@@ -263,7 +288,7 @@ sub __generate_desc_and_kws_for_clone {
         my $lstart = $locus_start{$lname};
         my $lend = $locus_end{$lname};
 
-        print "locus: $lstart-$lend\n" if $DEBUG;
+        warn "DE:  locus: $lstart-$lend\n" if $DEBUG;
 
         # establish if any part of this locus lies on this clone
         my $line;
@@ -297,11 +322,11 @@ sub __generate_desc_and_kws_for_clone {
             next;
         }
 
-        $line = $partial_text if $locus->is_truncated;
+        $line = $partial_text if $g_trunc{$locus};
 
         $desc =~ s/\s+$//;
 
-        print "desc: $desc\n" if $DEBUG;
+        warn "DE:  desc: $desc\n" if $DEBUG;
 
         next if $desc =~ /artefact|artifact/i;
 
@@ -319,9 +344,10 @@ sub __generate_desc_and_kws_for_clone {
             }
         }
         elsif ($desc =~ /pseudogene/i) {
-            if ($locus->name !~ /$clone_accession/ &&
-                $locus->name !~ /$clone_name/) {
-                $line .= A($desc).' '.$locus->name;
+            my $lname = $g_name{$locus};
+            if ($lname !~ /$clone_accession/ &&
+                $lname !~ /$clone_name/) {
+                $line .= A($desc).' '.$lname;
             }
             else {
                 $line .= A($desc);
@@ -338,7 +364,7 @@ sub __generate_desc_and_kws_for_clone {
             push @DEline, \$line;
         }
 
-        print "line: $line\n" if $DEBUG;
+        warn "DE:  line: $line\n" if $DEBUG;
     }
 
     if ($novel_gene_count) {
