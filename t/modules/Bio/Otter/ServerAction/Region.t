@@ -275,13 +275,14 @@ sub _DE_region_equiv {
         # may be false?  "I didn't find anything to describe"  (619b6039)
 
         my $clone_slice = $slice->clone_near
-          ($clone->assembly_start,
-           $clone->assembly_end);
+          ($slice->start + $clone->assembly_start,
+           $slice->start + $clone->assembly_end);
         # untested, is this the right patch?
 
         my $remote_desc = $client->get_slice_DE($clone_slice);
         is($remote_desc, $ace_desc,
-           "desc for ".$clone->clone_name." vs. ".$clone_slice->name);
+           "desc for ".$clone->clone_name." vs. ".$clone_slice->name)
+          and diag explain $remote_desc;
     }
 
     return;
