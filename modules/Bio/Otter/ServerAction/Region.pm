@@ -169,7 +169,8 @@ sub _genes_DE {
 sub __generate_desc_and_kws_for_clone {
     my ($self, $region, @loci) = @_;
 
-    my $DEBUG = 0;
+    my $DEBUG;
+#    $DEBUG = [];
 
     # set to true to generate a description that specifies if the
     # clone contains a central part or the 5' or 3' end of partial
@@ -220,9 +221,8 @@ sub __generate_desc_and_kws_for_clone {
         my $tsct_list = $locus_sub{$lname} ||= [];
         push(@$tsct_list, $sub);
 
-        # record if the locus is a transposon 
-# XXX: not translated
-#        $locus_is_transposon{$lname} = 1 if $sub->GeneMethod->name =~ /transposon/i;
+        # record if the locus is a transposon (some in ZF)
+        $locus_is_transposon{$lname} = 1 if $locus->biotype =~ /transposon/i;
 
         # track the start, end and strand of the locus
 
@@ -240,19 +240,19 @@ sub __generate_desc_and_kws_for_clone {
 
     }
 
-    warn "DE:clone_desc_cache miss\n" if $DEBUG;
-
-    my $cstart = $region->start;
-    my $cend = $region->end;
-
-    warn "DE:clone: $cstart-$cend\n" if $DEBUG;
+    my @region_chr = ($region->start, $region->end);
+    my $cstart = 1;
+    my $cend = $region_chr[1] - $region_chr[0] + 1;
 
 my ($clone_accession, $clone_name) = ('XXX:nil') x 2; # for detecting un-named locus?
 #    my $clone_accession = $clone->accession;
 #    my $clone_name = $clone->clone_name;
-#
-#    warn "DE:clone_accession: $clone_accession\n" if $DEBUG;
-#    warn "DE:clone_name: $clone_name\n" if $DEBUG;
+
+    push @$DEBUG,
+      { region => "chromosomal (@region_chr) => local ($cstart $cend)",
+        clone_accession => $clone_accession,
+        clone_name => $clone_name }
+        if $DEBUG;
 
     my $final_line = 'Contains ';
     my @keywords;
@@ -262,8 +262,7 @@ my ($clone_accession, $clone_name) = ('XXX:nil') x 2; # for detecting un-named l
 
     # loop through the loci in 5' -> 3' order 
     foreach my $loc_name (sort {$locus_start{$a} <=> $locus_start{$b}} keys %locus_sub) {
-
-        warn "DE:  checking next locus: $loc_name\n" if $DEBUG;
+        push @$DEBUG, "  checking next locus: $loc_name" if $DEBUG;
 
         my $tsct_list = $locus_sub{$loc_name};
         my $locus = $ts2g{ $tsct_list->[0] };
@@ -276,7 +275,7 @@ my ($clone_accession, $clone_name) = ('XXX:nil') x 2; # for detecting un-named l
 
         my $desc = $locus->description;
 
-        warn "DE:  desc: $desc\n" if $DEBUG;
+        push @$DEBUG, "  desc: $desc" if $DEBUG;
 
         # ignore loci without descriptions
         next unless $desc;
@@ -288,7 +287,7 @@ my ($clone_accession, $clone_name) = ('XXX:nil') x 2; # for detecting un-named l
         my $lstart = $locus_start{$lname};
         my $lend = $locus_end{$lname};
 
-        warn "DE:  locus: $lstart-$lend\n" if $DEBUG;
+        push @$DEBUG, "  locus: $lstart-$lend" if $DEBUG;
 
         # establish if any part of this locus lies on this clone
         my $line;
@@ -326,7 +325,7 @@ my ($clone_accession, $clone_name) = ('XXX:nil') x 2; # for detecting un-named l
 
         $desc =~ s/\s+$//;
 
-        warn "DE:  desc: $desc\n" if $DEBUG;
+        push @$DEBUG, "  desc: $desc" if $DEBUG;
 
         next if $desc =~ /artefact|artifact/i;
 
@@ -350,6 +349,8 @@ my ($clone_accession, $clone_name) = ('XXX:nil') x 2; # for detecting un-named l
                 $line .= A($desc).' '.$lname;
             }
             else {
+                # in a pseudogene named after its clones,
+                # locusname is not interesting
                 $line .= A($desc);
             }
             push @DEline, \$line ;
@@ -364,7 +365,7 @@ my ($clone_accession, $clone_name) = ('XXX:nil') x 2; # for detecting un-named l
             push @DEline, \$line;
         }
 
-        warn "DE:  line: $line\n" if $DEBUG;
+        push @$DEBUG, "  line: $line" if $DEBUG;
     }
 
     if ($novel_gene_count) {
@@ -406,11 +407,17 @@ my ($clone_accession, $clone_name) = ('XXX:nil') x 2; # for detecting un-named l
         $final_line .= ${$DEline[$range -2]}." and ".${$DEline[$range-1]}.".";
     }
 
-    print $final_line."\n" if $DEBUG;
+    push @$DEBUG,
+      { ts_name => \%ts_name, g_name => \%g_name,
+        DEline => [ map { $$_ } @DEline ], # JSON encodes only boolean scalar refs
+        pos => "DE:clone: $cstart-$cend",
+        g_pos => [ map { [$_->start, $_->end] } values %ts2g ],
+      } if $DEBUG;
 
     return {
         keywords    => ( join "\n", @keywords ),
         description => $final_line,
+        ($DEBUG ? (_debug => $DEBUG) : ()),
     };
 }
 
