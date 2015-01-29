@@ -25,14 +25,14 @@ Construct-only, with read-only attributes.
 sub new {
     my ($pkg, $access, $hashref) = @_;
     my $self = bless { _access => $access }, $pkg;
-    weaken $self->{_access};
+    weaken $self->{'_access'};
 
     my %info = %$hashref;
     foreach my $key (qw( write read comment )) {
         $self->{$key} = delete $info{$key} if exists $info{$key};
     }
 
-    $self->{_users} = $self->_build_users(delete $info{users});
+    $self->{'_users'} = $self->_build_users(delete $info{users});
 
     my @badkey = sort keys %info;
     die "$pkg->new: unexpected subkeys (@badkey)" if @badkey;
@@ -42,18 +42,18 @@ sub new {
 
 sub _access {
     my ($self) = @_;
-    return $self->{_access}
+    return $self->{'_access'}
       || die "Lost my weakened _access";
 }
 
 sub comment {
     my ($self) = @_;
-    return $self->{comment};
+    return $self->{'comment'};
 }
 
 sub users {
     my ($self) = @_;
-    return @{ $self->{_users} };
+    return @{ $self->{'_users'} };
 }
 
 sub _build_users {
@@ -67,23 +67,23 @@ sub _build_users {
 
 sub _write {
     my ($self) = @_;
-    return $self->{write} || [];
+    return $self->{'write'} || [];
 }
 
 sub _read {
     my ($self) = @_;
-    return $self->{read} || [];
+    return $self->{'read'} || [];
 }
 
 sub write_list {
     my ($self) = @_;
-    return $self->{_write_dslist} ||=
+    return $self->{'_write_dslist'} ||=
       Bio::Otter::Auth::DsList->new($self->_access, $self->_write);
 }
 
 sub read_list {
     my ($self) = @_;
-    return $self->{_read_dslist} ||=
+    return $self->{'_read_dslist'} ||=
       Bio::Otter::Auth::DsList->new($self->_access, $self->_read);
 }
 

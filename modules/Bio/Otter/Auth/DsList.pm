@@ -26,12 +26,12 @@ sub new {
     my $self = bless {}, $pkg;
 
     # Access to species_groups is needed to expand them
-    $self->{_access} = $access;
-    weaken $self->{_access};
+    $self->{'_access'} = $access;
+    weaken $self->{'_access'};
     confess "Made without _access" unless
       try{ $self->_access->can('species_groups') };
 
-    $self->{_names} = $dataset_names_list;
+    $self->{'_names'} = $dataset_names_list;
     croak "$pkg->new needs arrayref of dataset names"
       unless ref($dataset_names_list);
 
@@ -59,13 +59,13 @@ sub clone_without {
 
 sub _access {
     my ($self) = @_;
-    return $self->{_access}
+    return $self->{'_access'}
       || die "Lost my weakened _access";
 }
 
 sub raw_names {
     my ($self) = @_;
-    return @{ $self->{_names} };
+    return @{ $self->{'_names'} };
 }
 
 sub expanded_names {
@@ -77,7 +77,7 @@ sub expanded_names {
 
 sub _group {
     my ($self, $groupname) = @_;
-    local $self->{_LOOPING} = 1;
+    local $self->{'_LOOPING'} = 1;
 
     my $sp_grp = $self->_access->species_groups;
     die "Cannot resolve species_group $groupname without linkage"
@@ -87,7 +87,7 @@ sub _group {
     die "Cannot resolve unknown species_group $groupname"
       unless defined $group;
     die "Loop detected while resolving species_group $groupname"
-      if $group->{_LOOPING};
+      if $group->{'_LOOPING'};
 
     return $group->expanded_names;
 }
