@@ -419,7 +419,7 @@ sub fetch_all_by_Slice {
                 my $gene_att = $gene->get_all_Attributes;
                 push @$gene_att, $remark_att;
                 $gene->truncated_flag(1);
-                warn "Found a truncated gene\n";
+                warn "Found a truncated gene ($message)\n";
             }
         }
 
