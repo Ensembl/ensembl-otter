@@ -30,13 +30,13 @@ after all other data is loaded.
 sub new {
     my ($pkg, $access, $hashref_or_name) = @_;
     my $self = bless { _access => $access }, $pkg;
-    weaken $self->{_access};
+    weaken $self->{'_access'};
 
     if (ref($hashref_or_name)) {
         my @email = try { keys %$hashref_or_name };
         die "$pkg->new hashref: expected one email key, got (@email)"
           unless 1==@email;
-        my $e = $self->{_email} = $email[0];
+        my $e = $self->{'_email'} = $email[0];
         my $data = $hashref_or_name->{$e};
         die "Empty user spec for $e - trailing : in YAML?" unless $data;
 
@@ -48,7 +48,7 @@ sub new {
         die "$pkg->new for $e: unexpected subkeys (@badkey)" if @badkey;
 
     } else {
-        $self->{_email} = $hashref_or_name;
+        $self->{'_email'} = $hashref_or_name;
     }
 
     return $self;
@@ -64,28 +64,28 @@ sub new {
 
 sub _access {
     my ($self) = @_;
-    return $self->{_access}
+    return $self->{'_access'}
       || die "Lost my weakened _access";
 }
 
 sub email {
     my ($self) = @_;
-    return $self->{_email};
+    return $self->{'_email'};
 }
 
 sub comment {
     my ($self) = @_;
-    return $self->{comment};
+    return $self->{'comment'};
 }
 
 sub _more_write {
     my ($self) = @_;
-    return $self->{write};
+    return $self->{'write'};
 }
 
 sub _more_read {
     my ($self) = @_;
-    return $self->{read};
+    return $self->{'read'};
 }
 
 
@@ -101,7 +101,7 @@ sub _write_list {
 sub _read_list {
     my ($self) = @_;
     if (my $mw = $self->_more_read) {
-        return $self->{_read_dslist} ||=
+        return $self->{'_read_dslist'} ||=
           Bio::Otter::Auth::DsList->new($self->_access, $mw);
     } else {
         return ();
@@ -121,13 +121,13 @@ sub in_group {
     my ($self, @ugroup) = @_;
     my $e = $self->email;
     if (@ugroup) {
-        die "User $e has _in_group already" if $self->{_in_group};
+        die "User $e has _in_group already" if $self->{'_in_group'};
         $self->{_in_group} = [ @ugroup ];
         foreach my $i (0..$#ugroup) {
             weaken($ugroup[$i]);
         }
     }
-    my $glist = $self->{_in_group}
+    my $glist = $self->{'_in_group'}
       or die "User $e _in_group is not yet set";
     return @$glist;
 }

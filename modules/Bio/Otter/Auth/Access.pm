@@ -81,7 +81,7 @@ sub new {
                  _input => $hashref };
     bless $self, $pkg;
 
-    local $self->{_ptr} = 'begin'; # where we are up to, with parsing
+    local $self->{'_ptr'} = 'begin'; # where we are up to, with parsing
     try {
         $self->_check_species_groups;
         $self->_flatten_users;
@@ -107,18 +107,18 @@ the C<Bio::Otter::Auth::*> classes.
 
 sub species_dat {
     my ($self) = @_;
-    return $self->{_species_dat};
+    return $self->{'_species_dat'};
 }
 
 sub _input {
     my ($self, $key) = @_;
-    $self->{_ptr} = $key;
-    return $self->{_input}->{$key} || die "Key $key not found in input";
+    $self->{'_ptr'} = $key;
+    return $self->{'_input'}->{$key} || die "Key $key not found in input";
 }
 
 sub species_groups {
     my ($self) = @_;
-    return $self->{_species_groups}
+    return $self->{'_species_groups'}
       ||= $self->_build_species_groups($self->_input('species_groups'));
 }
 
@@ -144,7 +144,7 @@ sub _build_species_groups {
     my ($self, $sp_grps) = @_;
     my %out;
     while (my ($name, $sgroup) = each %$sp_grps) {
-        $self->{_ptr} = "species_groups/$name";
+        $self->{'_ptr'} = "species_groups/$name";
         $out{$name} = Bio::Otter::Auth::DsList->new($self, $sgroup);
     }
     return \%out;
@@ -153,7 +153,7 @@ sub _build_species_groups {
 sub _check_species_groups {
     my ($self) = @_;
     while (my ($name, $dslist) = each %{ $self->species_groups }) {
-        $self->{_ptr} = "species_groups/$name";
+        $self->{'_ptr'} = "species_groups/$name";
         my @ds = $dslist->datasets;
     }
     return;
@@ -161,7 +161,7 @@ sub _check_species_groups {
 
 sub _user_groups {
     my ($self) = @_;
-    return $self->{_user_groups}
+    return $self->{'_user_groups'}
       ||= $self->_build_user_groups($self->_input('user_groups'));
 }
 
@@ -169,7 +169,7 @@ sub _build_user_groups {
     my ($self, $u_grps) = @_;
     my %out;
     while (my ($name, $ugroup) = each %$u_grps) {
-        $self->{_ptr} = "user_groups/$name";
+        $self->{'_ptr'} = "user_groups/$name";
         $out{$name} = Bio::Otter::Auth::UserGroup->new($self, $ugroup);
     }
     return \%out;
@@ -189,7 +189,7 @@ of authors.
 
 sub all_users {
     my ($self) = @_;
-    return $self->{_users};
+    return $self->{'_users'};
 }
 
 
@@ -197,14 +197,14 @@ sub _flatten_users {
     my ($self) = @_;
     my %out;
     while (my ($name, $ugroup) = each %{ $self->_user_groups }) {
-        $self->{_ptr} = "user_groups/$name";
+        $self->{'_ptr'} = "user_groups/$name";
         foreach my $u ($ugroup->users) {
             my $e = $u->email;
             die "Duplicate user $e" if $out{lc($e)}; # see $u->in_group comment
             $out{lc($e)} = $u;
         }
     }
-    $self->{_users} = \%out;
+    $self->{'_users'} = \%out;
     return;
 }
 
@@ -232,7 +232,7 @@ sub legacy_access {
         my $U = Bio::Otter::Auth::User->new($self, $email);
         $U->in_group($G);
 
-        $self->_user_groups->{legacy_access} = $G;
+        $self->_user_groups->{'legacy_access'} = $G;
         $self->all_users->{$email} = $U;
     }
 
