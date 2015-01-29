@@ -228,7 +228,10 @@ sub __generate_desc_and_kws_for_clone {
     my $cstart = 1;
     my $cend = $region_chr[1] - $region_chr[0] + 1;
 
-my ($clone_accession, $clone_name) = ('XXX:nil') x 2; # for detecting un-named locus?
+my ($clone_accession, $clone_name) =
+  ('XXX:nil',
+   qr{^[A-Z]{1,2}\d{1,3}-?\d{1,3}[A-Z]\d{1,3}(\.\d{1,2})?$}); # generic clone name
+
 #    my $clone_accession = $clone->accession;
 #    my $clone_name = $clone->clone_name;
 
