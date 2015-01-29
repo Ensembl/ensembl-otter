@@ -113,7 +113,7 @@ sub species_dat {
 sub _input {
     my ($self, $key) = @_;
     $self->{_ptr} = $key;
-    return $self->{_input}->{$key} or die "Key $key not found in input";
+    return $self->{_input}->{$key} || die "Key $key not found in input";
 }
 
 sub species_groups {

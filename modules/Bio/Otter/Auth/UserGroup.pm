@@ -43,7 +43,7 @@ sub new {
 sub _access {
     my ($self) = @_;
     return $self->{_access}
-      or die "Lost my weakened _access";
+      || die "Lost my weakened _access";
 }
 
 sub comment {
