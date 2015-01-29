@@ -374,6 +374,7 @@ my ($clone_accession, $clone_name) = ('XXX:nil') x 2; # for detecting un-named l
         }
     }
 
+    my $lf = ""; # was "" in the AceDB version, "\n" makes boundaries clearer
     my $range = scalar @DEline;
     if ($range == 0) {
         $final_line .= "no genes.";
@@ -382,13 +383,13 @@ my ($clone_accession, $clone_name) = ('XXX:nil') x 2; # for detecting un-named l
         $final_line .= ${$DEline[0]}.".";
     }
     elsif ($range == 2) {
-        $final_line .= ${$DEline[0]}. " and ".${$DEline[1]}.".";
+        $final_line .= ${$DEline[0]}. " and$lf ".${$DEline[1]}.".";
     }
     else {
         for (my $k = 0; $k < ($range - 2); $k++) {
-            $final_line .= ${$DEline[$k]}.", ";
+            $final_line .= ${$DEline[$k]}.",$lf ";
         }
-        $final_line .= ${$DEline[$range -2]}." and ".${$DEline[$range-1]}.".";
+        $final_line .= ${$DEline[$range -2]}." and$lf ".${$DEline[$range-1]}.".";
     }
 
     push @$DEBUG,
