@@ -143,31 +143,12 @@ C<<$Assembly->generate_description_for_clone>> .
 
 sub DE_region {
     my $self = shift;
-
-    my $odba  = $self->server->otter_dba;
-    my $slice = $self->slice;
-
-    # XXX: inefficiency - we only need to fetch_Genes, but we also fetch_SimpleFeatures etc.
-    my $region = Bio::Vega::Region->new_from_otter_db(
-        otter_dba     => $odba,
-        slice         => $slice,
-        server_action => $self,
-        );
-
-    my $DE = $self->_genes_DE($region);
-    return $DE;
-}
-
-sub _genes_DE {
-    my ($self, $region) = @_;
-    my $slice = $region->slice;
-    my @gene = $region->genes;
-
-    return $self->__generate_desc_and_kws_for_clone($slice, @gene);
+    return $self->__generate_desc_and_kws_for_clone($self->slice);
 }
 
 sub __generate_desc_and_kws_for_clone {
-    my ($self, $region, @loci) = @_;
+    my ($self, $region) = @_;
+
 
     my $DEBUG;
 #    $DEBUG = [];
@@ -189,6 +170,9 @@ sub __generate_desc_and_kws_for_clone {
 
     # identify the loci in this assembly
 #    foreach my $sub (sort { ace_sort($a->name, $b->name) } $self->get_all_SubSeqs) {
+
+    my $GA = $region->adaptor->db->get_GeneAdaptor;
+    my @loci = @{ $GA->fetch_all_by_Slice( $region ) };
 
     my $r_len = $region->length;
     my (%g2ts, %ts2g, @ts, %g_trunc, %ts_name, %g_name);
