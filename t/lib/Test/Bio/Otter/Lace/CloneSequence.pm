@@ -44,6 +44,17 @@ sub accession_dot_sv : Test(2) {
     return;
 }
 
+sub drop_pipelineStatus : Test(3) {
+    my $test = shift;
+    my $cs = $test->our_object;
+    can_ok $cs, 'drop_pipelineStatus';
+    $test->set_attributes;
+    isa_ok $cs->pipelineStatus, 'Bio::OtterLace::PipelineStatus', '...and when pipelineStatus';
+    $cs->drop_pipelineStatus;
+    is $cs->pipelineStatus, undef, '...it can be dropped';
+    return;
+}
+
 1;
 
 # EOF
