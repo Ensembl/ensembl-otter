@@ -1,45 +1,9 @@
 package Test::Bio::Otter::Lace::CloneSequence;
 
-use Test::Class::Most          # automagically becomes my parent
-    attributes => [ qw( clone_sequence ) ];
+use Test::Class::Most
+    parent     => 'OtterTest::Class';
 
-use lib "${ENV{ANACODE_TEAM_TOOLS}}/t/tlib";
-use Test::CriticModule;
-
-sub class { return 'Bio::Otter::Lace::CloneSequence' };
-
-sub startup : Tests(startup) {
-    my $test  = shift;
-    my $class = $test->class;
-    eval "use $class";
-    die $@ if $@;
-    return;
-}
-
-sub setup : Tests(setup) {
-    my $test = shift;
-    my $class = $test->class;
-    $test->clone_sequence($class->new);
-    return;
-}
-
-sub _critic : Test(1) {
-    my $test = shift;
-    my $class = $test->class;
-    critic_module_ok($class);
-    return;
-}
-
-sub constructor : Test(3) {
-    my $test = shift;
-    my $class = $test->class;
-    can_ok $class, 'new';
-    ok my  $cs = $class->new, '... and the constructor should succeed';
-    isa_ok $cs,  $class,      '... and the object it returns';
-    return;
-}
-
-sub attributes {
+sub build_attributes {
     return {
         accession     => 'A12345',
         sv            => 6,
@@ -57,23 +21,14 @@ sub attributes {
         contig_id           => 'Contig-ID',         # redundant accessor?
         super_contig_name   => 'Super-Contig-Name', # redundant accessor?
         pipeline_chromosome => 'Pipe-Chr',          # redundant accessor?
-        # ContigInfo          => contig_info_obj,     # takes object
-        # pipelineStatus      => pipeline_status_obj, # takes object
+        ContigInfo          => sub { return bless {}, 'Bio::Vega::ContigInfo' },
+        pipelineStatus      => sub { return bless {}, 'Bio::OtterLace::PipelineStatus' },
     };
-}
-
-sub test_attributes : Test(45) {
-    my $test = shift;
-    my $attributes = $test->attributes;
-    foreach my $a ( keys %$attributes ) {
-        $test->_attribute($a, $attributes->{$a});
-    }
-    return;
 }
 
 sub sequence : Test(3) {
     my $test = shift;
-    my $cs = $test->clone_sequence;
+    my $cs = $test->our_object;
     can_ok $cs, 'sequence';
     throws_ok { $cs->sequence } qr/sequence\(\) not set/, '...and throws if sequence not set';
     $cs->sequence('GATACAAAAA');
@@ -82,31 +37,10 @@ sub sequence : Test(3) {
 
 sub accession_dot_sv : Test(2) {
     my $test = shift;
-    my $cs = $test->clone_sequence;
+    my $cs = $test->our_object;
     can_ok $cs, 'accession_dot_sv';
-    $test->_set_attributes;
+    $test->set_attributes;
     is $cs->accession_dot_sv, 'A12345.6', '...and its value should match';
-    return;
-}
-
-sub _attribute {
-    my ($test, $attribute, $expected) = @_;
-    $test->setup;
-    my $cs = $test->clone_sequence;
-    can_ok $cs, $attribute;
-    ok ! defined $cs->$attribute, "...and '$attribute' should start out undefined";
-    $test->_set_attributes;
-    is $cs->$attribute, $expected,'...and setting its value should succeed';
-    return;
-}
-
-sub _set_attributes {
-    my $test = shift;
-    my $cs = $test->clone_sequence;
-    my $attributes = $test->attributes;
-    foreach my $a ( keys %$attributes ) {
-        $cs->$a($attributes->{$a});
-    }
     return;
 }
 
