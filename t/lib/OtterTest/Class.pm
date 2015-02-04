@@ -13,6 +13,10 @@ BEGIN {
     __PACKAGE__->mk_classdata('class');
 }
 
+INIT {
+    Test::Class->runtests;
+}
+
 sub is_abstract {
     my $test = shift;
     return Test::Class::Most->is_abstract($test);
