@@ -16,7 +16,6 @@ $Data::Dumper::Terse = 1;
 
 my (
     %tag_stack,
-    %current_object,
     %current_string,
     %object_builders,
     %object_data,
@@ -29,7 +28,6 @@ sub DESTROY {
     # warn sprintf "Destroying '%s'\n", ref($self);
 
     delete $tag_stack{$self};
-    delete $current_object{$self};
     delete $current_string{$self};
     delete $object_builders{$self};
     my $data = delete $object_data{$self};
