@@ -22,6 +22,9 @@ BEGIN {
         if (delete $args{no_run_test}) {
             my $caller = caller;
             $no_run_tests{$class} = 1;
+            my $obj_class = $class->_set_class;
+            warn "Trying to 'use $obj_class'";
+            eval "use $obj_class";
         }
         return;
     }
@@ -52,15 +55,28 @@ sub is_abstract {
     return Test::Class::Most->is_abstract($test);
 }
 
+sub _set_class {
+    my $test = shift;
+
+    my $class = $test->class;
+    return $class if $class;
+
+    ( $class = ref($test) || $test ) =~ s/^Test:://;
+    $test->class($class);
+    return $class;
+}
+
 sub startup : Tests(startup => 1) {
     my $test  = shift;
     return 'abstract base class' if $test->is_abstract;
 
-    ( my $class = ref $test ) =~ s/^Test:://;
-
+    my $class = $test->_set_class;
     use_ok $class or die;
-    $test->class($class);
 
+    return;
+}
+
+sub shutdown : Tests(shutdown) {
     return;
 }
 
@@ -73,7 +89,9 @@ sub setup : Tests(setup) {
     return;
 }
 
-# sub attributes { return undef }
+sub teardown : Tests(teardown) {
+    return;
+}
 
 sub _critic : Test(1) {
     my $test = shift;
@@ -99,7 +117,7 @@ sub test_attributes : Tests {
     my $test = shift;
     return 'abstract base class' if $test->is_abstract;
 
-    my $attributes = $test->attributes;
+    my $attributes = $test->_attributes;
     return 'no attributes' unless $attributes;
 
     $test->num_tests((scalar keys %$attributes)*3);
@@ -121,38 +139,48 @@ sub _attribute {
     $test->set_attributes;
     is $obj->$attribute, $expected,'...and setting its value should succeed';
 
+    $test->teardown;
     return;
 }
 
 sub set_attributes {
     my $test = shift;
     my $obj = $test->our_object;
-    my $attributes = $test->attributes;
+    my $attributes = $test->_attributes;
     foreach my $a ( keys %$attributes ) {
         $obj->$a($attributes->{$a});
     }
     return;
 }
 
-sub attributes {
+sub _attributes {
     my $test = shift;
 
-    my $attributes = $test->{attributes};
-    return $attributes if $attributes;
+    my $_attributes = $test->{_attributes};
+    return $_attributes if $_attributes;
 
-    $attributes = { %{$test->build_attributes} }; # make a copy we can manipulate
-    foreach my $a ( keys %$attributes ) {
-        my $val_or_sub = $attributes->{$a};
+    $_attributes = { %{$test->build_attributes} }; # make a copy we can manipulate
+    foreach my $a ( keys %$_attributes ) {
+        my $val_or_sub = $_attributes->{$a};
         my $ref = ref $val_or_sub;
         if ($ref and $ref eq 'CODE') {
             $val_or_sub = &$val_or_sub($test);
-            $attributes->{$a} = $val_or_sub;
+            $_attributes->{$a} = $val_or_sub;
         }
     }
 
-    return $test->{attributes} = $attributes;
+    return $test->{_attributes} = $_attributes;
 }
 
 sub build_attributes { die 'build_attributes() must be provided by child class.' }
+
+# Caller is responsible for doing $test->teardown() once finished
+sub test_object {
+    my $test = shift;
+    $test->_set_class;
+    $test->setup;
+    $test->set_attributes;
+    return $test->our_object;
+}
 
 1;
