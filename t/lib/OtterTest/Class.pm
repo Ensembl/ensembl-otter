@@ -11,10 +11,40 @@ use Test::CriticModule;
 
 BEGIN {
     __PACKAGE__->mk_classdata('class');
+    __PACKAGE__->mk_classdata('run_all');
 }
 
-INIT {
-    Test::Class->runtests;
+{
+    my %no_run_tests;
+
+    sub import {
+        my ($class, %args) = @_;
+        if (delete $args{no_run_test}) {
+            my $caller = caller;
+            $no_run_tests{$class} = 1;
+        }
+        return;
+    }
+
+    sub _test_classes {
+        my $class = shift;
+        my @test_classes = Test::Class::_test_classes($class);
+        return @test_classes if __PACKAGE__->run_all;
+        return grep { not $no_run_tests{$_} } @test_classes;
+    }
+
+    sub runtests {
+        my @tests = @_;
+        if (@tests == 1 && !ref($tests[0])) {
+            my $base_class = shift @tests;
+            @tests = _test_classes( $base_class ); # use my version
+        }
+        return Test::Class::runtests(@tests);
+    }
+
+    INIT {
+        __PACKAGE__->runtests;
+    }
 }
 
 sub is_abstract {
@@ -43,7 +73,7 @@ sub setup : Tests(setup) {
     return;
 }
 
-sub attributes { return undef }
+# sub attributes { return undef }
 
 sub _critic : Test(1) {
     my $test = shift;

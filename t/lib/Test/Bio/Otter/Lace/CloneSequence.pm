@@ -3,6 +3,8 @@ package Test::Bio::Otter::Lace::CloneSequence;
 use Test::Class::Most
     parent     => 'OtterTest::Class';
 
+use Test::Bio::Vega::ContigInfo no_run_test => 1;
+
 sub build_attributes {
     return {
         accession     => 'A12345',
