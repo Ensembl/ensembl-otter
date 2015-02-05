@@ -23,7 +23,7 @@ sub build_attributes {
         contig_id           => 'Contig-ID',         # redundant accessor?
         super_contig_name   => 'Super-Contig-Name', # redundant accessor?
         pipeline_chromosome => 'Pipe-Chr',          # redundant accessor?
-        ContigInfo          => sub { return bless {}, 'Bio::Vega::ContigInfo' },
+        ContigInfo          => sub { return Test::Bio::Vega::ContigInfo->new->test_object },
         pipelineStatus      => sub { return bless {}, 'Bio::OtterLace::PipelineStatus' },
     };
 }
