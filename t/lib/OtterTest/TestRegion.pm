@@ -13,7 +13,7 @@ use Bio::Vega::Gene;
 use Bio::Vega::Transform::Otter;
 
 use Exporter qw( import );
-our @EXPORT_OK = qw( check_xml extra_gene  add_extra_gene_xml region_is %test_region_params local_xml_copy );
+our @EXPORT_OK = qw( check_xml extra_gene  add_extra_gene_xml region_is %test_region_params local_xml_copy local_xml_parsed );
 
 our %test_region_params = (   ## no critic (Variables::ProhibitPackageVars)
     dataset => 'human_test',
@@ -193,6 +193,18 @@ __EO_GENE_XML__
         $xml =~ s|(     </locus>\n)(   </sequence_set>)|$1$extra_gene$2|m;
         return $xml;
     }
+}
+
+sub local_xml_parsed {
+    require XML::Simple;
+    XML::Simple->import(':strict');
+    my $xs = XML::Simple->new(
+        ForceArray => [],
+        KeyAttr    => [],
+        );
+    my $xml = local_xml_copy();
+    my $parsed = $xs->XMLin($xml);
+    return $parsed;
 }
 
 # YUK - this ain't great! Maybe we should query the production server via HTTP.
