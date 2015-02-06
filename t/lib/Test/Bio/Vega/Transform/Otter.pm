@@ -5,6 +5,7 @@ use Test::Class::Most
     attributes => [ qw( xml_string parsed_xml ) ];
 
 use Test::Bio::Otter::Lace::CloneSequence no_run_test => 1;
+use Test::Bio::Vega::Gene                 no_run_test => 1;
 
 use List::Util qw(min max);
 use OtterTest::TestRegion;
@@ -101,7 +102,35 @@ sub get_CloneSequences : Tests {
         my $t_cs = Test::Bio::Otter::Lace::CloneSequence->new(our_object => $cs[$i]);
         $t_cs->matches_parsed_xml($sf, "... CloneSequence[$i]");
     }
+    return;
+}
 
+sub get_Genes : Tests {
+    my $test = shift;
+
+    my $genes = $test->object_accessor( get_Genes => 'ARRAY' );
+
+    my $parsed = $test->parsed_xml;
+    my $loci   = $parsed->{sequence_set}->{locus};
+
+    my $n = scalar @$genes;
+    is $n,  scalar @$loci, '... n(Genes)';
+
+    foreach my $i ( 0..$n-1 ) {
+        isa_ok $genes->[$i], 'Bio::Vega::Gene', "... Gene[$i]";
+
+        my $locus = $loci->[$i];
+        my $t_gene = Test::Bio::Vega::Gene->new(our_object => $genes->[$i]);
+        $t_gene->matches_parsed_xml($locus, "... Gene[$i]");
+    }
+
+    return;
+}
+
+sub get_SimpleFeatures : Tests {
+    my $test = shift;
+
+    my $genes = $test->object_accessor( get_Genes => 'ARRAY' );
     return;
 }
 
