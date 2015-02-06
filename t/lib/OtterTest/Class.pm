@@ -49,6 +49,14 @@ BEGIN {
     }
 }
 
+sub new {
+    my ($class, %args) = @_;
+    if (my $our_object = delete $args{our_object}) {
+        $args{'OtterTest::Class::our_object'} = $our_object;
+    }
+    return $class->SUPER::new(%args);
+}
+
 sub is_abstract {
     my $test = shift;
     return Test::Class::Most->is_abstract($test);
@@ -140,7 +148,7 @@ sub test_attributes : Tests {
 
     $test->num_tests((scalar keys %$attributes)*3);
 
-    foreach my $a ( keys %$attributes ) {
+    foreach my $a ( sort keys %$attributes ) {
         $test->_attribute($a, $attributes->{$a});
     }
     return;
@@ -168,6 +176,16 @@ sub set_attributes {
     foreach my $a ( keys %$attributes ) {
         $obj->$a($attributes->{$a});
     }
+    return;
+}
+
+sub attributes_are {
+    my ($test, $object, $expected, $desc) = @_;
+    subtest $desc => sub {
+        foreach my $a ( sort keys %$expected ) {
+            is $object->$a, $expected->{$a}, $a;
+        }
+    };
     return;
 }
 
