@@ -46,39 +46,23 @@ sub parse : Test(2) {
 
 sub get_Analysis : Test(3) {
     my $test = shift;
-
-    my $bvto = $test->our_object();
-    can_ok $bvto, 'get_Analysis';
-
-    my $an = $bvto->get_Analysis('otter-module-test');
-    isa_ok $an, 'Bio::EnsEMBL::Analysis';
+    my $an = $test->object_accessor( get_Analysis => 'Bio::EnsEMBL::Analysis', 'otter-module-test' );
     is $an->logic_name, 'otter-module-test', '... logic_name';
-
     return;
 }
 
 sub get_ChrCoordSystem : Test(4) {
     my $test = shift;
-
-    my $bvto = $test->our_object();
-    can_ok $bvto, 'get_ChrCoordSystem';
-
-    my $cs = $bvto->get_ChrCoordSystem;
-    isa_ok $cs, 'Bio::EnsEMBL::CoordSystem';
+    my $cs = $test->object_accessor( get_ChrCoordSystem => 'Bio::EnsEMBL::CoordSystem' );
     is $cs->name,    'chromosome', '... name';
     is $cs->version, 'Otter',      '... version';
-
     return;
 }
 
 sub get_ChromosomeSlice : Test(7) {
     my $test = shift;
 
-    my $bvto = $test->our_object();
-    can_ok $bvto, 'get_ChromosomeSlice';
-
-    my $csl = $bvto->get_ChromosomeSlice;
-    isa_ok $csl, 'Bio::EnsEMBL::Slice';
+    my $csl = $test->object_accessor( get_ChromosomeSlice => 'Bio::EnsEMBL::Slice' );
 
     my $parsed = $test->parsed_xml;
     my $sequence_set = $parsed->{sequence_set};
@@ -87,6 +71,8 @@ sub get_ChromosomeSlice : Test(7) {
     is $csl->start,  min(map { $_->{assembly_start} } @{$sequence_set->{sequence_fragment}}), '... start';
     is $csl->end,    max(map { $_->{assembly_end} }   @{$sequence_set->{sequence_fragment}}), '... end';
     is $csl->strand, 1, '... strand';
+
+    my $bvto = $test->our_object();
     is $csl->coord_system, $bvto->get_ChrCoordSystem, '... coord_system';
 
     return;
