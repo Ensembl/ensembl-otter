@@ -57,6 +57,29 @@ sub drop_pipelineStatus : Test(4) {
     return;
 }
 
+sub matches_parsed_xml {
+    my ($test, $parsed_xml, $description) = @_;
+    $test->attributes_are($test->our_object,
+                          {
+                              accession     => $parsed_xml->{accession},
+                              sv            => $parsed_xml->{version},
+                              clone_name    => $parsed_xml->{clone_name},
+                              contig_name   => $parsed_xml->{id},
+                              chromosome    => $parsed_xml->{chromosome},
+                              assembly_type => $parsed_xml->{assembly_type}, # needs to be injected
+                              chr_start     => $parsed_xml->{assembly_start},
+                              chr_end       => $parsed_xml->{assembly_end},
+                              contig_start  => $parsed_xml->{fragment_offset},
+                              # This may not always work:
+                              contig_end    => $parsed_xml->{fragment_offset}
+                                                + $parsed_xml->{assembly_end} - $parsed_xml->{assembly_start},
+                              contig_strand => $parsed_xml->{fragment_ori},
+                              length        => $parsed_xml->{clone_length},
+                          },
+                          $description);
+    return;
+}
+
 1;
 
 # EOF

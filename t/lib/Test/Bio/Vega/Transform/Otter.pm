@@ -4,6 +4,8 @@ use Test::Class::Most
     parent     => 'Test::Bio::Vega::Transform',
     attributes => [ qw( xml_string parsed_xml ) ];
 
+use Test::Bio::Otter::Lace::CloneSequence no_run_test => 1;
+
 use List::Util qw(min max);
 use OtterTest::TestRegion;
 
@@ -92,7 +94,12 @@ sub get_CloneSequences : Tests {
     is $n,  scalar @$sequence_frags, '... n(CloneSequences)';
     foreach my $i ( 0..$n-1 ) {
         isa_ok $cs[$i], 'Bio::Otter::Lace::CloneSequence', "... CloneSequence[$i]";
-        is $cs[$i]->chr_start, $sequence_frags->[$i]->{assembly_start}, '... chr_start';
+
+        my $sf = $sequence_frags->[$i];
+        $sf->{assembly_type} = $parsed->{assembly_type}; # inject into sequence_fragment
+
+        my $t_cs = Test::Bio::Otter::Lace::CloneSequence->new(our_object => $cs[$i]);
+        $t_cs->matches_parsed_xml($sf, "... CloneSequence[$i]");
     }
 
     return;
