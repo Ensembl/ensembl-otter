@@ -177,7 +177,10 @@ sub _attributes {
     my $_attributes = $test->{_attributes};
     return $_attributes if $_attributes;
 
-    $_attributes = { %{$test->build_attributes} }; # make a copy we can manipulate
+    $_attributes = $test->build_attributes;
+    return unless $_attributes;
+
+    $_attributes = { %$_attributes }; # make a copy we can manipulate
     foreach my $a ( keys %$_attributes ) {
         my $val_or_sub = $_attributes->{$a};
         my $ref = ref $val_or_sub;

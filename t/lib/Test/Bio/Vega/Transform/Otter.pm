@@ -7,10 +7,7 @@ use Test::Class::Most
 use List::Util qw(min max);
 use OtterTest::TestRegion;
 
-sub build_attributes {
-    my $test = shift;
-    return { };
-}
+sub build_attributes { return; }
 
 sub startup : Tests(startup => +0) {
     my $test = shift;
