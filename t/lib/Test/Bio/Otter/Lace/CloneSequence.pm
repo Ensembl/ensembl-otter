@@ -24,7 +24,7 @@ sub build_attributes {
         super_contig_name   => 'Super-Contig-Name', # redundant accessor?
         pipeline_chromosome => 'Pipe-Chr',          # redundant accessor?
         ContigInfo          => sub { return Test::Bio::Vega::ContigInfo->new->test_object },
-        pipelineStatus      => sub { return bless {}, 'Bio::OtterLace::PipelineStatus' },
+        pipelineStatus      => sub { return bless {}, 'Bio::Otter::Lace::PipelineStatus' },
     };
 }
 
@@ -46,12 +46,12 @@ sub accession_dot_sv : Test(2) {
     return;
 }
 
-sub drop_pipelineStatus : Test(3) {
+sub drop_pipelineStatus : Test(4) {
     my $test = shift;
+    $test->set_attributes;
+    my $pls = $test->object_accessor( pipelineStatus => 'Bio::Otter::Lace::PipelineStatus' );
     my $cs = $test->our_object;
     can_ok $cs, 'drop_pipelineStatus';
-    $test->set_attributes;
-    isa_ok $cs->pipelineStatus, 'Bio::OtterLace::PipelineStatus', '...and when pipelineStatus';
     $cs->drop_pipelineStatus;
     is $cs->pipelineStatus, undef, '...it can be dropped';
     return;
