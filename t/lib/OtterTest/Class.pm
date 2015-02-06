@@ -113,6 +113,17 @@ sub constructor : Test(3) {
     return;
 }
 
+# To be used by tests on accessors which return another object
+# Runs 2 tests
+sub object_accessor {
+    my ($test, $accessor, $expected_class, @args) = @_;
+    my $object = $test->our_object;
+    can_ok $object, $accessor;
+    $object = $object->$accessor(@args);
+    isa_ok $object, $expected_class, '... and returned object';
+    return $object;
+}
+
 sub test_attributes : Tests {
     my $test = shift;
     return 'abstract base class' if $test->is_abstract;
