@@ -97,8 +97,16 @@ sub _critic : Test(1) {
     my $test = shift;
     return 'abstract base class' if $test->is_abstract;
 
+    local $SIG{__WARN__} = sub {
+        my $msg = shift;
+        return if $msg =~ m/^Called UNIVERSAL::isa\(\) as a function/;
+        warn $msg;
+        return;
+    };
+
     my $class = $test->class;
     critic_module_ok($class);
+
     return;
 }
 
