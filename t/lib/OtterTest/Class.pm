@@ -84,6 +84,8 @@ sub startup : Tests(startup => 1) {
 }
 
 sub shutdown : Tests(shutdown) {
+    my $test = shift;
+    $test->class(undef);   # so it's reset if we test more than one class per run
     return;
 }
 
