@@ -1,13 +1,14 @@
 #!/usr/bin/env perl
 
-use Test::Otter;                # find t/lib
-
-use Test::Bio::Otter::Lace::CloneSequence;
-use Test::Bio::Vega::ContigInfo;
+use Test::Otter;
+use OtterTest::Class;
 
 BEGIN {
     OtterTest::Class->run_all(1);
 }
+
+use OtterTest::Loader qw( t/lib );
+
 
 # OtterTest::Class::INIT does this now:
 # Test::Class->runtests;
