@@ -23,7 +23,6 @@ BEGIN {
             my $caller = caller;
             $no_run_tests{$class} = 1;
             my $obj_class = $class->_set_class;
-            warn "Trying to 'use $obj_class'";
             eval "use $obj_class";
         }
         return;
