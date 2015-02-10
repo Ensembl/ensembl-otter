@@ -29,6 +29,7 @@ use Try::Tiny;
 
 #    my $cl = Bio::Otter::Lace::Defaults::make_Client();
     foreach my $ds (Bio::Otter::Server::Config->SpeciesDat->all_datasets) {
+        next if $ds->name =~ /_(dev|test)$/;
         printf "Querying dataset %s\n", $ds->name;
         my $query_dba =
           $pipe_flag
