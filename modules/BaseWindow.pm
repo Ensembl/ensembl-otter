@@ -206,7 +206,8 @@ sub named_font {
 sub _font_prop {
     my ($self, $font, $prop) = @_;
     if ($prop eq 'linegap') {
-        return $self->_font_prop($font, 'linespace') * (__have_XFT() ? 1.16 : 1.4);
+		my $size = $self->_font_prop($font, 'linespace');
+        return $size + int($size / 6);
     }
     return $font->metrics("-$prop");
 }
