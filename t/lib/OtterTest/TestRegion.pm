@@ -13,7 +13,8 @@ use Bio::Vega::Gene;
 use Bio::Vega::Transform::Otter;
 
 use Exporter qw( import );
-our @EXPORT_OK = qw( check_xml extra_gene  add_extra_gene_xml region_is %test_region_params local_xml_copy local_xml_parsed );
+our @EXPORT_OK = qw( check_xml extra_gene  add_extra_gene_xml region_is %test_region_params
+                     local_xml_copy local_xml_parsed gene_info_lookup );
 
 our %test_region_params = (   ## no critic (Variables::ProhibitPackageVars)
     dataset => 'human_test',
@@ -199,7 +200,7 @@ sub local_xml_parsed {
     require XML::Simple;
     XML::Simple->import(':strict');
     my $xs = XML::Simple->new(
-        ForceArray => [],
+        ForceArray => [ qw( locus transcript exon ) ],
         KeyAttr    => [],
         );
     my $xml = local_xml_copy();
@@ -384,6 +385,31 @@ sub local_xml_copy {
 __EO_XML__
     chomp $xml;
     return $xml;
+}
+
+{
+    my %gene_info = (
+        OTTHUMG00000175882 => {
+            source  => 'havana',
+            biotype => 'tec',
+            status  => 'UNKNOWN',
+        },
+        OTTHUMG00000014122 => {
+            source  => 'havana',
+            biotype => 'protein_coding',
+            status  => 'KNOWN',
+        },
+        OTTHUMG00000014123 => {
+            source  => 'havana',
+            biotype => 'processed_transcript',
+            status  => 'UNKNOWN',
+        },
+        );
+
+    sub gene_info_lookup {
+        my ($stable_id) = @_;
+        return $gene_info{$stable_id};
+    }
 }
 
 1;
