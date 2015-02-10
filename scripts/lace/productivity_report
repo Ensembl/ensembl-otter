@@ -50,7 +50,6 @@ use Bio::Otter::Server::Config;
         gm5
         ib2
         jel
-        jh25
         jla1
         jm12
         jr4
@@ -65,13 +64,16 @@ use Bio::Otter::Server::Config;
     };
 
     my $usage = sub { exec('perldoc', $0) };
+    my $split_created_moidified = 0;
+    my @annotator_cmdline;
     Bio::Otter::Lace::Defaults::do_getopt(
         'h|help!'       => $usage,
         'dataset=s'     => \@dataset_name,
         'from=s'        => \$from,
-        'annotators=s'  => \@annotator_names,
+        'annotators=s'  => \@annotator_cmdline,
+        'split!'        => \$split_created_moidified,
         ) or $usage->();
-    
+
     unless ($from) {
         # Default to showing last six months
         my ($month, $year) = (localtime)[4,5];
@@ -82,9 +84,17 @@ use Bio::Otter::Server::Config;
         }
         $from = sprintf "%4d-%02d", $year + 1900, $month + 1;
     }
-    
+
+    my ($year_from, $month_from) = $from =~ /^(\d{4})-(\d{2})$/
+        or die "Failed to parse year and month from '$from'";
+        $month_from--;
+
     my %annotator = ();
     my $restrict_names = 0;
+
+    if (@annotator_cmdline) {
+        @annotator_names = @annotator_cmdline;
+    }
     if (@annotator_names) {
         $restrict_names = 1;
         foreach my $str (@annotator_names) {
@@ -93,10 +103,9 @@ use Bio::Otter::Server::Config;
             }
         }
     }
-    
-    # Client communicates with otter HTTP server
+    @annotator_names = sort keys %annotator;
+
     my $species_dat = Bio::Otter::Server::Config->SpeciesDat;
-    my $cl = Bio::Otter::Lace::Defaults::make_Client();
 
     my( @dataset );
     if (@dataset_name) {
@@ -109,40 +118,65 @@ use Bio::Otter::Server::Config;
     }
 
     my $global_counts = {};
-    
+
     my @object_types = qw{ gene transcript };
 
     foreach my $ds (@dataset) {
         my $otter_dba = $ds->otter_dba;
 
         foreach my $type (@object_types) {
-            my $sth = $otter_dba->dbc->prepare(qq{
+            my $sql = qq{
                 SELECT o.stable_id
                   , UNIX_TIMESTAMP(o.created_date)
                   , UNIX_TIMESTAMP(o.modified_date)
                   , a.author_name
+                  , o.seq_region_id
+                  , o.${type}_id
                 FROM $type o
                 JOIN ${type}_author oa
                   ON o.${type}_id = oa.${type}_id
                 JOIN author a
                   ON oa.author_id = a.author_id
-                WHERE o.modified_date >= ?
-                ORDER BY o.modified_date ASC
-            });
-            $sth->execute($from);
+                ORDER BY o.stable_id ASC
+                  , o.modified_date ASC
+            };
+            my $sth = $otter_dba->dbc->prepare($sql);
+            $sth->execute;
 
-            my( $stable_id, $created, $modified, $author );
-            $sth->bind_columns(\$stable_id, \$created, \$modified, \$author);
+            my( $stable_id, $created, $modified, $author, $seq_region, $db_id );
+            $sth->bind_columns(\$stable_id, \$created, \$modified, \$author, \$seq_region, \$db_id);
 
             my $counts = {};
+            my $prev_stable_id  = '';
+            my $prev_seq_region = 0;
+            my $prev_modified = 0;
             while ($sth->fetch) {
+
+                if ($prev_stable_id ne $stable_id) {
+                    # New gene or transcript
+                    $prev_stable_id = $stable_id;
+                    $prev_seq_region = 0;
+                    $prev_modified = 0;
+                }
+                elsif ($prev_seq_region) {
+                    # Skip edits where the seq_region changed (the result of automated transfer
+                    # when changing assemblies) or object wasn't modified (which happens for
+                    # transcripts unchanged in a gene).
+                    if ($prev_seq_region != $seq_region or $modified == $prev_modified) {
+                        $prev_seq_region = $seq_region;
+                        $prev_modified = $modified;
+                        next;
+                    }
+                }
+                $prev_seq_region = $seq_region;
+                $prev_modified = $modified;
+
                 my $action = $created == $modified ? 'created' : 'modified';
                 my ($month, $year) = (localtime($modified))[4,5];
                 $year += 1900;
-                if ($restrict_names and ! $annotator{$author}) {
-                    next;
-                    # $author = 'other';
-                }
+                # if ($author eq 'aeb' and $year == 2014 and $month == 10) {
+                #     warn join("\t", $stable_id, $db_id, $seq_region, $created, $modified, $action), "\n";
+                # }
                 $counts->{$author}{$year}{$month}{$stable_id} ||= $action;
             }
             foreach my $author (keys %$counts) {
@@ -159,17 +193,27 @@ use Bio::Otter::Server::Config;
             }
         }
     }
-    
+
     printf "Gene and transcripts in datasets: %s\n", join(", ", sort map { $_->name } @dataset);
-    
+
     # Author name headers
-    my ($author_header, $gene_tsct_header);
+    my ($author_header, $gene_tsct_header, $created_modified);
     foreach my $name (@annotator_names, 'Total') {
-        $author_header .= "\t$name\t";
-        $gene_tsct_header .= "\tgene\ttsct";
+        if ($split_created_moidified) {
+            $author_header .= "\t$name\t\t\t";
+            $gene_tsct_header .= "\tgene\t\ttsct\t";
+            $created_modified .= "\tcre\tmod" x 2;
+        }
+        else {
+            $author_header .= "\t$name\t";
+            $gene_tsct_header .= "\tgene\ttsct";
+        }
     }
     print "$author_header\n",
         "$gene_tsct_header\n";
+    if ($split_created_moidified) {
+        print "$created_modified\n";
+    }
 
     my @month_names = qw{
         Jan Feb Mar
@@ -177,9 +221,17 @@ use Bio::Otter::Server::Config;
         Jul Aug Sep
         Oct Nov Dec
     };
+    my $in_month = $month_from;
     foreach my $year (sort {$a <=> $b} keys %$global_counts) {
+        next unless $year >= $year_from;
         my $year_counts = $global_counts->{$year};
         foreach my $month (sort {$a <=> $b} keys %$year_counts) {
+            if ($month >= $in_month) {
+                $in_month = 0;
+            }
+            else {
+                next;
+            }
             my $month_counts = $year_counts->{$month};
             my $display_month = $month_names[$month];
             print "$year $display_month";
@@ -187,16 +239,31 @@ use Bio::Otter::Server::Config;
             foreach my $author (@annotator_names) {
                 my $author_counts = $month_counts->{$author};
                 foreach my $type (@object_types) {
-                    my $count = 0;
-                    $count += $author_counts->{$type}{'created'}  || 0;
-                    $count += $author_counts->{$type}{'modified'} || 0;
-                    print "\t$count";
-                    $month_totals->{$type} += $count;
+                    my $cre = $author_counts->{$type}{'created'}  || 0;
+                    my $mod = $author_counts->{$type}{'modified'} || 0;
+                    my $count = $cre + $mod;
+                    if ($split_created_moidified) {
+                        print "\t$cre\t$mod";
+                        $month_totals->{$type}{'created'}  += $cre;
+                        $month_totals->{$type}{'modified'} += $mod;
+                    } else {
+                        print "\t$count";
+                        $month_totals->{$type} += $count;
+                    }
                 }
             }
-            foreach my $type (@object_types) {
-                my $count = $month_totals->{$type} || 0;
-                print "\t$count";
+            if ($split_created_moidified) {
+                foreach my $type (@object_types) {
+                    my $cre = $month_totals->{$type}{'created'}  || 0;
+                    my $mod = $month_totals->{$type}{'modified'} || 0;
+                    print "\t$cre\t$mod";
+                }
+            }
+            else {
+                foreach my $type (@object_types) {
+                    my $count = $month_totals->{$type} || 0;
+                    print "\t$count";
+                }
             }
             print "\n";
         }
