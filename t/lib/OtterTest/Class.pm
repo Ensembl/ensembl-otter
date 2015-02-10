@@ -2,7 +2,7 @@ package OtterTest::Class;
 
 use Test::Class::Most           # autmogically becomes our parent
     is_abstract => 1,
-    attributes  => our_object;
+    attributes  => [ qw( our_object our_args ) ];
 
 use parent 'Class::Data::Inheritable';
 
@@ -94,7 +94,7 @@ sub setup : Tests(setup) {
     return if $test->is_abstract;
 
     my $class = $test->class;
-    $test->our_object($class->new);
+    $test->our_object($class->new(@{$test->our_args // []}));
     return;
 }
 
