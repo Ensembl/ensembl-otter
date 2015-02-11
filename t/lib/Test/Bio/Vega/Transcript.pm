@@ -4,6 +4,7 @@ use Test::Class::Most
     parent     => 'OtterTest::Class';
 
 use Test::Bio::Vega::Author no_run_test => 1;
+use Test::Bio::Vega::Exon   no_run_test => 1;
 
 use OtterTest::TestRegion qw( transcript_info_lookup );
 
@@ -73,7 +74,13 @@ sub matches_parsed_xml {
 
     my $n_exons = scalar @$exons;
     is $n_exons,  scalar @$xml_exons, 'n(Exons)';
-    # FIXME - Test them!
+    # FIXME - DRY!
+    foreach my $i ( 0 .. $n_exons-1 ) {
+        isa_ok $exons->[$i], 'Bio::Vega::Exon', "... Exon[$i]";
+
+        my $t_ts = Test::Bio::Vega::Exon->new(our_object => $exons->[$i]);
+        $t_ts->matches_parsed_xml($xml_exons->[$i], "... Exon[$i]");
+    }
 
     my $evidence = $ts->evidence_list;
     my $xml_evi  = $parsed_xml->{evidence_set}->{evidence};
