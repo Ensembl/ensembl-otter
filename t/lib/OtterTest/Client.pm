@@ -145,7 +145,7 @@ sub _response_cache_fn {
     my $pkgfn = __PACKAGE__;
     $pkgfn =~ s{::}{/}g;
     my $vsn = Bio::Otter::Version->version;
-    $fn =~ s{(/t/)lib/\Q${pkgfn}.pm\E$}{$1.OTC.${what}_response.${vsn}.${dsname}.txt}
+    $fn =~ s{((?:^|/)t/)lib/\Q${pkgfn}.pm\E$}{$1.OTC.${what}_response.${vsn}.${dsname}.txt}
       or die "Can't make filename from $fn";
     return $fn;
 }

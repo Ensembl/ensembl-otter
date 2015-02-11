@@ -112,14 +112,6 @@ sub initialize {
 
     # These coordinate sytems could be class variables, but lets keep them
     # private to this instance so it is free to mess with them.
-    $chr_coord_system{$self} = Bio::EnsEMBL::CoordSystem->new(
-        -name           => 'chromosome',
-        -version        => 'Otter',
-        -rank           => 2,
-        -sequence_level => 0,
-        -default        => 1,
-    );
-
     $ctg_coord_system{$self} = Bio::EnsEMBL::CoordSystem->new(
         -name           => 'contig',
         -rank           => 5,
@@ -190,7 +182,7 @@ sub build_SequenceFragment {
             -start             => $start < $chr_slice->start ? $start : $chr_slice->start,
             -end               => $end   > $chr_slice->end   ? $end   : $chr_slice->end,
             -strand            => 1,
-            -coord_system      => $chr_coord_system{$self},
+            -coord_system      => $self->get_set_ChrCoordSystem,
         );
         $chrslice{$self} = $new_chr_slice;
     } else {
@@ -200,7 +192,7 @@ sub build_SequenceFragment {
             -start             => $start,
             -end               => $end,
             -strand            => 1,
-            -coord_system      => $chr_coord_system{$self},
+            -coord_system      => $self->get_set_ChrCoordSystem,
         );
         $chrslice{$self} = $chr_slice;
     }
@@ -659,6 +651,39 @@ sub build_Locus {
 
 sub do_nothing {
     return;
+}
+
+sub get_ChrCoordSystem {
+    my ($self) = @_;
+
+    return $chr_coord_system{$self};
+}
+
+sub set_ChrCoordSystem {
+    my ($self, $chr_coord_system) = @_;
+
+    return $chr_coord_system{$self} = $chr_coord_system;
+}
+
+sub create_ChrCoordSystem {
+    my ($self) = @_;
+    return Bio::EnsEMBL::CoordSystem->new(
+        -name           => 'chromosome',
+        -version        => 'Otter',
+        -rank           => 2,
+        -sequence_level => 0,
+        -default        => 1,
+        );
+}
+
+sub get_set_ChrCoordSystem {
+    my ($self) = @_;
+
+    my $chr_coord_system = $self->get_ChrCoordSystem;
+    return $chr_coord_system if $chr_coord_system;
+
+    $chr_coord_system = $self->create_ChrCoordSystem;
+    return $self->set_ChrCoordSystem($chr_coord_system);
 }
 
 sub get_ChromosomeSlice {
