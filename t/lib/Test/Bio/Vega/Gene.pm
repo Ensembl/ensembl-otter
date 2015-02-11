@@ -3,7 +3,8 @@ package Test::Bio::Vega::Gene;
 use Test::Class::Most
     parent     => 'OtterTest::Class';
 
-use Test::Bio::Vega::Author no_run_test => 1;
+use Test::Bio::Vega::Author     no_run_test => 1;
+use Test::Bio::Vega::Transcript no_run_test => 1;
 
 use OtterTest::TestRegion qw( gene_info_lookup );
 
@@ -72,6 +73,14 @@ sub matches_parsed_xml {
 
     my $n = scalar @$transcripts;
     is $n,  scalar @$xml_ts, 'n(Transcripts)';
+
+    foreach my $i ( 0 .. $n-1 ) {
+        isa_ok $transcripts->[$i], 'Bio::Vega::Transcript', "... Transcript[$i]";
+
+        my $parsed_ts = $parsed_xml->{transcript}->[$i];
+        my $t_ts = Test::Bio::Vega::Transcript->new(our_object => $transcripts->[$i]);
+        $t_ts->matches_parsed_xml($parsed_ts, "... Transcript[$i]");
+    }
 
     return;
 }
