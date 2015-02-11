@@ -3,8 +3,9 @@ package Test::Bio::Vega::Transcript;
 use Test::Class::Most
     parent     => 'OtterTest::Class';
 
-use Test::Bio::Vega::Author no_run_test => 1;
-use Test::Bio::Vega::Exon   no_run_test => 1;
+use Test::Bio::Vega::Author   no_run_test => 1;
+use Test::Bio::Vega::Evidence no_run_test => 1;
+use Test::Bio::Vega::Exon     no_run_test => 1;
 
 use OtterTest::TestRegion qw( transcript_info_lookup );
 
@@ -87,7 +88,13 @@ sub matches_parsed_xml {
 
     my $n_evi = scalar @$evidence;
     is $n_evi,  scalar @$xml_evi, 'n(Evidence)';
-    # FIXME - Test them!
+    # FIXME - DRY!
+    foreach my $i ( 0 .. $n_evi-1 ) {
+        isa_ok $evidence->[$i], 'Bio::Vega::Evidence', "... Evidence[$i]";
+
+        my $t_ts = Test::Bio::Vega::Evidence->new(our_object => $evidence->[$i]);
+        $t_ts->matches_parsed_xml($xml_evi->[$i], "... Evidence[$i]");
+    }
 
     my $translation = $ts->translation;
     if (my $translation_sid = $parsed_xml->{translation_stable_id}) {
