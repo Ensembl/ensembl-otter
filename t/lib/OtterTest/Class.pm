@@ -2,7 +2,7 @@ package OtterTest::Class;
 
 use Test::Class::Most           # autmogically becomes our parent
     is_abstract => 1,
-    attributes  => our_object;
+    attributes  => [ qw( our_object our_args ) ];
 
 use parent 'Class::Data::Inheritable';
 
@@ -49,6 +49,14 @@ BEGIN {
     }
 }
 
+sub new {
+    my ($class, %args) = @_;
+    if (my $our_object = delete $args{our_object}) {
+        $args{'OtterTest::Class::our_object'} = $our_object;
+    }
+    return $class->SUPER::new(%args);
+}
+
 sub is_abstract {
     my $test = shift;
     return Test::Class::Most->is_abstract($test);
@@ -76,6 +84,8 @@ sub startup : Tests(startup => 1) {
 }
 
 sub shutdown : Tests(shutdown) {
+    my $test = shift;
+    $test->class(undef);   # so it's reset if we test more than one class per run
     return;
 }
 
@@ -84,7 +94,7 @@ sub setup : Tests(setup) {
     return if $test->is_abstract;
 
     my $class = $test->class;
-    $test->our_object($class->new);
+    $test->our_object($class->new(@{$test->our_args // []}));
     return;
 }
 
@@ -140,7 +150,7 @@ sub test_attributes : Tests {
 
     $test->num_tests((scalar keys %$attributes)*3);
 
-    foreach my $a ( keys %$attributes ) {
+    foreach my $a ( sort keys %$attributes ) {
         $test->_attribute($a, $attributes->{$a});
     }
     return;
@@ -171,13 +181,26 @@ sub set_attributes {
     return;
 }
 
+sub attributes_are {
+    my ($test, $object, $expected, $desc) = @_;
+    subtest $desc => sub {
+        foreach my $a ( sort keys %$expected ) {
+            is $object->$a, $expected->{$a}, $a;
+        }
+    };
+    return;
+}
+
 sub _attributes {
     my $test = shift;
 
     my $_attributes = $test->{_attributes};
     return $_attributes if $_attributes;
 
-    $_attributes = { %{$test->build_attributes} }; # make a copy we can manipulate
+    $_attributes = $test->build_attributes;
+    return unless $_attributes;
+
+    $_attributes = { %$_attributes }; # make a copy we can manipulate
     foreach my $a ( keys %$_attributes ) {
         my $val_or_sub = $_attributes->{$a};
         my $ref = ref $val_or_sub;
