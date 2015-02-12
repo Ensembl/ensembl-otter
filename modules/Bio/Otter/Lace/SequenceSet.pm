@@ -175,6 +175,17 @@ sub selected_CloneSequences_parameters {
     return ($dsname, $ssname, $chr_name, $chr_start, $chr_end);
 }
 
+sub selected_CloneSequences_as_Slice {
+    my ($self, $client) = @_;
+
+    my ($dsname, $ssname, $chr_name, $chr_start, $chr_end) = $self->selected_CloneSequences_parameters;
+    return Bio::Otter::Lace::Slice->new(
+      $client, $dsname, $ssname,
+      'chromosome', 'Otter',     # Should these be defaults, or can we fetch them from another object?
+      $chr_name, $chr_start, $chr_end,
+      );
+}
+
 sub region_coordinates {
     my ($self, $ctg) = @_;
 
