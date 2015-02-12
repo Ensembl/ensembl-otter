@@ -366,23 +366,28 @@ sub initialise {
                 -font         => ['Helvetica', $self->font_size, 'normal'],
             );
         $comment->pack(-side => 'left');
-        my $clear_button =
-            $button_frame_notes->Button(
-                -text    => 'clear',
-                -command => sub { my $ref = $self->set_note_ref(); $$ref = undef; },
-            )->pack(-side => 'right');
+
+        $self->make_button($button_frame_notes, 'Clear', sub{
+            my $ref = $self->set_note_ref();
+            $$ref = '';
+        });
+
+        $self->make_button($button_frame_notes, 'Fetch DE', sub {
+            $self->get_region_description;
+        });
 
         # Remove Control-H binding from Entry
         $comment->bind(ref($comment), '<Control-h>', '');
         $comment->bind(ref($comment), '<Control-H>', '');
-        $button_frame_notes->bind('<Destroy>', sub { $self = undef });
 
         my $set_reviewed = sub{
-            $self->save_sequence_notes($comment);
+            $self->save_sequence_notes;
         };
         $self->make_button($button_frame_notes, 'Set note', $set_reviewed, 0);
         $top->bind('<Control-s>', $set_reviewed);
         $top->bind('<Control-S>', $set_reviewed);
+
+        $button_frame_notes->bind('<Destroy>', sub { $self = undef });
 
         $button_frame_cmds->Checkbutton(
             -variable    => $self->write_access_var_ref(),
@@ -390,7 +395,6 @@ sub initialise {
             -borderwidth => 2,
             -relief      => 'groove',
         )->pack(-side => 'left', -pady => 2, -fill => 'x');
-
     } else {
         # $button_frame_cmds = $top->Frame->pack(-side => 'top');
         $button_frame_cmds->Label(
@@ -1379,6 +1383,23 @@ sub layout_columns_and_rows {
     return;
 }
 
+sub get_region_description {
+    my ($self) = @_;
+
+    unless ($self->set_selected_from_canvas) {
+        $self->message("No clones selected");
+        return;
+    }
+    my $client = $self->Client;
+    my $slice = $self->SequenceSet->selected_CloneSequences_as_Slice($client);
+    my $desc = $client->get_slice_DE($slice);
+
+    my $text = $self->set_note_ref;
+    $$text = $desc;
+    
+    return;
+}
+
 sub save_sequence_notes {
     my ($self) = @_;
 
@@ -1685,6 +1706,7 @@ sub set_note_ref{
     $self->{'_set_note'} = $search if $search;
     return $self->{'_set_note'};
 }
+
 1;
 
 __END__
