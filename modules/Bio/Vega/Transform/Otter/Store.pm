@@ -11,6 +11,7 @@ use NEXT;
 use parent qw( Bio::Vega::Transform::Otter Bio::Otter::Log::WithContextMixin );
 
 my (
+    %dna_contig_coord_system,
     %vega_dba,
     %log_context,
     );
@@ -18,8 +19,9 @@ my (
 sub DESTROY {
     my ($self) = @_;
 
+    delete $dna_contig_coord_system{$self};
     delete $vega_dba{$self};
-    delete($log_context{$self});
+    delete $log_context{$self};
 
     return $self->NEXT::DESTROY;
 }
@@ -39,7 +41,7 @@ sub store {
     my $vega_dba = $self->vega_dba;
 
     my $cs_a = $self->vega_dba->get_CoordSystemAdaptor;
-    foreach my $cs_type ( qw( Chr Clone Contig ) ) {
+    foreach my $cs_type ( qw( Chr Clone Contig DnaContig ) ) {
         my $get_set = "get_set_${cs_type}CoordSystem";
         my $coord_system = $self->$get_set;
         unless ($coord_system->is_stored($vega_dba)) {
@@ -47,10 +49,17 @@ sub store {
         }
     }
 
+    # We need a new CoordSystemAdaptor to ensure the mapping cache is regenerated :-(
+    # Bio::EnsEMBL::Registry->clear;
+
     my $slice = $self->get_ChromosomeSlice;
     my $db_slice = $self->slice_stored_if_needed($slice, $dna);
 
     my $reattach = ($db_slice != $slice);
+
+    foreach my $cs ( $self->get_CloneSequences ) {
+        $self->_store_clone_sequence($cs, $db_slice);
+    }
 
     my $gene_a = $vega_dba->get_GeneAdaptor;
     foreach my $gene ( @{$self->get_Genes} ) {
@@ -74,7 +83,6 @@ sub slice_stored_if_needed {
         $region_slice->seq_region_name,
         );
 
-    my $contig_seq_region;
     if ($db_seq_region) {
         $self->logger->debug('slice already in sqlite');
     } else {
@@ -84,7 +92,7 @@ sub slice_stored_if_needed {
         my $cs_adaptor = $vega_dba->get_CoordSystemAdaptor;
         my $cs_chr    = $cs_adaptor->fetch_by_name($region_slice->coord_system->name,
                                                    $region_slice->coord_system->version);
-        my $cs_contig = $cs_adaptor->fetch_by_name('contig', 'OtterLocal');
+        my $cs_dna_contig = $cs_adaptor->fetch_by_name('dna_contig', 'Otter');
 
         # db_seq_region must start from 1
         my $db_seq_region_parameters = {
@@ -99,16 +107,18 @@ sub slice_stored_if_needed {
         # Replace $region_slice with one connected to the database
         $region_slice = $db_seq_region->sub_Slice($region_slice->start, $region_slice->end);
 
+        # This is replicating the stuff from B:O:L:DB where we just needed a region contig to bung the sequence on
+        # and may cause problems here...
         my $region_length = $region_slice->end - $region_slice->start + 1;
         my $contig_seq_region_parameters = {
-            seq_region_name   => $region_slice->seq_region_name,
+            seq_region_name   => $region_slice->seq_region_name . ":contig",
             strand            => 1,
             start             => 1,
             end               => $region_length,
             seq_region_length => $region_length,
-            coord_system      => $cs_contig,
+            coord_system      => $cs_dna_contig,
         };
-        $contig_seq_region = Bio::EnsEMBL::Slice->new_fast($contig_seq_region_parameters);
+        my $contig_seq_region = Bio::EnsEMBL::Slice->new_fast($contig_seq_region_parameters);
         $slice_adaptor->store($contig_seq_region, \$dna);
 
         $slice_adaptor->store_assembly($region_slice, $contig_seq_region);
@@ -134,6 +144,44 @@ sub _reattach_gene {
     return $gene;
 }
 
+sub _store_clone_sequence {
+    my ($self, $cs, $db_slice) = @_;
+    my $vega_dba = $self->vega_dba;
+
+    my $slice_adaptor = $vega_dba->get_SliceAdaptor;
+
+    my $clone_coord_sys = $self->get_CloneCoordSystem;
+    my $clone = Bio::EnsEMBL::Slice->new_fast({
+        seq_region_name   => $cs->accession_dot_sv,
+        strand            => 1,
+        start             => 1,
+        end               => $cs->length,
+        seq_region_length => $cs->length,
+        coord_system      => $clone_coord_sys,
+                                              });
+    $slice_adaptor->store($clone);
+
+    my $contig_coord_sys = $self->get_ContigCoordSystem;
+    my $db_contig = Bio::EnsEMBL::Slice->new_fast({
+        seq_region_name   => $cs->contig_name,
+        strand            => $cs->contig_strand,
+        start             => 1,
+        end               => $cs->length,
+        seq_region_length => $cs->length,
+        coord_system      => $contig_coord_sys,
+                                                  });
+    $slice_adaptor->store($db_contig);
+    $slice_adaptor->store_assembly($clone, $db_contig);
+
+    my $chr_map_slice = $db_slice->seq_region_Slice->sub_Slice($cs->chr_start,    $cs->chr_end,    1);
+    my $ctg_map_slice = $db_contig->sub_Slice(                 $cs->contig_start, $cs->contig_end, $cs->contig_strand);
+    $slice_adaptor->store_assembly($chr_map_slice, $ctg_map_slice);
+
+    # FIXME: ensure attributes are stored as appropriate
+
+    return;
+}
+
 # Overrides parent to check DB first
 #
 sub get_set_CoordSystem {
@@ -157,6 +205,35 @@ sub get_set_CoordSystem {
     $coord_system = $template_cs unless $coord_system;
 
     return $self->$set($coord_system);
+}
+
+sub get_DnaContigCoordSystem {
+    my ($self) = @_;
+
+    return $dna_contig_coord_system{$self};
+}
+
+sub set_DnaContigCoordSystem {
+    my ($self, $dna_contig_coord_system) = @_;
+
+    return $dna_contig_coord_system{$self} = $dna_contig_coord_system;
+}
+
+sub create_DnaContigCoordSystem {
+    my ($self) = @_;
+    return Bio::EnsEMBL::CoordSystem->new(
+        -name           => 'dna_contig',
+        -version        => 'Otter',
+        -rank           => 6,
+        -sequence_level => 1,
+        -default        => 1,
+        );
+}
+
+sub get_set_DnaContigCoordSystem {
+    my ($self) = @_;
+
+    return $self->get_set_CoordSystem('DnaContig');
 }
 
 # Required by Bio::Otter::Log::WithContextMixin

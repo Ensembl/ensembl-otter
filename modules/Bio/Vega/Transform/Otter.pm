@@ -720,7 +720,7 @@ sub create_ContigCoordSystem {
     return Bio::EnsEMBL::CoordSystem->new(
         -name           => 'contig',
         -rank           => 5,
-        -sequence_level => 1,
+        -sequence_level => 0,
         -default        => 1,
         );
 }

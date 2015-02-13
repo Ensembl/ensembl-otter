@@ -149,7 +149,7 @@ sub session_slice {
         my $cs_adaptor = $self->vega_dba->get_CoordSystemAdaptor;
         my $cs_chr    = $cs_adaptor->fetch_by_name($ensembl_slice->coord_system->name,
                                                    $ensembl_slice->coord_system->version);
-        my $cs_contig = $cs_adaptor->fetch_by_name('contig', 'OtterLocal');
+        my $cs_contig = $cs_adaptor->fetch_by_name('contig', 'Otter');
 
         # db_seq_region must start from 1
         my $db_seq_region_parameters = {
@@ -268,11 +268,25 @@ sub create_tables {
 
 my @local_coord_system = (
     {
+        coord_system_id => 100,
+        species_id      => 1,
+        name            => 'clone',
+        rank            => 4,
+        attrib          => 'default_version',
+    },
+    {
         coord_system_id => 101,
         species_id      => 1,
         name            => 'contig',
-        version         => 'OtterLocal',
-        rank            => 101,
+        rank            => 5,
+        attrib          => 'default_version',
+    },
+    {
+        coord_system_id => 102,
+        species_id      => 1,
+        name            => 'dna_contig',
+        version         => 'Otter',
+        rank            => 6,
         attrib          => 'default_version,sequence_level',
     },
 );
@@ -280,7 +294,11 @@ my @local_coord_system = (
 my %local_meta = (
     'assembly.mapping.local' => {
         species_id => 1,
-        values     => [ 'chromosome:Otter#contig:OtterLocal' ],
+        values     => [
+            'chromosome:Otter#dna_contig:Otter',
+            'chromosome:Otter#contig',
+            'clone#contig',
+            ],
     },
 );
 
