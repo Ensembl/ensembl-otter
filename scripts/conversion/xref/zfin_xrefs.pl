@@ -65,6 +65,7 @@ no warnings 'uninitialized';
 use FindBin qw($Bin);
 use vars qw($SERVERROOT);
 use Storable;
+use Encode qw(decode encode);
 
 BEGIN {
   $SERVERROOT = "$Bin/../../../..";
@@ -139,10 +140,9 @@ if ($support->param('prune') and $support->user_proceed('Would you really like t
   #reset display xrefs
   $support->log("Resetting gene.display_xref_id...\n");
   $num = $dba->dbc->do(qq(
-           UPDATE gene g, gene_stable_id gsi, xref x
+           UPDATE gene g, xref x
            SET g.display_xref_id = x.xref_id
-           WHERE g.gene_id = gsi.gene_id
-           AND gsi.stable_id = x.dbprimary_acc
+           WHERE g.stable_id = x.dbprimary_acc
         ));
   $support->log("Done deleting $num entries.\n");
 }
@@ -181,6 +181,7 @@ foreach (@recs) {
   chomp;
   next unless (/ZDB-GENE/);
   my ($zfinid,$desc,$name,$alias,$so) = split /\t/;
+  $alias = encode('utf8',$alias);
   $aliases{$zfinid}->{$alias}++;
 }
 
