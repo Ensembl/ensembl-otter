@@ -112,8 +112,6 @@ my %lns_to_stay = (
   'repeat_feature'        => { map {$_,1} qw(RepeatMasker trf) },
   'dna_align_feature'     => { map {$_,1} qw(Est2genome_clusters Est2genome_fish Est2genome_other Est2genome_human Est2genome_mouse Est2genome_pig vertrna refseq_zebrafish refseq_human refseq_mouse refseq_rat vertrna_other) },
   'protein_align_feature' => { map {$_,1} qw(Uniprot Uniprot_TR Uniprot_SW) },
-#  'gene'                  => { map {$_,1} qw(Halfwise) },
-#  'transcript'            => { map {$_,1} qw(Halfwise) },
 );
 
 #define logic names that we know are to be deleted from other tables
@@ -249,11 +247,6 @@ if ($gene_c) {
 		       meta_coord
 		       coord_system
 		     );
-##enable for halfwise
-#		       gene
-#		       transcript
-#		       exon_transcript
-#		       exon
 
 #store counts of original number of features in each table
 foreach my $t (@target_tables) {
