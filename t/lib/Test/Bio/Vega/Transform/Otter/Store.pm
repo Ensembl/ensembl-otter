@@ -7,6 +7,9 @@ use Test::Class::Most
 use OtterTest::DB;
 use OtterTest::TestRegion qw( local_xml_dna );
 
+use Bio::Vega::Region;
+use Bio::Vega::Transform::XML;
+
 # These fixtures will move into a parent class or role at some stage
 #
 sub startup {
@@ -48,12 +51,30 @@ sub our_object {
     return $our_object;
 }
 
-sub store : Test(2) {
+sub store : Test(4) {
     my $test = shift;
     my $bvtos = $test->our_object;
     can_ok $bvtos, 'store';
     $bvtos->store(local_xml_dna());
     pass '... stored';
+
+    my $original_slice = $bvtos->get_ChromosomeSlice;
+    # FIXME : we do this quite a lot:
+    my $sa = $test->test_db->vega_dba->get_SliceAdaptor;
+    my $seq_region = $sa->fetch_by_region($original_slice->coord_system->name, $original_slice->seq_region_name);
+    my $slice = $seq_region->sub_Slice($original_slice->start, $original_slice->end);
+
+    my $region = Bio::Vega::Region->new_from_otter_db(
+        otter_dba => $test->test_db->vega_dba,
+        slice     => $slice,
+        );
+    my $xml_writer = Bio::Vega::Transform::XML->new;
+    $xml_writer->region($region);
+    my $xml_out = $xml_writer->generate_OtterXML;
+    chomp $xml_out;
+    ok $xml_out, '... regenerate XML';
+    eq_or_diff $xml_out, $test->xml_string, '... XML matches';
+
     return;
 }
 
