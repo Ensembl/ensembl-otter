@@ -38,10 +38,13 @@ sub store {
 
     my $vega_dba = $self->vega_dba;
 
-    my $chr_coord_system = $self->get_set_ChrCoordSystem;
-    unless ($chr_coord_system->is_stored($vega_dba)) {
-        my $cs_a = $self->vega_dba->get_CoordSystemAdaptor;
-        $cs_a->store($chr_coord_system);
+    my $cs_a = $self->vega_dba->get_CoordSystemAdaptor;
+    foreach my $cs_type ( qw( Chr Clone Contig ) ) {
+        my $get_set = "get_set_${cs_type}CoordSystem";
+        my $coord_system = $self->$get_set;
+        unless ($coord_system->is_stored($vega_dba)) {
+            $cs_a->store($coord_system);
+        }
     }
 
     my $slice = $self->get_ChromosomeSlice;
@@ -64,7 +67,7 @@ sub slice_stored_if_needed {
     my ($self, $region_slice, $dna) = @_;
 
     my $vega_dba = $self->vega_dba;
-    my $slice_adaptor = $self->vega_dba->get_SliceAdaptor;
+    my $slice_adaptor = $vega_dba->get_SliceAdaptor;
 
     my $db_seq_region = $slice_adaptor->fetch_by_region(
         $region_slice->coord_system->name,
@@ -78,7 +81,7 @@ sub slice_stored_if_needed {
         $self->logger->debug('creating and storing slice');
 
         # db_seq_region's coord_system needs to be the one already in the DB.
-        my $cs_adaptor = $self->vega_dba->get_CoordSystemAdaptor;
+        my $cs_adaptor = $vega_dba->get_CoordSystemAdaptor;
         my $cs_chr    = $cs_adaptor->fetch_by_name($region_slice->coord_system->name,
                                                    $region_slice->coord_system->version);
         my $cs_contig = $cs_adaptor->fetch_by_name('contig', 'OtterLocal');
@@ -133,22 +136,27 @@ sub _reattach_gene {
 
 # Overrides parent to check DB first
 #
-sub get_set_ChrCoordSystem {
-    my ($self) = @_;
+sub get_set_CoordSystem {
+    my ($self, $cs_type) = @_;
 
-    my $chr_coord_system = $self->get_ChrCoordSystem;
-    return $chr_coord_system if $chr_coord_system;
+    my $get    = "get_${cs_type}CoordSystem";
 
-    my $cs_a = $self->vega_dba->get_CoordSystemAdaptor;
-    my $template_cs = $self->create_ChrCoordSystem;
+    my $coord_system = $self->$get;
+    return $coord_system if $coord_system;
+
+    my $create = "create_${cs_type}CoordSystem";
+    my $set    = "set_${cs_type}CoordSystem";
+
+    my $template_cs = $self->$create;
 
     # First check we don't already have it
-    $chr_coord_system = $cs_a->fetch_by_name($template_cs->name, $template_cs->version);
+    my $cs_a = $self->vega_dba->get_CoordSystemAdaptor;
+    $coord_system = $cs_a->fetch_by_name($template_cs->name, $template_cs->version);
 
     # If not, return the template - it'll get stored later if needed
-    $chr_coord_system = $template_cs unless $chr_coord_system;
+    $coord_system = $template_cs unless $coord_system;
 
-    return $self->set_ChrCoordSystem($chr_coord_system);
+    return $self->$set($coord_system);
 }
 
 # Required by Bio::Otter::Log::WithContextMixin

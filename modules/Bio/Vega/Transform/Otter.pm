@@ -46,6 +46,7 @@ my (
     %dna,
     %author_cache,
     %chr_coord_system,
+    %clone_coord_system,
     %ctg_coord_system,
 );
 
@@ -71,6 +72,7 @@ sub DESTROY {
     delete $dna{$self};
     delete $author_cache{$self};
     delete $chr_coord_system{$self};
+    delete $clone_coord_system{$self};
     delete $ctg_coord_system{$self};
 
     $self->NEXT::DESTROY;
@@ -109,15 +111,6 @@ sub initialize {
         [ transcript        => qw{ remark         } ],
         [ sequence_fragment => qw{ remark keyword } ],
     ]);
-
-    # These coordinate sytems could be class variables, but lets keep them
-    # private to this instance so it is free to mess with them.
-    $ctg_coord_system{$self} = Bio::EnsEMBL::CoordSystem->new(
-        -name           => 'contig',
-        -rank           => 5,
-        -sequence_level => 1,
-        -default        => 1,
-    );
 
     return;
 }
@@ -245,7 +238,7 @@ sub build_SequenceFragment {
         -end                => $cmp_end,
         -strand             => $strand,
         -seq_region_length  => $cln_length,
-        -coord_system       => $ctg_coord_system{$self},
+        -coord_system       => $self->get_set_ContigCoordSystem,
     );
 
     my $cs = Bio::Otter::Lace::CloneSequence->new;
@@ -679,11 +672,78 @@ sub create_ChrCoordSystem {
 sub get_set_ChrCoordSystem {
     my ($self) = @_;
 
-    my $chr_coord_system = $self->get_ChrCoordSystem;
-    return $chr_coord_system if $chr_coord_system;
+    return $self->get_set_CoordSystem('Chr');
+}
 
-    $chr_coord_system = $self->create_ChrCoordSystem;
-    return $self->set_ChrCoordSystem($chr_coord_system);
+sub get_CloneCoordSystem {
+    my ($self) = @_;
+
+    return $clone_coord_system{$self};
+}
+
+sub set_CloneCoordSystem {
+    my ($self, $clone_coord_system) = @_;
+
+    return $clone_coord_system{$self} = $clone_coord_system;
+}
+
+sub create_CloneCoordSystem {
+    my ($self) = @_;
+    return Bio::EnsEMBL::CoordSystem->new(
+        -name           => 'clone',
+        -rank           => 4,
+        -sequence_level => 0,
+        -default        => 1,
+        );
+}
+
+sub get_set_CloneCoordSystem {
+    my ($self) = @_;
+
+    return $self->get_set_CoordSystem('Clone');
+}
+
+sub get_ContigCoordSystem {
+    my ($self) = @_;
+
+    return $ctg_coord_system{$self};
+}
+
+sub set_ContigCoordSystem {
+    my ($self, $contig_coord_system) = @_;
+
+    return $ctg_coord_system{$self} = $contig_coord_system;
+}
+
+sub create_ContigCoordSystem {
+    my ($self) = @_;
+    return Bio::EnsEMBL::CoordSystem->new(
+        -name           => 'contig',
+        -rank           => 5,
+        -sequence_level => 1,
+        -default        => 1,
+        );
+}
+
+sub get_set_ContigCoordSystem {
+    my ($self) = @_;
+
+    return $self->get_set_CoordSystem('Contig');
+}
+
+sub get_set_CoordSystem {
+    my ($self, $cs_type) = @_;
+
+    my $get    = "get_${cs_type}CoordSystem";
+
+    my $coord_system = $self->$get;
+    return $coord_system if $coord_system;
+
+    my $set    = "set_${cs_type}CoordSystem";
+    my $create = "create_${cs_type}CoordSystem";
+
+    $coord_system = $self->$create;
+    return $self->$set($coord_system);
 }
 
 sub get_ChromosomeSlice {
