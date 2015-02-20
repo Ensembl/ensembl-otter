@@ -34,12 +34,12 @@ sub fetch_by_contigSlice {
            AND is_current
     });
     $sth->execute($seq_region_id);
-    return unless $sth->rows();
 
         # created_date is only set for contig_info objects that either come directly
         # from the DB (this case) or have just been stored.
         # Since the date is not a part of XML, the XML->Vega parser will leave the date unset.
     my ($contiginfo_id, $author_id, $created_uniseconds) = $sth->fetchrow_array();
+    return unless $sth->rows();
 
     $sth->finish();
     my $author=$self->db->get_AuthorAdaptor->fetch_by_dbID($author_id);
@@ -105,13 +105,14 @@ sub store {
                  ."\nerror is: ".$@;
 
         # Store a new row in the contig_info table and get contig_info_id
-        my $sth = $self->prepare(q{
+        my $created_date_fn = $self->db->dbc->from_seconds_to_date('?');
+        my $sth = $self->prepare(qq{
                                INSERT INTO contig_info(
                                seq_region_id
                                , author_id
                                , created_date
                                , is_current)
-                               VALUES (?,?,FROM_UNIXTIME(?),1)
+                               VALUES (?,?,$created_date_fn,1)
         });
 
         my $created_date = $contig_info->created_date || $time_uniseconds || time;
