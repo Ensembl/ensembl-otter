@@ -5,7 +5,6 @@ use warnings;
 
 use lib "${ENV{ANACODE_TEAM_TOOLS}}/t/tlib";
 use Test::CriticModule;
-BEGIN { delete $ENV{HARNESS_IS_VERBOSE} }
 use Test::SetupLog4perl;
 
 use Sys::Hostname;
@@ -34,8 +33,8 @@ BEGIN {
 }
 
 sub main {
-#    subtest critic_tt => \&critic_tt;
-#    subtest test_regions_tt => \&test_regions_tt;
+    subtest critic_tt => \&critic_tt;
+    subtest test_regions_tt => \&test_regions_tt;
     subtest DE_line_equiv_tt => \&DE_line_equiv_tt;
     subtest DE_line_cases_tt => \&DE_line_cases_tt;
     return 0;
@@ -228,9 +227,7 @@ sub try_unlock_region {
 sub DE_line_equiv_tt {
     my $tmpdir = tempdir('DE_line_equiv.XXXXXX', TMPDIR => 1, CLEANUP => 1);
     my @r =
-      (
-#       [qw[ human_test chr12-38 chromosome Otter 12 30351955 30504663 ]], # 420
-       [qw[ human_test chr12-38 chromosome Otter 12 30351955 34820185 ]], # 420..474
+      ([qw[ human_test chr12-38 chromosome Otter 12 30351955 34820185 ]], # 420..474
       );
 
     for (my $i=0; $i<@r; $i++) {
@@ -283,12 +280,6 @@ sub _DE_region_equiv {
         # untested, is this the right patch?
 
         my $remote_desc = $client->get_slice_DE($clone_slice);
-
-#diag explain { clone => { cstart => $clone->assembly_start, cend => $clone->assembly_end, clone_accession => $clone->accession, clone_name => $clone->clone_name },
-#                 slice => { start => $clone_slice->start, end => $clone_slice->end },
-#                   result => { remote => $remote_desc, ace => $ace_desc },
-#             };
-
         is($remote_desc, $ace_desc,
            "desc for ".$clone->clone_name." vs. ".$clone_slice->name)
           and diag explain $remote_desc;
