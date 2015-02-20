@@ -53,11 +53,16 @@ sub store {
     # Bio::EnsEMBL::Registry->clear;
 
     my $slice = $self->get_ChromosomeSlice;
-    my $db_slice = $self->slice_stored_if_needed($slice, $dna);
+
+    # Take chromosome name from first CloneSequence
+    my @clone_seqs = $self->get_CloneSequences;
+    my $chromosome = $clone_seqs[0]->chromosome;
+
+    my $db_slice = $self->slice_stored_if_needed($slice, $dna, $chromosome);
 
     my $reattach = ($db_slice != $slice);
 
-    foreach my $cs ( $self->get_CloneSequences ) {
+    foreach my $cs ( @clone_seqs ) {
         $self->_store_clone_sequence($cs, $db_slice);
     }
 
@@ -73,7 +78,7 @@ sub store {
 }
 
 sub slice_stored_if_needed {
-    my ($self, $region_slice, $dna) = @_;
+    my ($self, $region_slice, $dna, $chromosome) = @_;
 
     my $vega_dba = $self->vega_dba;
     my $slice_adaptor = $vega_dba->get_SliceAdaptor;
@@ -103,6 +108,11 @@ sub slice_stored_if_needed {
         };
         $db_seq_region = Bio::EnsEMBL::Slice->new_fast($db_seq_region_parameters);
         $slice_adaptor->store($db_seq_region);
+
+        # Ensure EnsEMBL-style chromosome name is stored
+        my $attrib_adaptor = $vega_dba->get_AttributeAdaptor;
+        my $chr_name_attr = $self->make_Attribute('chr', $chromosome);
+        $attrib_adaptor->store_on_Slice($db_seq_region, [ $chr_name_attr ] );
 
         # Replace $region_slice with one connected to the database
         $region_slice = $db_seq_region->sub_Slice($region_slice->start, $region_slice->end);
@@ -161,6 +171,10 @@ sub _store_clone_sequence {
                                               });
     $slice_adaptor->store($clone);
 
+    my $attrib_adaptor = $vega_dba->get_AttributeAdaptor;
+    my @cln_attribs = map { @{ $cs->ContigInfo->get_all_Attributes($_) } } qw( embl_acc embl_version intl_clone_name );
+    $attrib_adaptor->store_on_Slice($clone, \@cln_attribs);
+
     my $contig_coord_sys = $self->get_ContigCoordSystem;
     my $db_contig = Bio::EnsEMBL::Slice->new_fast({
         seq_region_name   => $cs->contig_name,
@@ -177,7 +191,12 @@ sub _store_clone_sequence {
     my $ctg_map_slice = $db_contig->sub_Slice(                 $cs->contig_start, $cs->contig_end, $cs->contig_strand);
     $slice_adaptor->store_assembly($chr_map_slice, $ctg_map_slice);
 
-    # FIXME: ensure attributes are stored as appropriate
+    if (my $ci = $cs->ContigInfo) {
+        my $contig_info_adaptor = $vega_dba->get_ContigInfoAdaptor;
+        $ci->slice($ctg_map_slice);
+        $ci->author(Bio::Vega::Author->new(-name => 'dummy', -email => 'dummy')); # FIXME - what to use here?
+        $contig_info_adaptor->store($ci);
+    }
 
     return;
 }
