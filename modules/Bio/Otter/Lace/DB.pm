@@ -14,6 +14,7 @@ use Bio::Otter::Lace::DB::OTFRequestAdaptor;
 use parent qw( Bio::Otter::Log::WithContextMixin );
 
 my(
+    %species,
     %dbh,
     %file,
     %vega_dba,
@@ -26,6 +27,7 @@ my(
 sub DESTROY {
     my ($self) = @_;
 
+    delete($species{$self});
     delete($dbh{$self});
     delete($file{$self});
     delete($vega_dba{$self});
@@ -40,7 +42,7 @@ sub DESTROY {
 sub new {
     my ($pkg, %args) = @_;
 
-    my ($home, $client, $log_context) = @args{qw( home client log_context )};
+    my ($species, $home, $client, $log_context) = @args{qw( species home client log_context )};
 
     my $ref = "";
     my $self = bless \$ref, $pkg;
@@ -50,6 +52,8 @@ sub new {
         $self->logger->logconfess("Cannot create SQLite database without home parameter");
     }
 
+    $self->species($species);
+
     my $file = "$home/otter.sqlite";
     $self->file($file);
 
@@ -57,6 +61,15 @@ sub new {
     $self->init_db($client);
 
     return $self;
+}
+
+sub species {
+    my ($self, $arg) = @_;
+
+    if ($arg) {
+        $species{$self} = $arg;
+    }
+    return $species{$self};
 }
 
 sub dbh {
@@ -103,7 +116,8 @@ sub vega_dba {
 
     my $dbc = Bio::Vega::DBSQL::DBAdaptor->new(
         -driver => 'SQLite',
-        -dbname => $file{$self}
+        -dbname => $file{$self},
+        -species => $self->species,
         );
 
     return $vega_dba{$self} = $dbc;

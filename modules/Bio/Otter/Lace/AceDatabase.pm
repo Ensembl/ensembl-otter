@@ -71,8 +71,11 @@ sub AccessionTypeCache {
 sub DB {
     my ($self) = @_;
 
-    my $db = $self->{'_sqlite_database'}
-        ||= Bio::Otter::Lace::DB->new(home => $self->home, client => $self->Client, log_context => $self->log_context);
+    my $db = $self->{'_sqlite_database'} ||= Bio::Otter::Lace::DB->new(
+        home        => $self->home,
+        client      => $self->Client,
+        log_context => $self->log_context
+        );
     return $db;
 }
 
@@ -249,6 +252,8 @@ sub init_AceDatabase {
 
     my ($raw_dna, @tiles) = $self->get_assembly_dna;
     $self->write_dna_data($raw_dna, @tiles);
+
+    $self->DB->species($parser->species);
 
     $self->write_methods_acefile;
 

@@ -41,7 +41,7 @@ sub new {
 sub new_with_dataset_info {
     my ($pkg, %args) = @_;
 
-    my $db = $pkg->new(%args);
+    my $db = $pkg->new(%args, species => $args{dataset_name});
 
     my $test_dataset = Bio::Otter::Lace::DataSet->new;
     $test_dataset->name($args{dataset_name});
