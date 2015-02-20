@@ -77,11 +77,10 @@ sub store_on_ContigInfo  {
     $self->throw("ContigInfo is not stored in this DB - cannot store attributes.");
   }
   my $contiginfo_id = $contiginfo->dbID();
-  my $sth = $self->prepare(
-      "INSERT into contig_attrib ".
-      "SET contig_info_id = ?, attrib_type_id = ?, ".
-      "value = ? "
-      );
+  my $sth = $self->prepare(q{
+      INSERT into contig_attrib (contig_info_id, attrib_type_id, value)
+                         VALUES (?,              ?,              ?)
+      });
 
   for my $attrib ( @$attributes ) {
     if(!ref($attrib) && $attrib->isa('Bio::EnsEMBL::Attribute')) {
