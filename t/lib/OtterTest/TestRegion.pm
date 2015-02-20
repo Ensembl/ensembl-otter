@@ -285,8 +285,8 @@ sub local_xml_copy {
        <type>Known_CDS</type>
        <known>1</known>
        <truncated>0</truncated>
-       <synonym>bA145H9.2</synonym>
        <synonym>RP11-145H9.2</synonym>
+       <synonym>bA145H9.2</synonym>
        <author>anacode</author>
        <author_email>anacode</author_email>
        <transcript>
