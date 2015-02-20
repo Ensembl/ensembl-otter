@@ -28,12 +28,13 @@ sub setup {
 }
 
 sub _get_test_db {
-    return OtterTest::DB->new_with_dataset_info(dataset_name => 'human');
+    return OtterTest::DB->new_with_dataset_info(dataset_name => 'human_test');
 }
 
 sub teardown {
     my $test = shift;
     $test->test_db(undef);
+    Bio::EnsEMBL::Registry->clear; # nasty nasty caches!
     $test->SUPER::teardown;
     return;
 }
