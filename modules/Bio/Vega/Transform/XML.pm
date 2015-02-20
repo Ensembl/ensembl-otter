@@ -184,7 +184,7 @@ sub generate_Locus {
     $g->attribvals($self->prettyprint('truncated',$gene->truncated_flag));
 
     if(my $synonyms = $gene->get_all_Attributes('synonym')) {
-        foreach my $syn (@$synonyms){
+        foreach my $syn (sort { $a->value cmp $b->value } @$synonyms){
             $g->attribvals($self->prettyprint('synonym',$syn->value));
         }
     }
