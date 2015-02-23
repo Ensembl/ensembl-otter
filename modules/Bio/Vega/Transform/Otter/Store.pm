@@ -159,33 +159,49 @@ sub _store_clone_sequence {
     my $vega_dba = $self->vega_dba;
 
     my $slice_adaptor = $vega_dba->get_SliceAdaptor;
-
     my $clone_coord_sys = $self->get_CloneCoordSystem;
-    my $clone = Bio::EnsEMBL::Slice->new_fast({
-        seq_region_name   => $cs->accession_dot_sv,
-        strand            => 1,
-        start             => 1,
-        end               => $cs->length,
-        seq_region_length => $cs->length,
-        coord_system      => $clone_coord_sys,
-                                              });
-    $slice_adaptor->store($clone);
 
-    my $attrib_adaptor = $vega_dba->get_AttributeAdaptor;
-    my @cln_attribs = map { @{ $cs->ContigInfo->get_all_Attributes($_) } } qw( embl_acc embl_version intl_clone_name );
-    $attrib_adaptor->store_on_Slice($clone, \@cln_attribs);
+    my $clone = $slice_adaptor->fetch_by_region(
+        $clone_coord_sys->name,
+        $cs->accession_dot_sv,
+        );
+
+    unless ($clone) {
+        $clone = Bio::EnsEMBL::Slice->new_fast({
+            seq_region_name   => $cs->accession_dot_sv,
+            strand            => 1,
+            start             => 1,
+            end               => $cs->length,
+            seq_region_length => $cs->length,
+            coord_system      => $clone_coord_sys,
+                                               });
+        $slice_adaptor->store($clone);
+
+        my $attrib_adaptor = $vega_dba->get_AttributeAdaptor;
+        my @cln_attribs = map { @{ $cs->ContigInfo->get_all_Attributes($_) } }
+                              qw( embl_acc embl_version intl_clone_name );
+        $attrib_adaptor->store_on_Slice($clone, \@cln_attribs);
+    }
 
     my $contig_coord_sys = $self->get_ContigCoordSystem;
-    my $db_contig = Bio::EnsEMBL::Slice->new_fast({
-        seq_region_name   => $cs->contig_name,
-        strand            => $cs->contig_strand,
-        start             => 1,
-        end               => $cs->length,
-        seq_region_length => $cs->length,
-        coord_system      => $contig_coord_sys,
-                                                  });
-    $slice_adaptor->store($db_contig);
-    $slice_adaptor->store_assembly($clone, $db_contig);
+
+    my $db_contig = $slice_adaptor->fetch_by_region(
+        $contig_coord_sys->name,
+        $cs->contig_name,
+        );
+
+    unless ($db_contig) {
+        $db_contig = Bio::EnsEMBL::Slice->new_fast({
+            seq_region_name   => $cs->contig_name,
+            strand            => 1,
+            start             => 1,
+            end               => $cs->length,
+            seq_region_length => $cs->length,
+            coord_system      => $contig_coord_sys,
+                                                   });
+        $slice_adaptor->store($db_contig);
+        $slice_adaptor->store_assembly($clone, $db_contig);
+    }
 
     my $chr_map_slice = $db_slice->seq_region_Slice->sub_Slice($cs->chr_start,    $cs->chr_end,    1);
     my $ctg_map_slice = $db_contig->sub_Slice(                 $cs->contig_start, $cs->contig_end, $cs->contig_strand);
