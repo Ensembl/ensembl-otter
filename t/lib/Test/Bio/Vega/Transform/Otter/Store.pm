@@ -69,6 +69,19 @@ sub store : Test(4) {
         otter_dba => $test->test_db->vega_dba,
         slice     => $slice,
         );
+
+    # This is a bit yucky!
+  GENE: foreach my $g ($region->genes) {
+    ATTR: foreach my $ga ( @{$g->get_all_Attributes} ) {
+        next ATTR unless $ga->code eq 'remark';
+        my $value = $ga->value;
+        if ($ga->value =~ /^Transcript .* has (no|\d+) exons+ /) {
+            $g->truncated_flag(1);
+            next GENE;
+        }
+    } # ATTR
+  } # GENE
+
     my $xml_writer = Bio::Vega::Transform::XML->new;
     $xml_writer->region($region);
     my $xml_out = $xml_writer->generate_OtterXML;
