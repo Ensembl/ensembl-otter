@@ -74,6 +74,14 @@ sub store {
         $gene_a->store($gene);
     }
 
+    my $sf_a = $vega_dba->get_SimpleFeatureAdaptor;
+    foreach my $sf ( @{$self->get_SimpleFeatures} ) {
+        if ($reattach) {
+            $sf->slice($db_slice);
+        }
+        $sf_a->store($sf);
+    }
+
     return;
 }
 
