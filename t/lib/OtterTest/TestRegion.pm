@@ -8,7 +8,11 @@ use warnings;
 use Test::Builder;
 use Test::Differences qw( eq_or_diff unified_diff );
 
+use Cwd qw(abs_path);
+use File::Basename;
+use File::Slurp;
 use List::Util qw(min max);
+use Readonly;
 
 use Bio::Otter::Server::Support::Local;
 use Bio::Vega::Gene;
@@ -200,215 +204,52 @@ __EO_GENE_XML__
     }
 }
 
-# FIXME: cache locally
-sub local_xml_parsed {
-    require XML::Simple;
-    XML::Simple->import(':strict');
-    my $xs = XML::Simple->new(
-        ForceArray => [ qw( locus transcript exon evidence ) ],
-        KeyAttr    => [],
-        );
-    my $xml = local_xml_copy();
-    my $parsed = $xs->XMLin($xml);
-    return $parsed;
+{
+    my $obj;
+
+    # We use the first region (index 0) which is our original one
+    sub _region_0 {
+        $obj ||= __PACKAGE__->new(0);
+        return $obj;
+    }
 }
 
-# YUK - this ain't great! Maybe we should query the production server via HTTP.
-#
 sub local_xml_copy {
-    my $xml = <<'__EO_XML__';
- <otter>
-   <species>human_test</species>
-   <sequence_set>
-     <assembly_type>chr6-38</assembly_type>
-     <sequence_fragment>
-       <id>AL359852.20.1.120512</id>
-       <chromosome>6</chromosome>
-       <accession>AL359852</accession>
-       <version>20</version>
-       <clone_name>RP11-299J5</clone_name>
-       <assembly_start>2557766</assembly_start>
-       <assembly_end>2588301</assembly_end>
-       <fragment_ori>1</fragment_ori>
-       <fragment_offset>89977</fragment_offset>
-       <clone_length>120512</clone_length>
-       <remark>Annotation_remark- annotated</remark>
-     </sequence_fragment>
-     <sequence_fragment>
-       <id>AL138876.23.1.107888</id>
-       <chromosome>6</chromosome>
-       <accession>AL138876</accession>
-       <version>23</version>
-       <clone_name>RP11-145H9</clone_name>
-       <assembly_start>2588302</assembly_start>
-       <assembly_end>2647766</assembly_end>
-       <fragment_ori>1</fragment_ori>
-       <fragment_offset>101</fragment_offset>
-       <clone_length>107888</clone_length>
-       <remark>EMBL_dump_info.DE_line- Contains part of a gene for a novel protein similar to myosin light chain kinase and two novel genes.</remark>
-       <remark>Annotation_remark- annotated</remark>
-       <keyword>myosin</keyword>
-       <keyword>kinase</keyword>
-     </sequence_fragment>
-     <locus>
-       <stable_id>OTTHUMG00000175882</stable_id>
-       <description>TEC</description>
-       <name>RP11-299J5.1</name>
-       <type>TEC</type>
-       <known>0</known>
-       <truncated>0</truncated>
-       <author>anacode</author>
-       <author_email>anacode</author_email>
-       <transcript>
-         <stable_id>OTTHUMT00000431233</stable_id>
-         <author>anacode</author>
-         <author_email>anacode</author_email>
-         <transcript_class>TEC</transcript_class>
-         <name>RP11-299J5.1-001</name>
-         <evidence_set>
-           <evidence>
-             <name>Em:AK057938.1</name>
-             <type>cDNA</type>
-           </evidence>
-         </evidence_set>
-         <exon_set>
-           <exon>
-             <stable_id>OTTHUME00002169081</stable_id>
-             <start>2561947</start>
-             <end>2564143</end>
-             <strand>1</strand>
-             <phase>-1</phase>
-             <end_phase>-1</end_phase>
-           </exon>
-         </exon_set>
-       </transcript>
-     </locus>
-     <locus>
-       <stable_id>OTTHUMG00000014122</stable_id>
-       <description>chromosome 6 open reading frame 195</description>
-       <name>C6orf195</name>
-       <type>Known_CDS</type>
-       <known>1</known>
-       <truncated>0</truncated>
-       <synonym>RP11-145H9.2</synonym>
-       <synonym>bA145H9.2</synonym>
-       <author>anacode</author>
-       <author_email>anacode</author_email>
-       <transcript>
-         <stable_id>OTTHUMT00000039633</stable_id>
-         <author>anacode</author>
-         <author_email>anacode</author_email>
-         <remark>novel protein (FLJ31934)</remark>
-         <transcript_class>Known_CDS</transcript_class>
-         <name>RP11-145H9.2-001</name>
-         <translation_start>2623822</translation_start>
-         <translation_end>2623439</translation_end>
-         <translation_stable_id>OTTHUMP00000015942</translation_stable_id>
-         <evidence_set>
-           <evidence>
-             <name>Em:AK056496</name>
-             <type>Genomic</type>
-           </evidence>
-           <evidence>
-             <name>Sw:Q96MT4</name>
-             <type>Protein</type>
-           </evidence>
-         </evidence_set>
-         <exon_set>
-           <exon>
-             <stable_id>OTTHUME00000175047</stable_id>
-             <start>2634565</start>
-             <end>2634603</end>
-             <strand>-1</strand>
-             <phase>-1</phase>
-             <end_phase>-1</end_phase>
-           </exon>
-           <exon>
-             <stable_id>OTTHUME00000175046</stable_id>
-             <start>2633605</start>
-             <end>2633792</end>
-             <strand>-1</strand>
-             <phase>-1</phase>
-             <end_phase>-1</end_phase>
-           </exon>
-           <exon>
-             <stable_id>OTTHUME00000175048</stable_id>
-             <start>2621913</start>
-             <end>2624119</end>
-             <strand>-1</strand>
-             <phase>-1</phase>
-             <end_phase>-1</end_phase>
-           </exon>
-         </exon_set>
-       </transcript>
-     </locus>
-     <locus>
-       <stable_id>OTTHUMG00000014123</stable_id>
-       <description>novel transcript</description>
-       <name>RP11-145H9.3</name>
-       <type>Transcript</type>
-       <known>0</known>
-       <truncated>0</truncated>
-       <synonym>bA145H9.3</synonym>
-       <author>anacode</author>
-       <author_email>anacode</author_email>
-       <transcript>
-         <stable_id>OTTHUMT00000039634</stable_id>
-         <author>anacode</author>
-         <author_email>anacode</author_email>
-         <remark>novel transcript</remark>
-         <transcript_class>lincRNA</transcript_class>
-         <name>RP11-145H9.3-001</name>
-         <evidence_set>
-           <evidence>
-             <name>Em:BM553903</name>
-             <type>EST</type>
-           </evidence>
-         </evidence_set>
-         <exon_set>
-           <exon>
-             <stable_id>OTTHUME00000175050</stable_id>
-             <start>2636936</start>
-             <end>2637455</end>
-             <strand>1</strand>
-             <phase>-1</phase>
-             <end_phase>-1</end_phase>
-           </exon>
-           <exon>
-             <stable_id>OTTHUME00000175049</stable_id>
-             <start>2639688</start>
-             <end>2640001</end>
-             <strand>1</strand>
-             <phase>-1</phase>
-             <end_phase>-1</end_phase>
-           </exon>
-         </exon_set>
-       </transcript>
-     </locus>
-   </sequence_set>
- </otter>
-__EO_XML__
-    chomp $xml;
+    my $obj = _region_0;
+    my $xml = $obj->xml_region;
     return $xml;
+}
+
+sub local_xml_parsed {
+    my $obj = _region_0;
+    return $obj->xml_parsed;
+}
+
+sub local_xml_bounds {
+    my $obj = _region_0;
+    return $obj->xml_bounds;
+}
+
+# WARNING: this generates fake DNA !!
+sub local_xml_dna {
+    my $obj = _region_0;
+    return $obj->fake_dna;
 }
 
 {
     my %gene_info = (
-        OTTHUMG00000175882 => {
-            source  => 'havana',
-            biotype => 'tec',
-            status  => 'UNKNOWN',
-        },
-        OTTHUMG00000014122 => {
-            source  => 'havana',
-            biotype => 'protein_coding',
-            status  => 'KNOWN',
-        },
-        OTTHUMG00000014123 => {
-            source  => 'havana',
-            biotype => 'processed_transcript',
-            status  => 'UNKNOWN',
-        },
+        # First region, chr6-38 partial clones 37, 38
+        OTTHUMG00000175882 => { source  => 'havana', biotype => 'tec',                  status  => 'UNKNOWN', },
+        OTTHUMG00000014122 => { source  => 'havana', biotype => 'protein_coding',       status  => 'KNOWN',   },
+        OTTHUMG00000014123 => { source  => 'havana', biotype => 'processed_transcript', status  => 'UNKNOWN', },
+
+        # Second region, chr2-38 clones 16 - 26
+        OTTHUMG00000151389 => { source  => 'havana', biotype => 'processed_transcript', status  => 'NOVEL',   },
+        OTTHUMG00000151370 => { source  => 'havana', biotype => 'protein_coding',       status  => 'KNOWN',   },
+        OTTHUMG00000151390 => { source  => 'havana', biotype => 'processed_transcript', status  => 'NOVEL',   },
+        OTTHUMG00000151387 => { source  => 'havana', biotype => 'processed_transcript', status  => 'NOVEL',   },
+        OTTHUMG00000151388 => { source  => 'havana', biotype => 'processed_transcript', status  => 'NOVEL',   },
+        OTTHUMG00000090271 => { source  => 'havana', biotype => 'protein_coding',       status  => 'KNOWN',   },
         );
 
     sub gene_info_lookup {
@@ -419,18 +260,29 @@ __EO_XML__
 
 {
     my %transcript_info = (
-        OTTHUMT00000431233 => {
-            biotype => 'tec',
-            status  => 'UNKNOWN',
-        },
-        OTTHUMT00000039633 => {
-            biotype => 'protein_coding',
-            status  => 'KNOWN',
-        },
-        OTTHUMT00000039634 => {
-            biotype => 'lincrna',
-            status  => 'UNKNOWN',
-        },
+        # First region, chr6-38 partial clones 37, 38
+        OTTHUMT00000431233 => { biotype => 'tec',            status  => 'UNKNOWN', },
+        OTTHUMT00000039633 => { biotype => 'protein_coding', status  => 'KNOWN',   },
+        OTTHUMT00000039634 => { biotype => 'lincrna',        status  => 'UNKNOWN', },
+
+        # Second region, chr2-38 clones 16 - 26
+        OTTHUMT00000322452 => { biotype => 'antisense',               status  => 'UNKNOWN', },
+        OTTHUMT00000322407 => { biotype => 'nonsense_mediated_decay', status  => 'UNKNOWN', },
+        OTTHUMT00000322786 => { biotype => 'nonsense_mediated_decay', status  => 'UNKNOWN', },
+        OTTHUMT00000322454 => { biotype => 'protein_coding',          status  => 'KNOWN',   },
+        OTTHUMT00000322455 => { biotype => 'protein_coding',          status  => 'NOVEL',   },
+        OTTHUMT00000322456 => { biotype => 'processed_transcript',    status  => 'UNKNOWN', },
+        OTTHUMT00000322460 => { biotype => 'processed_transcript',    status  => 'UNKNOWN', },
+        OTTHUMT00000322787 => { biotype => 'processed_transcript',    status  => 'UNKNOWN', },
+        OTTHUMT00000322457 => { biotype => 'processed_transcript',    status  => 'UNKNOWN', },
+        OTTHUMT00000322461 => { biotype => 'processed_transcript',    status  => 'UNKNOWN', },
+        OTTHUMT00000322458 => { biotype => 'processed_transcript',    status  => 'UNKNOWN', },
+        OTTHUMT00000322459 => { biotype => 'processed_transcript',    status  => 'UNKNOWN', },
+        OTTHUMT00000322462 => { biotype => 'processed_transcript',    status  => 'UNKNOWN', },
+        OTTHUMT00000322453 => { biotype => 'antisense',               status  => 'UNKNOWN', },
+        OTTHUMT00000322450 => { biotype => 'antisense',               status  => 'UNKNOWN', },
+        OTTHUMT00000322451 => { biotype => 'antisense',               status  => 'UNKNOWN', },
+        OTTHUMT00000353107 => { biotype => 'processed_transcript',    status  => 'UNKNOWN', },
         );
 
     sub transcript_info_lookup {
@@ -439,8 +291,64 @@ __EO_XML__
     }
 }
 
-sub local_xml_bounds {
-    my $parsed = local_xml_parsed();
+
+##
+## New OO interface starts here
+##
+
+# NB order is significant, as the first entry is used by the old non-OO versions
+#
+Readonly my @TEST_REGIONS => qw(
+    human_test:chr6-38:2557766-2647766
+    human_test:chr2-38:929903-1379472
+);
+
+# FIXME: duplication with Test::OtterLaceOnTheFly
+Readonly my $REGION_PATH => abs_path(dirname(__FILE__) . "/../../etc/test_regions");
+
+sub new {
+    my ($class, $name_or_index) = @_;
+
+    my $self = bless {}, $class;
+
+    my $name = $name_or_index;
+    if ($name_or_index =~ /^\d+$/) {
+        $name = $TEST_REGIONS[$name_or_index];
+    }
+    $name .= '.xml' if $name !~ /\.xml$/;
+
+    $self->{'xml_region'} = read_file("${REGION_PATH}/$name");
+    chomp $self->{'xml_region'};
+
+    return $self;
+}
+
+sub xml_region {
+    my ($self) = @_;
+    my $xml_region = $self->{'xml_region'};
+    return $xml_region;
+}
+
+sub xml_parsed {
+    my ($self) = @_;
+    my $xml_parsed = $self->{'xml_parsed'};
+    return $xml_parsed if $xml_parsed;
+
+    require XML::Simple;
+    XML::Simple->import(':strict');
+    my $xs = XML::Simple->new(
+        ForceArray => [ qw( locus transcript exon evidence ) ],
+        KeyAttr    => [],
+        );
+    my $xml = local_xml_copy();
+    my $parsed = $xs->XMLin($self->xml_region);
+
+    return $self->{'xml_parsed'} = $parsed;
+}
+
+sub xml_bounds {
+    my ($self) = @_;
+    my $parsed = $self->xml_parsed();
     my $sequence_set = $parsed->{sequence_set};
 
     my $start = min(map { $_->{assembly_start} } @{$sequence_set->{sequence_fragment}});
@@ -449,8 +357,9 @@ sub local_xml_bounds {
     return ($start, $end, $end - $start + 1);
 }
 
-sub local_xml_dna {
-    my (undef, undef, $length) = local_xml_bounds();
+sub fake_dna {
+    my ($self) = @_;
+    my (undef, undef, $length) = $self->xml_bounds();
     my $chunk = "GATTACAAGT";
     return ($chunk x int($length / 10)) . substr($chunk, 0, $length % 10);
 }
