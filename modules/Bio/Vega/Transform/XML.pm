@@ -190,12 +190,12 @@ sub generate_Locus {
     }
 
     if(my $remarks = $gene->get_all_Attributes('remark')) {
-        foreach my $rem (@$remarks) {
+        foreach my $rem (sort { $a->value cmp $b->value } @$remarks) {
             $g->attribvals($self->prettyprint('remark',$rem->value));
         }
     }
     if(my $remarks = $gene->get_all_Attributes('hidden_remark')) {
-        foreach my $rem (@$remarks) {
+        foreach my $rem (sort { $a->value cmp $b->value } @$remarks) {
             $g->attribvals($self->prettyprint('remark','Annotation_remark- '.$rem->value));
         }
     }
@@ -233,12 +233,12 @@ sub generate_Transcript {
     }
 
   if(my $remarks = $tran->get_all_Attributes('remark')){
-     foreach my $rem (@$remarks){
+     foreach my $rem (sort { $a->value cmp $b->value } @$remarks){
         $t->attribvals($self->prettyprint('remark',$rem->value));
      }
   }
   if(my $remarks = $tran->get_all_Attributes('hidden_remark')){
-      foreach my $rem (@$remarks){
+      foreach my $rem (sort { $a->value cmp $b->value } @$remarks){
           $t->attribvals($self->prettyprint('remark','Annotation_remark- '.$rem->value));
       }
   }
