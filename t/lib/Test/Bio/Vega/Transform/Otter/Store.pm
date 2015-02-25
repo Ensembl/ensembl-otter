@@ -5,7 +5,6 @@ use Test::Class::Most
     attributes => test_db;
 
 use OtterTest::DB;
-use OtterTest::TestRegion qw( local_xml_dna );
 
 use Bio::Vega::Region;
 use Bio::Vega::Transform::XML;
@@ -56,7 +55,7 @@ sub store : Test(4) {
     my $test = shift;
     my $bvtos = $test->our_object;
     can_ok $bvtos, 'store';
-    $bvtos->store(local_xml_dna());
+    $bvtos->store($test->test_region->fake_dna());
     pass '... stored';
 
     my $original_slice = $bvtos->get_ChromosomeSlice;
@@ -87,7 +86,7 @@ sub store : Test(4) {
     my $xml_out = $xml_writer->generate_OtterXML;
     chomp $xml_out;
     ok $xml_out, '... regenerate XML';
-    eq_or_diff $xml_out, $test->xml_string, '... XML matches';
+    eq_or_diff $xml_out, $test->test_region->xml_region, '... XML matches';
 
     return;
 }
