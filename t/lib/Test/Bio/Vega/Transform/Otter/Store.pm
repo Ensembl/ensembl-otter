@@ -51,7 +51,25 @@ sub our_object {
     return $our_object;
 }
 
-sub store : Test(4) {
+sub store : Test(8) {
+    my $test = shift;
+
+    # First with standard object and test region
+    $test->_store_extract_compare;
+
+    # Now re-run with the first simpler region
+
+    $test->teardown;
+
+    $test->test_region(OtterTest::TestRegion->new(0));
+    $test->setup;
+
+    $test->_store_extract_compare;
+
+    return;
+}
+
+sub _store_extract_compare {
     my $test = shift;
     my $bvtos = $test->our_object;
     can_ok $bvtos, 'store';

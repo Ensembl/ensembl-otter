@@ -14,7 +14,7 @@ sub build_attributes { return; }
 sub startup : Tests(startup => +0) {
     my $test = shift;
     $test->SUPER::startup;
-    $test->test_region(OtterTest::TestRegion->new(0));
+    $test->test_region(OtterTest::TestRegion->new(1)); # we use the second more complex region
     return;
 }
 
