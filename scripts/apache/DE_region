@@ -13,8 +13,7 @@ use Bio::Otter::ServerAction::Region;
 sub DE_region {
     my ($server) = @_;
     $server->content_type('application/json');
-    my $xml = Bio::Otter::ServerAction::Region->new_with_slice($server)->DE_region;
-    return $xml;
+    return Bio::Otter::ServerAction::Region->new_with_slice($server)->DE_region;
 }
 
 Bio::Otter::Server::Support::Web->send_response(\&DE_region);
