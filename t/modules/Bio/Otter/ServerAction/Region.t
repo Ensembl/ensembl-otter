@@ -8,7 +8,7 @@ use Test::CriticModule;
 use Test::SetupLog4perl;
 
 use Sys::Hostname;
-use Test::More tests => 7;
+use Test::More tests => 5;
 use Text::Diff;
 use Try::Tiny;
 
@@ -35,8 +35,8 @@ BEGIN {
 sub main {
     subtest critic_tt => \&critic_tt;
     subtest test_regions_tt => \&test_regions_tt;
-    subtest DE_line_equiv_tt => \&DE_line_equiv_tt;
-    subtest DE_line_cases_tt => \&DE_line_cases_tt;
+#    subtest DE_line_equiv_tt => \&DE_line_equiv_tt;
+#    subtest DE_line_cases_tt => \&DE_line_cases_tt;
     return 0;
 }
 
