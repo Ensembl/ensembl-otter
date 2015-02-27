@@ -8,13 +8,17 @@ use warnings;
 use Test::Builder;
 use Test::Differences qw( eq_or_diff unified_diff );
 
+use List::Util qw(min max);
+
 use Bio::Otter::Server::Support::Local;
 use Bio::Vega::Gene;
 use Bio::Vega::Transform::Otter;
 
+# FIXME: time to make this OO
 use Exporter qw( import );
 our @EXPORT_OK = qw( check_xml extra_gene  add_extra_gene_xml region_is %test_region_params
-                     local_xml_copy local_xml_parsed gene_info_lookup transcript_info_lookup );
+                     local_xml_copy local_xml_parsed local_xml_bounds local_xml_dna
+                     gene_info_lookup transcript_info_lookup );
 
 our %test_region_params = (   ## no critic (Variables::ProhibitPackageVars)
     dataset => 'human_test',
@@ -196,6 +200,7 @@ __EO_GENE_XML__
     }
 }
 
+# FIXME: cache locally
 sub local_xml_parsed {
     require XML::Simple;
     XML::Simple->import(':strict');
@@ -432,6 +437,22 @@ __EO_XML__
         my ($stable_id) = @_;
         return $transcript_info{$stable_id};
     }
+}
+
+sub local_xml_bounds {
+    my $parsed = local_xml_parsed();
+    my $sequence_set = $parsed->{sequence_set};
+
+    my $start = min(map { $_->{assembly_start} } @{$sequence_set->{sequence_fragment}});
+    my $end   = max(map { $_->{assembly_end} }   @{$sequence_set->{sequence_fragment}});
+
+    return ($start, $end, $end - $start + 1);
+}
+
+sub local_xml_dna {
+    my (undef, undef, $length) = local_xml_bounds();
+    my $chunk = "GATTACAAGT";
+    return ($chunk x int($length / 10)) . substr($chunk, 0, $length % 10);
 }
 
 1;
