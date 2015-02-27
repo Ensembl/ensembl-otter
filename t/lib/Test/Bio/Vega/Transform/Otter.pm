@@ -7,7 +7,6 @@ use Test::Class::Most
 use Test::Bio::Otter::Lace::CloneSequence no_run_test => 1;
 use Test::Bio::Vega::Gene                 no_run_test => 1;
 
-use List::Util qw(min max);
 use OtterTest::TestRegion;
 
 sub build_attributes { return; }
@@ -67,9 +66,11 @@ sub get_ChromosomeSlice : Test(7) {
     my $parsed = $test->parsed_xml;
     my $sequence_set = $parsed->{sequence_set};
 
+    my ($start, $end) = OtterTest::TestRegion::local_xml_bounds();
+
     is $csl->seq_region_name, $sequence_set->{assembly_type}, '... seq_region_name';
-    is $csl->start,  min(map { $_->{assembly_start} } @{$sequence_set->{sequence_fragment}}), '... start';
-    is $csl->end,    max(map { $_->{assembly_end} }   @{$sequence_set->{sequence_fragment}}), '... end';
+    is $csl->start,  $start, '... start';
+    is $csl->end,    $end,   '... end';
     is $csl->strand, 1, '... strand';
 
     my $bvto = $test->our_object();
