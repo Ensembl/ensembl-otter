@@ -159,7 +159,7 @@ sub tools_versions {
 
 sub __need_tools {
     return
-      ([ zmap => '--version' ],
+      ([ zmap => '--raw_version' ],
        [ blixemh => '--version' ], # represents other Seqtools
        [ sgifaceserver => '-version',
          qr{^(acedb \S+),}i ],
