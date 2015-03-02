@@ -38,8 +38,8 @@ use Bio::Otter::Lace::Defaults;
     my $get_db_id = $otter_dbc->prepare(q{
         SELECT transcript_id
         FROM transcript
-        WHERE t.is_current = 1
-          AND t.stable_id = ?
+        WHERE is_current = 1
+          AND stable_id = ?
     });
     my $count_attrib = $otter_dbc->prepare(qq{
         SELECT count(*)
