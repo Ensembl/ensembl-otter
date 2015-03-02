@@ -25,7 +25,7 @@ sub main {
     my ($do_interrupt, $do_expire) = (0, 0);
     my @lock_id_range = ();
     my $range_parser = sub{
-        my( $start, $end ) = $_[1] =~ /(\d+)(?:[^\d+](\d+))?/;
+        my( $start, $end ) = $_[1] =~ /(\d+)(?:[^\d]+(\d+))?/;
         if ($start and ! $end) {
             $end = $start;
         }
