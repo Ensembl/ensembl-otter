@@ -309,8 +309,6 @@ sub set_biotype_status_from_transcripts {
     #     $tsct_status{ $tsct->status }++;
     # }
 
-    my $annotator_set_biotype;
-
     %tsct_biotype = %$tsct_biotype_hash;
     %tsct_status  = %$tsct_status_hash;
 
