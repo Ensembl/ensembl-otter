@@ -132,6 +132,10 @@ $anasoft/lib/perl5/site_perl:\
 $anasoft/lib/perl5/vendor_perl:\
 $anasoft/lib/perl5\
 "
+        if [ -z "$OTTER_MACOS" ]
+        then
+            source "$ensembl_otter_home/scripts/client/_otterlace_macos_env.sh"
+        fi
         ;;
 
     *)
