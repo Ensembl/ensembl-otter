@@ -315,18 +315,27 @@ sub new {
     if ($name_or_index =~ /^\d+$/) {
         $name = $TEST_REGIONS[$name_or_index];
     }
-    $name .= '.xml' if $name !~ /\.xml$/;
-
-    $self->{'xml_region'} = read_file("${REGION_PATH}/$name");
-    chomp $self->{'xml_region'};
+    $self->{'_base_name'} = $name;
 
     return $self;
+}
+
+sub _base_name {
+    my ($self) = @_;
+    my $_base_name = $self->{'_base_name'};
+    return $_base_name;
 }
 
 sub xml_region {
     my ($self) = @_;
     my $xml_region = $self->{'xml_region'};
-    return $xml_region;
+    return $xml_region if $xml_region;
+
+    my $name =  $self->_base_name;
+    $xml_region = read_file("${REGION_PATH}/${name}.xml");
+    chomp $xml_region;
+
+    return $self->{'xml_region'} = $xml_region;
 }
 
 sub xml_parsed {
