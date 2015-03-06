@@ -18,7 +18,8 @@ use Hum::Ace::Assembly;
 
 use Test::Otter qw( ^db_or_skipall ^data_dir_or_skipall OtterClient ); # may skip test
 
-use OtterTest::TestRegion qw( check_xml extra_gene add_extra_gene_xml region_is %test_region_params local_xml_copy );
+use OtterTest::TestRegion qw( check_xml extra_gene add_extra_gene_xml region_is %test_region_params local_xml_copy
+                              local_assembly_dna );
 
 my %modules;
 
@@ -55,8 +56,7 @@ sub test_regions_tt {
     isa_ok($sa_region, $modules{region});
 
     my $dna = $sa_region->get_assembly_dna;
-    ok($dna, 'get_assembly_dna');
-    note('Got ', length $dna, ' bp');
+    is($dna, local_assembly_dna(), 'get_assembly_dna');
 
     my $region = $sa_region->get_region;
     isa_ok($region, 'Bio::Vega::Region');
