@@ -21,7 +21,7 @@ use Bio::Vega::Transform::Otter;
 # FIXME: time to make this OO
 use Exporter qw( import );
 our @EXPORT_OK = qw( check_xml extra_gene  add_extra_gene_xml region_is %test_region_params
-                     local_xml_copy local_xml_parsed local_xml_bounds local_xml_dna
+                     local_xml_copy local_xml_parsed local_xml_bounds local_xml_dna local_assembly_dna
                      gene_info_lookup transcript_info_lookup );
 
 our %test_region_params = (   ## no critic (Variables::ProhibitPackageVars)
@@ -236,6 +236,11 @@ sub local_xml_dna {
     return $obj->fake_dna;
 }
 
+sub local_assembly_dna {
+    my $obj = _region_0;
+    return $obj->assembly_dna;
+}
+
 {
     my %gene_info = (
         # First region, chr6-38 partial clones 37, 38
@@ -371,6 +376,17 @@ sub fake_dna {
     my (undef, undef, $length) = $self->xml_bounds();
     my $chunk = "GATTACAAGT";
     return ($chunk x int($length / 10)) . substr($chunk, 0, $length % 10);
+}
+
+sub assembly_dna {
+    my ($self) = @_;
+    my $assembly_dna = $self->{'assembly_dna'};
+    return $assembly_dna if $assembly_dna;
+
+    my $name =  $self->_base_name;
+    $assembly_dna = read_file("${REGION_PATH}/${name}.assembly_dna.txt");
+
+    return $self->{'assembly_dna'} = $assembly_dna;
 }
 
 1;
