@@ -8,6 +8,7 @@ use warnings;
 use Test::Builder;
 use Test::Differences qw( eq_or_diff unified_diff );
 
+use Carp;
 use Cwd qw(abs_path);
 use File::Basename;
 use File::Slurp;
@@ -20,9 +21,16 @@ use Bio::Vega::Transform::Otter;
 
 # FIXME: time to make this OO
 use Exporter qw( import );
-our @EXPORT_OK = qw( check_xml extra_gene  add_extra_gene_xml region_is
+our @EXPORT_OK = qw( check_xml region_is
                      local_xml_copy local_xml_parsed local_xml_bounds local_xml_dna local_assembly_dna
                      gene_info_lookup transcript_info_lookup );
+
+# NB order is significant, as the first entry is used by the old non-OO versions
+#
+Readonly my @TEST_REGIONS => qw(
+    human_test:chr6-38:2557766-2647766
+    human_test:chr2-38:929903-1379472
+);
 
 sub local_server {
     my ($self) = @_;
@@ -48,7 +56,11 @@ sub region_is {
 # May have been easier to just user our parser to parse XML, *sigh*
 #
 sub extra_gene {
-    my ($slice) = @_;
+    my ($self, $slice) = @_;
+
+    my $expected = $TEST_REGIONS[0];
+    croak "extra_gene() only works for '$expected'" unless $self->_base_name eq $expected;
+
     my $bvt_otter = Bio::Vega::Transform::Otter->new; # just for utility methods
 
     my $analysis = $bvt_otter->get_Analysis('Otter');
@@ -191,7 +203,7 @@ sub extra_gene {
 __EO_GENE_XML__
 
     sub add_extra_gene_xml {
-        my $xml = shift;
+        my ($self, $xml) = @_;
         $xml =~ s|(     </locus>\n)(   </sequence_set>)|$1$extra_gene$2|m;
         return $xml;
     }
@@ -298,13 +310,6 @@ sub local_assembly_dna {
 ##
 ## New OO interface starts here
 ##
-
-# NB order is significant, as the first entry is used by the old non-OO versions
-#
-Readonly my @TEST_REGIONS => qw(
-    human_test:chr6-38:2557766-2647766
-    human_test:chr2-38:929903-1379472
-);
 
 # FIXME: duplication with Test::OtterLaceOnTheFly
 Readonly my $REGION_PATH => abs_path(dirname(__FILE__) . "/../../etc/test_regions");

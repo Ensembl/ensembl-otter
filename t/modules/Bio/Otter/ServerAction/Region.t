@@ -18,8 +18,7 @@ use Hum::Ace::Assembly;
 
 use Test::Otter qw( ^db_or_skipall ^data_dir_or_skipall OtterClient ); # may skip test
 
-use OtterTest::TestRegion qw( check_xml extra_gene add_extra_gene_xml region_is local_xml_copy
-                              local_assembly_dna );
+use OtterTest::TestRegion qw( check_xml region_is );
 
 my %modules;
 
@@ -57,7 +56,7 @@ sub test_regions_tt {
     isa_ok($sa_region, $modules{region});
 
     my $dna = $sa_region->get_assembly_dna;
-    is($dna, local_assembly_dna(), 'get_assembly_dna');
+    is($dna, $test_region->assembly_dna(), 'get_assembly_dna');
 
     my $region = $sa_region->get_region;
     isa_ok($region, 'Bio::Vega::Region');
@@ -103,7 +102,7 @@ sub test_regions_tt {
     # To get the authors changed, ensure each gene in the region will need
     # a save.
     if (0) {
-        my @rst = try_write_region($sa_xml_region, local_xml_copy(), $lock->{locknums});
+        my @rst = try_write_region($sa_xml_region, $test_region->xml_region, $lock->{locknums});
         my @unl = try_unlock_region($sa_region, $lock->{locknums});
         die explain { did_reset => \@rst, unlock => \@unl };
     }
@@ -112,7 +111,7 @@ sub test_regions_tt {
     ok($okay, 'write_region (unchanged) from XML') or diag "error: $error";
     ok($region_out, 'write_region returns some stuff');
 
-    my $new_xml = add_extra_gene_xml($xml);
+    my $new_xml = $test_region->add_extra_gene_xml($xml);
     ($okay, $region_out, $error) = try_write_region($sa_xml_region, $new_xml, $lock->{locknums});
     ok($okay, 'write_region (new gene) from XML')
       or diag explain { error => $error, new_xml => $new_xml, region_out => $region_out };
@@ -157,7 +156,7 @@ sub test_regions_tt {
         );
     $region2->seq_features(   $region->seq_features);
     $region2->clone_sequences($region->clone_sequences);
-    my @genes = ( $region->genes, extra_gene($region->slice) );
+    my @genes = ( $region->genes, $test_region->extra_gene($region->slice) );
     $region2->genes(@genes);
 
     ($okay, $region_out, $error) = try_write_region($sa_region, $region2, $lock->{locknums});
