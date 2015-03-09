@@ -18,7 +18,7 @@ use Hum::Ace::Assembly;
 
 use Test::Otter qw( ^db_or_skipall ^data_dir_or_skipall OtterClient ); # may skip test
 
-use OtterTest::TestRegion qw( check_xml extra_gene add_extra_gene_xml region_is %test_region_params local_xml_copy
+use OtterTest::TestRegion qw( check_xml extra_gene add_extra_gene_xml region_is local_xml_copy
                               local_assembly_dna );
 
 my %modules;
@@ -51,7 +51,8 @@ sub critic_tt {
 
 
 sub test_regions_tt {
-    my $local_server = OtterTest::TestRegion->local_server; # complete with region params
+    my $test_region = OtterTest::TestRegion->new(0);
+    my $local_server = $test_region->local_server; # complete with region params
     my $sa_region = $modules{region}->new_with_slice($local_server);
     isa_ok($sa_region, $modules{region});
 
@@ -66,7 +67,9 @@ sub test_regions_tt {
     like($error, qr/Writing region failed to init \[No 'locknums' argument/,
          'error message ok');
 
-    my $sa_xml_region = $modules{xml_region}->new_with_slice(OtterTest::TestRegion->local_server);
+    # Need a new local_server as params get consumed as used.
+    $local_server = $test_region->local_server; # complete with region params
+    my $sa_xml_region = $modules{xml_region}->new_with_slice($local_server);
     isa_ok($sa_xml_region, $modules{xml_region});
 
     my $xml = $sa_xml_region->get_region;
@@ -81,7 +84,7 @@ sub test_regions_tt {
          'error message ok');
 
     my $lock;
-    ($okay, $lock, $error) = try_lock_region($sa_region);
+    ($okay, $lock, $error) = try_lock_region($test_region, $sa_region);
     if (ok($okay, 'locked okay')) {
         note explain $lock;
     } else {
@@ -90,7 +93,7 @@ sub test_regions_tt {
     }
 
     my $lock2;
-    ($okay, $lock2, $error) = try_lock_region($sa_region);
+    ($okay, $lock2, $error) = try_lock_region($test_region, $sa_region);
     ok(not($okay), 'second lock attempt fails as expected') or diag explain $lock2;
 
 
@@ -194,10 +197,10 @@ sub try_write_region {
 }
 
 sub try_lock_region {
-    my ($server_action_region) = @_;
+    my ($test_region, $server_action_region) = @_;
     my ($ok, $data_out, $err);
     try {
-        $server_action_region->server->set_params( %test_region_params, hostname => hostname );
+        $server_action_region->server->set_params( %{$test_region->region_params}, hostname => hostname );
         $data_out = $server_action_region->lock_region;
         $ok = 1;
     } catch {
