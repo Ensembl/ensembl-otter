@@ -18,7 +18,7 @@ use Hum::Ace::Assembly;
 
 use Test::Otter qw( ^db_or_skipall ^data_dir_or_skipall OtterClient ); # may skip test
 
-use OtterTest::TestRegion qw( check_xml region_is );
+use OtterTest::TestRegion;
 
 my %modules;
 
@@ -74,7 +74,7 @@ sub test_regions_tt {
     my $xml = $sa_xml_region->get_region;
     ok($xml, 'get_region as XML');
     note('Got ', length $xml, ' chrs');
-    check_xml($xml, 'XML is as expected');
+    $test_region->xml_matches($xml, 'XML is as expected');
     # if it's not, consider the commented Reset below
 
     ($okay, $region_out, $error) = try_write_region($sa_xml_region, $xml, 0);
@@ -165,14 +165,14 @@ sub test_regions_tt {
 
     my $region3 = $sa_region->get_region;
     ok ($region3, 'get_region as B:V:Region object again');
-    region_is($region3, $region2, 'region has extra gene');
+    $test_region->region_is($region3, $region2, 'region has extra gene');
 
     ($okay, $region_out, $error) = try_write_region($sa_region, $region, $lock->{locknums});
     ok($okay, 'write_region (back to scratch) from Bio::Vega::Region object');
     ok($region_out, 'write_region returns some stuff');
 
     my $region4 = $sa_region->get_region;
-    region_is($region4, $region, 'region back to starting point');
+    $test_region->region_is($region4, $region, 'region back to starting point');
 
     ($okay, $error) = try_unlock_region($sa_region, $lock->{locknums});
     ok($okay, 'unlocked okay');
