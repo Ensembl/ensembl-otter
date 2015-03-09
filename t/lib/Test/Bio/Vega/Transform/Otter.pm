@@ -2,12 +2,11 @@ package Test::Bio::Vega::Transform::Otter;
 
 use Test::Class::Most
     parent     => 'Test::Bio::Vega::Transform',
-    attributes => [ qw( xml_string parsed_xml ) ];
+    attributes => [ qw( test_region ) ];
 
 use Test::Bio::Otter::Lace::CloneSequence no_run_test => 1;
 use Test::Bio::Vega::Gene                 no_run_test => 1;
 
-use List::Util qw(min max);
 use OtterTest::TestRegion;
 
 sub build_attributes { return; }
@@ -15,10 +14,7 @@ sub build_attributes { return; }
 sub startup : Tests(startup => +0) {
     my $test = shift;
     $test->SUPER::startup;
-
-    $test->xml_string(OtterTest::TestRegion::local_xml_copy());
-    $test->parsed_xml(OtterTest::TestRegion::local_xml_parsed());
-
+    $test->test_region(OtterTest::TestRegion->new(1)); # we use the second more complex region
     return;
 }
 
@@ -27,7 +23,7 @@ sub setup : Tests(setup) {
     $test->SUPER::setup;
 
     my $bvto = $test->our_object;
-    $bvto->parse($test->xml_string);
+    $bvto->parse($test->test_region->xml_region);
 
     return;
 }
@@ -38,7 +34,7 @@ sub parse : Test(2) {
     my $bvto = $test->our_object;
     can_ok $bvto, 'parse';
 
-    my $parsed = $test->parsed_xml;
+    my $parsed = $test->test_region->xml_parsed;
     is $bvto->species, $parsed->{species}, '...and species ok';
 
     return;
@@ -64,12 +60,14 @@ sub get_ChromosomeSlice : Test(7) {
 
     my $csl = $test->object_accessor( get_ChromosomeSlice => 'Bio::EnsEMBL::Slice' );
 
-    my $parsed = $test->parsed_xml;
+    my $parsed = $test->test_region->xml_parsed;
     my $sequence_set = $parsed->{sequence_set};
 
+    my ($start, $end) = $test->test_region->xml_bounds();
+
     is $csl->seq_region_name, $sequence_set->{assembly_type}, '... seq_region_name';
-    is $csl->start,  min(map { $_->{assembly_start} } @{$sequence_set->{sequence_fragment}}), '... start';
-    is $csl->end,    max(map { $_->{assembly_end} }   @{$sequence_set->{sequence_fragment}}), '... end';
+    is $csl->start,  $start, '... start';
+    is $csl->end,    $end,   '... end';
     is $csl->strand, 1, '... strand';
 
     my $bvto = $test->our_object();
@@ -86,7 +84,7 @@ sub get_CloneSequences : Tests {
 
     my @cs = $bvto->get_CloneSequences;
 
-    my $parsed = $test->parsed_xml;
+    my $parsed = $test->test_region->xml_parsed;
     my $sequence_set = $parsed->{sequence_set};
     my $sequence_frags = [ sort { $a->{assembly_start} <=> $b->{assembly_start} }
                                 @{$sequence_set->{sequence_fragment}}             ];
@@ -110,7 +108,7 @@ sub get_Genes : Tests {
 
     my $genes = $test->object_accessor( get_Genes => 'ARRAY' );
 
-    my $parsed = $test->parsed_xml;
+    my $parsed = $test->test_region->xml_parsed;
     my $loci   = $parsed->{sequence_set}->{locus};
 
     my $n = scalar @$genes;
