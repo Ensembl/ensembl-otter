@@ -23,7 +23,7 @@ use Bio::Vega::Transform::Otter;
 use Exporter qw( import );
 our @EXPORT_OK = qw( check_xml region_is
                      local_xml_copy local_xml_parsed local_xml_bounds local_xml_dna local_assembly_dna
-                     gene_info_lookup transcript_info_lookup );
+                   );
 
 # NB order is significant, as the first entry is used by the old non-OO versions
 #
@@ -268,7 +268,7 @@ sub local_assembly_dna {
         );
 
     sub gene_info_lookup {
-        my ($stable_id) = @_;
+        my ($self, $stable_id) = @_;
         return $gene_info{$stable_id};
     }
 }
@@ -301,7 +301,7 @@ sub local_assembly_dna {
         );
 
     sub transcript_info_lookup {
-        my ($stable_id) = @_;
+        my ($self, $stable_id) = @_;
         return $transcript_info{$stable_id};
     }
 }

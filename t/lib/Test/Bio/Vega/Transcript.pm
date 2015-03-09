@@ -7,7 +7,7 @@ use Test::Bio::Vega::Author   no_run_test => 1;
 use Test::Bio::Vega::Evidence no_run_test => 1;
 use Test::Bio::Vega::Exon     no_run_test => 1;
 
-use OtterTest::TestRegion qw( transcript_info_lookup );
+use OtterTest::TestRegion;
 
 sub build_attributes {
     my $test = shift;
@@ -49,7 +49,7 @@ sub evidence_list : Test(4) {
 sub matches_parsed_xml {
     my ($test, $parsed_xml, $description) = @_;
     my $ts = $test->our_object;
-    my $ts_info = transcript_info_lookup($parsed_xml->{stable_id});
+    my $ts_info = OtterTest::TestRegion->new->transcript_info_lookup($parsed_xml->{stable_id});
     note "stable_id '$parsed_xml->{stable_id}'";
     $test->attributes_are($ts,
                           {

@@ -6,7 +6,7 @@ use Test::Class::Most
 use Test::Bio::Vega::Author     no_run_test => 1;
 use Test::Bio::Vega::Transcript no_run_test => 1;
 
-use OtterTest::TestRegion qw( gene_info_lookup );
+use OtterTest::TestRegion;
 
 sub build_attributes {
     my $test = shift;
@@ -46,7 +46,7 @@ sub truncated_flag : Test(3) {
 sub matches_parsed_xml {
     my ($test, $parsed_xml, $description) = @_;
     my $gene = $test->our_object;
-    my $gene_info = gene_info_lookup($parsed_xml->{stable_id});
+    my $gene_info = OtterTest::TestRegion->new->gene_info_lookup($parsed_xml->{stable_id});
     note "stable_id '$parsed_xml->{stable_id}'";
     $test->attributes_are($gene,
                           {
