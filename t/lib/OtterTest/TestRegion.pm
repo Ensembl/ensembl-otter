@@ -20,24 +20,15 @@ use Bio::Vega::Transform::Otter;
 
 # FIXME: time to make this OO
 use Exporter qw( import );
-our @EXPORT_OK = qw( check_xml extra_gene  add_extra_gene_xml region_is %test_region_params
+our @EXPORT_OK = qw( check_xml extra_gene  add_extra_gene_xml region_is
                      local_xml_copy local_xml_parsed local_xml_bounds local_xml_dna local_assembly_dna
                      gene_info_lookup transcript_info_lookup );
 
-our %test_region_params = (   ## no critic (Variables::ProhibitPackageVars)
-    dataset => 'human_test',
-    name    => '6',
-    chr     => 'chr6-38',
-    cs      => 'chromosome',
-    csver   => 'Otter',
-    start   => 2_557_766,
-    end     => 2_647_766,
-    );
-
 sub local_server {
+    my ($self) = @_;
     my $local_server = Bio::Otter::Server::Support::Local->new;
     $local_server->authorized_user('anacode');
-    $local_server->set_params(%test_region_params);
+    $local_server->set_params(%{$self->region_params});
     return $local_server;
 }
 
@@ -98,6 +89,8 @@ sub extra_gene {
         { start => 2_621_692, end => 2_621_879, strand => -1 },
         { start => 2_610_000, end => 2_612_206, strand => -1 },
         );
+
+    my %test_region_params = test_region_params();
     my $tran_start_pos = 2_611_909 - $test_region_params{start} + 1;
     my $tran_end_pos   = 2_611_526 - $test_region_params{start} + 1;
 
@@ -228,6 +221,11 @@ sub local_xml_parsed {
 sub local_xml_bounds {
     my $obj = _region_0;
     return $obj->xml_bounds;
+}
+
+sub test_region_params {
+    my $obj = _region_0;
+    return %{$obj->region_params};
 }
 
 # WARNING: this generates fake DNA !!
@@ -369,6 +367,28 @@ sub xml_bounds {
     my $end   = max(map { $_->{assembly_end} }   @{$sequence_set->{sequence_fragment}});
 
     return ($start, $end, $end - $start + 1);
+}
+
+sub region_params {
+    my ($self) = @_;
+    my $region_params = $self->{'region_params'};
+    return $region_params if $region_params;
+
+    my @bounds = $self->xml_bounds;
+    my $parsed = $self->xml_parsed;
+    my $set    = $parsed->{sequence_set};
+
+    my $params = {
+        dataset => $parsed->{species},
+        name    => $set->{sequence_fragment}->[0]->{chromosome},
+        chr     => $set->{assembly_type},
+        cs      => 'chromosome',
+        csver   => 'Otter',
+        start   => $bounds[0],
+        end     => $bounds[1],
+    };
+
+    return $self->{'region_params'} = $params;
 }
 
 sub fake_dna {

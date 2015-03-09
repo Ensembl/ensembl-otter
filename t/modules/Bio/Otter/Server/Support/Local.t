@@ -11,7 +11,7 @@ use Test::More;
 
 use Test::Otter qw( ^db_or_skipall ^data_dir_or_skipall ); # may skip test
 
-use OtterTest::TestRegion qw( %test_region_params );
+use OtterTest::TestRegion;
 use Bio::Otter::ServerAction::Region; # a specimen ServerAction.
 
 my $module;
@@ -24,8 +24,9 @@ BEGIN {
 critic_module_ok($module);
 
 my $local_server = new_ok($module);
-ok($local_server->set_params(%test_region_params), 'set_params');
-is($local_server->param($_), $test_region_params{$_}, "param '$_'") foreach keys %test_region_params;
+my $params = OtterTest::TestRegion->new(0)->region_params;
+ok($local_server->set_params(%$params), 'set_params');
+is($local_server->param($_), $params->{$_}, "param '$_'") foreach keys %$params;
 
 my $otter_dba = $local_server->otter_dba;
 isa_ok($otter_dba, 'Bio::Vega::DBSQL::DBAdaptor');
