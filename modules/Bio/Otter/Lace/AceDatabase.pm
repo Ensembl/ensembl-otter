@@ -14,7 +14,7 @@ use Try::Tiny;
 use Scalar::Util 'weaken';
 
 use Bio::Vega::Region;
-use Bio::Vega::Transform::Otter::Ace;
+use Bio::Vega::Transform::Otter::Combo;
 use Bio::Vega::AceConverter;
 use Bio::Vega::Transform::XML;
 
@@ -246,7 +246,8 @@ sub init_AceDatabase {
         'GET', 'get_region');
     $self->write_file('01_before.xml', $xml_string);
 
-    my $parser = Bio::Vega::Transform::Otter::Ace->new;
+    my $parser = Bio::Vega::Transform::Otter::Combo->new;
+    $parser->vega_dba($self->DB->vega_dba); # may be needed to store CoordSystems
     $parser->parse($xml_string);
     $self->write_otter_acefile($parser);
 
@@ -254,11 +255,12 @@ sub init_AceDatabase {
     $self->write_dna_data($raw_dna, @tiles);
 
     $self->DB->species($parser->species);
+    $parser->store($raw_dna);
 
     $self->write_methods_acefile;
 
     $self->save_region_xml($xml_string); # sets up $self->slice
-    $self->DB->session_slice($self->slice->ensembl_slice, $raw_dna);
+    $self->DB->session_slice($self->slice->ensembl_slice);
 
     $self->initialize_database;
 

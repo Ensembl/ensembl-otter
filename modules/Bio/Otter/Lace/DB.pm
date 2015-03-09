@@ -124,7 +124,7 @@ sub vega_dba {
 }
 
 sub session_slice {
-    my ($self, $ensembl_slice, $dna) = @_;
+    my ($self, $ensembl_slice) = @_;
 
     my $session_slice = $session_slice{$self};
     return $session_slice if $session_slice;
@@ -132,52 +132,21 @@ sub session_slice {
     $ensembl_slice or
         $self->logger->logconfess("ensembl_slice must be supplied when creating or recovering session_slice");
 
-    # If this is a recovered session we will already have the seq_region in the local DB
+    # Slice should have been created by Bio::Vega::Transform::Otter::Store->store()
+
     my $slice_adaptor = $self->vega_dba->get_SliceAdaptor;
     my $db_seq_region = $slice_adaptor->fetch_by_region(
         $ensembl_slice->coord_system->name,
         $ensembl_slice->seq_region_name,
         );
 
-    my $contig_seq_region;
     if ($db_seq_region) {
         $self->logger->debug('slice already in sqlite');
     } else {
-        $self->logger->debug('creating and storing slice');
-
-        # db_seq_region's coord_system needs to be the one already in the DB.
-        my $cs_adaptor = $self->vega_dba->get_CoordSystemAdaptor;
-        my $cs_chr    = $cs_adaptor->fetch_by_name($ensembl_slice->coord_system->name,
-                                                   $ensembl_slice->coord_system->version);
-        my $cs_contig = $cs_adaptor->fetch_by_name('contig', 'OtterLocal');
-
-        # db_seq_region must start from 1
-        my $db_seq_region_parameters = {
-            %$ensembl_slice,
-            coord_system      => $cs_chr,
-            start             => 1,
-            seq_region_length => $ensembl_slice->end,
-        };
-        $db_seq_region = Bio::EnsEMBL::Slice->new_fast($db_seq_region_parameters);
-        $slice_adaptor->store($db_seq_region);
-
-        my $region_length = $ensembl_slice->end - $ensembl_slice->start + 1;
-        my $contig_seq_region_parameters = {
-            seq_region_name   => $ensembl_slice->seq_region_name,
-            strand            => 1,
-            start             => 1,
-            end               => $region_length,
-            seq_region_length => $region_length,
-            coord_system      => $cs_contig,
-        };
-        $contig_seq_region = Bio::EnsEMBL::Slice->new_fast($contig_seq_region_parameters);
-        $slice_adaptor->store($contig_seq_region, \$dna);
+        $self->logger->logconfess('slice not found in SQLite');
     }
 
     $session_slice = $db_seq_region->sub_Slice($ensembl_slice->start, $ensembl_slice->end);
-    if ($contig_seq_region) {
-        $slice_adaptor->store_assembly($session_slice, $contig_seq_region);
-    }
     return $session_slice{$self} = $session_slice;
 }
 
@@ -268,11 +237,25 @@ sub create_tables {
 
 my @local_coord_system = (
     {
+        coord_system_id => 100,
+        species_id      => 1,
+        name            => 'clone',
+        rank            => 4,
+        attrib          => 'default_version',
+    },
+    {
         coord_system_id => 101,
         species_id      => 1,
         name            => 'contig',
-        version         => 'OtterLocal',
-        rank            => 101,
+        rank            => 5,
+        attrib          => 'default_version',
+    },
+    {
+        coord_system_id => 102,
+        species_id      => 1,
+        name            => 'dna_contig',
+        version         => 'Otter',
+        rank            => 6,
         attrib          => 'default_version,sequence_level',
     },
 );
@@ -280,7 +263,11 @@ my @local_coord_system = (
 my %local_meta = (
     'assembly.mapping.local' => {
         species_id => 1,
-        values     => [ 'chromosome:Otter#contig:OtterLocal' ],
+        values     => [
+            'chromosome:Otter#dna_contig:Otter',
+            'chromosome:Otter#contig',
+            'clone#contig',
+            ],
     },
 );
 
