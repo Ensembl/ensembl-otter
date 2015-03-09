@@ -247,7 +247,7 @@ sub init_AceDatabase {
     $self->write_file('01_before.xml', $xml_string);
 
     my $parser = Bio::Vega::Transform::Otter::Combo->new;
-    $parser->vega_dba($self->DB->vega_dba); # FIXME - shouldn't be needed until just before store()
+    $parser->vega_dba($self->DB->vega_dba); # may be needed to store CoordSystems
     $parser->parse($xml_string);
     $self->write_otter_acefile($parser);
 
@@ -260,7 +260,7 @@ sub init_AceDatabase {
     $self->write_methods_acefile;
 
     $self->save_region_xml($xml_string); # sets up $self->slice
-    $self->DB->session_slice($self->slice->ensembl_slice, $raw_dna);
+    $self->DB->session_slice($self->slice->ensembl_slice);
 
     $self->initialize_database;
 
