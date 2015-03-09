@@ -19,18 +19,32 @@ use Bio::Otter::Server::Support::Local;
 use Bio::Vega::Gene;
 use Bio::Vega::Transform::Otter;
 
-# FIXME: time to make this OO
-use Exporter qw( import );
-our @EXPORT_OK = qw( check_xml region_is
-                     local_xml_copy local_xml_parsed local_xml_bounds local_xml_dna local_assembly_dna
-                   );
 
-# NB order is significant, as the first entry is used by the old non-OO versions
+# FIXME: duplication with Test::OtterLaceOnTheFly
+#
+Readonly my $REGION_PATH => abs_path(dirname(__FILE__) . "/../../etc/test_regions");
+
+# NB: order is significant, as older test scripts use ->new(0)
+#     as shorthand for first region.
 #
 Readonly my @TEST_REGIONS => qw(
     human_test:chr6-38:2557766-2647766
     human_test:chr2-38:929903-1379472
 );
+
+sub new {
+    my ($class, $name_or_index) = @_;
+
+    my $self = bless {}, $class;
+
+    my $name = $name_or_index;
+    if ($name_or_index =~ /^\d+$/) {
+        $name = $TEST_REGIONS[$name_or_index];
+    }
+    $self->{'_base_name'} = $name;
+
+    return $self;
+}
 
 sub local_server {
     my ($self) = @_;
@@ -40,14 +54,15 @@ sub local_server {
     return $local_server;
 }
 
-sub check_xml {
-    my ($xml, $desc) = @_;
+sub xml_matches {
+    my ($self, $xml, $desc) = @_;
     chomp $xml;
     unified_diff(); # set global default
-    return eq_or_diff($xml, local_xml_copy(), $desc, { context => 10 });
+    return eq_or_diff($xml, $self->xml_region, $desc, { context => 10 });
 }
 
 sub region_is {
+    my ($self, $got, $expected) = @_;
     my $tb = Test::Builder->new;
     $tb->diag("region_is(): NOT YET IMPLEMENTED");
     return;
@@ -102,16 +117,16 @@ sub extra_gene {
         { start => 2_610_000, end => 2_612_206, strand => -1 },
         );
 
-    my %test_region_params = test_region_params();
-    my $tran_start_pos = 2_611_909 - $test_region_params{start} + 1;
-    my $tran_end_pos   = 2_611_526 - $test_region_params{start} + 1;
+    my $test_region_params = $self->region_params;
+    my $tran_start_pos = 2_611_909 - $test_region_params->{start} + 1;
+    my $tran_end_pos   = 2_611_526 - $test_region_params->{start} + 1;
 
     my @exons;
     my ($start_Exon,$start_Exon_Pos,$end_Exon,$end_Exon_Pos); # FIXME: dup with B:V:Transform::Otter
     foreach my $e_spec (@exon_specs) {
         my $exon = Bio::Vega::Exon->new(
-            -start     => ($e_spec->{'start'} - $test_region_params{start} + 1),
-            -end       => ($e_spec->{'end'}   - $test_region_params{start} + 1),
+            -start     => ($e_spec->{'start'} - $test_region_params->{start} + 1),
+            -end       => ($e_spec->{'end'}   - $test_region_params->{start} + 1),
             -strand    => $e_spec->{'strand'},
             -slice     => $slice,
             -phase     => -1,
@@ -210,48 +225,6 @@ __EO_GENE_XML__
 }
 
 {
-    my $obj;
-
-    # We use the first region (index 0) which is our original one
-    sub _region_0 {
-        $obj ||= __PACKAGE__->new(0);
-        return $obj;
-    }
-}
-
-sub local_xml_copy {
-    my $obj = _region_0;
-    my $xml = $obj->xml_region;
-    return $xml;
-}
-
-sub local_xml_parsed {
-    my $obj = _region_0;
-    return $obj->xml_parsed;
-}
-
-sub local_xml_bounds {
-    my $obj = _region_0;
-    return $obj->xml_bounds;
-}
-
-sub test_region_params {
-    my $obj = _region_0;
-    return %{$obj->region_params};
-}
-
-# WARNING: this generates fake DNA !!
-sub local_xml_dna {
-    my $obj = _region_0;
-    return $obj->fake_dna;
-}
-
-sub local_assembly_dna {
-    my $obj = _region_0;
-    return $obj->assembly_dna;
-}
-
-{
     my %gene_info = (
         # First region, chr6-38 partial clones 37, 38
         OTTHUMG00000175882 => { source  => 'havana', biotype => 'tec',                  status  => 'UNKNOWN', },
@@ -306,28 +279,6 @@ sub local_assembly_dna {
     }
 }
 
-
-##
-## New OO interface starts here
-##
-
-# FIXME: duplication with Test::OtterLaceOnTheFly
-Readonly my $REGION_PATH => abs_path(dirname(__FILE__) . "/../../etc/test_regions");
-
-sub new {
-    my ($class, $name_or_index) = @_;
-
-    my $self = bless {}, $class;
-
-    my $name = $name_or_index;
-    if ($name_or_index =~ /^\d+$/) {
-        $name = $TEST_REGIONS[$name_or_index];
-    }
-    $self->{'_base_name'} = $name;
-
-    return $self;
-}
-
 sub _base_name {
     my ($self) = @_;
     my $_base_name = $self->{'_base_name'};
@@ -357,7 +308,6 @@ sub xml_parsed {
         ForceArray => [ qw( locus transcript exon evidence ) ],
         KeyAttr    => [],
         );
-    my $xml = local_xml_copy();
     my $parsed = $xs->XMLin($self->xml_region);
 
     return $self->{'xml_parsed'} = $parsed;
