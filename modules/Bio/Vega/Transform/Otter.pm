@@ -414,72 +414,72 @@ sub build_Transcript {
         -stable_id => $data->{'stable_id'},
         -analysis  => $ana,
         -slice     => $chr_slice,
-    );
+        );
 
     $self->add_xrefs_to_object($transcript);
 
-  ##translation start - end
-  my $tran_start_pos = $data->{'translation_start'};
-  my $tran_end_pos   = $data->{'translation_end'};
+    ##translation start - end
+    my $tran_start_pos = $data->{'translation_start'};
+    my $tran_end_pos   = $data->{'translation_end'};
 
-  ##adding exon to transcript and finding translation position
-  my ($start_Exon,$start_Exon_Pos,$end_Exon,$end_Exon_Pos);
-  foreach my $exon (@$exons) {
-     $transcript->add_Exon($exon);
-     if ( defined $tran_start_pos && !defined $start_Exon_Pos){
-        $start_Exon_Pos=$self->translation_pos($tran_start_pos,$exon);
-        $start_Exon=$exon;
-     }
-     if (defined $tran_end_pos && !defined $end_Exon_Pos){
-        $end_Exon_Pos=$self->translation_pos($tran_end_pos,$exon);
-        $end_Exon=$exon;
-     }
-  }
-
-  ##add translation to transcript
-  if (defined $tran_start_pos && defined $tran_end_pos ){
-     if (!defined($start_Exon) || !defined($end_Exon)) {
-        die "\n ERROR: Failed mapping translation to transcript with stable_id:".$data->{'stable_id'}.
-          "\n undefined start exon:$start_Exon or undefined end exon:$end_Exon\n";
-     }
-     else {
-        my $translation = Bio::Vega::Translation->new(
-            -stable_id=>$data->{'translation_stable_id'},
-        );
-        $translation->start_Exon($start_Exon);
-        $translation->start($start_Exon_Pos);
-        $translation->end_Exon($end_Exon);
-        $translation->end($end_Exon_Pos);
-
-        # TO DO: decide whether is this kludge is necessary and remove it if not
-        ##probably add a check to see if $end_Exon_Pos is set or not
-        # if ($start_Exon->strand == 1 && $start_Exon->start != $tran_start_pos) {
-        #   $start_Exon->end_phase(($start_Exon->length-$start_Exon_Pos+1)%3);
-        # } elsif ($start_Exon->strand == -1 && $start_Exon->end != $tran_start_pos) {
-        #   $start_Exon->end_phase(($start_Exon->length-$start_Exon_Pos+1)%3);
-        # }
-
-        if ($end_Exon->length >= $end_Exon_Pos) {
-          $end_Exon->end_phase(-1);
+    ##adding exon to transcript and finding translation position
+    my ($start_Exon,$start_Exon_Pos,$end_Exon,$end_Exon_Pos);
+    foreach my $exon (@$exons) {
+        $transcript->add_Exon($exon);
+        if ( defined $tran_start_pos && !defined $start_Exon_Pos){
+            $start_Exon_Pos=$self->translation_pos($tran_start_pos,$exon);
+            $start_Exon=$exon;
         }
-        $transcript->translation($translation);
-     }
-  }
-  elsif (defined $tran_start_pos || defined $tran_end_pos) {
-     die "ERROR: Only half of translation start/ end pair is defined\n";
-  }
+        if (defined $tran_end_pos && !defined $end_Exon_Pos){
+            $end_Exon_Pos=$self->translation_pos($tran_end_pos,$exon);
+            $end_Exon=$exon;
+        }
+    }
 
-  # biotype and status from transcript class name
-  if (my $class = $data->{'transcript_class'}) {
-      my ($biotype, $status) = method2biotype_status($class);
-      $transcript->biotype($biotype);
-      $transcript->status($status);
-  }
+    ##add translation to transcript
+    if (defined $tran_start_pos && defined $tran_end_pos ){
+        if (!defined($start_Exon) || !defined($end_Exon)) {
+            die "\n ERROR: Failed mapping translation to transcript with stable_id:".$data->{'stable_id'}.
+                "\n undefined start exon:$start_Exon or undefined end exon:$end_Exon\n";
+        }
+        else {
+            my $translation = Bio::Vega::Translation->new(
+                -stable_id=>$data->{'translation_stable_id'},
+                );
+            $translation->start_Exon($start_Exon);
+            $translation->start($start_Exon_Pos);
+            $translation->end_Exon($end_Exon);
+            $translation->end($end_Exon_Pos);
 
-  if ($data->{'author'}) {
-      my $transcript_author = $self->make_Author($data->{'author'}, $data->{'author_email'});
-      $transcript->transcript_author($transcript_author);
-  }
+            # TO DO: decide whether is this kludge is necessary and remove it if not
+            ##probably add a check to see if $end_Exon_Pos is set or not
+            # if ($start_Exon->strand == 1 && $start_Exon->start != $tran_start_pos) {
+            #   $start_Exon->end_phase(($start_Exon->length-$start_Exon_Pos+1)%3);
+            # } elsif ($start_Exon->strand == -1 && $start_Exon->end != $tran_start_pos) {
+            #   $start_Exon->end_phase(($start_Exon->length-$start_Exon_Pos+1)%3);
+            # }
+
+            if ($end_Exon->length >= $end_Exon_Pos) {
+                $end_Exon->end_phase(-1);
+            }
+            $transcript->translation($translation);
+        }
+    }
+    elsif (defined $tran_start_pos || defined $tran_end_pos) {
+        die "ERROR: Only half of translation start/ end pair is defined\n";
+    }
+
+    # biotype and status from transcript class name
+    if (my $class = $data->{'transcript_class'}) {
+        my ($biotype, $status) = method2biotype_status($class);
+        $transcript->biotype($biotype);
+        $transcript->status($status);
+    }
+
+    if ($data->{'author'}) {
+        my $transcript_author = $self->make_Author($data->{'author'}, $data->{'author_email'});
+        $transcript->transcript_author($transcript_author);
+    }
 
     # Transcript attributes
     my $transcript_attributes;
@@ -499,38 +499,38 @@ sub build_Transcript {
         push @$transcript_attributes, $self->make_Attribute('cds_end_NF', $cds_end_not_found);
     }
 
-  if(my $remarks=$data->{'remark'}) {
-      foreach my $rem (@$remarks){
-        my $attrib;
-        if($rem=~/Annotation_remark-\s+(.+)/) {
-            $rem=$1;
-            $attrib=$self->make_Attribute('hidden_remark', $rem);
-        } else {
-            $attrib=$self->make_Attribute('remark', $rem);
+    if(my $remarks=$data->{'remark'}) {
+        foreach my $rem (@$remarks){
+            my $attrib;
+            if($rem=~/Annotation_remark-\s+(.+)/) {
+                $rem=$1;
+                $attrib=$self->make_Attribute('hidden_remark', $rem);
+            } else {
+                $attrib=$self->make_Attribute('remark', $rem);
+            }
+            push @$transcript_attributes,$attrib;
         }
+    }
+
+    if ($transcript_name) {   ### Don't we always have a name?
+        if ($seen_transcript_name{$self}{$transcript_name}) {
+            die "more than one transcript has the name $transcript_name";
+        } else {
+            $seen_transcript_name{$self}{$transcript_name} = 1;
+        }
+        my $attrib=$self->make_Attribute('name', $transcript_name);
         push @$transcript_attributes,$attrib;
-      }
-  }
+    }
 
-  if ($transcript_name) {   ### Don't we always have a name?
-     if ($seen_transcript_name{$self}{$transcript_name}) {
-        die "more than one transcript has the name $transcript_name";
-     } else {
-        $seen_transcript_name{$self}{$transcript_name} = 1;
-     }
-     my $attrib=$self->make_Attribute('name', $transcript_name);
-     push @$transcript_attributes,$attrib;
-  }
+    ##add transcript attributes
+    $transcript->add_Attributes(@$transcript_attributes);
 
-  ##add transcript attributes
-  $transcript->add_Attributes(@$transcript_attributes);
+    ##evidence
+    my $evidence_l = delete $evidence_list{$self} || [];
+    $transcript->evidence_list($evidence_l);
 
-  ##evidence
-  my $evidence_l = delete $evidence_list{$self} || [];
-  $transcript->evidence_list($evidence_l);
-
-  my $list = $transcript_list{$self} ||= [];
-  push @$list, $transcript;
+    my $list = $transcript_list{$self} ||= [];
+    push @$list, $transcript;
 
     return;
 }
