@@ -599,39 +599,6 @@ sub build_Locus {
         $gene->gene_author($gene_author);
     }
 
-    ##gene attributes name,synonym,remark
-    my $gene_attributes=[];
-    my $gene_name=$data->{'name'};
-    if (defined $gene_name ) {
-        if ($seen_gene_name{$self}{$gene_name}) {
-            die "more than one gene has the name $gene_name";
-        } else {
-            $seen_gene_name{$self}{$gene_name} = 1;
-        }
-        my $name_attrib=$self->make_Attribute('name', $gene_name);
-        push @$gene_attributes,$name_attrib;
-    }
-    my $gene_synonym=$data->{'synonym'};
-    if (defined $gene_synonym){
-        foreach my $a (@$gene_synonym) {
-            my $syn_attrib=$self->make_Attribute('synonym', $a);
-            push @$gene_attributes,$syn_attrib;
-        }
-    }
-
-    if(my $remarks=$data->{'remark'}) {
-        foreach my $rem (@$remarks){
-            my $attrib;
-            if($rem=~/Annotation_remark-\s+(.+)/) {
-                $rem=$1;
-                $attrib=$self->make_Attribute('hidden_remark', $rem);
-            } else {
-                $attrib=$self->make_Attribute('remark', $rem);
-            }
-            push @$gene_attributes,$attrib;
-        }
-    }
-
     ##share exons among transcripts of this gene
     foreach my $tran (@$transcripts) {
         $tran->source($source); # copy from $gene, we don't need them to differ
@@ -639,7 +606,7 @@ sub build_Locus {
     }
     $gene->prune_Exons;
     ##add all gene attributes
-    $gene->add_Attributes(@$gene_attributes);
+    $gene->add_Attributes($self->_build_gene_attributes($data));
     ##truncated flag
     my $truncated=$data->{'truncated'};
     if (defined $truncated) {
@@ -667,6 +634,45 @@ sub build_Locus {
     push @$list, $gene;
 
     return;
+}
+
+sub _build_gene_attributes
+{
+    my ($self, $data) = @_;
+
+    my @gene_attributes;
+
+    my $gene_name=$data->{'name'};
+    if (defined $gene_name ) {
+        if ($seen_gene_name{$self}{$gene_name}) {
+            die "more than one gene has the name $gene_name";
+        } else {
+            $seen_gene_name{$self}{$gene_name} = 1;
+        }
+        my $name_attrib=$self->make_Attribute('name', $gene_name);
+        push @gene_attributes,$name_attrib;
+    }
+    my $gene_synonym=$data->{'synonym'};
+    if (defined $gene_synonym){
+        foreach my $a (@$gene_synonym) {
+            my $syn_attrib=$self->make_Attribute('synonym', $a);
+            push @gene_attributes,$syn_attrib;
+        }
+    }
+
+    if(my $remarks=$data->{'remark'}) {
+        foreach my $rem (@$remarks){
+            my $attrib;
+            if($rem=~/Annotation_remark-\s+(.+)/) {
+                $rem=$1;
+                $attrib=$self->make_Attribute('hidden_remark', $rem);
+            } else {
+                $attrib=$self->make_Attribute('remark', $rem);
+            }
+            push @gene_attributes,$attrib;
+        }
+    }
+    return @gene_attributes;
 }
 
 sub do_nothing {
