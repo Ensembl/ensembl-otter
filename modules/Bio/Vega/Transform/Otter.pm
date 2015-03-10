@@ -141,10 +141,16 @@ sub chromosome_name {
 sub build_SequenceFragment {
     my ($self, $data) = @_;
 
+    $self->_create_or_extend_chr_slice($data);
+    $self->_build_clone_sequence($data);
+
+    return;
+}
+
+sub _create_or_extend_chr_slice {
+    my ($self, $data) = @_;
+
     my $assembly_type = $self->parent_data->{'assembly_type'};
-    unless ($assembly_type) {
-        die "cannot make chromosome slice without assembly type name\n";
-    }
 
     if (my $chrname = $chromosome_name{$self}) { # cached from the previous SequenceFragments
         if($chrname ne $data->{'chromosome'}) {
@@ -154,17 +160,12 @@ sub build_SequenceFragment {
         $chromosome_name{$self} = $data->{'chromosome'};
     }
 
-    my $frag_offset    = $data->{'fragment_offset'};
     my $start          = $data->{'assembly_start'};
     my $end            = $data->{'assembly_end'};
-    my $strand         = $data->{'fragment_ori'};
-    my $ctg_name       = $data->{'id'};
-    my $cln_length     = $data->{'clone_length'};
 
-    unless ($assembly_type && $start && $end && $frag_offset && $strand && $ctg_name && $cln_length) {
+    unless ($assembly_type && $start && $end) {
         die "XML does not contain information needed to create slice:\n"
-           ."assembly_type='$assembly_type' start='$start' end='$end' frag_offset='$frag_offset' strand='$strand' "
-           ."ctg_name='$ctg_name' cln_length='$cln_length'";
+           ."assembly_type='$assembly_type' start='$start' end='$end'";
     }
 
     if (my $chr_slice = $chrslice{$self}) {
@@ -189,6 +190,25 @@ sub build_SequenceFragment {
         );
         $chrslice{$self} = $chr_slice;
     }
+    return;
+}
+
+sub _build_clone_sequence {
+    my ($self, $data) = @_;
+
+    my $frag_offset    = $data->{'fragment_offset'};
+    my $strand         = $data->{'fragment_ori'};
+    my $ctg_name       = $data->{'id'};
+    my $cln_length     = $data->{'clone_length'};
+
+    unless ($frag_offset && $strand && $ctg_name && $cln_length) {
+        die "XML does not contain information needed to create clone_sequence:\n"
+           ."frag_offset='$frag_offset' strand='$strand' "
+           ."ctg_name='$ctg_name' cln_length='$cln_length'";
+    }
+
+    my $start          = $data->{'assembly_start'};
+    my $end            = $data->{'assembly_end'};
 
     my $cmp_start  = $frag_offset;
     my $cmp_end    = $frag_offset + $end - $start;
