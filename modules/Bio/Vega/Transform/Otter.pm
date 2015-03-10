@@ -406,7 +406,6 @@ sub build_Transcript {
 
     my $exons = delete $exon_list{$self};
     my $chr_slice = $self->get_ChromosomeSlice;
-    my $transcript_name = $data->{'name'};
 
     my $ana = $self->get_Analysis($data->{'analysis'} || 'Otter');
 
@@ -481,22 +480,40 @@ sub build_Transcript {
         $transcript->transcript_author($transcript_author);
     }
 
-    # Transcript attributes
-    my $transcript_attributes;
+    ##add transcript attributes
+    $transcript->add_Attributes($self->_build_transcript_attributes($data, $start_Exon_Pos));
+
+    ##evidence
+    my $evidence_l = delete $evidence_list{$self} || [];
+    $transcript->evidence_list($evidence_l);
+
+    my $list = $transcript_list{$self} ||= [];
+    push @$list, $transcript;
+
+    return;
+}
+
+sub _build_transcript_attributes
+{
+    my ($self, $data, $start_Exon_Pos) = @_;
+
+    my $transcript_name = $data->{'name'};
+
+    my @transcript_attributes;
     if (my $mRNA_start_not_found = $data->{'mRNA_start_not_found'}) {
-        push @$transcript_attributes, $self->make_Attribute('mRNA_start_NF', $mRNA_start_not_found);
+        push @transcript_attributes, $self->make_Attribute('mRNA_start_NF', $mRNA_start_not_found);
     }
     if (my $mRNA_end_not_found = $data->{'mRNA_end_not_found'}) {
-        push @$transcript_attributes, $self->make_Attribute('mRNA_end_NF', $mRNA_end_not_found);
+        push @transcript_attributes, $self->make_Attribute('mRNA_end_NF', $mRNA_end_not_found);
     }
     if (my $cds_start_not_found = $data->{'cds_start_not_found'}) {
         if ($start_Exon_Pos != 1) {
             die "Transcript '$transcript_name' has CDS start not found set but has 5' UTR";
         }
-        push @$transcript_attributes, $self->make_Attribute('cds_start_NF', $cds_start_not_found);
+        push @transcript_attributes, $self->make_Attribute('cds_start_NF', $cds_start_not_found);
     }
     if (my $cds_end_not_found = $data->{'cds_end_not_found'}) {
-        push @$transcript_attributes, $self->make_Attribute('cds_end_NF', $cds_end_not_found);
+        push @transcript_attributes, $self->make_Attribute('cds_end_NF', $cds_end_not_found);
     }
 
     if(my $remarks=$data->{'remark'}) {
@@ -508,7 +525,7 @@ sub build_Transcript {
             } else {
                 $attrib=$self->make_Attribute('remark', $rem);
             }
-            push @$transcript_attributes,$attrib;
+            push @transcript_attributes,$attrib;
         }
     }
 
@@ -519,20 +536,10 @@ sub build_Transcript {
             $seen_transcript_name{$self}{$transcript_name} = 1;
         }
         my $attrib=$self->make_Attribute('name', $transcript_name);
-        push @$transcript_attributes,$attrib;
+        push @transcript_attributes,$attrib;
     }
 
-    ##add transcript attributes
-    $transcript->add_Attributes(@$transcript_attributes);
-
-    ##evidence
-    my $evidence_l = delete $evidence_list{$self} || [];
-    $transcript->evidence_list($evidence_l);
-
-    my $list = $transcript_list{$self} ||= [];
-    push @$list, $transcript;
-
-    return;
+    return @transcript_attributes;
 }
 
 sub translation_pos {
