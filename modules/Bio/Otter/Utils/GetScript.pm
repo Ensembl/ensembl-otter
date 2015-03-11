@@ -267,7 +267,7 @@ sub update_local_db {
             1;
              } ) {
             my $err = $@;
-            my $msg = "Update of otter_filter table in SQLite db failed; $err";
+            my $msg = "Update of otter_column table in SQLite db failed; $err";
             $self->log_message($msg);
             die $msg;
         }
