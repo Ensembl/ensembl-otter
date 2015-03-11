@@ -18,11 +18,13 @@ sub slice {
 }
 
 sub tile_features {
-    my ($self) = @_;
+    my ($self, $coord_system_name) = @_;
+    $coord_system_name //= 'seqlevel';
+
     my $slice = $self->slice;
 
     my @features;
-    foreach my $tile (@{ $slice->project('seqlevel') }) {
+    foreach my $tile (@{ $slice->project($coord_system_name) }) {
         my $tile_slice = $tile->to_Slice;
         my $sf = Bio::EnsEMBL::FeaturePair->new(
             -start         => $tile->from_start,
