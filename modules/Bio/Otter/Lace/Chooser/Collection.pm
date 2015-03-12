@@ -142,6 +142,11 @@ sub list_Items {
     }
 }
 
+sub list_Items_exclude_internal {
+    my ($self) = @_;
+    return grep { $_->is_Bracket or not $_->internal_type } $self->list_Items;
+}
+
 sub list_Brackets {
     my ($self) = @_;
 
@@ -288,7 +293,7 @@ sub select_Bracket {
 sub update_all_Bracket_selection {
     my ($self) = @_;
 
-    my @item_list = $self->list_Items;
+    my @item_list = $self->list_Items_exclude_internal;
     my @bracket_path;
     my $skip_to_next_bracket = 0;
     while (my $item = shift @item_list) {
@@ -430,7 +435,7 @@ sub select_default {
 sub select_all {
     my ($self) = @_;
 
-    foreach my $item ($self->list_Items) {
+    foreach my $item ($self->list_Items_exclude_internal) {
         $item->selected(1);
     }
 
@@ -440,7 +445,7 @@ sub select_all {
 sub select_none {
     my ($self) = @_;
 
-    foreach my $item ($self->list_Items) {
+    foreach my $item ($self->list_Items_exclude_internal) {
         $item->selected(0);
     }
 
