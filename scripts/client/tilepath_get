@@ -1,0 +1,40 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+
+package Bio::Otter::GetScript::TilePathGet;
+
+use Bio::Vega::Tiler;
+
+use base 'Bio::Otter::Utils::GetScript::LocalDB';
+
+sub version { return 'tilepath_get 0.5'; };
+sub log_filename { return 'localdb_log.txt'; }
+
+sub do_it {
+    my ($self) = @_;
+
+    $self->do_requires;
+
+    my $tiler = Bio::Vega::Tiler->new($self->vega_slice);
+    my @features = $tiler->simple_features('contig');
+    $self->send_feature_gff(\@features);
+
+    return;
+}
+
+## no critic (Modules::ProhibitMultiplePackages)
+
+package main;
+
+Bio::Otter::GetScript::TilePathGet->new->run;
+
+exit;
+
+__END__
+
+=head1 AUTHOR
+
+Ana Code B<email> anacode@sanger.ac.uk
+

@@ -11,6 +11,7 @@ use Bio::Otter::Lace::CloneSequence;
 use Bio::Vega::ContigInfo;
 use Bio::Vega::SliceLockBroker;
 use Bio::Vega::Region;
+use Bio::Vega::Tiler;
 
 use base 'Bio::Otter::ServerAction';
 
@@ -76,11 +77,12 @@ sub get_assembly_dna {
     my $slice = $self->slice;
     my $output_string = $slice->seq . "\n";
 
+    my $tiler = Bio::Vega::Tiler->new($slice);
     my $posn = 0;
-    foreach my $tile (@{ $slice->project('seqlevel') }) {
-        my $tile_slice = $tile->to_Slice;
-        my $start = $tile->from_start;
-        my $end   = $tile->from_end;
+    foreach my $tile ($tiler->feature_pairs) {
+
+        my $start = $tile->start;
+        my $end   = $tile->end;
 
         # Is there a gap before this piece?
         if (my $gap = $start - $posn - 1) {
@@ -94,13 +96,13 @@ sub get_assembly_dna {
         # To save copying large strings, we append onto the
         # end of the sequence in the output string.
         $output_string .= join("\t",
-                               $tile->from_start,
-                               $tile->from_end,
-                               $tile_slice->seq_region_name,
-                               $tile_slice->start,
-                               $tile_slice->end,
-                               $tile_slice->strand,
-                               $tile_slice->seq_region_Slice->length,
+                               $start,
+                               $end,
+                               $tile->hseqname,
+                               $tile->hstart,
+                               $tile->hend,
+                               $tile->hstrand,
+                               $tile->score, # abused to pass clone length
             ) . "\n";
     }
     if (my $gap = $slice->length - $posn) {

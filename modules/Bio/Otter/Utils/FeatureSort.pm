@@ -10,14 +10,27 @@ our @EXPORT_OK = qw( feature_sort );
 #
 sub feature_sort {
     my (@unsorted) = @_;
-    my @sorted = sort _feature_cmp @unsorted;
-    return @sorted;
+    return unless @unsorted;
+    if ($unsorted[0]->can('hseqname')) {
+        return sort _feature_cmp_hseqname @unsorted;
+    } else {
+        return sort _feature_cmp_no_name  @unsorted;
+    }
 }
 
-sub _feature_cmp {
+# Code duplication for sorting speed
+#
+sub _feature_cmp_hseqname {
     return
         $a->hseqname cmp $b->hseqname
         ||
+        $a->start    <=> $b->start
+        ||
+        $a->end      <=> $b->end;
+}
+
+sub _feature_cmp_no_name {
+    return
         $a->start    <=> $b->start
         ||
         $a->end      <=> $b->end;
