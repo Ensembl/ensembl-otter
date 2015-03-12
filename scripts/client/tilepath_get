@@ -18,7 +18,7 @@ sub do_it {
     $self->do_requires;
 
     my $tiler = Bio::Vega::Tiler->new($self->vega_slice);
-    my @features = $tiler->tile_features('contig');
+    my @features = $tiler->simple_features('contig');
     $self->send_feature_gff(\@features);
 
     return;

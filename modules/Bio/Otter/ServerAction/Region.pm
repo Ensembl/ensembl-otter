@@ -79,7 +79,7 @@ sub get_assembly_dna {
 
     my $tiler = Bio::Vega::Tiler->new($slice);
     my $posn = 0;
-    foreach my $tile ($tiler->tile_features) {
+    foreach my $tile ($tiler->feature_pairs) {
 
         my $start = $tile->start;
         my $end   = $tile->end;
