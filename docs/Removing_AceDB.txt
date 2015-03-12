@@ -1,0 +1,26 @@
+15:59 <@mg13> I’m thinking about the next stage in parallel running with AceDB and SQLite, as we migrate.
+15:59 <@mg13> I think I will build the Hum::Ace::Assembly and related Hum::Ace objects by reading the region from SQLite into EnsEMBL objects (we already have the code for that) and then building the Hum::Ace::Assembly from that.
+16:00 <@jgrg> Yes, sounds sensible.
+16:01 <@mg13> It might be a useful shortcut to store EnsEMBL dbID’s in the Hum::Ace objects.
+16:01 <@jgrg> We presumably need to go from some Hum::Ace objects back to EnsEMBL ones.
+16:01 <@mg13> Yes.
+16:03 <@jgrg> Would it be sensible to store a ref to the EnsEMBL object itself in Hum::Ace objects, rather than dbID?
+16:03 <@mg13> Yes, it might be.
+16:04 <@jgrg> Hum::Ace objects might act as shims, calling methods inside EnsEMBL ones.
+16:04 <@jgrg> is_archival might check that the object has an attached EnsEMBL object with a dbID.
+16:05 <@mg13> That could work.
+16:05 <@jgrg> (I think is_archival is used to flag if an object is a saved acedb object.)
+16:05 <@mg13> Could also help with eventually doing away with the Hum::Ace objects.
+16:06 <@jgrg> Exactly. The Hum::Ace object shims might become thinner as we develop further, until we remove them entirely.
+16:07 <@mg13> I wonder if I should modify the Hum::Ace classes directly, or create subclasses? Hum::Ace::SubSeq::Vega, etc.
+16:10 <@jgrg> Don’t know.
+16:10 <@jgrg> Hum::Ace objects are created from the Tk GUI fields.
+16:11 <@mg13> They’re still being used by the HumPub submissions stuff, aren’t they?
+16:11 <@jgrg> No, I don’t think so.
+16:12 <@jgrg> They just happen to share a git repository.
+16:12 <@mg13> Oh okay, not so problematic if I start poking them, then. I can do it on a branch, anyway.
+16:13 <@jgrg> ace_string is used to compare objects created from the GUI to the “acrchival” copy held in memory.
+16:14 <@mg13> I can also use it to compare my new incarnation of an assembly from SQLite with the express_data_fetch’d version from acedb.
+16:14 <@jgrg> Yes.
+16:15 <@mg13> Good. Sounds like I have plenty to work on.
+16:16 <@jgrg> I’m excited to be getting rid of acedb. It will be a big milestone.
