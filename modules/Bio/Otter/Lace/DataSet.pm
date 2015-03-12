@@ -371,6 +371,8 @@ sub _filter_load {
 sub _filter_add {
     my ($self, $name, $wanted) = @_;
     my $filter = $self->{_filter_by_name}{$name};
+    # Uncomment for debugging:
+    # warn sprintf "_filter_add: '%s', wanted=%s, found=%s\n", $name, $wanted ? 1 : 0, $filter ? 'yes' : 'no';
     return unless $filter;
     $filter->wanted($wanted);
     push @{$self->{_filters}}, $filter;
