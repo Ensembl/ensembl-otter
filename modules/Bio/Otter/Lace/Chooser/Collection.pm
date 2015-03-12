@@ -267,7 +267,7 @@ sub get_Bracket_contents {
 
     confess "Not a Bracket: $bracket" unless $bracket->is_Bracket;
 
-    my @item_list = $self->list_Items;
+    my @item_list = $self->list_Items_exclude_internal;
     while (my $item = shift @item_list) {
         last if $item == $bracket;
     }
