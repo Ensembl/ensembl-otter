@@ -12,7 +12,6 @@ use FileHandle;
 use Bio::Otter::Lace::Defaults;
 use Bio::Vega::DBSQL::DBAdaptor;
 use Bio::Vega::Transform::XML;
-use Bio::Vega::Transform::PrettyPrint;
 use Tk;
 use Tk::Font;
 use Tk::Tree;

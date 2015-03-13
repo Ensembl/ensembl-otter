@@ -6,7 +6,6 @@ use warnings;
 use strict;
 use Bio::Otter::Lace::Defaults;
 use Bio::Vega::DBSQL::DBAdaptor;
-use Bio::Vega::Transform::PrettyPrint;
 
 my ($dataset);
 Bio::Otter::Lace::Defaults::do_getopt('ds|dataset=s' => \$dataset);
