@@ -5,7 +5,7 @@ use warnings;
 
 use strict;
 
-use Bio::Vega::Transform::Otter;
+use Bio::Vega::Transform::XMLToRegion;
 use Bio::Vega::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Slice;
 use Bio::Otter::Lace::Defaults;
@@ -40,7 +40,7 @@ foreach my $file ( `ls $input_dir` ) {
 
 
   ##create an XML parser
-  $parser = Bio::Vega::Transform::Otter->new;
+  $parser = Bio::Vega::Transform::XMLToRegion->new;
   $parser->parsefile($xmlfile);
 
   my $cl = Bio::Otter::Lace::Defaults::make_Client();

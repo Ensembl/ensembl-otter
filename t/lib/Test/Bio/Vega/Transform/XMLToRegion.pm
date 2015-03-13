@@ -1,7 +1,7 @@
-package Test::Bio::Vega::Transform::Otter;
+package Test::Bio::Vega::Transform::XMLToRegion;
 
 use Test::Class::Most
-    parent     => 'Test::Bio::Vega::Transform',
+    parent     => 'Test::Bio::Vega::XML::Parser',
     attributes => [ qw( test_region ) ];
 
 use Test::Bio::Otter::Lace::CloneSequence no_run_test => 1;

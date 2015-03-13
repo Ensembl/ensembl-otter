@@ -1,13 +1,13 @@
-package Test::Bio::Vega::Transform::Otter::Store;
+package Test::Bio::Vega::Transform::XMLToRegion::Store;
 
 use Test::Class::Most
-    parent     => 'Test::Bio::Vega::Transform::Otter',
+    parent     => 'Test::Bio::Vega::Transform::XMLToRegion',
     attributes => test_db;
 
 use OtterTest::DB;
 
 use Bio::Vega::Region;
-use Bio::Vega::Transform::XML;
+use Bio::Vega::Transform::RegionToXML;
 
 # These fixtures will move into a parent class or role at some stage
 #
@@ -99,7 +99,7 @@ sub _store_extract_compare {
     } # ATTR
   } # GENE
 
-    my $xml_writer = Bio::Vega::Transform::XML->new;
+    my $xml_writer = Bio::Vega::Transform::RegionToXML->new;
     $xml_writer->region($region);
     my $xml_out = $xml_writer->generate_OtterXML;
     chomp $xml_out;

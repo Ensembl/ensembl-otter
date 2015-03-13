@@ -1,14 +1,14 @@
 
-### Bio::Vega::Transform::Otter::Store
+### Bio::Vega::Transform::XMLToRegion::Store
 
-package Bio::Vega::Transform::Otter::Store;
+package Bio::Vega::Transform::XMLToRegion::Store;
 
 use strict;
 use warnings;
 
 use NEXT;
 
-use parent qw( Bio::Vega::Transform::Otter Bio::Otter::Log::WithContextMixin );
+use parent qw( Bio::Vega::Transform::XMLToRegion Bio::Otter::Log::WithContextMixin );
 
 my (
     %dna_contig_coord_system,
@@ -298,7 +298,7 @@ sub log_context {
 
 __END__
 
-=head1 NAME - Bio::Vega::Transform::Otter::Store
+=head1 NAME - Bio::Vega::Transform::XMLToRegion::Store
 
 =head1 AUTHOR
 

@@ -5,7 +5,7 @@ use warnings;
 
 use Bio::Otter::Lace::Defaults;
 use Bio::Vega::DBSQL::DBAdaptor;
-use Bio::Vega::Transform::XML;
+use Bio::Vega::Transform::RegionToXML;
 
 {
     my $dsname  = 'human';
@@ -33,7 +33,7 @@ use Bio::Vega::Transform::XML;
             print STDERR "$out_file\n";
             open my $out, "> $out_file" or die "Can't write to '$out_file'; $!";
             my $gene = $gene_dba->fetch_by_dbID($gene_db_id);
-            print $out Bio::Vega::Transform::XML->new->get_geneXML($gene);
+            print $out Bio::Vega::Transform::RegionToXML->new->get_geneXML($gene);
             close $out or die "Error writing to '$out_file'; $!";
         }
     }

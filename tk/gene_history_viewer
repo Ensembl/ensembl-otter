@@ -11,7 +11,7 @@ use Text::Tabs;
 use FileHandle;
 use Bio::Otter::Lace::Defaults;
 use Bio::Vega::DBSQL::DBAdaptor;
-use Bio::Vega::Transform::XML;
+use Bio::Vega::Transform::RegionToXML;
 use Tk;
 use Tk::Font;
 use Tk::Tree;
@@ -155,7 +155,7 @@ sub compare_gene_versions {
   foreach my $path (@paths ){
 
 	my $geneobj = $tree->info('data', $path);
-    my $xmlg    = new Bio::Vega::Transform::XML;
+    my $xmlg    = new Bio::Vega::Transform::RegionToXML;
     my $file    = "$outdir/ghv_$path"."_$$";
     open( my $fh, ">$file") or die;
     print $fh $xmlg->get_geneXML($geneobj);

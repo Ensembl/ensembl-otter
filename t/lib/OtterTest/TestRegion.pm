@@ -17,7 +17,7 @@ use Readonly;
 
 use Bio::Otter::Server::Support::Local;
 use Bio::Vega::Gene;
-use Bio::Vega::Transform::Otter;
+use Bio::Vega::Transform::XMLToRegion;
 
 
 # FIXME: duplication with Test::OtterLaceOnTheFly
@@ -76,7 +76,7 @@ sub extra_gene {
     my $expected = $TEST_REGIONS[0];
     croak "extra_gene() only works for '$expected'" unless $self->_base_name eq $expected;
 
-    my $bvt_otter = Bio::Vega::Transform::Otter->new; # just for utility methods
+    my $bvt_otter = Bio::Vega::Transform::XMLToRegion->new; # just for utility methods
 
     my $analysis = $bvt_otter->get_Analysis('Otter');
     my $author   = $bvt_otter->make_Author('anacode', 'anacode');

@@ -41,7 +41,7 @@ use Bio::Otter::Lace::Client;
 use Bio::Otter::RequestQueuer;
 use Bio::Otter::Zircon::ProcessHits;
 use Bio::Otter::ZMap::XML;
-use Bio::Vega::Transform::Otter::Ace;
+use Bio::Vega::Transform::XMLToRegion::Ace;
 
 use Tk::ArrayBar;
 use Tk::Screens;
@@ -1017,7 +1017,7 @@ sub save_data {
            $adb->DataSet->name,
            $adb->fetch_lock_token);
         die "save_otter_xml returned no XML" unless $xml;
-        my $parser = Bio::Vega::Transform::Otter::Ace->new;
+        my $parser = Bio::Vega::Transform::XMLToRegion::Ace->new;
         $parser->parse($xml);
         my $ace_data = $parser->make_ace_genes_transcripts;
         $adb->unsaved_changes(0);
