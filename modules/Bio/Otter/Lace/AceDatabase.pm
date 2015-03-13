@@ -14,9 +14,10 @@ use Try::Tiny;
 use Scalar::Util 'weaken';
 
 use Bio::Vega::Region;
-use Bio::Vega::Transform::Otter::Combo;
+use Bio::Vega::Transform::XMLToRegion;
+use Bio::Vega::Transform::XMLToRegion::Combo;
 use Bio::Vega::AceConverter;
-use Bio::Vega::Transform::XML;
+use Bio::Vega::Transform::RegionToXML;
 
 use Bio::Otter::Debug;
 use Bio::Otter::Lace::AccessionTypeCache;
@@ -246,7 +247,7 @@ sub init_AceDatabase {
         'GET', 'get_region');
     $self->write_file('01_before.xml', $xml_string);
 
-    my $parser = Bio::Vega::Transform::Otter::Combo->new;
+    my $parser = Bio::Vega::Transform::XMLToRegion::Combo->new;
     $parser->vega_dba($self->DB->vega_dba); # may be needed to store CoordSystems
     $parser->parse($xml_string);
     $self->write_otter_acefile($parser);
@@ -329,7 +330,7 @@ sub recover_slice_from_region_xml {
         $self->logger->logconfess("Could not fetch XML from SQLite DB to create smart slice");
     }
 
-    my $parser = Bio::Vega::Transform::Otter->new;
+    my $parser = Bio::Vega::Transform::XMLToRegion->new;
     $parser->parse($xml);
     my $chr_slice = $parser->get_ChromosomeSlice;
 
@@ -866,7 +867,7 @@ sub generate_XML_from_acedb {
     # write_region requires that the client describe the region, to
     # ensure it is the correct one, but then ignores ContigInfo.
 
-    my $formatter = Bio::Vega::Transform::XML->new;
+    my $formatter = Bio::Vega::Transform::RegionToXML->new;
     $formatter->region($region);
     return $formatter->generate_OtterXML;
 }

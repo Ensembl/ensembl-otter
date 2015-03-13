@@ -1,7 +1,7 @@
 
-### Bio::Vega::Transform::Otter
+### Bio::Vega::Transform::XMLToRegion
 
-package Bio::Vega::Transform::Otter;
+package Bio::Vega::Transform::XMLToRegion;
 
 use strict;
 use warnings;
@@ -25,7 +25,7 @@ use Bio::Vega::Evidence;
 use Bio::Vega::Utils::GeneTranscriptBiotypeStatus 'method2biotype_status';
 use Bio::Otter::Lace::CloneSequence;
 
-use base 'Bio::Vega::Transform';
+use base 'Bio::Vega::XML::Parser';
 
 my (
     %species,
@@ -854,7 +854,7 @@ sub make_Author {
 
 __END__
 
-=head1 NAME - Bio::Vega::Transform::Otter
+=head1 NAME - Bio::Vega::Transform::XMLToRegion
 
 =head1 AUTHOR
 
