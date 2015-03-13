@@ -1291,7 +1291,7 @@ sub get_all_SequenceSets_for_DataSet {
           });
 
   local $XML::Simple::PREFERRED_PARSER = 'XML::Parser';
-  # configure expat for speed, also used in Bio::Vega::Transform
+  # configure expat for speed, also used in Bio::Vega::XML::Parser
 
   my $sequencesets_hash =
       XMLin($sequencesets_xml,
@@ -1365,7 +1365,7 @@ sub get_all_CloneSequences_for_DataSet_SequenceSet { # without any lock info
     );
 
   local $XML::Simple::PREFERRED_PARSER = 'XML::Parser';
-  # configure expat for speed, also used in Bio::Vega::Transform
+  # configure expat for speed, also used in Bio::Vega::XML::Parser
 
   my $clonesequences_array =
       XMLin($clonesequences_xml,

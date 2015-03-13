@@ -1,4 +1,4 @@
-package Test::Bio::Vega::Transform;
+package Test::Bio::Vega::XML::Parser;
 
 use Test::Class::Most
     parent     => 'OtterTest::Class';
@@ -11,12 +11,12 @@ sub build_attributes {
 }
 
 # Transform base class does not supply required initialise() method.
-package Bio::Vega::Transform;
+package Bio::Vega::XML::Parser;
 
 use Test::More;
 
 sub initialize {
-    note 'DUMMY Bio::Vega::Transform->initialize().';
+    note 'DUMMY Bio::Vega::XML::Parser->initialize().';
     return;
 }
 
