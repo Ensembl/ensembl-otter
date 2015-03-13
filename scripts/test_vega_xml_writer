@@ -24,7 +24,7 @@ use strict;
 use warnings;
 
 use Bio::Vega::Transform::Otter;
-use Bio::Vega::Transform::XML;
+use Bio::Vega::Transform::RegionToXML;
 use Getopt::Long;
 use Data::Dumper;
 
@@ -53,7 +53,7 @@ use Data::Dumper;
   my $parser = Bio::Vega::Transform::Otter->new;
   $parser->parsefile($xmlfile);
   my $genes=$parser->get_Genes;
-  my $writer=Bio::Vega::Transform::XML->new;
+  my $writer=Bio::Vega::Transform::RegionToXML->new;
   # foreach my $gene (@$genes){
   print STDOUT $writer->getxml('gene',$genes);
   #}

@@ -9,7 +9,7 @@ use Net::Domain qw{ hostname };
 
 use Bio::Otter::Lace::Defaults;
 use Bio::Vega::Transform::Otter;
-use Bio::Vega::Transform::XML;
+use Bio::Vega::Transform::RegionToXML;
 
 
 {
@@ -36,9 +36,9 @@ use Bio::Vega::Transform::XML;
         my $gene = $gene_aptr->fetch_by_stable_id($gsid);
         my $slice = $gene->feature_Slice;
         $gene = $gene->transfer($slice);
-        die("Broken before refactoring of Bio::Vega::Transform::XML on 2013-07-15.");
+        die("Broken before refactoring of Bio::Vega::Transform::RegionToXML on 2013-07-15.");
         # ...as generate_OtterXML takes no arguments.
-        my $before_xml = Bio::Vega::Transform::XML->new->generate_OtterXML(
+        my $before_xml = Bio::Vega::Transform::RegionToXML->new->generate_OtterXML(
             [$slice],
             $dba,
             1,
@@ -54,9 +54,9 @@ use Bio::Vega::Transform::XML;
         }
         my $xml_gene = $xml_gene_list->[0];
         print Data::Dumper::Dumper($xml_gene);
-        die("Broken before refactoring of Bio::Vega::Transform::XML on 2013-07-15.");
+        die("Broken before refactoring of Bio::Vega::Transform::RegionToXML on 2013-07-15.");
         # ...as generate_OtterXML takes no arguments.
-        my $after_xml = Bio::Vega::Transform::XML->new->generate_OtterXML(
+        my $after_xml = Bio::Vega::Transform::RegionToXML->new->generate_OtterXML(
             [$slice],
             $dba,
             1,

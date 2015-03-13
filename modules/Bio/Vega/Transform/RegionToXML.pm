@@ -1,8 +1,5 @@
 
-# This module is badly named.  It is nothing to do with Bio::Vega::Transform
-# It does not parse XML, it creates XML.
-
-package Bio::Vega::Transform::XML;
+package Bio::Vega::Transform::RegionToXML;
 
 use strict;
 use warnings;
@@ -401,7 +398,7 @@ sub generate_FeatureSet {
 
 __END__
 
-=head1 NAME - Bio::Vega::Transform::XML
+=head1 NAME - Bio::Vega::Transform::RegionToXML
 
 =head1 AUTHOR
 
