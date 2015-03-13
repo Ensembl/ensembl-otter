@@ -6,7 +6,7 @@ package Bio::Vega::Utils::XML;
 use strict;
 use warnings;
 
-use Bio::Vega::Transform::Otter;
+use Bio::Vega::Transform::XMLToRegion;
 use Bio::Vega::Transform::RegionToXML;
 
 use base 'Exporter';
@@ -40,7 +40,7 @@ sub freeze_thaw_gene {
         [],
         );
     # warn $xml;
-    my $parser = Bio::Vega::Transform::Otter->new;
+    my $parser = Bio::Vega::Transform::XMLToRegion->new;
     $parser->parse($xml);
     my $xml_gene_list = $parser->get_Genes;
     unless (@$xml_gene_list == 1) {

@@ -8,7 +8,7 @@ use Net::Domain qw{ hostname };
 # use Algorithm::Diff;
 
 use Bio::Otter::Lace::Defaults;
-use Bio::Vega::Transform::Otter;
+use Bio::Vega::Transform::XMLToRegion;
 use Bio::Vega::Transform::RegionToXML;
 
 
@@ -46,7 +46,7 @@ use Bio::Vega::Transform::RegionToXML;
             [],
             );
         # print $before_xml;
-        my $parser = Bio::Vega::Transform::Otter->new;
+        my $parser = Bio::Vega::Transform::XMLToRegion->new;
         $parser->parse($before_xml);
         my $xml_gene_list = $parser->get_Genes;
         unless (@$xml_gene_list == 1) {

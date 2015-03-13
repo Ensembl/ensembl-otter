@@ -1,7 +1,7 @@
-package Test::Bio::Vega::Transform::Otter::Store;
+package Test::Bio::Vega::Transform::XMLToRegion::Store;
 
 use Test::Class::Most
-    parent     => 'Test::Bio::Vega::Transform::Otter',
+    parent     => 'Test::Bio::Vega::Transform::XMLToRegion',
     attributes => test_db;
 
 use OtterTest::DB;

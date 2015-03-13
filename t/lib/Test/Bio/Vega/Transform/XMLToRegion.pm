@@ -1,4 +1,4 @@
-package Test::Bio::Vega::Transform::Otter;
+package Test::Bio::Vega::Transform::XMLToRegion;
 
 use Test::Class::Most
     parent     => 'Test::Bio::Vega::XML::Parser',

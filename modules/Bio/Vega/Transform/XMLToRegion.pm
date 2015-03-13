@@ -1,7 +1,7 @@
 
-### Bio::Vega::Transform::Otter
+### Bio::Vega::Transform::XMLToRegion
 
-package Bio::Vega::Transform::Otter;
+package Bio::Vega::Transform::XMLToRegion;
 
 use strict;
 use warnings;
@@ -854,7 +854,7 @@ sub make_Author {
 
 __END__
 
-=head1 NAME - Bio::Vega::Transform::Otter
+=head1 NAME - Bio::Vega::Transform::XMLToRegion
 
 =head1 AUTHOR
 
