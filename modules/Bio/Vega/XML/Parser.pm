@@ -1,7 +1,7 @@
 
-### Bio::Vega::Transform
+### Bio::Vega::XML::Parser
 
-package Bio::Vega::Transform;
+package Bio::Vega::XML::Parser;
 
 use strict;
 use warnings;
@@ -203,7 +203,7 @@ sub handle_end {
 
 __END__
 
-=head1 NAME - Bio::Vega::Transform
+=head1 NAME - Bio::Vega::XML::Parser
 
 =head1 AUTHOR
 

@@ -25,7 +25,7 @@ use Bio::Vega::Evidence;
 use Bio::Vega::Utils::GeneTranscriptBiotypeStatus 'method2biotype_status';
 use Bio::Otter::Lace::CloneSequence;
 
-use base 'Bio::Vega::Transform';
+use base 'Bio::Vega::XML::Parser';
 
 my (
     %species,
