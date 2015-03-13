@@ -1,4 +1,6 @@
-package Bio::Vega::Writer;
+# Renamed to Writer_V1 pending replacement with Hum::XmlWriter
+
+package Bio::Vega::XML::Writer_V1;
 
 use strict;
 use warnings;
@@ -59,7 +61,7 @@ sub formatxml {
 1;
 __END__
 
-=head1 NAME - Bio::Vega::Writer
+=head1 NAME - Bio::Vega::XML::Writer_V1
 
 =head1 AUTHOR
 
