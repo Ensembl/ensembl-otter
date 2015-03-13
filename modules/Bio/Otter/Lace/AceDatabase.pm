@@ -16,7 +16,7 @@ use Scalar::Util 'weaken';
 use Bio::Vega::Region;
 use Bio::Vega::Transform::Otter::Combo;
 use Bio::Vega::AceConverter;
-use Bio::Vega::Transform::XML;
+use Bio::Vega::Transform::RegionToXML;
 
 use Bio::Otter::Debug;
 use Bio::Otter::Lace::AccessionTypeCache;
@@ -866,7 +866,7 @@ sub generate_XML_from_acedb {
     # write_region requires that the client describe the region, to
     # ensure it is the correct one, but then ignores ContigInfo.
 
-    my $formatter = Bio::Vega::Transform::XML->new;
+    my $formatter = Bio::Vega::Transform::RegionToXML->new;
     $formatter->region($region);
     return $formatter->generate_OtterXML;
 }

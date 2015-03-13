@@ -7,7 +7,7 @@ use strict;
 use warnings;
 
 use Bio::Vega::Transform::Otter;
-use Bio::Vega::Transform::XML;
+use Bio::Vega::Transform::RegionToXML;
 
 use base 'Exporter';
 our @EXPORT_OK = qw{ freeze_thaw_gene };
@@ -30,9 +30,9 @@ sub freeze_thaw_gene {
 
     my $slice = $gene->feature_Slice;
     $gene = $gene->transfer($slice);
-    die("Broken before refactoring of Bio::Vega::Transform::XML on 2013-07-15.") if 1;
+    die("Broken before refactoring of Bio::Vega::Transform::RegionToXML on 2013-07-15.") if 1;
     # ...as generate_OtterXML takes no arguments.
-    my $xml = Bio::Vega::Transform::XML->new->generate_OtterXML(
+    my $xml = Bio::Vega::Transform::RegionToXML->new->generate_OtterXML(
         $slice,
         $gene->adaptor->db,
         1,

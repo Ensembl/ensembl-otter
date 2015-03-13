@@ -5,7 +5,7 @@ use warnings;
 
 use Bio::Vega::Region;
 use Bio::Vega::Transform::Otter;
-use Bio::Vega::Transform::XML;
+use Bio::Vega::Transform::RegionToXML;
 
 use base 'Bio::Otter::ServerAction::Region';
 
@@ -22,7 +22,7 @@ sub serialise_region {
     my ($self, $region) = @_;
 
     warn "Converting slice to XML...\n";
-    my $formatter = Bio::Vega::Transform::XML->new;
+    my $formatter = Bio::Vega::Transform::RegionToXML->new;
     $formatter->region($region);
     my $xml = $formatter->generate_OtterXML;
     warn "Done converting slice to XML. Length of XML = " . length($xml) . "\n";
