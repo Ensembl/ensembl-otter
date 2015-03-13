@@ -4,7 +4,7 @@ package Bio::Vega::XML::Writer_V1;
 
 use strict;
 use warnings;
-use Bio::Vega::Transform::PrettyPrint;
+use Bio::Vega::XML::Writer_V1::PrettyPrint;
 use Bio::Vega::Utils::XmlEscape qw (xml_escape);
 
 sub new {
@@ -35,7 +35,7 @@ sub formatopenendtag{
 
 sub prettyprint{
   my ($self, $name, $value) = @_;
-  my $element = Bio::Vega::Transform::PrettyPrint->new(
+  my $element = Bio::Vega::XML::Writer_V1::PrettyPrint->new(
     -name  => $name,
     -value => defined($value) ? xml_escape($value) : undef,
     );

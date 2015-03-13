@@ -1,4 +1,4 @@
-package Bio::Vega::Transform::PrettyPrint;
+package Bio::Vega::XML::Writer_V1::PrettyPrint;
 
 use Bio::EnsEMBL::Utils::Argument qw ( rearrange );
 
