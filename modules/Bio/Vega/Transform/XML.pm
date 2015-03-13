@@ -13,7 +13,7 @@ use Bio::EnsEMBL::Utils::Exception qw (throw);
 use Bio::Vega::Utils::GeneTranscriptBiotypeStatus 'biotype_status2method';
 use Bio::Otter::Utils::Attribute qw( get_single_attrib_value );
 
-use base 'Bio::Vega::Writer';
+use base 'Bio::Vega::XML::Writer_V1';
 
 my %region;
 
