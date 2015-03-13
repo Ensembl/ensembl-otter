@@ -21,7 +21,7 @@ basically to load a comple assembly with gene and its components, the script wit
 use strict;
 use warnings;
 
-use Bio::Vega::Transform::Otter;
+use Bio::Vega::Transform::XMLToRegion;
 use Bio::Vega::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Slice;
 use Bio::Otter::Lace::Defaults;
@@ -45,7 +45,7 @@ if ($assembly !~ /yes|no/ ) {
 }
 
 ##create a parser and parse the xmlfile and create vega objects
-my $parser = Bio::Vega::Transform::Otter->new;
+my $parser = Bio::Vega::Transform::XMLToRegion->new;
 
 $parser->Assembly($assembly);
 $parser->parsefile($xmlfile);

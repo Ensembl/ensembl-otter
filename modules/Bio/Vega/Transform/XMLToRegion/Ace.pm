@@ -1,7 +1,7 @@
 
-### Bio::Vega::Transform::Otter::Ace
+### Bio::Vega::Transform::XMLToRegion::Ace
 
-package Bio::Vega::Transform::Otter::Ace;
+package Bio::Vega::Transform::XMLToRegion::Ace;
 
 use strict;
 use warnings;
@@ -11,7 +11,7 @@ use NEXT;
 use Hum::Ace::AceText;
 use Bio::Vega::Utils::GeneTranscriptBiotypeStatus 'biotype_status2method';
 
-use base 'Bio::Vega::Transform::Otter';
+use base 'Bio::Vega::Transform::XMLToRegion';
 
 my %ens2ace_phase = (
     0   => 1,
@@ -461,7 +461,7 @@ sub make_ace_genomic_features {
 
 __END__
 
-=head1 NAME - Bio::Vega::Transform::Otter::Ace
+=head1 NAME - Bio::Vega::Transform::XMLToRegion::Ace
 
 =head1 AUTHOR
 

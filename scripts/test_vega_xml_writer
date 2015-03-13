@@ -23,7 +23,7 @@ test_vega_xml_writer -dbhost xxx -dbport xxx -dbname xxx -dbuser xxx -dbpass xxx
 use strict;
 use warnings;
 
-use Bio::Vega::Transform::Otter;
+use Bio::Vega::Transform::XMLToRegion;
 use Bio::Vega::Transform::RegionToXML;
 use Getopt::Long;
 use Data::Dumper;
@@ -50,7 +50,7 @@ use Data::Dumper;
     exec('perldoc', $0);
   }
 
-  my $parser = Bio::Vega::Transform::Otter->new;
+  my $parser = Bio::Vega::Transform::XMLToRegion->new;
   $parser->parsefile($xmlfile);
   my $genes=$parser->get_Genes;
   my $writer=Bio::Vega::Transform::RegionToXML->new;
