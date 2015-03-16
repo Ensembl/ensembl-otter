@@ -285,7 +285,7 @@ sub _build_clone_sequence {
     return;
 }
 
-sub get_Analysis {
+sub _get_Analysis {
     my ($self, $name) = @_;
 
     my $ana = $logic_ana{$self}{$name} ||= Bio::EnsEMBL::Analysis->new(-logic_name => $name);
@@ -334,7 +334,7 @@ sub build_DNA {
 sub build_Feature {
     my ($self, $data) = @_;
 
-    my $ana = $self->get_Analysis($data->{'type'});
+    my $ana = $self->_get_Analysis($data->{'type'});
     my $chr_slice = $self->get_ChromosomeSlice;
 
        ##convert xml coordinates which are in chromosomal coords - to feature coords
@@ -405,7 +405,7 @@ sub build_Transcript {
     my $exons = delete $exon_list{$self};
     my $chr_slice = $self->get_ChromosomeSlice;
 
-    my $ana = $self->get_Analysis($data->{'analysis'} || 'Otter');
+    my $ana = $self->_get_Analysis($data->{'analysis'} || 'Otter');
 
     my $transcript = Bio::Vega::Transcript->new(
         -stable_id => $data->{'stable_id'},
@@ -561,7 +561,7 @@ sub build_Locus {
     ## transcript author group has been temporarily set to 'anything' ??
 
     my $chr_slice = $self->get_ChromosomeSlice;
-    my $ana = $self->get_Analysis($data->{'analysis'} || 'Otter');
+    my $ana = $self->_get_Analysis($data->{'analysis'} || 'Otter');
     my $gene = Bio::Vega::Gene->new(
         -stable_id => $data->{'stable_id'},
         -slice => $chr_slice,
