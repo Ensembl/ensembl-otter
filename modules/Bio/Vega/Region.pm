@@ -134,6 +134,12 @@ sub clone_sequences {
     return @$clone_sequences;
 }
 
+sub sorted_clone_sequences {
+    my ($self) = @_;
+    my @cs = sort { $a->chr_start() <=> $b->chr_start() } $self->clone_sequences;
+    return @cs;
+}
+
 sub add_clone_sequences {
     my ($self, @clone_sequences ) = @_;
     push @{$self->_clone_seq_list}, @clone_sequences;
