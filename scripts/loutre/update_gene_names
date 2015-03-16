@@ -11,6 +11,8 @@ use Sys::Hostname;
 $Data::Dumper::Terse = 1;
 
 use Bio::Otter::Lace::Defaults;
+use Bio::Otter::Server::Config;
+
 use Bio::Vega::SliceLockBroker;
 
 use Log::Log4perl qw(:easy);
@@ -34,14 +36,9 @@ Log::Log4perl->easy_init;
       ) or $usage->();
     $usage->() unless $dataset;
 
-    # Client communicates with otter HTTP server
-    # $0 = 'otterlace';     # Needed to access restricted test datasets
-    my $cl = Bio::Otter::Lace::Defaults::make_Client();
-
     # DataSet interacts directly with an otter database
-    my $ds = $cl->get_DataSet_by_name($dataset);
-
-    my $otter_dba = $ds->get_cached_DBAdaptor;
+    my $ds = Bio::Otter::Server::Config->SpeciesDat->dataset($dataset);
+    my $otter_dba = $ds->otter_dba;
 
     my $sth = $otter_dba->dbc->prepare('
         SELECT ga.value as name
@@ -84,7 +81,7 @@ Log::Log4perl->easy_init;
         push @gene_data, $data;
     }
     
-    my $author_obj = Bio::Vega::Author->new(-name => $cl->author, -email => $cl->email);
+    my $author_obj = Bio::Vega::Author->new_for_uid;
     
     foreach my $data (@gene_data) {
         my $stable_id = $data->{'stable_id'};
