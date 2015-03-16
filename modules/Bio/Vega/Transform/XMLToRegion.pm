@@ -42,7 +42,6 @@ my (
     %seen_transcript_name,
     %seen_gene_name,
     %chromosome_name,
-    %dna,
     %author_cache,
     %chr_coord_system,
     %clone_coord_system,
@@ -67,7 +66,6 @@ sub DESTROY {
     delete $seen_gene_name{$self};
     delete $seen_transcript_name{$self};
     delete $chromosome_name{$self};
-    delete $dna{$self};
     delete $author_cache{$self};
     delete $chr_coord_system{$self};
     delete $clone_coord_system{$self};
@@ -93,7 +91,6 @@ sub initialize {
             feature             => 'build_Feature',
             xref                => 'build_XRef',
             sequence_fragment   => 'build_SequenceFragment',
-            dna                 => 'build_DNA',
             otter               => 'save_species',
 
             # We don't currently do anything on encountering
@@ -319,14 +316,6 @@ sub build_XRef {
 
     my $list = $xref_list{$self} ||= [];
     push @$list, $xref;
-
-    return;
-}
-
-sub build_DNA {
-    my ($self, $data) = @_;
-
-    $dna{$self} = $data->{'dna'};
 
     return;
 }
