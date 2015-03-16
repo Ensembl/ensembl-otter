@@ -32,7 +32,6 @@ my (
     %exon_list,
     %evidence_list,
     %gene_list,
-    # %assembly_tag_list,
     %transcript_list,
     %feature_list,
     %xref_list,
@@ -58,7 +57,6 @@ sub DESTROY {
     delete $exon_list{$self};
     delete $evidence_list{$self};
     delete $gene_list{$self};
-    # delete $assembly_tag_list{$self};
     delete $transcript_list{$self};
     delete $feature_list{$self};
     delete $xref_list{$self};
@@ -809,12 +807,6 @@ sub get_Genes {
 
     return $gene_list{$self} || [];
 }
-
-# sub get_AssemblyTags {
-#     my ($self) = @_;
-#
-#     return $assembly_tag_list{$self} || [];
-# }
 
 sub get_SimpleFeatures {
     my ($self) = @_;
