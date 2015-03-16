@@ -78,20 +78,20 @@ sub initialize {
     # Register the tags that trigger the building of objects
     $self->object_builders(
         {
-            exon                => 'build_Exon',
-            transcript          => 'build_Transcript',
-            locus               => 'build_Locus',
-            evidence            => 'build_Evidence',
-            feature             => 'build_Feature',
-            xref                => 'build_XRef',
-            sequence_fragment   => 'build_SequenceFragment',
-            otter               => 'save_species',
+            exon                => '_build_Exon',
+            transcript          => '_build_Transcript',
+            locus               => '_build_Locus',
+            evidence            => '_build_Evidence',
+            feature             => '_build_Feature',
+            xref                => '_build_XRef',
+            sequence_fragment   => '_build_SequenceFragment',
+            otter               => '_save_species',
 
             # We don't currently do anything on encountering
             # these end tags:
-            exon_set            => 'do_nothing',
-            evidence_set        => 'do_nothing',
-            feature_set         => 'do_nothing',
+            exon_set            => '_do_nothing',
+            evidence_set        => '_do_nothing',
+            feature_set         => '_do_nothing',
         }
     );
 
@@ -110,7 +110,7 @@ sub initialize {
 ## parser builder methods to build otter objects
 
 
-sub save_species {
+sub _save_species {
     my ($self, $data) = @_;
 
     $region{$self}->species($data->{'species'});
@@ -132,7 +132,7 @@ sub chromosome_name {
     return $region{$self}->chromosome_name;
 }
 
-sub build_SequenceFragment {
+sub _build_SequenceFragment {
     my ($self, $data) = @_;
 
     $self->_create_or_extend_chr_slice($data);
@@ -293,7 +293,7 @@ sub _get_Analysis {
     return $ana;
 }
 
-sub build_Evidence {
+sub _build_Evidence {
     my ($self, $data) = @_;
 
     my $evidence = Bio::Vega::Evidence->new(
@@ -306,7 +306,7 @@ sub build_Evidence {
     return;
 }
 
-sub build_XRef {
+sub _build_XRef {
     my ($self, $data) = @_;
 
     my $xref = Bio::EnsEMBL::DBEntry->new(
@@ -324,7 +324,7 @@ sub build_XRef {
     return;
 }
 
-sub build_Feature {
+sub _build_Feature {
     my ($self, $data) = @_;
 
     my $ana = $self->_get_Analysis($data->{'type'});
@@ -347,7 +347,7 @@ sub build_Feature {
     return;
 }
 
-sub build_Exon {
+sub _build_Exon {
     my ($self, $data) = @_;
 
     my $chr_slice = $self->get_ChromosomeSlice;
@@ -391,7 +391,7 @@ sub add_xrefs_to_object {
     return;
 }
 
-sub build_Transcript {
+sub _build_Transcript {
     my ($self, $data) = @_;
 
     my $exons = delete $exon_list{$self};
@@ -545,7 +545,7 @@ sub translation_pos {
   }
 }
 
-sub build_Locus {
+sub _build_Locus {
     my ($self, $data) = @_;
 
     ## version and is_current ??
@@ -664,7 +664,7 @@ sub _build_gene_attributes
     return @gene_attributes;
 }
 
-sub do_nothing {
+sub _do_nothing {
     return;
 }
 
