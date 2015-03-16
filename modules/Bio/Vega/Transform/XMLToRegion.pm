@@ -9,6 +9,7 @@ use warnings;
 use Carp;
 use NEXT;
 
+use Bio::Vega::Region;
 use Bio::Vega::Exon;
 use Bio::Vega::Transcript;
 use Bio::Vega::Gene;
@@ -28,21 +29,19 @@ use Bio::Otter::Lace::CloneSequence;
 use base 'Bio::Vega::XML::Parser';
 
 my (
-    %species,
+    %region,
+
+    # Temporaries, used during parsing
     %exon_list,
     %evidence_list,
-    %gene_list,
     %transcript_list,
-    %feature_list,
     %xref_list,
     %logic_ana,
-    %coord_system,
-    %clone_sequence_list,
-    %chrslice,
     %seen_transcript_name,
     %seen_gene_name,
     %chromosome_name,
     %author_cache,
+
     %chr_coord_system,
     %clone_coord_system,
     %ctg_coord_system,
@@ -52,17 +51,12 @@ my (
 sub DESTROY {
     my ($self) = @_;
 
-    delete $species{$self};
+    delete $region{$self};
     delete $exon_list{$self};
     delete $evidence_list{$self};
-    delete $gene_list{$self};
     delete $transcript_list{$self};
-    delete $feature_list{$self};
     delete $xref_list{$self};
     delete $logic_ana{$self};
-    delete $coord_system{$self};
-    delete $clone_sequence_list{$self};
-    delete $chrslice{$self};
     delete $seen_gene_name{$self};
     delete $seen_transcript_name{$self};
     delete $chromosome_name{$self};
@@ -107,6 +101,9 @@ sub initialize {
         [ sequence_fragment => qw{ remark keyword } ],
     ]);
 
+    # Create our empty region
+    $region{$self} = Bio::Vega::Region->new;
+
     return;
 }
 
@@ -116,21 +113,23 @@ sub initialize {
 sub save_species {
     my ($self, $data) = @_;
 
-    $species{$self} = $data->{'species'};
+    $region{$self}->species($data->{'species'});
 
     return;
 }
 
+# DELETE ME
 sub species {
     my ($self) = @_;
 
-    return $species{$self};
+    return $region{$self}->species;
 }
 
+# DELETE ME
 sub chromosome_name {
     my ($self) = @_;
 
-    return $chromosome_name{$self};
+    return $region{$self}->chromosome_name;
 }
 
 sub build_SequenceFragment {
@@ -163,7 +162,7 @@ sub _create_or_extend_chr_slice {
            ."assembly_type='$assembly_type' start='$start' end='$end'";
     }
 
-    if (my $chr_slice = $chrslice{$self}) {
+    if (my $chr_slice = $self->_chr_slice) {
         # Extend the cached version of the slice:
         # We have to make a new slice, because slice parameter methods are read-only
         my $new_chr_slice = Bio::EnsEMBL::Slice->new(
@@ -173,7 +172,7 @@ sub _create_or_extend_chr_slice {
             -strand            => 1,
             -coord_system      => $self->get_set_ChrCoordSystem,
         );
-        $chrslice{$self} = $new_chr_slice;
+        $self->_chr_slice($new_chr_slice);
     } else {
         # Create the first version of the Slice
         $chr_slice = Bio::EnsEMBL::Slice->new(
@@ -183,9 +182,15 @@ sub _create_or_extend_chr_slice {
             -strand            => 1,
             -coord_system      => $self->get_set_ChrCoordSystem,
         );
-        $chrslice{$self} = $chr_slice;
+        $self->_chr_slice($chr_slice);
     }
     return;
+}
+
+sub _chr_slice {
+    my ($self, @args) = @_;
+    $region{$self}->slice(@args) if @args;
+    return $region{$self}->slice;
 }
 
 sub _build_clone_sequence {
@@ -276,8 +281,7 @@ sub _build_clone_sequence {
         );
     $cs->ContigInfo($ci);
 
-    my $cs_list = $clone_sequence_list{$self} ||= [];
-    push @$cs_list, $cs;
+    $region{$self}->add_clone_sequences($cs);
 
     return;
 }
@@ -338,8 +342,7 @@ sub build_Feature {
         -display_label => $data->{'label'},
         -slice         => $chr_slice,
     );
-    my $list = $feature_list{$self} ||= [];
-    push @$list, $feature;
+    $region{$self}->add_seq_features($feature);
 
     return;
 }
@@ -617,8 +620,7 @@ sub build_Locus {
     $gene->start($gene->start - $slice_offset);
     $gene->end(  $gene->end   - $slice_offset);
 
-    my $list = $gene_list{$self} ||= [];
-    push @$list, $gene;
+    $region{$self}->add_genes($gene);
 
     return;
 }
@@ -766,41 +768,33 @@ sub get_set_CoordSystem {
     return $self->$set($coord_system);
 }
 
+# DELETE ME
 sub get_ChromosomeSlice {
     my ($self) = @_;
 
-    return $chrslice{$self};
+    return $self->_chr_slice;
 }
 
-sub set_ChromosomeSlice {
-    my ($self, $slice) = @_;
-
-    $chrslice{$self} = $slice;
-
-    return;
-}
-
+# DELETE ME - NB sort!!
 sub get_CloneSequences {
     my ($self) = @_;
 
-    if (my $cs = $clone_sequence_list{$self}) {
-        my @clone_sequences = sort { $a->chr_start() <=> $b->chr_start() } @$cs;
-        return @clone_sequences;
-    } else {
-        return;
-    }
+    my @cs = sort { $a->chr_start() <=> $b->chr_start() } $region{$self}->clone_sequences;
+    return @cs;
 }
 
+# DELETE ME
 sub get_Genes {
     my ($self) = @_;
 
-    return $gene_list{$self} || [];
+    return [ $region{$self}->genes ];
 }
 
+# DELETE ME
 sub get_SimpleFeatures {
     my ($self) = @_;
 
-    return $feature_list{$self} || [];
+    return [ $region{$self}->seq_features ];
 }
 
 
