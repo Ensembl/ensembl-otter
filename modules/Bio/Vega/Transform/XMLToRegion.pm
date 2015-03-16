@@ -244,7 +244,7 @@ sub _build_clone_sequence {
     }
 
         ## FIXME: $cln_author may be passed in the XML, but is ultimately ignored by write_region
-    #my $cln_author=$self->make_Author($data->{'author'}, $data->{'author_email'});
+    #my $cln_author=$self->_make_Author($data->{'author'}, $data->{'author_email'});
 
     # create tiles (offset_in_slice + contig_component_slice + attributes)
     my $ctg_cmp_slice = Bio::EnsEMBL::Slice->new(
@@ -463,7 +463,7 @@ sub build_Transcript {
     }
 
     if ($data->{'author'}) {
-        my $transcript_author = $self->make_Author($data->{'author'}, $data->{'author_email'});
+        my $transcript_author = $self->_make_Author($data->{'author'}, $data->{'author_email'});
         $transcript->transcript_author($transcript_author);
     }
 
@@ -582,7 +582,7 @@ sub build_Locus {
     $gene->status($status);
 
     if ($data->{'author'}) {
-        my $gene_author = $self->make_Author($data->{'author'}, $data->{'author_email'});
+        my $gene_author = $self->_make_Author($data->{'author'}, $data->{'author_email'});
         $gene->gene_author($gene_author);
     }
 
@@ -815,7 +815,7 @@ sub make_Attribute {
         );
 }
 
-sub make_Author {
+sub _make_Author {
     my ($self, $name, $email) = @_;
 
     $email ||= $name;
