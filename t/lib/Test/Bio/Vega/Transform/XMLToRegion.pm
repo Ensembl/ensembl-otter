@@ -2,7 +2,7 @@ package Test::Bio::Vega::Transform::XMLToRegion;
 
 use Test::Class::Most
     parent     => 'Test::Bio::Vega::XML::Parser',
-    attributes => [ qw( test_region ) ];
+    attributes => [ qw( test_region parse_result ) ];
 
 use Test::Bio::Otter::Lace::CloneSequence no_run_test => 1;
 use Test::Bio::Vega::Gene                 no_run_test => 1;
@@ -23,19 +23,23 @@ sub setup : Tests(setup) {
     $test->SUPER::setup;
 
     my $bvto = $test->our_object;
-    $bvto->parse($test->test_region->xml_region);
+    my $region = $bvto->parse($test->test_region->xml_region);
+    $test->parse_result($region);
 
     return;
 }
 
-sub parse : Test(2) {
+sub parse : Test(3) {
     my $test = shift;
 
     my $bvto = $test->our_object;
     can_ok $bvto, 'parse';
 
+    my $region = $test->parse_result;
+    isa_ok($region, 'Bio::Vega::Region', '...and result of parse()');
+
     my $parsed = $test->test_region->xml_parsed;
-    is $bvto->species, $parsed->{species}, '...and species ok';
+    is $region->species, $parsed->{species}, '...and species ok';
 
     return;
 }
@@ -48,10 +52,12 @@ sub get_ChrCoordSystem : Test(4) {
     return;
 }
 
-sub get_ChromosomeSlice : Test(7) {
+# FIXME: we should be testing the Region now.
+sub region_slice : Test(6) {
     my $test = shift;
 
-    my $csl = $test->object_accessor( get_ChromosomeSlice => 'Bio::EnsEMBL::Slice' );
+    my $csl = $test->parse_result->slice;
+    isa_ok($csl, 'Bio::EnsEMBL::Slice', 'region->slice');
 
     my $parsed = $test->test_region->xml_parsed;
     my $sequence_set = $parsed->{sequence_set};
@@ -69,13 +75,10 @@ sub get_ChromosomeSlice : Test(7) {
     return;
 }
 
-sub get_CloneSequences : Tests {
+sub region_clone_sequences : Tests {
     my $test = shift;
 
-    my $bvto = $test->our_object();
-    can_ok $bvto, 'get_CloneSequences';
-
-    my @cs = $bvto->get_CloneSequences;
+    my @cs = $test->parse_result->sorted_clone_sequences;
 
     my $parsed = $test->test_region->xml_parsed;
     my $sequence_set = $parsed->{sequence_set};
@@ -96,32 +99,40 @@ sub get_CloneSequences : Tests {
     return;
 }
 
-sub get_Genes : Tests {
+sub region_genes : Tests {
     my $test = shift;
 
-    my $genes = $test->object_accessor( get_Genes => 'ARRAY' );
+    my @genes = $test->parse_result->genes;
 
     my $parsed = $test->test_region->xml_parsed;
     my $loci   = $parsed->{sequence_set}->{locus};
 
-    my $n = scalar @$genes;
+    my $n = scalar @genes;
     is $n,  scalar @$loci, '... n(Genes)';
 
     foreach my $i ( 0..$n-1 ) {
-        isa_ok $genes->[$i], 'Bio::Vega::Gene', "... Gene[$i]";
+        isa_ok $genes[$i], 'Bio::Vega::Gene', "... Gene[$i]";
 
         my $locus = $loci->[$i];
-        my $t_gene = Test::Bio::Vega::Gene->new(our_object => $genes->[$i]);
+        my $t_gene = Test::Bio::Vega::Gene->new(our_object => $genes[$i]);
         $t_gene->matches_parsed_xml($locus, "... Gene[$i]");
     }
 
     return;
 }
 
-sub get_SimpleFeatures : Tests {
+sub seq_features : Tests {
     my $test = shift;
 
-    my $genes = $test->object_accessor( get_Genes => 'ARRAY' );
+    my @features = $test->parse_result->seq_features;
+
+    my $parsed = $test->test_region->xml_parsed;
+    my $e_features = $parsed->{sequence_set}->{feature_set}->{feature};
+
+    my $n = scalar @features;
+    is $n,  scalar @$e_features, 'n(seq_features)';
+
+    # FIXME: do some tests here!!
     return;
 }
 

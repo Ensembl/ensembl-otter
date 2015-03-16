@@ -249,13 +249,13 @@ sub init_AceDatabase {
 
     my $parser = Bio::Vega::Transform::XMLToRegion::Combo->new;
     $parser->vega_dba($self->DB->vega_dba); # may be needed to store CoordSystems
-    $parser->parse($xml_string);
+    my $region = $parser->parse($xml_string);
     $self->write_otter_acefile($parser);
 
     my ($raw_dna, @tiles) = $self->get_assembly_dna;
     $self->write_dna_data($raw_dna, @tiles);
 
-    $self->DB->species($parser->species);
+    $self->DB->species($region->species);
     $parser->store($raw_dna);
 
     $self->write_methods_acefile;

@@ -305,7 +305,7 @@ sub xml_parsed {
     require XML::Simple;
     XML::Simple->import(':strict');
     my $xs = XML::Simple->new(
-        ForceArray => [ qw( locus transcript exon evidence ) ],
+        ForceArray => [ qw( locus transcript exon evidence feature ) ],
         KeyAttr    => [],
         );
     my $parsed = $xs->XMLin($self->xml_region);

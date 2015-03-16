@@ -117,6 +117,16 @@ sub parse {
     return $region{$self};
 }
 
+sub parsefile {
+    my ($self, @args) = @_;
+
+    # parent does the hard work...
+    $self->NEXT::parsefile(@args);
+
+    # ...calling our builders to assemble the result:
+    return $region{$self};
+}
+
 
 ## parser builder methods to build otter objects
 
@@ -127,20 +137,6 @@ sub _save_species {
     $region{$self}->species($data->{'species'});
 
     return;
-}
-
-# DELETE ME
-sub species {
-    my ($self) = @_;
-
-    return $region{$self}->species;
-}
-
-# DELETE ME
-sub chromosome_name {
-    my ($self) = @_;
-
-    return $region{$self}->chromosome_name;
 }
 
 sub _build_SequenceFragment {
@@ -339,7 +335,7 @@ sub _build_Feature {
     my ($self, $data) = @_;
 
     my $ana = $self->_get_Analysis($data->{'type'});
-    my $chr_slice = $self->get_ChromosomeSlice;
+    my $chr_slice = $self->_chr_slice;
 
        ##convert xml coordinates which are in chromosomal coords - to feature coords
     my $slice_offset = $chr_slice->start - 1;
@@ -361,7 +357,7 @@ sub _build_Feature {
 sub _build_Exon {
     my ($self, $data) = @_;
 
-    my $chr_slice = $self->get_ChromosomeSlice;
+    my $chr_slice = $self->_chr_slice;
 
     my $exon = Bio::Vega::Exon->new(
         -start     => $data->{'start'},
@@ -406,7 +402,7 @@ sub _build_Transcript {
     my ($self, $data) = @_;
 
     my $exons = delete $exon_list{$self};
-    my $chr_slice = $self->get_ChromosomeSlice;
+    my $chr_slice = $self->_chr_slice;
 
     my $ana = $self->_get_Analysis($data->{'analysis'} || 'Otter');
 
@@ -563,7 +559,7 @@ sub _build_Locus {
     my $transcripts = delete $transcript_list{$self};
     ## transcript author group has been temporarily set to 'anything' ??
 
-    my $chr_slice = $self->get_ChromosomeSlice;
+    my $chr_slice = $self->_chr_slice;
     my $ana = $self->_get_Analysis($data->{'analysis'} || 'Otter');
     my $gene = Bio::Vega::Gene->new(
         -stable_id => $data->{'stable_id'},
@@ -779,33 +775,11 @@ sub get_set_CoordSystem {
     return $self->$set($coord_system);
 }
 
-# DELETE ME
-sub get_ChromosomeSlice {
+# DELETE ME once re-factoring is complete
+sub region {
     my ($self) = @_;
 
-    return $self->_chr_slice;
-}
-
-# DELETE ME - NB sort!!
-sub get_CloneSequences {
-    my ($self) = @_;
-
-    my @cs = sort { $a->chr_start() <=> $b->chr_start() } $region{$self}->clone_sequences;
-    return @cs;
-}
-
-# DELETE ME
-sub get_Genes {
-    my ($self) = @_;
-
-    return [ $region{$self}->genes ];
-}
-
-# DELETE ME
-sub get_SimpleFeatures {
-    my ($self) = @_;
-
-    return [ $region{$self}->seq_features ];
+    return $region{$self};
 }
 
 

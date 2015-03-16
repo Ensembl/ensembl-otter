@@ -76,7 +76,7 @@ sub _store_extract_compare {
     $bvtos->store($test->test_region->fake_dna());
     pass '... stored';
 
-    my $original_slice = $bvtos->get_ChromosomeSlice;
+    my $original_slice = $test->parse_result->slice;
     # FIXME : we do this quite a lot:
     my $sa = $test->test_db->vega_dba->get_SliceAdaptor;
     my $seq_region = $sa->fetch_by_region($original_slice->coord_system->name, $original_slice->seq_region_name);
