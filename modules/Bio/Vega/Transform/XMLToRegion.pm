@@ -107,6 +107,17 @@ sub initialize {
     return;
 }
 
+sub parse {
+    my ($self, @args) = @_;
+
+    # parent does the hard work...
+    $self->NEXT::parse(@args);
+
+    # ...calling our builders to assemble the result:
+    return $region{$self};
+}
+
+
 ## parser builder methods to build otter objects
 
 
