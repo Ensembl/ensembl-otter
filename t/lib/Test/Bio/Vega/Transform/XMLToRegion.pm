@@ -40,13 +40,6 @@ sub parse : Test(2) {
     return;
 }
 
-sub get_Analysis : Test(3) {
-    my $test = shift;
-    my $an = $test->object_accessor( get_Analysis => 'Bio::EnsEMBL::Analysis', 'otter-module-test' );
-    is $an->logic_name, 'otter-module-test', '... logic_name';
-    return;
-}
-
 sub get_ChrCoordSystem : Test(4) {
     my $test = shift;
     my $cs = $test->object_accessor( get_ChrCoordSystem => 'Bio::EnsEMBL::CoordSystem' );
