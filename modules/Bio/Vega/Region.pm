@@ -108,6 +108,12 @@ sub genes {
     return @$genes;
 }
 
+sub add_genes {
+    my ($self, @genes ) = @_;
+    push @{$self->_gene_list}, @genes;
+    return;
+}
+
 sub seq_features {
     my ($self, @args) = @_;
     $self->_seq_feature_list( [ @args ] ) if @args;
@@ -115,11 +121,38 @@ sub seq_features {
     return @$seq_features;
 }
 
+sub add_seq_features {
+    my ($self, @seq_features ) = @_;
+    push @{$self->_seq_feature_list}, @seq_features;
+    return;
+}
+
 sub clone_sequences {
     my ($self, @args) = @_;
     $self->_clone_seq_list( [ @args ] ) if @args;
     my $clone_sequences = $self->_clone_seq_list;
     return @$clone_sequences;
+}
+
+sub sorted_clone_sequences {
+    my ($self) = @_;
+    my @cs = sort { $a->chr_start() <=> $b->chr_start() } $self->clone_sequences;
+    return @cs;
+}
+
+sub add_clone_sequences {
+    my ($self, @clone_sequences ) = @_;
+    push @{$self->_clone_seq_list}, @clone_sequences;
+    return;
+}
+
+# We assume all clone_sequences belong to same chromosome
+#
+sub chromosome_name {
+    my ($self) = @_;
+    my @cs = $self->clone_sequences;
+    return unless @cs;
+    return $cs[0]->chromosome;
 }
 
 sub fetch_CloneSequences {

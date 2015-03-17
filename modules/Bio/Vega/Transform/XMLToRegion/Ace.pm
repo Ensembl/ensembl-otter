@@ -67,7 +67,7 @@ sub make_ace_genes_transcripts {
     my $tsct_str = '';
     my $gene_str = '';
 
-    foreach my $gene (@{$self->get_Genes}) {
+    foreach my $gene ( $self->region->genes ) {
         my $gene_name = get_first_attrib_value($gene, 'name');
         my $gene_ace = Hum::Ace::AceText->new_from_class_and_name_with_delete('Locus', $gene_name);
         fill_locus_AceText($gene, $gene_ace);
@@ -253,7 +253,7 @@ sub new_slice_ace_object {
 sub make_assembly_name {
     my ($self) = @_;
 
-    my $chr_slice = $self->get_ChromosomeSlice;
+    my $chr_slice = $self->region->slice;
     return sprintf "%s_%d-%d",
         $chr_slice->seq_region_name,
         $chr_slice->start,
@@ -263,7 +263,7 @@ sub make_assembly_name {
 sub make_ace_chr_assembly {
     my ($self) = @_;
 
-    my $chr_slice = $self->get_ChromosomeSlice;
+    my $chr_slice = $self->region->slice;
 
     my $ace = Hum::Ace::AceText->new_from_class_and_name('Sequence', $chr_slice->seq_region_name);
     $ace->add_tag('AGP_Fragment',
@@ -277,16 +277,17 @@ sub make_ace_chr_assembly {
 sub make_ace_assembly {
     my ($self) = @_;
 
-    my $dataset_name = $self->species or die "species tag is missing";
+    my $region = $self->region;
+    my $dataset_name = $region->species or die "species tag is missing";
 
     my $ace = $self->new_slice_ace_object;
     $ace->add_tag('Assembly');
     $ace->add_tag('Species', $dataset_name);
 
-    $ace->add_tag('Assembly_name', $self->get_ChromosomeSlice->seq_region_name);
+    $ace->add_tag('Assembly_name', $region->slice->seq_region_name);
 
     # Clone sequences are returned sorted in ascending order by their starts
-    my @asm_clone_sequences = $self->get_CloneSequences;
+    my @asm_clone_sequences = $region->sorted_clone_sequences;
 
     # For contigs which contribute more than once to the assembly
     # we need to record their spans for the Smap tags.
@@ -343,7 +344,7 @@ sub make_ace_contigs {
     my ($self) = @_;
 
     my $str = '';
-    foreach my $cs ($self->get_CloneSequences) {
+    foreach my $cs ($self->region->sorted_clone_sequences) {
         $str .= $self->make_ace_ctg($cs);
     }
     return $str;
@@ -422,12 +423,12 @@ sub mRNA_posn {
 sub make_ace_genomic_features {
     my ($self) = @_;
 
-    my $feat_list = $self->get_SimpleFeatures;
-    unless (@$feat_list) {
+    my @feat_list = $self->region->seq_features;
+    unless (@feat_list) {
         return '';
     }
     my $ace = $self->new_slice_ace_object;
-    foreach my $feat (@$feat_list) {
+    foreach my $feat (@feat_list) {
         # Ace format encodes strand by order of start + end
         my $start = $feat->start;
         my $end   = $feat->end;

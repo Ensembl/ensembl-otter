@@ -78,8 +78,8 @@ sub extra_gene {
 
     my $bvt_otter = Bio::Vega::Transform::XMLToRegion->new; # just for utility methods
 
-    my $analysis = $bvt_otter->get_Analysis('Otter');
-    my $author   = $bvt_otter->make_Author('anacode', 'anacode');
+    my $analysis = $bvt_otter->_get_Analysis('Otter');
+    my $author   = $bvt_otter->_make_Author('anacode', 'anacode');
 
     my $gene = Bio::Vega::Gene->new(
         -slice =>       $slice,
@@ -305,7 +305,7 @@ sub xml_parsed {
     require XML::Simple;
     XML::Simple->import(':strict');
     my $xs = XML::Simple->new(
-        ForceArray => [ qw( locus transcript exon evidence ) ],
+        ForceArray => [ qw( locus transcript exon evidence feature ) ],
         KeyAttr    => [],
         );
     my $parsed = $xs->XMLin($self->xml_region);

@@ -9,6 +9,7 @@ use warnings;
 use Carp;
 use NEXT;
 
+use Bio::Vega::Region;
 use Bio::Vega::Exon;
 use Bio::Vega::Transcript;
 use Bio::Vega::Gene;
@@ -28,22 +29,19 @@ use Bio::Otter::Lace::CloneSequence;
 use base 'Bio::Vega::XML::Parser';
 
 my (
-    %species,
+    %region,
+
+    # Temporaries, used during parsing
     %exon_list,
     %evidence_list,
-    %gene_list,
     %transcript_list,
-    %feature_list,
     %xref_list,
     %logic_ana,
-    %coord_system,
-    %clone_sequence_list,
-    %chrslice,
     %seen_transcript_name,
     %seen_gene_name,
     %chromosome_name,
-    %dna,
     %author_cache,
+
     %chr_coord_system,
     %clone_coord_system,
     %ctg_coord_system,
@@ -53,21 +51,15 @@ my (
 sub DESTROY {
     my ($self) = @_;
 
-    delete $species{$self};
+    delete $region{$self};
     delete $exon_list{$self};
     delete $evidence_list{$self};
-    delete $gene_list{$self};
     delete $transcript_list{$self};
-    delete $feature_list{$self};
     delete $xref_list{$self};
     delete $logic_ana{$self};
-    delete $coord_system{$self};
-    delete $clone_sequence_list{$self};
-    delete $chrslice{$self};
     delete $seen_gene_name{$self};
     delete $seen_transcript_name{$self};
     delete $chromosome_name{$self};
-    delete $dna{$self};
     delete $author_cache{$self};
     delete $chr_coord_system{$self};
     delete $clone_coord_system{$self};
@@ -86,21 +78,20 @@ sub initialize {
     # Register the tags that trigger the building of objects
     $self->object_builders(
         {
-            exon                => 'build_Exon',
-            transcript          => 'build_Transcript',
-            locus               => 'build_Locus',
-            evidence            => 'build_Evidence',
-            feature             => 'build_Feature',
-            xref                => 'build_XRef',
-            sequence_fragment   => 'build_SequenceFragment',
-            dna                 => 'build_DNA',
-            otter               => 'save_species',
+            exon                => '_build_Exon',
+            transcript          => '_build_Transcript',
+            locus               => '_build_Locus',
+            evidence            => '_build_Evidence',
+            feature             => '_build_Feature',
+            xref                => '_build_XRef',
+            sequence_fragment   => '_build_SequenceFragment',
+            otter               => '_save_species',
 
             # We don't currently do anything on encountering
             # these end tags:
-            exon_set            => 'do_nothing',
-            evidence_set        => 'do_nothing',
-            feature_set         => 'do_nothing',
+            exon_set            => '_do_nothing',
+            evidence_set        => '_do_nothing',
+            feature_set         => '_do_nothing',
         }
     );
 
@@ -110,33 +101,45 @@ sub initialize {
         [ sequence_fragment => qw{ remark keyword } ],
     ]);
 
+    # Create our empty region
+    $region{$self} = Bio::Vega::Region->new;
+
     return;
 }
+
+sub parse {
+    my ($self, @args) = @_;
+
+    # parent does the hard work...
+    $self->NEXT::parse(@args);
+
+    # ...calling our builders to assemble the result:
+    return $region{$self};
+}
+
+sub parsefile {
+    my ($self, @args) = @_;
+
+    # parent does the hard work...
+    $self->NEXT::parsefile(@args);
+
+    # ...calling our builders to assemble the result:
+    return $region{$self};
+}
+
 
 ## parser builder methods to build otter objects
 
 
-sub save_species {
+sub _save_species {
     my ($self, $data) = @_;
 
-    $species{$self} = $data->{'species'};
+    $region{$self}->species($data->{'species'});
 
     return;
 }
 
-sub species {
-    my ($self) = @_;
-
-    return $species{$self};
-}
-
-sub chromosome_name {
-    my ($self) = @_;
-
-    return $chromosome_name{$self};
-}
-
-sub build_SequenceFragment {
+sub _build_SequenceFragment {
     my ($self, $data) = @_;
 
     $self->_create_or_extend_chr_slice($data);
@@ -166,7 +169,7 @@ sub _create_or_extend_chr_slice {
            ."assembly_type='$assembly_type' start='$start' end='$end'";
     }
 
-    if (my $chr_slice = $chrslice{$self}) {
+    if (my $chr_slice = $self->_chr_slice) {
         # Extend the cached version of the slice:
         # We have to make a new slice, because slice parameter methods are read-only
         my $new_chr_slice = Bio::EnsEMBL::Slice->new(
@@ -176,7 +179,7 @@ sub _create_or_extend_chr_slice {
             -strand            => 1,
             -coord_system      => $self->get_set_ChrCoordSystem,
         );
-        $chrslice{$self} = $new_chr_slice;
+        $self->_chr_slice($new_chr_slice);
     } else {
         # Create the first version of the Slice
         $chr_slice = Bio::EnsEMBL::Slice->new(
@@ -186,9 +189,15 @@ sub _create_or_extend_chr_slice {
             -strand            => 1,
             -coord_system      => $self->get_set_ChrCoordSystem,
         );
-        $chrslice{$self} = $chr_slice;
+        $self->_chr_slice($chr_slice);
     }
     return;
+}
+
+sub _chr_slice {
+    my ($self, @args) = @_;
+    $region{$self}->slice(@args) if @args;
+    return $region{$self}->slice;
 }
 
 sub _build_clone_sequence {
@@ -247,7 +256,7 @@ sub _build_clone_sequence {
     }
 
         ## FIXME: $cln_author may be passed in the XML, but is ultimately ignored by write_region
-    #my $cln_author=$self->make_Author($data->{'author'}, $data->{'author_email'});
+    #my $cln_author=$self->_make_Author($data->{'author'}, $data->{'author_email'});
 
     # create tiles (offset_in_slice + contig_component_slice + attributes)
     my $ctg_cmp_slice = Bio::EnsEMBL::Slice->new(
@@ -279,20 +288,19 @@ sub _build_clone_sequence {
         );
     $cs->ContigInfo($ci);
 
-    my $cs_list = $clone_sequence_list{$self} ||= [];
-    push @$cs_list, $cs;
+    $region{$self}->add_clone_sequences($cs);
 
     return;
 }
 
-sub get_Analysis {
+sub _get_Analysis {
     my ($self, $name) = @_;
 
     my $ana = $logic_ana{$self}{$name} ||= Bio::EnsEMBL::Analysis->new(-logic_name => $name);
     return $ana;
 }
 
-sub build_Evidence {
+sub _build_Evidence {
     my ($self, $data) = @_;
 
     my $evidence = Bio::Vega::Evidence->new(
@@ -305,7 +313,7 @@ sub build_Evidence {
     return;
 }
 
-sub build_XRef {
+sub _build_XRef {
     my ($self, $data) = @_;
 
     my $xref = Bio::EnsEMBL::DBEntry->new(
@@ -323,19 +331,11 @@ sub build_XRef {
     return;
 }
 
-sub build_DNA {
+sub _build_Feature {
     my ($self, $data) = @_;
 
-    $dna{$self} = $data->{'dna'};
-
-    return;
-}
-
-sub build_Feature {
-    my ($self, $data) = @_;
-
-    my $ana = $self->get_Analysis($data->{'type'});
-    my $chr_slice = $self->get_ChromosomeSlice;
+    my $ana = $self->_get_Analysis($data->{'type'});
+    my $chr_slice = $self->_chr_slice;
 
        ##convert xml coordinates which are in chromosomal coords - to feature coords
     my $slice_offset = $chr_slice->start - 1;
@@ -349,16 +349,15 @@ sub build_Feature {
         -display_label => $data->{'label'},
         -slice         => $chr_slice,
     );
-    my $list = $feature_list{$self} ||= [];
-    push @$list, $feature;
+    $region{$self}->add_seq_features($feature);
 
     return;
 }
 
-sub build_Exon {
+sub _build_Exon {
     my ($self, $data) = @_;
 
-    my $chr_slice = $self->get_ChromosomeSlice;
+    my $chr_slice = $self->_chr_slice;
 
     my $exon = Bio::Vega::Exon->new(
         -start     => $data->{'start'},
@@ -399,13 +398,13 @@ sub add_xrefs_to_object {
     return;
 }
 
-sub build_Transcript {
+sub _build_Transcript {
     my ($self, $data) = @_;
 
     my $exons = delete $exon_list{$self};
-    my $chr_slice = $self->get_ChromosomeSlice;
+    my $chr_slice = $self->_chr_slice;
 
-    my $ana = $self->get_Analysis($data->{'analysis'} || 'Otter');
+    my $ana = $self->_get_Analysis($data->{'analysis'} || 'Otter');
 
     my $transcript = Bio::Vega::Transcript->new(
         -stable_id => $data->{'stable_id'},
@@ -474,7 +473,7 @@ sub build_Transcript {
     }
 
     if ($data->{'author'}) {
-        my $transcript_author = $self->make_Author($data->{'author'}, $data->{'author_email'});
+        my $transcript_author = $self->_make_Author($data->{'author'}, $data->{'author_email'});
         $transcript->transcript_author($transcript_author);
     }
 
@@ -553,15 +552,15 @@ sub translation_pos {
   }
 }
 
-sub build_Locus {
+sub _build_Locus {
     my ($self, $data) = @_;
 
     ## version and is_current ??
     my $transcripts = delete $transcript_list{$self};
     ## transcript author group has been temporarily set to 'anything' ??
 
-    my $chr_slice = $self->get_ChromosomeSlice;
-    my $ana = $self->get_Analysis($data->{'analysis'} || 'Otter');
+    my $chr_slice = $self->_chr_slice;
+    my $ana = $self->_get_Analysis($data->{'analysis'} || 'Otter');
     my $gene = Bio::Vega::Gene->new(
         -stable_id => $data->{'stable_id'},
         -slice => $chr_slice,
@@ -593,7 +592,7 @@ sub build_Locus {
     $gene->status($status);
 
     if ($data->{'author'}) {
-        my $gene_author = $self->make_Author($data->{'author'}, $data->{'author_email'});
+        my $gene_author = $self->_make_Author($data->{'author'}, $data->{'author_email'});
         $gene->gene_author($gene_author);
     }
 
@@ -628,8 +627,7 @@ sub build_Locus {
     $gene->start($gene->start - $slice_offset);
     $gene->end(  $gene->end   - $slice_offset);
 
-    my $list = $gene_list{$self} ||= [];
-    push @$list, $gene;
+    $region{$self}->add_genes($gene);
 
     return;
 }
@@ -673,7 +671,7 @@ sub _build_gene_attributes
     return @gene_attributes;
 }
 
-sub do_nothing {
+sub _do_nothing {
     return;
 }
 
@@ -777,41 +775,11 @@ sub get_set_CoordSystem {
     return $self->$set($coord_system);
 }
 
-sub get_ChromosomeSlice {
+# DELETE ME once re-factoring is complete
+sub region {
     my ($self) = @_;
 
-    return $chrslice{$self};
-}
-
-sub set_ChromosomeSlice {
-    my ($self, $slice) = @_;
-
-    $chrslice{$self} = $slice;
-
-    return;
-}
-
-sub get_CloneSequences {
-    my ($self) = @_;
-
-    if (my $cs = $clone_sequence_list{$self}) {
-        my @clone_sequences = sort { $a->chr_start() <=> $b->chr_start() } @$cs;
-        return @clone_sequences;
-    } else {
-        return;
-    }
-}
-
-sub get_Genes {
-    my ($self) = @_;
-
-    return $gene_list{$self} || [];
-}
-
-sub get_SimpleFeatures {
-    my ($self) = @_;
-
-    return $feature_list{$self} || [];
+    return $region{$self};
 }
 
 
@@ -826,7 +794,7 @@ sub make_Attribute {
         );
 }
 
-sub make_Author {
+sub _make_Author {
     my ($self, $name, $email) = @_;
 
     $email ||= $name;
