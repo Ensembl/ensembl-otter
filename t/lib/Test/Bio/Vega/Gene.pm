@@ -46,7 +46,7 @@ sub truncated_flag : Test(3) {
 sub matches_parsed_xml {
     my ($test, $parsed_xml, $description) = @_;
     my $gene = $test->our_object;
-    my $gene_info = OtterTest::TestRegion->new->gene_info_lookup($parsed_xml->{stable_id});
+    my $gene_info = OtterTest::TestRegion->new(0)->gene_info_lookup($parsed_xml->{stable_id});
     note "stable_id '$parsed_xml->{stable_id}'";
     $test->attributes_are($gene,
                           {
