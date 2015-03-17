@@ -3,7 +3,6 @@ package Bio::Otter::ServerAction::XML::Region;
 use strict;
 use warnings;
 
-use Bio::Vega::Region;
 use Bio::Vega::Transform::XMLToRegion;
 use Bio::Vega::Transform::RegionToXML;
 
@@ -33,15 +32,7 @@ sub serialise_region {
 sub deserialise_region {
     my ($self, $xml_string) = @_;
 
-    my $parser = Bio::Vega::Transform::XMLToRegion->new;
-    $parser->parse($xml_string);
-
-    my $region = Bio::Vega::Region->new;
-    $region->slice($parser->get_ChromosomeSlice);
-    $region->clone_sequences($parser->get_CloneSequences);
-    $region->genes(@{$parser->get_Genes});
-    $region->seq_features(@{$parser->get_SimpleFeatures});
-
+    my $region = Bio::Vega::Transform::XMLToRegion->new->parse($xml_string);
     return $region;
 }
 

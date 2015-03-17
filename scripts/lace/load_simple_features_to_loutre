@@ -41,7 +41,7 @@ foreach my $file ( `ls $input_dir` ) {
 
   ##create an XML parser
   $parser = Bio::Vega::Transform::XMLToRegion->new;
-  $parser->parsefile($xmlfile);
+  my $region = $parser->parsefile($xmlfile);
 
   my $cl = Bio::Otter::Lace::Defaults::make_Client();
   my $ds = $cl->get_DataSet_by_name($dataset_name);
@@ -65,14 +65,14 @@ foreach my $file ( `ls $input_dir` ) {
   if( eval{
     # Load SimpleFeatures in xml
 
-    my $chr_slice=$parser->get_ChromosomeSlice;
+    my $chr_slice=$region->slice;
 
     my $new_slice = $sa->fetch_by_name($chr_slice->name);
 
-    my $simple_features=$parser->get_SimpleFeatures;
+    my @simple_features = $region->seq_features;
     my $sfa=$db->get_SimpleFeatureAdaptor;
 
-    foreach my $new_feat (@$simple_features) {
+    foreach my $new_feat (@simple_features) {
 
       $new_feat->slice($new_slice);
       eval { $sfa->store($new_feat); 1; }

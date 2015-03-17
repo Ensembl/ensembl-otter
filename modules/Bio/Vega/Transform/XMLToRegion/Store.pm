@@ -49,13 +49,11 @@ sub store {
         }
     }
 
-    # We need a new CoordSystemAdaptor to ensure the mapping cache is regenerated :-(
-    # Bio::EnsEMBL::Registry->clear;
-
-    my $slice = $self->get_ChromosomeSlice;
+    my $region = $self->region;
+    my $slice = $region->slice;
 
     # Take chromosome name from first CloneSequence
-    my @clone_seqs = $self->get_CloneSequences;
+    my @clone_seqs = $region->sorted_clone_sequences;
     my $chromosome = $clone_seqs[0]->chromosome;
 
     my $db_slice = $self->slice_stored_if_needed($slice, $dna, $chromosome);
@@ -67,7 +65,7 @@ sub store {
     }
 
     my $gene_a = $vega_dba->get_GeneAdaptor;
-    foreach my $gene ( @{$self->get_Genes} ) {
+    foreach my $gene ( $region->genes ) {
         if ($reattach) {
             $self->_reattach_gene($gene, $db_slice);
         }
@@ -75,7 +73,7 @@ sub store {
     }
 
     my $sf_a = $vega_dba->get_SimpleFeatureAdaptor;
-    foreach my $sf ( @{$self->get_SimpleFeatures} ) {
+    foreach my $sf ( $region->seq_features ) {
         if ($reattach) {
             $sf->slice($db_slice);
         }

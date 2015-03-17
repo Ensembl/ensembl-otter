@@ -249,13 +249,13 @@ sub init_AceDatabase {
 
     my $parser = Bio::Vega::Transform::XMLToRegion::Combo->new;
     $parser->vega_dba($self->DB->vega_dba); # may be needed to store CoordSystems
-    $parser->parse($xml_string);
+    my $region = $parser->parse($xml_string);
     $self->write_otter_acefile($parser);
 
     my ($raw_dna, @tiles) = $self->get_assembly_dna;
     $self->write_dna_data($raw_dna, @tiles);
 
-    $self->DB->species($parser->species);
+    $self->DB->species($region->species);
     $parser->store($raw_dna);
 
     $self->write_methods_acefile;
@@ -330,17 +330,17 @@ sub recover_slice_from_region_xml {
         $self->logger->logconfess("Could not fetch XML from SQLite DB to create smart slice");
     }
 
-    my $parser = Bio::Vega::Transform::XMLToRegion->new;
-    $parser->parse($xml);
-    my $chr_slice = $parser->get_ChromosomeSlice;
+    my $region = Bio::Vega::Transform::XMLToRegion->new->parse($xml);
 
+    # Perhaps we need Bio::Otter::Lace::Slice->new_from_region()
+    my $chr_slice = $region->slice;
     my $slice = Bio::Otter::Lace::Slice->new(
         $client,
-        $parser->species,
+        $region->species,
         $chr_slice->seq_region_name,
         $chr_slice->coord_system->name,
         $chr_slice->coord_system->version,
-        $parser->chromosome_name,
+        $region->chromosome_name,
         $chr_slice->start,
         $chr_slice->end,
         );

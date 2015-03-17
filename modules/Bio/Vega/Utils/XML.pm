@@ -40,14 +40,13 @@ sub freeze_thaw_gene {
         [],
         );
     # warn $xml;
-    my $parser = Bio::Vega::Transform::XMLToRegion->new;
-    $parser->parse($xml);
-    my $xml_gene_list = $parser->get_Genes;
-    unless (@$xml_gene_list == 1) {
-        die sprintf "Weird.  Put 1 gene into XML but got %d out", scalar @$xml_gene_list;
+    my $region = Bio::Vega::Transform::XMLToRegion->new->parse($xml);
+    my @xml_gene_list = $region->genes;
+    unless (@xml_gene_list == 1) {
+        die sprintf "Weird.  Put 1 gene into XML but got %d out", scalar @xml_gene_list;
     }
 
-    my $xml_gene = $xml_gene_list->[0];
+    my $xml_gene = $xml_gene_list[0];
     $xml_gene->attach_slice($slice);
     return $xml_gene;
 }
