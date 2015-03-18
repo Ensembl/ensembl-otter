@@ -5,6 +5,7 @@ use warnings;
 
 use Bio::Vega::Transform::XMLToRegion;
 use Bio::Vega::Transform::RegionToXML;
+use Bio::Vega::CoordSystemFactory;
 
 use base 'Bio::Otter::ServerAction::Region';
 
@@ -32,7 +33,11 @@ sub serialise_region {
 sub deserialise_region {
     my ($self, $xml_string) = @_;
 
-    my $region = Bio::Vega::Transform::XMLToRegion->new->parse($xml_string);
+    my $cs_factory = Bio::Vega::CoordSystemFactory->new;
+    my $parser = Bio::Vega::Transform::XMLToRegion->new;
+    $parser->coord_system_factory($cs_factory);
+
+    my $region = $parser->parse($xml_string);
     return $region;
 }
 
