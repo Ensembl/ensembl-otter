@@ -40,14 +40,11 @@ sub store {
 
     my $vega_dba = $self->vega_dba;
 
-    my $cs_a = $self->vega_dba->get_CoordSystemAdaptor;
-    foreach my $cs_type ( qw( Chr Clone Contig DnaContig ) ) {
-        my $get_set = "get_set_${cs_type}CoordSystem";
-        my $coord_system = $self->$get_set;
-        unless ($coord_system->is_stored($vega_dba)) {
-            $cs_a->store($coord_system);
-        }
-    }
+    # This is usually done by B:O:L:DB->load_dataset_info, but just in case,
+    # we do it here. The correct coord_system_factory will store the instantiated
+    # coord_systems in the database.
+    #
+    $self->coord_system_factory->instantiate_all;
 
     my $region = $self->region;
     my $slice = $region->slice;
@@ -99,11 +96,9 @@ sub slice_stored_if_needed {
     } else {
         $self->logger->debug('creating and storing slice');
 
-        # db_seq_region's coord_system needs to be the one already in the DB.
-        my $cs_adaptor = $vega_dba->get_CoordSystemAdaptor;
-        my $cs_chr    = $cs_adaptor->fetch_by_name($region_slice->coord_system->name,
-                                                   $region_slice->coord_system->version);
-        my $cs_dna_contig = $cs_adaptor->fetch_by_name('dna_contig', 'Otter');
+        my $cs_factory    = $self->coord_system_factory;
+        my $cs_chr        = $cs_factory->coord_system($region_slice->coord_system->name);
+        my $cs_dna_contig = $cs_factory->coord_system('dna_contig');
 
         # db_seq_region must start from 1
         my $db_seq_region_parameters = {
@@ -165,7 +160,10 @@ sub _store_clone_sequence {
     my $vega_dba = $self->vega_dba;
 
     my $slice_adaptor = $vega_dba->get_SliceAdaptor;
-    my $clone_coord_sys = $self->get_CloneCoordSystem;
+
+    my $cs_factory       = $self->coord_system_factory;
+    my $clone_coord_sys  = $cs_factory->coord_system('clone');
+    my $contig_coord_sys = $cs_factory->coord_system('contig');
 
     my $clone = $slice_adaptor->fetch_by_region(
         $clone_coord_sys->name,
@@ -188,8 +186,6 @@ sub _store_clone_sequence {
                               qw( embl_acc embl_version intl_clone_name );
         $attrib_adaptor->store_on_Slice($clone, \@cln_attribs);
     }
-
-    my $contig_coord_sys = $self->get_ContigCoordSystem;
 
     my $db_contig = $slice_adaptor->fetch_by_region(
         $contig_coord_sys->name,
@@ -221,60 +217,6 @@ sub _store_clone_sequence {
     }
 
     return;
-}
-
-# Overrides parent to check DB first
-#
-sub get_set_CoordSystem {
-    my ($self, $cs_type) = @_;
-
-    my $get    = "get_${cs_type}CoordSystem";
-
-    my $coord_system = $self->$get;
-    return $coord_system if $coord_system;
-
-    my $create = "create_${cs_type}CoordSystem";
-    my $set    = "set_${cs_type}CoordSystem";
-
-    my $template_cs = $self->$create;
-
-    # First check we don't already have it
-    my $cs_a = $self->vega_dba->get_CoordSystemAdaptor;
-    $coord_system = $cs_a->fetch_by_name($template_cs->name, $template_cs->version);
-
-    # If not, return the template - it'll get stored later if needed
-    $coord_system = $template_cs unless $coord_system;
-
-    return $self->$set($coord_system);
-}
-
-sub get_DnaContigCoordSystem {
-    my ($self) = @_;
-
-    return $dna_contig_coord_system{$self};
-}
-
-sub set_DnaContigCoordSystem {
-    my ($self, $dna_contig_coord_system) = @_;
-
-    return $dna_contig_coord_system{$self} = $dna_contig_coord_system;
-}
-
-sub create_DnaContigCoordSystem {
-    my ($self) = @_;
-    return Bio::EnsEMBL::CoordSystem->new(
-        -name           => 'dna_contig',
-        -version        => 'Otter',
-        -rank           => 6,
-        -sequence_level => 1,
-        -default        => 1,
-        );
-}
-
-sub get_set_DnaContigCoordSystem {
-    my ($self) = @_;
-
-    return $self->get_set_CoordSystem('DnaContig');
 }
 
 # Required by Bio::Otter::Log::WithContextMixin

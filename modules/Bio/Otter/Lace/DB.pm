@@ -10,6 +10,8 @@ use DBI;
 
 use Bio::Otter::Lace::DB::ColumnAdaptor;
 use Bio::Otter::Lace::DB::OTFRequestAdaptor;
+use Bio::Vega::CoordSystemFactory;
+use Bio::EnsEMBL::Registry;
 
 use parent qw( Bio::Otter::Log::WithContextMixin );
 
@@ -108,19 +110,23 @@ sub vega_dba {
     my ($self) = @_;
     return $vega_dba{$self} if $vega_dba{$self};
 
-    # This pulls in EnsEMBL, so we only do it if required, to reduce the footprint of filter_get &co.
-    require Bio::Vega::DBSQL::DBAdaptor;
-
     $self->_is_loaded('dataset_info') or
         $self->logger->logconfess("Cannot create Vega adaptor until dataset info is loaded");
 
-    my $dbc = Bio::Vega::DBSQL::DBAdaptor->new(
-        -driver => 'SQLite',
-        -dbname => $file{$self},
+    return $vega_dba{$self} = $self->_dba;
+}
+
+sub _dba {
+    my ($self) = @_;
+
+    # This pulls in EnsEMBL, so we only do it if required, to reduce the footprint of filter_get &co.
+    require Bio::Vega::DBSQL::DBAdaptor;
+
+    return Bio::Vega::DBSQL::DBAdaptor->new(
+        -driver  => 'SQLite',
+        -dbname  => $self->file,
         -species => $self->species,
         );
-
-    return $vega_dba{$self} = $dbc;
 }
 
 sub session_slice {
@@ -235,42 +241,6 @@ sub create_tables {
     return;
 }
 
-my @local_coord_system = (
-    {
-        coord_system_id => 100,
-        species_id      => 1,
-        name            => 'clone',
-        rank            => 4,
-        attrib          => 'default_version',
-    },
-    {
-        coord_system_id => 101,
-        species_id      => 1,
-        name            => 'contig',
-        rank            => 5,
-        attrib          => 'default_version',
-    },
-    {
-        coord_system_id => 102,
-        species_id      => 1,
-        name            => 'dna_contig',
-        version         => 'Otter',
-        rank            => 6,
-        attrib          => 'default_version,sequence_level',
-    },
-);
-
-my %local_meta = (
-    'assembly.mapping.local' => {
-        species_id => 1,
-        values     => [
-            'chromosome:Otter#dna_contig:Otter',
-            'chromosome:Otter#contig',
-            'clone#contig',
-            ],
-    },
-);
-
 sub load_dataset_info {
     my ($self, $dataset) = @_;
     return if $self->_is_loaded('dataset_info');
@@ -286,35 +256,75 @@ sub load_dataset_info {
     my @cs_cols = qw(                                        coord_system_id  species_id  name  version  rank  attrib );
     my $cs_sth  = $dbh->prepare(q{ INSERT INTO coord_system (coord_system_id, species_id, name, version, rank, attrib)
                                                      VALUES (?, ?, ?, ?, ?, ?) });
+
+    # I'm not really sure we need to do this - we could just use a local version
+    #
     my $cs_chr  = $dataset->get_db_info_item('coord_system.chromosome');
+    my $local_cs_spec = {
+        $cs_chr->{name} => {
+            '-version'        => $cs_chr->{version},
+            '-rank'           => $cs_chr->{rank},
+            '-default'        => $cs_chr =~ m/default_version/,
+            '-sequence_level' => $cs_chr =~ m/sequence_level/,
+        },
+    };
 
     my @at_cols = qw(                                       attrib_type_id  code  name  description );
     my $at_sth  = $dbh->prepare(q{ INSERT INTO attrib_type (attrib_type_id, code, name, description)
                                                     VALUES (?, ?, ?, ?) });
     my $at_list = $dataset->get_db_info_item('attrib_type');
 
+    my $cs_factory = Bio::Vega::CoordSystemFactory->new(
+        dba           => $self->_dba, # a throw-away, see also Registry->clear below
+        create_in_db  => 1,
+        override_spec => $local_cs_spec,
+        );
+
+    my %local_meta = (
+        'assembly.mapping' => {
+            species_id => 1,
+            values     => [
+                $cs_factory->assembly_mappings,
+            ],
+        },
+        );
+
     $dbh->begin_work;
 
-    my %meta = ( %$meta_hash, %local_meta );
-    while (my ($key, $details) = each %meta) {
-
-        next if $key eq 'assembly.mapping'; # we do our own mapping...
-        $key = 'assembly.mapping' if $key eq 'assembly.mapping.local';
-
+    # Meta first, so that CoordSystemAdaptor doesn't complain about missing schema_version
+    #
+    while (my ($key, $details) = each %$meta_hash) {
+        next if $key eq 'assembly.mapping'; # we do our own mapping, below...
         foreach my $value (@{$details->{values}}) {
             $meta_sth->execute($details->{species_id}, $key, $value);
         }
     }
 
-    foreach my $row ($cs_chr, @local_coord_system) {
-        $cs_sth->execute(@$row{@cs_cols});
-    }
-
+    # Attributes
+    #
     foreach my $row (@$at_list) {
         $at_sth->execute(@$row{@at_cols});
     }
 
     $dbh->commit;
+
+    $dbh->begin_work;
+
+    # Coord systems via factory
+    #
+    $cs_factory->instantiate_all;
+
+    # Mappings
+    #
+    while (my ($key, $details) = each %local_meta) {
+        foreach my $value (@{$details->{values}}) {
+            $meta_sth->execute($details->{species_id}, $key, $value);
+        }
+    }
+
+    $dbh->commit;
+
+    Bio::EnsEMBL::Registry->clear; # else mappings won't be loaded in our vega_dba() :-(
 
     $self->_is_loaded('dataset_info', 1);
 

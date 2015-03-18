@@ -17,7 +17,6 @@ use Bio::Vega::Translation;
 use Bio::EnsEMBL::SimpleFeature;
 use Bio::EnsEMBL::Analysis;
 use Bio::EnsEMBL::Slice;
-use Bio::EnsEMBL::CoordSystem;
 use Bio::EnsEMBL::Attribute;
 use Bio::EnsEMBL::DBEntry;
 use Bio::Vega::Author;
@@ -42,9 +41,7 @@ my (
     %chromosome_name,
     %author_cache,
 
-    %chr_coord_system,
-    %clone_coord_system,
-    %ctg_coord_system,
+    %coord_system_factory,
 );
 
 
@@ -61,9 +58,6 @@ sub DESTROY {
     delete $seen_transcript_name{$self};
     delete $chromosome_name{$self};
     delete $author_cache{$self};
-    delete $chr_coord_system{$self};
-    delete $clone_coord_system{$self};
-    delete $ctg_coord_system{$self};
 
     $self->NEXT::DESTROY;
 
@@ -169,6 +163,8 @@ sub _create_or_extend_chr_slice {
            ."assembly_type='$assembly_type' start='$start' end='$end'";
     }
 
+    my $chr_coord_system = $self->coord_system_factory->coord_system('chromosome');
+
     if (my $chr_slice = $self->_chr_slice) {
         # Extend the cached version of the slice:
         # We have to make a new slice, because slice parameter methods are read-only
@@ -177,7 +173,7 @@ sub _create_or_extend_chr_slice {
             -start             => $start < $chr_slice->start ? $start : $chr_slice->start,
             -end               => $end   > $chr_slice->end   ? $end   : $chr_slice->end,
             -strand            => 1,
-            -coord_system      => $self->get_set_ChrCoordSystem,
+            -coord_system      => $chr_coord_system,
         );
         $self->_chr_slice($new_chr_slice);
     } else {
@@ -187,7 +183,7 @@ sub _create_or_extend_chr_slice {
             -start             => $start,
             -end               => $end,
             -strand            => 1,
-            -coord_system      => $self->get_set_ChrCoordSystem,
+            -coord_system      => $chr_coord_system,
         );
         $self->_chr_slice($chr_slice);
     }
@@ -265,7 +261,7 @@ sub _build_clone_sequence {
         -end                => $cmp_end,
         -strand             => $strand,
         -seq_region_length  => $cln_length,
-        -coord_system       => $self->get_set_ContigCoordSystem,
+        -coord_system       => $self->coord_system_factory->coord_system('contig'),
     );
 
     my $cs = Bio::Otter::Lace::CloneSequence->new;
@@ -675,106 +671,6 @@ sub _do_nothing {
     return;
 }
 
-sub get_ChrCoordSystem {
-    my ($self) = @_;
-
-    return $chr_coord_system{$self};
-}
-
-sub set_ChrCoordSystem {
-    my ($self, $chr_coord_system) = @_;
-
-    return $chr_coord_system{$self} = $chr_coord_system;
-}
-
-sub create_ChrCoordSystem {
-    my ($self) = @_;
-    return Bio::EnsEMBL::CoordSystem->new(
-        -name           => 'chromosome',
-        -version        => 'Otter',
-        -rank           => 2,
-        -sequence_level => 0,
-        -default        => 1,
-        );
-}
-
-sub get_set_ChrCoordSystem {
-    my ($self) = @_;
-
-    return $self->get_set_CoordSystem('Chr');
-}
-
-sub get_CloneCoordSystem {
-    my ($self) = @_;
-
-    return $clone_coord_system{$self};
-}
-
-sub set_CloneCoordSystem {
-    my ($self, $clone_coord_system) = @_;
-
-    return $clone_coord_system{$self} = $clone_coord_system;
-}
-
-sub create_CloneCoordSystem {
-    my ($self) = @_;
-    return Bio::EnsEMBL::CoordSystem->new(
-        -name           => 'clone',
-        -rank           => 4,
-        -sequence_level => 0,
-        -default        => 1,
-        );
-}
-
-sub get_set_CloneCoordSystem {
-    my ($self) = @_;
-
-    return $self->get_set_CoordSystem('Clone');
-}
-
-sub get_ContigCoordSystem {
-    my ($self) = @_;
-
-    return $ctg_coord_system{$self};
-}
-
-sub set_ContigCoordSystem {
-    my ($self, $contig_coord_system) = @_;
-
-    return $ctg_coord_system{$self} = $contig_coord_system;
-}
-
-sub create_ContigCoordSystem {
-    my ($self) = @_;
-    return Bio::EnsEMBL::CoordSystem->new(
-        -name           => 'contig',
-        -rank           => 5,
-        -sequence_level => 0,
-        -default        => 1,
-        );
-}
-
-sub get_set_ContigCoordSystem {
-    my ($self) = @_;
-
-    return $self->get_set_CoordSystem('Contig');
-}
-
-sub get_set_CoordSystem {
-    my ($self, $cs_type) = @_;
-
-    my $get    = "get_${cs_type}CoordSystem";
-
-    my $coord_system = $self->$get;
-    return $coord_system if $coord_system;
-
-    my $set    = "set_${cs_type}CoordSystem";
-    my $create = "create_${cs_type}CoordSystem";
-
-    $coord_system = $self->$create;
-    return $self->$set($coord_system);
-}
-
 # DELETE ME once re-factoring is complete
 sub region {
     my ($self) = @_;
@@ -808,6 +704,13 @@ sub _make_Author {
         $author_cache{$self}{$email} = $author;
     }
     return $author;
+}
+
+sub coord_system_factory {
+    my ($self, @args) = @_;
+    ($coord_system_factory{$self}) = @args if @args;
+    my $coord_system_factory = $coord_system_factory{$self};
+    return $coord_system_factory;
 }
 
 1;
