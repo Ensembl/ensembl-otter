@@ -6,6 +6,7 @@ use Test::Class::Most
 
 use OtterTest::DB;
 
+use Bio::Vega::CoordSystemFactory;
 use Bio::Vega::Region;
 use Bio::Vega::Transform::RegionToXML;
 
@@ -36,6 +37,11 @@ sub teardown {
     Bio::EnsEMBL::Registry->clear; # nasty nasty caches!
     $test->SUPER::teardown;
     return;
+}
+
+sub get_coord_system_factory {
+    my $test = shift;
+    return Bio::Vega::CoordSystemFactory->new( dba => $test->test_db->vega_dba, create_in_db => 1 );
 }
 
 # Override the our_object() accessor to set vega_dba after construction

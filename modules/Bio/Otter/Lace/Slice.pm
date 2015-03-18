@@ -150,6 +150,7 @@ sub ensembl_slice {
         -seq_region_name    => $self->ssname,
         -start              => $self->start,
         -end                => $self->end,
+        # FIXME - this should be from a factory
         -coord_system   => Bio::EnsEMBL::CoordSystem->new(
             -name           => $self->csname,
             -version        => $self->csver,
