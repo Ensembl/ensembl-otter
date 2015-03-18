@@ -37,7 +37,7 @@ use Bio::Vega::Transform::RegionToXML;
         my $slice = $gene->feature_Slice;
         $gene = $gene->transfer($slice);
         die("Broken before refactoring of Bio::Vega::Transform::RegionToXML on 2013-07-15.");
-        # ...as generate_OtterXML takes no arguments.
+        # ...as generate_OtterXML takes no arguments, AND XMLToRegion needs a CoordSystemFactory
         my $before_xml = Bio::Vega::Transform::RegionToXML->new->generate_OtterXML(
             [$slice],
             $dba,

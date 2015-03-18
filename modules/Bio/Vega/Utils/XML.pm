@@ -31,7 +31,7 @@ sub freeze_thaw_gene {
     my $slice = $gene->feature_Slice;
     $gene = $gene->transfer($slice);
     die("Broken before refactoring of Bio::Vega::Transform::RegionToXML on 2013-07-15.") if 1;
-    # ...as generate_OtterXML takes no arguments.
+    # ...as generate_OtterXML takes no arguments, AND XMLToRegion needs a CoordSystemFactory
     my $xml = Bio::Vega::Transform::RegionToXML->new->generate_OtterXML(
         $slice,
         $gene->adaptor->db,

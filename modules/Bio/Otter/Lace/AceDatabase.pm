@@ -13,6 +13,7 @@ use Config::IniFiles;
 use Try::Tiny;
 use Scalar::Util 'weaken';
 
+use Bio::Vega::CoordSystemFactory;
 use Bio::Vega::Region;
 use Bio::Vega::Transform::XMLToRegion;
 use Bio::Vega::Transform::XMLToRegion::Combo;
@@ -248,7 +249,11 @@ sub init_AceDatabase {
     $self->write_file('01_before.xml', $xml_string);
 
     my $parser = Bio::Vega::Transform::XMLToRegion::Combo->new;
-    $parser->vega_dba($self->DB->vega_dba); # may be needed to store CoordSystems
+    $parser->vega_dba($self->DB->vega_dba);
+
+    my $cs_factory = Bio::Vega::CoordSystemFactory->new( dba => $self->DB->vega_dba );
+    $parser->coord_system_factory($cs_factory);
+
     my $region = $parser->parse($xml_string);
     $self->write_otter_acefile($parser);
 
@@ -330,7 +335,9 @@ sub recover_slice_from_region_xml {
         $self->logger->logconfess("Could not fetch XML from SQLite DB to create smart slice");
     }
 
-    my $region = Bio::Vega::Transform::XMLToRegion->new->parse($xml);
+    my $parser = Bio::Vega::Transform::XMLToRegion->new;
+    $parser->coord_system_factory(Bio::Vega::CoordSystemFactory->new); # Should we get this from somewhere else?
+    my $region = $parser->parse($xml);
 
     # Perhaps we need Bio::Otter::Lace::Slice->new_from_region()
     my $chr_slice = $region->slice;

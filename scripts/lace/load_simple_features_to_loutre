@@ -41,6 +41,7 @@ foreach my $file ( `ls $input_dir` ) {
 
   ##create an XML parser
   $parser = Bio::Vega::Transform::XMLToRegion->new;
+  die 'Broken by refactoring of Bio::Vega::Transfrom::XMLToRegion on 2015-03-18: needs CoordSystemFactory.';
   my $region = $parser->parsefile($xmlfile);
 
   my $cl = Bio::Otter::Lace::Defaults::make_Client();
