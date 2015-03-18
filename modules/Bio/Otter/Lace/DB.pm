@@ -312,10 +312,7 @@ sub load_dataset_info {
 
     # Coord systems via factory
     #
-    foreach my $cs_name ( $cs_factory->known ) {
-        # The act of retrieving them causes them to be created in the DB
-        my $cs = $cs_factory->coord_system($cs_name);
-    }
+    $cs_factory->instantiate_all;
 
     # Mappings
     #
