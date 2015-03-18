@@ -91,6 +91,10 @@ sub dba_1_create_in_db : Tests {
 
     my $dba = $test->dba;
     my $dba_factory = $test->class->new( dba => $dba, create_in_db => 1 );
+
+    can_ok $dba_factory, 'instantiate_all';
+    $dba_factory->instantiate_all;
+
     foreach my $name ($dba_factory->known) {
         subtest $name => sub {
             my $cs = $dba_factory->coord_system($name);

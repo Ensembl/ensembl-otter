@@ -72,6 +72,15 @@ sub known {
     return @known;
 }
 
+sub instantiate_all {
+    my ($self) = @_;
+    foreach my $name ( $self->known ) {
+        # Ensure it's brought into existence and cached
+        $self->coord_system($name);
+    }
+    return;
+}
+
 sub assembly_mappings {
     return @_MAPPINGS_SPEC;
 }
