@@ -118,6 +118,18 @@ sub dba_2_already_in_db : Tests {
     return;
 }
 
+sub assembly_mappings : Tests(2) {
+    my $test = shift;
+    my $factory = $test->our_object;
+
+    can_ok $factory, 'assembly_mappings';
+    my @mappings = $factory->assembly_mappings;
+    ok scalar(@mappings), '... and returns some mappings';
+    note 'n(assembly_mappings) = ', scalar(@mappings);
+
+    return;
+}
+
 sub _note_cs {
     my ($cs) = @_;
     note(sprintf '%-10s, v: %-5s, r: %2s, d: %s, s: %s, id: %4s',

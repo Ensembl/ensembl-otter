@@ -17,6 +17,15 @@ Readonly my %_COORD_SYSTEM_SPEC => (
     'dna_contig' => { '-version' => 'Otter', '-rank' => 6, '-default' => 1, '-sequence_level' => 1, },
     );
 
+# Our canned mappings - kept here for consistency with our canned coordinate systems
+#
+no warnings 'qw';
+Readonly my @_MAPPINGS_SPEC => qw(
+    chromosome:Otter#dna_contig:Otter
+    chromosome:Otter#contig
+    clone#contig
+    );
+use warnings 'qw';
 
 sub new {
     my ($class, %args) = @_;
@@ -61,6 +70,10 @@ sub coord_system {
 sub known {
     my @known = sort { $_COORD_SYSTEM_SPEC{$a}->{'-rank'} <=> $_COORD_SYSTEM_SPEC{$b}->{'-rank'} } keys %_COORD_SYSTEM_SPEC;
     return @known;
+}
+
+sub assembly_mappings {
+    return @_MAPPINGS_SPEC;
 }
 
 sub _dba_cs {
