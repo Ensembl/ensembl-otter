@@ -15,11 +15,11 @@ use Scalar::Util 'weaken';
 
 use Bio::Vega::CoordSystemFactory;
 use Bio::Vega::Region;
+use Bio::Vega::Region::Ace;
 use Bio::Vega::Region::Store;
-use Bio::Vega::Transform::XMLToRegion;
-use Bio::Vega::Transform::XMLToRegion::Ace;
 use Bio::Vega::AceConverter;
 use Bio::Vega::Transform::RegionToXML;
+use Bio::Vega::Transform::XMLToRegion;
 
 use Bio::Otter::Debug;
 use Bio::Otter::Lace::AccessionTypeCache;
@@ -249,13 +249,13 @@ sub init_AceDatabase {
         'GET', 'get_region');
     $self->write_file('01_before.xml', $xml_string);
 
-    my $parser = Bio::Vega::Transform::XMLToRegion::Ace->new;
+    my $parser = Bio::Vega::Transform::XMLToRegion->new;
 
     my $cs_factory = Bio::Vega::CoordSystemFactory->new( dba => $self->DB->vega_dba );
     $parser->coord_system_factory($cs_factory);
 
     my $region = $parser->parse($xml_string);
-    $self->write_otter_acefile($parser);
+    $self->write_otter_acefile($region);
 
     my ($raw_dna, @tiles) = $self->get_assembly_dna;
     $self->write_dna_data($raw_dna, @tiles);
@@ -279,12 +279,14 @@ sub init_AceDatabase {
 }
 
 sub write_otter_acefile {
-    my ($self, $parser) = @_;
+    my ($self, $region) = @_;
+
+    my $ace_maker = Bio::Vega::Region::Ace->new;
 
     # Storing ace_text in a file
     my $ace_filename = $self->home . '/rawdata/otter.ace';
     open my $ace_fh, '>', $ace_filename or $self->logger->logdie("Can't write to '$ace_filename'");
-    print $ace_fh $parser->make_ace;
+    print $ace_fh $ace_maker->make_ace($region);
     close $ace_fh or $self->logger->logconfess("Error writing to '$ace_filename' : $!");
     $self->add_acefile($ace_filename);
 
