@@ -138,7 +138,7 @@ sub session_slice {
     $ensembl_slice or
         $self->logger->logconfess("ensembl_slice must be supplied when creating or recovering session_slice");
 
-    # Slice should have been created by Bio::Vega::Transform::XMLToRegion::Store->store()
+    # Slice should have been created by Bio::Vega::Region::Store->store()
 
     my $slice_adaptor = $self->vega_dba->get_SliceAdaptor;
     my $db_seq_region = $slice_adaptor->fetch_by_region(

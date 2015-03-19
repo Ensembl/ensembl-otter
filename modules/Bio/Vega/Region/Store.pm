@@ -1,42 +1,47 @@
 
-### Bio::Vega::Transform::XMLToRegion::Store
+### Bio::Vega::Region::Store
+#
+# NOT a subclass of Bio::Vega::Region
+#
 
-package Bio::Vega::Transform::XMLToRegion::Store;
+package Bio::Vega::Region::Store;
 
 use strict;
 use warnings;
 
-use NEXT;
+use Bio::EnsEMBL::Attribute;
+use Bio::EnsEMBL::Slice;
+use Bio::Vega::Author;
 
-use parent qw( Bio::Vega::Transform::XMLToRegion Bio::Otter::Log::WithContextMixin );
-
-my (
-    %dna_contig_coord_system,
-    %vega_dba,
-    %log_context,
-    );
-
-sub DESTROY {
-    my ($self) = @_;
-
-    delete $dna_contig_coord_system{$self};
-    delete $vega_dba{$self};
-    delete $log_context{$self};
-
-    return $self->NEXT::DESTROY;
-}
+use parent qw( Bio::Otter::Log::WithContextMixin );
 
 # FIXME: log_context setup
 
+sub new {
+    my ($class, %args) = @_;
+    my $self = bless {
+        coord_system_factory => $args{coord_system_factory},
+        vega_dba             => $args{vega_dba},
+    }, $class;
+    return $self;
+}
+
+sub coord_system_factory {
+    my ($self, @args) = @_;
+    ($self->{'coord_system_factory'}) = @args if @args;
+    my $coord_system_factory = $self->{'coord_system_factory'};
+    return $coord_system_factory;
+}
+
 sub vega_dba {
     my ($self, @args) = @_;
-    ($vega_dba{$self}) = @args if @args;
-    my $vega_dba = $vega_dba{$self};
+    ($self->{'vega_dba'}) = @args if @args;
+    my $vega_dba = $self->{'vega_dba'};
     return $vega_dba;
 }
 
 sub store {
-    my ($self, $dna) = @_;
+    my ($self, $region, $dna) = @_;
 
     my $vega_dba = $self->vega_dba;
 
@@ -46,7 +51,6 @@ sub store {
     #
     $self->coord_system_factory->instantiate_all;
 
-    my $region = $self->region;
     my $slice = $region->slice;
 
     # Take chromosome name from first CloneSequence
@@ -112,7 +116,7 @@ sub slice_stored_if_needed {
 
         # Ensure EnsEMBL-style chromosome name is stored
         my $attrib_adaptor = $vega_dba->get_AttributeAdaptor;
-        my $chr_name_attr = $self->make_Attribute('chr', $chromosome);
+        my $chr_name_attr = Bio::EnsEMBL::Attribute->new( -CODE => 'chr', -VALUE => $chromosome);
         $attrib_adaptor->store_on_Slice($db_seq_region, [ $chr_name_attr ] );
 
         # Replace $region_slice with one connected to the database
@@ -219,26 +223,13 @@ sub _store_clone_sequence {
     return;
 }
 
-# Required by Bio::Otter::Log::WithContextMixin
-# (default version is not inside-out compatible!)
-# FIXME: dup with B:O:L:DB
-
-sub log_context {
-    my ($self, $arg) = @_;
-
-    if ($arg) {
-        $log_context{$self} = $arg;
-    }
-
-    return $log_context{$self} if $log_context{$self};
-    return '-B-V-Transform-Otter-Store unnamed-';
-}
+sub default_log_context { return '-B-V-Region-Store unnamed-'; }
 
 1;
 
 __END__
 
-=head1 NAME - Bio::Vega::Transform::XMLToRegion::Store
+=head1 NAME - Bio::Vega::Region::Store
 
 =head1 AUTHOR
 
