@@ -671,13 +671,6 @@ sub _do_nothing {
     return;
 }
 
-# DELETE ME once re-factoring is complete
-sub region {
-    my ($self) = @_;
-
-    return $region{$self};
-}
-
 
 ##make Otter objects methods
 

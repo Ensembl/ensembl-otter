@@ -1,17 +1,14 @@
 
-### Bio::Vega::Transform::XMLToRegion::Ace
+### Bio::Vega::Region::Ace
 
-package Bio::Vega::Transform::XMLToRegion::Ace;
+package Bio::Vega::Region::Ace;
 
 use strict;
 use warnings;
 use Carp;
-use NEXT;
 
 use Hum::Ace::AceText;
 use Bio::Vega::Utils::GeneTranscriptBiotypeStatus 'biotype_status2method';
-
-use base 'Bio::Vega::Transform::XMLToRegion';
 
 my %ens2ace_phase = (
     0   => 1,
@@ -19,55 +16,48 @@ my %ens2ace_phase = (
     1   => 3,
     );
 
-# my (
-#     %ace_string,
-# );
 
-sub DESTROY {
-    my ($self) = @_;
-
-    # delete $ace_string{$self};
-
-    $self->NEXT::DESTROY;
-
-    return;
+sub new {
+    my ($class, %args) = @_;
+    my $self = bless {}, $class;
+    return $self;
 }
 
 
 ### Where should we add "-D" commands to the ace data?
 
 sub make_ace {
-    my ($self) = @_;
+    my ($self, $region) = @_;
 
     # New top level object to generate whole chromosome coordinates
-    my $ace_str = $self->make_ace_chr_assembly;
+    my $ace_str = $self->make_ace_chr_assembly($region);
 
     # Assembly object from chromosome slice
-    $ace_str .= $self->make_ace_assembly;
+    $ace_str .= $self->make_ace_assembly($region);
 
     # Objects for each genomic clone
-    $ace_str .= $self->make_ace_contigs;
+    $ace_str .= $self->make_ace_contigs($region);
 
     # Genes and transcripts
-    $ace_str .= $self->make_ace_genes_transcripts;
+    $ace_str .= $self->make_ace_genes_transcripts($region);
 
     # Authors - we only store the author name
 
     # Genomic features
-    $ace_str .= $self->make_ace_genomic_features;
+    $ace_str .= $self->make_ace_genomic_features($region);
 
     return $ace_str;
 }
 
 sub make_ace_genes_transcripts {
-    my ($self) = @_;
+    my ($self, $region) = @_;
 
-    my $slice_ace   = $self->new_slice_ace_object;
-    my $slice_name  = $self->make_assembly_name;
+    my $slice_ace   = $self->new_slice_ace_object($region);
+    my $slice_name  = $self->make_assembly_name($region);
     my $tsct_str = '';
     my $gene_str = '';
 
-    foreach my $gene ( $self->region->genes ) {
+    foreach my $gene ( $region->genes ) {
         my $gene_name = get_first_attrib_value($gene, 'name');
         my $gene_ace = Hum::Ace::AceText->new_from_class_and_name_with_delete('Locus', $gene_name);
         fill_locus_AceText($gene, $gene_ace);
@@ -244,16 +234,16 @@ sub fill_locus_AceText {
 }
 
 sub new_slice_ace_object {
-    my ($self) = @_;
+    my ($self, $region) = @_;
 
-    my $slice_name = $self->make_assembly_name;
+    my $slice_name = $self->make_assembly_name($region);
     return Hum::Ace::AceText->new_from_class_and_name('Sequence', $slice_name);
 }
 
 sub make_assembly_name {
-    my ($self) = @_;
+    my ($self, $region) = @_;
 
-    my $chr_slice = $self->region->slice;
+    my $chr_slice = $region->slice;
     return sprintf "%s_%d-%d",
         $chr_slice->seq_region_name,
         $chr_slice->start,
@@ -261,13 +251,13 @@ sub make_assembly_name {
 }
 
 sub make_ace_chr_assembly {
-    my ($self) = @_;
+    my ($self, $region) = @_;
 
-    my $chr_slice = $self->region->slice;
+    my $chr_slice = $region->slice;
 
     my $ace = Hum::Ace::AceText->new_from_class_and_name('Sequence', $chr_slice->seq_region_name);
     $ace->add_tag('AGP_Fragment',
-        $self->make_assembly_name, $chr_slice->start, $chr_slice->end,
+        $self->make_assembly_name($region), $chr_slice->start, $chr_slice->end,
         'Align', $chr_slice->start, 1, $chr_slice->length,
         );
 
@@ -275,12 +265,11 @@ sub make_ace_chr_assembly {
 }
 
 sub make_ace_assembly {
-    my ($self) = @_;
+    my ($self, $region) = @_;
 
-    my $region = $self->region;
     my $dataset_name = $region->species or die "species tag is missing";
 
-    my $ace = $self->new_slice_ace_object;
+    my $ace = $self->new_slice_ace_object($region);
     $ace->add_tag('Assembly');
     $ace->add_tag('Species', $dataset_name);
 
@@ -341,10 +330,10 @@ sub make_ace_assembly {
 }
 
 sub make_ace_contigs {
-    my ($self) = @_;
+    my ($self, $region) = @_;
 
     my $str = '';
-    foreach my $cs ($self->region->sorted_clone_sequences) {
+    foreach my $cs ($region->sorted_clone_sequences) {
         $str .= $self->make_ace_ctg($cs);
     }
     return $str;
@@ -421,13 +410,13 @@ sub mRNA_posn {
 }
 
 sub make_ace_genomic_features {
-    my ($self) = @_;
+    my ($self, $region) = @_;
 
-    my @feat_list = $self->region->seq_features;
+    my @feat_list = $region->seq_features;
     unless (@feat_list) {
         return '';
     }
-    my $ace = $self->new_slice_ace_object;
+    my $ace = $self->new_slice_ace_object($region);
     foreach my $feat (@feat_list) {
         # Ace format encodes strand by order of start + end
         my $start = $feat->start;
@@ -462,7 +451,7 @@ sub make_ace_genomic_features {
 
 __END__
 
-=head1 NAME - Bio::Vega::Transform::XMLToRegion::Ace
+=head1 NAME - Bio::Vega::Region::Ace
 
 =head1 AUTHOR
 
