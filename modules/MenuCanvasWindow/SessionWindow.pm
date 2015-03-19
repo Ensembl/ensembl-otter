@@ -41,7 +41,8 @@ use Bio::Otter::Lace::Client;
 use Bio::Otter::RequestQueuer;
 use Bio::Otter::Zircon::ProcessHits;
 use Bio::Otter::ZMap::XML;
-use Bio::Vega::Transform::XMLToRegion::Ace;
+use Bio::Vega::Region::Ace;
+use Bio::Vega::Transform::XMLToRegion;
 use Bio::Vega::CoordSystemFactory;
 
 use Tk::ArrayBar;
@@ -1018,15 +1019,20 @@ sub save_data {
            $adb->DataSet->name,
            $adb->fetch_lock_token);
         die "save_otter_xml returned no XML" unless $xml;
-        my $parser = Bio::Vega::Transform::XMLToRegion::Ace->new;
+
+        my $parser = Bio::Vega::Transform::XMLToRegion->new;
         $parser->coord_system_factory(Bio::Vega::CoordSystemFactory->new);
-        $parser->parse($xml);
-        my $ace_data = $parser->make_ace_genes_transcripts;
+        my $region = $parser->parse($xml);
+
+        my $ace_maker = Bio::Vega::Region::Ace->new;
+        my $ace_data = $ace_maker->make_ace_genes_transcripts($region);
+
         $adb->unsaved_changes(0);
         $self->flag_db_edits(0);    # or the save_ace() will set unsaved_changes back to "1"
         $self->save_ace($ace_data);
         $self->flag_db_edits(1);
         $self->resync_with_db;
+
         $self->set_window_title;
         return 1;
     }
