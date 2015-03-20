@@ -68,7 +68,7 @@ use Storable;
 BEGIN {
   $SERVERROOT = "$Bin/../../../..";
   unshift(@INC, "$SERVERROOT/ensembl/modules");
-#  unshift(@INC, "$SERVERROOT/bioperl-live");
+  unshift(@INC, "$SERVERROOT/bioperl-live");
 }
 
 use Getopt::Long;
