@@ -747,7 +747,7 @@ sub parse_hgnc {
     'Pubmed IDs'      => 'PUBMED',
     'Entrez Gene ID'  => 'EntrezGene',
     'OMIM ID'         => 'MIM_GENE',
-    'RefSeq IDs' => 'RefSeq',
+    'RefSeq IDs'      => 'RefSeq',
   );
 
   #define relationships between RefSeq accession number and database (this is not in the download file)
@@ -833,14 +833,17 @@ sub parse_hgnc {
 
       #set RefSeq records to the correct type of molecule
       elsif ($db eq 'RefSeq') {
-	if (my ($prefix) = $accessions{$db} =~ /^([A-Z]{2})_/) {
-	  if (my $type = $refseq_dbs{$prefix}) {
-	    $xrefs->{$gene_name}->{$type}[0] = $accessions{$db} .'||'. $accessions{$db};
-	  }
-	  elsif (! $report_once{$prefix}) {
-            $report_once{$prefix}++;
-	    $support->log_warning("RefSeq prefix $prefix not recognised\n");
-	  }
+	foreach my $record (split ',', $accessions{$db}) {
+          $record =~ s/^\s+|\s+$//g; #whitespace
+          if (my ($prefix) = $record =~ /^([A-Z]{2})_/) {
+            if (my $type = $refseq_dbs{$prefix}) {
+              push @{$xrefs->{$gene_name}->{$type}[0]}, $record .'||'. $record;
+            }
+            elsif (! $report_once{$prefix}) {
+              $report_once{$prefix}++;
+              $support->log_warning("RefSeq prefix $prefix not recognised\n");
+            }
+          }
 	}
       }
 
