@@ -231,7 +231,6 @@ foreach my $name (@tables) {
 if ($support->param('prune') && $support->user_proceed("\nDo you want to undo all changes from previous runs of this script?")) {
   foreach my $name (@tables) {
     my $backup_name = 'backup_asm_mapping_'.$name;
-    warn $backup_name;
     if (exists($tabs{$backup_name})) {
       $support->log_verbose("Resetting values for table $name\n");
       $vdbh->do("DELETE from $name");
@@ -251,7 +250,7 @@ if ($support->param('prune') && $support->user_proceed("\nDo you want to undo al
 		WHERE  name = 'chromosome'));
 if ($count > 1) {
   $support->log_warning("There is an unexpected number ($count) of chromosome coordinate systems - you need to investigate\n");
-  exit if (! $support->param('dry_run'));
+  exit unless $support->param('dry_run');
 }
 
 my $alt_assembly    = $support->param('ensemblassembly');
@@ -532,11 +531,13 @@ sub munge_loutre_mappings {
   my $sth = $ldbh->prepare($sql);
   $sth->execute;
   my $c = 0;
-  while (my ($asm_start,$asm_end,$cmp_start,$cmp_end,$ori) = $sth->fetchrow_array) {
-    $ass_ins_sth->execute($v_sr_id,$seq_region_id+$alt_offset,$asm_start,$asm_end,$cmp_start+$offset,$cmp_end+$offset,$ori);
-    $c++;
+  if (! $support->param('dry_run')) {
+    while (my ($asm_start,$asm_end,$cmp_start,$cmp_end,$ori) = $sth->fetchrow_array) {
+      $ass_ins_sth->execute($v_sr_id,$seq_region_id+$alt_offset,$asm_start,$asm_end,$cmp_start+$offset,$cmp_end+$offset,$ori);
+      $c++;
+    }
+    $support->log("Inserted $c assembly table_entries\n",3);
   }
-  $support->log("Inserted $c assembly table_entries\n",3);
 }
 
 sub add_equiv_patch {
@@ -650,19 +651,20 @@ sub add_second_assembly {
 sub check_insdc_versions {
   my ($v_name,$dets) = @_;
   my $ename = $dets->{'do_mapping_using'}{'ename'};
-  my ($e_srs_name) = $ename; # =~ /CHR_(.+)$/;
+  my ($e_srs_name) = $ename =~ /CHR_(.+)$/;
   my $e_sr_id = $dets->{'do_mapping_using'}{'esr_id'};
   my $insdc   = $dets->{'insdc'};
   if (! $insdc && (! $support->param('live_update')) ) {
     $support->log_warning("No accession for PATCH $v_name in Vega so we don't know if e! and Vega are using the same PATCH!\n",2);
     return;
   }
-  my @e_patch_names  = $edbh->selectrow_array(qq(
-                SELECT srs.synonym
-                  FROM seq_region_synonym srs, seq_region sr
-                 WHERE srs.seq_region_id = sr.seq_region_id
-                   AND sr.name = '$e_srs_name'
-                   AND srs.external_db_id = '$insdc_edb'));
+  my $sql = qq(SELECT srs.synonym
+                 FROM seq_region_synonym srs, seq_region sr
+                WHERE srs.seq_region_id = sr.seq_region_id
+                  AND sr.name = '$e_srs_name'
+                  AND srs.external_db_id = '$insdc_edb');
+  my @e_patch_names  = $edbh->selectrow_array($sql);
+
   if (scalar(@e_patch_names > 1) && (! $support->param('live_update')) ) {
     $support->log_warning("More than one e! seq_region_synonym found for $v_name, need to alter the code below\n",2);
   }
