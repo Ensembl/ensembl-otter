@@ -36,8 +36,8 @@ Parses a file from MGI and adds xrefs for any new MGI names. Reports on names
 that we don't use so these can be sent back to Havana. Checks if old names are also
 attached to genes on non-reference slices (ie DIL regions)
 
-File to use is ftp://ftp.informatics.jax.org/pub/reports/MRK_VEGA.rpt
-
+File to use is ftp://ftp.informatics.jax.org/pub/reports/MRK_VEGA.rpt - it'll be donwloaded by
+the script.
 
 =head1 LICENCE
 
@@ -66,6 +66,7 @@ BEGIN {
 
 use Getopt::Long;
 use LWP::UserAgent;
+use POSIX qw(strftime);
 use Pod::Usage;
 use Bio::EnsEMBL::Utils::ConversionSupport;
 use Data::Dumper;
@@ -74,18 +75,23 @@ my $support = new Bio::EnsEMBL::Utils::ConversionSupport($SERVERROOT);
 $support->parse_common_options(@_);
 $support->parse_extra_options(
   'mgifixfile=s',
+  'jel_file=s',
   'prune');
 $support->allowed_params(
   $support->get_common_params,
   'mgifixfile',
+  'jel_file',
   'prune');
-$support->check_required_params('mgifixfile');	
 if ($support->param('help') or $support->error) {
   warn $support->error if $support->error;
   pod2usage(1);
 }
 $support->confirm_params;
 $support->init_log;
+
+my $date = strftime "%Y-%m-%d", localtime;
+$support->param('jel_file', ($support->param('logpath')."/mgi_names_to_fix_${date}.txt")) unless $support->param('jel_file');
+my $jel_fh     = $support->filehandle('>', $support->param('jel_file'));
 
 # connect to database and get adaptors
 my $dba = $support->get_database('ensembl');
@@ -242,8 +248,10 @@ else {
 $c = scalar(@potential_names);
 $support->log("\nNames to consider)($c):\n\n");
 $support->log(sprintf("%-25s%-30s%-20s%-20s%-20s%-20s\n", qw(STABLE_ID BIOTYPE SEQ_REGION OLD_NAME NEW_NAME NEW_DESC)));
+print $jel_fh sprintf("%s\t%s\t%s\t%s\t%s\t%s\n", qw(STABLE_ID BIOTYPE SEQ_REGION OLD_NAME NEW_NAME NEW_DESC));
 foreach my $rec (@potential_names) {
   $support->log(sprintf("%-25s%-30s%-20s%-20s%-20s%-20s\n", $rec->[0], $rec->[4], $rec->[5], $rec->[1], $rec->[2], $rec->[3]));
+  print $jel_fh sprintf("%s\t%s\t%s\t%s\t%s\t%s\n",$rec->[0], $rec->[4], $rec->[5], $rec->[1], $rec->[2], $rec->[3]);
 }
 
 $support->log("\nAdded $add_c MGI xrefs\n");
