@@ -10,14 +10,16 @@ use Try::Tiny;
 
 {
     my $sql;
-    my   $pipe_flag = 0;
-    my     $do_flag = 0;
-    my $ignore_flag = 0;
+    my $pipe_flag    = 0;
+    my $do_flag      = 0;
+    my $ignore_flag  = 0;
+    my $include_test = 0;
     Bio::Otter::Lace::Defaults::do_getopt(
         'query=s' => \$sql,
         'pipe!'   => \$pipe_flag,
         'do!'     => \$do_flag,
         'ignore!' => \$ignore_flag,
+        'test!'   => \$include_test,
     );
     unless ($sql) {
         local $/ = undef; # slurp the whole of STDIN
@@ -27,9 +29,10 @@ use Try::Tiny;
 
     print "$sql\n";
 
-#    my $cl = Bio::Otter::Lace::Defaults::make_Client();
     foreach my $ds (Bio::Otter::Server::Config->SpeciesDat->all_datasets) {
-        next if $ds->name =~ /_(dev|test)$/;
+        unless ($include_test) {
+            next if $ds->name =~ /_(dev|test)$/;
+        }
         printf "Querying dataset %s\n", $ds->name;
         my $query_dba =
           $pipe_flag
@@ -78,12 +81,16 @@ __END__
 
 =head1 SYNOPSIS
 
-  query_all_datasets [-pipe] [-do] -query "SQL STATEMENT"
-  query_all_datasets [-pipe] [-do] < tmp.sql
+  query_all_datasets [-test] [-pipe] [-do] -query "SQL STATEMENT"
+  query_all_datasets [-test] [-pipe] [-do] < tmp.sql
 
 =head1 PARAMETERS
 
 =over 4
+
+=item B<-test>
+
+Include datasets ending in C<_test> and C<_dev>. The default is to skip them.
 
 =item B<-pipe>
 
