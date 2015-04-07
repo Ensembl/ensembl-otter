@@ -202,7 +202,7 @@ my $_new_feature_id_sub = sub {
 
     package Bio::EnsEMBL::Gene;
 
-    use Bio::Vega::Utils::Detaint qw( detaint_pfam_url_fmt );
+    use Text::sprintfn;
 
     sub to_gff {
         my ($self, %args) = @_;
@@ -255,15 +255,13 @@ my $_new_feature_id_sub = sub {
         }
 
         if (my $url_string = $args{'url_string'}) {
-            my $url_fmt = detaint_pfam_url_fmt($url_string);
-            die "Cannot detaint url_string='$url_string'" unless $url_fmt;
-            if ($url_fmt =~ s{%\{pfam\}}{%s}) {
-                my $kv = $self->_urlsubst_pfam($url_fmt, $gene_numeric_id);
+            if ($url_string =~ m{%\(pfam\)}) {
+                my $kv = $self->_urlsubst_pfam($url_string, $gene_numeric_id);
                 @{$extra_attrs}{ keys %$kv } = values %$kv;
             }
             else {
                 # Assume it is an ensembl gene
-                my $url = sprintf $url_fmt, $self->stable_id;
+                my $url = sprintfn $url_string, { id => $self->stable_id, species => $args{'species.url'} };
                 $extra_attrs->{'url'} = $url;
             }
         }
@@ -293,7 +291,7 @@ my $_new_feature_id_sub = sub {
             if ($xr->dbname() eq 'PFAM') {
                 $out{'synthetic_gene_name'} = $xr->display_id;
                 my $name = sprintf "%s.%d", $xr->display_id, $gene_numeric_id;
-                my $url = sprintf $url_fmt, $xr->primary_id;
+                my $url = sprintfn $url_fmt, { pfam => $xr->primary_id };
                 $out{'locus'} = $name;
                 $out{'url'}   = $url;
             }
