@@ -7,6 +7,7 @@ use warnings;
 use Bio::Otter::Utils::AccessionInfo::Serialise qw( fasta_header_column_order escape_fasta_description );
 use Bio::Otter::Utils::RequireModule qw(require_module);
 use Bio::Vega::Enrich::SliceGetAllAlignFeatures;
+use Bio::Vega::Utils::Detaint qw( detaint_sprintfn_url_fmt );
 use Bio::Vega::Utils::GFF;
 use Bio::Vega::Utils::EnsEMBL2GFF;
 
@@ -16,6 +17,7 @@ my @gff_keys = qw(
     gff_feature
     gff_source
     gff_seqname
+    url_string
     );
 
 my $call_args = {
@@ -229,6 +231,17 @@ sub _features_gff {
     $gff_args{'target_hash'} = $target_hash;
     my $gff_version = $self->param('gff_version');
     $gff_args{'gff_format'} = Bio::Vega::Utils::GFF::gff_format($gff_version);
+
+    my $url_string = delete $gff_args{'url_string'}; # not detainted yet, so delete it for now
+    if (@$features) {           # don't bother unless there are some features
+        if ($url_string) {
+            my $url_fmt = detaint_sprintfn_url_fmt($url_string);
+            die "Cannot detaint url_string='$url_string'" unless $url_fmt;
+            $gff_args{'url_string'} = $url_fmt;      # reinstate detainted url_string
+        }
+        $gff_args{'species.url'} =
+            $self->otter_dba->get_MetaContainer->single_value_by_key('species.url', 1);
+    }
     my $features_gff = join '', map { $_->to_gff(%gff_args) || '' } @{$features};
 
     return $features_gff;
