@@ -462,15 +462,14 @@ my $_new_feature_id_sub = sub {
 
     package Bio::EnsEMBL::Variation::VariationFeature;
 
-    ### Should unify with Gene URL stuff.
-    my $url_format = 'http://www.ensembl.org/Homo_sapiens/Variation/Summary?v=%s';
+    use Text::sprintfn;
 
     sub _gff_hash {
-        my ($self, @args) = @_;
+        my ($self, %args) = @_;
 
         my $name   = $self->variation->name;
 
-        my $gff = $self->SUPER::_gff_hash(@args);
+        my $gff = $self->SUPER::_gff_hash(%args);
         my ($start, $end) = @{$gff}{qw( start end )};
         if ($start > $end) {
             @{$gff}{qw( start end )} = ($end, $start);
@@ -478,8 +477,8 @@ my $_new_feature_id_sub = sub {
 
         $gff->{'attributes'}{'Name'} = $name;
         $gff->{'attributes'}{'ensembl_variation'} = $self->allele_string;
-        if ($name =~ /^rs/) {
-            my $url = sprintf $url_format, $name;
+        if ($name =~ /^rs/ and my $url_string = $args{'url_string'}) {
+            my $url = sprintfn $url_string, { id => $name, species => $args{'species.url'} };
             $gff->{'attributes'}{'url'}  = $url;
         }
 
