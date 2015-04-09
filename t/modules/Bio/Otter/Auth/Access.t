@@ -87,6 +87,7 @@ species_groups:
   dev:
     - human_test
     - :main
+user_groups: {}
 INPUT
 
     return;
@@ -270,6 +271,7 @@ species_groups:
   qux:
     - human
     - mouse
+user_groups: {}
 INPUT
 
     like(try_err { Bio::Otter::Auth::DsList->new($acc, 'bar') },
