@@ -113,7 +113,7 @@ Ana Code B<email> anacode@sanger.ac.uk
 
 
 sub main {
-    plan tests => 9;
+    plan tests => 8;
 
     my @warn;
     local $SIG{__WARN__} = sub {
@@ -127,7 +127,7 @@ sub main {
     };
 
     subtest "cmdline, pipe" => sub {
-        cmdline_tt({qw{ host otterpipe1 database pipe_human }},
+        cmdline_tt({qw{ host mcs17 database pipe_human }},
                    [ 'pipe_human by netrc args', 'human', 'ensembl:pipe' ]);
     };
 
@@ -150,8 +150,6 @@ sub main {
     };
 
     subtest "BOSDataSet readonly" => __PACKAGE__->can('readonly_ds_tt');
-
-    subtest "DBSPEC vs HOST" => __PACKAGE__->can('equivs_tt'); # transient
 
   TODO: {
         local $TODO = "Not tested";
@@ -474,45 +472,5 @@ sub _dba2subslice {
 #
 ###
 
-
-# See that the HOST,PORT,USER,PASS fields of species.dat
-# are equivalent to the DBSPEC fields used with databases.yaml
-#
-# This tests both code and config.  It won't fix config problems
-# (i.e. doesn't regenerate old species.dat fields)
-sub equivs_tt { # transient
-    my $fn = Bio::Otter::Server::Config->data_filename('species.dat');
-    my $new = Bio::Otter::SpeciesDat->new($fn);
-    my @new_all = $new->all_datasets;
-    plan tests => 1 + @new_all;
-
-    my $old = Bio::Otter::SpeciesDat->new__old($fn);
-    # When this method is gone or fails for want of legacy fields, we
-    # just don't need the test
-
-#    # Paper over some CNAME vs. canonical hostname differences
-#    my %munge = qw( lutra7 otterpipe2 lutra5 otterpipe1 );
-#    foreach my $db ($old->all_datasets) {
-#        foreach my $k (qw( HOST DNA_HOST )) {
-#            my $p = $db->ds_all_params;
-#            my $replace = $munge{ $p->{$k} };
-#            next unless defined $replace;
-#            diag sprintf "In %s (old), replace %s = %s with %s\n",
-#              $db->name, $k, $p->{$k}, $replace;
-#            $p->{$k} = $replace;
-#        }
-#    }
-#
-### Not required, it was a data bug.  Left in case it becomes...  a feature.
-
-    foreach my $ds_name (sort map { $_->name } @new_all) {
-        is_deeply($old->dataset($ds_name),
-                  $new->dataset($ds_name),
-                  "Dataset $ds_name");
-    }
-    is_deeply($old, $new, 'trees equiv') or
-      note explain { old => $old, new => $new };
-    return;
-}
 
 main();
