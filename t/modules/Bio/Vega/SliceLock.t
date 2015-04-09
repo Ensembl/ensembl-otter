@@ -37,13 +37,12 @@ sub main {
 
     # Test supportedness with B:O:L:Dataset + raw $dbh
     #
-    # Merged - all databases will support both, until contig_locks are
-    # being removed.
+    # contig_locks tables have now been removed.
     subtest supported_live => sub {
-        supported_tt(human => [qw[ old new ]]);
+        supported_tt(human => [qw[ new ]]);
     };
     subtest supported_dev => sub {
-        supported_tt(human_dev => [qw[ old new ]]);
+        supported_tt(human_dev => [qw[ new ]]);
     };
 
     # Exercise it
