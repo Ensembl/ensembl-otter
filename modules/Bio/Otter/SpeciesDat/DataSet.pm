@@ -38,9 +38,6 @@ Methods are provided to read (not write) all the usual properties
  HOST     PORT     USER     PASS     DBSPEC     DBNAME
  DNA_HOST DNA_PORT DNA_USER DNA_PASS DNA_DBSPEC DNA_DBNAME
 
-Note that the RESTRICTED property has no method, and is deprecated
-(since 9795a05e, to disappear with v84).
-
 =cut
 
 sub new {

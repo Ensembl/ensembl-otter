@@ -15,7 +15,7 @@ use Bio::Otter::Auth::Access;
 my $BOAA = 'Bio::Otter::Auth::Access';
 
 sub main {
-    my @t = qw( species_groups_tt user_groups_tt legacy_tt dslist_tt dup_tt );
+    my @t = qw( species_groups_tt user_groups_tt dslist_tt dup_tt );
     plan tests => scalar @t;
 
     foreach my $subt (@t) {
@@ -207,58 +207,6 @@ sub __user_to_datasetnames {
     my %ds_name;
     @ds_name{ keys %$ds_hash } = map { $_->name } values %$ds_hash;
     return \%ds_name;
-}
-
-
-sub legacy_tt {
-    plan tests => 2;
-
-    my $acc = try_load(<<'INPUT');
----
-species_groups:
-  main:
-    - human
-    - mouse
-    - zebrafish
-  dev:
-    - human_test
-    - human_dev
-user_groups:
-  us:
-    write:
-      - :main
-    users:
-      - alice:
-          write:
-            - :dev
-      - bob
-  them:
-    write:
-      - zebrafish
-    users:
-      - Charlie.Bruin@example.org
-      - Daisy.Clue@example.net
-INPUT
-
-    if (!isa_ok($acc, 'Bio::Otter::Auth::Access')) {
-        diag $acc;
-        return; # subtest bail out
-    }
-
-    my $want = Load(<<'HASH');
----
-alice:
-  human_test: 1
-  human_dev: 1
-charlie.bruin@example.org:
-  zebrafish: 1
-daisy.clue@example.net:
-  zebrafish: 1
-HASH
-
-    is_deeply($acc->legacy_users_hash, $want, 'staff hidden');
-
-    return;
 }
 
 
