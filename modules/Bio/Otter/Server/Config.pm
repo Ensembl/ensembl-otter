@@ -417,51 +417,6 @@ sub Access {
 }
 
 
-=head2 users_hash()
-
-Return a freshly loaded hash C<< ->{$user}{$dataset} = 1 >> from the
-Otter Server config directory.
-
-=cut
-
-# Regenerate an "old users.txt style" users_hash from new access.yaml
-sub users_hash {
-    my ($pkg, @opt) = @_;
-    my $acc = $pkg->Access;
-    return $acc->legacy_users_hash(@opt);
-}
-
-sub users_hash__old {
-    my ($pkg) = @_;
-    my $usr_file = $pkg->data_filename('users.txt');
-    return $pkg->_read_user_file($usr_file);
-}
-
-sub _read_user_file {
-    my ($pkg, $usr_file) = @_;
-
-    my $usr_hash = {};
-
-    open my $list, '<', $usr_file
-        or die "Error opening '$usr_file'; $!";
-    while (<$list>) {
-        s/#.*//;            # Remove comments
-        s/(^\s+|\s+$)//g;   # Remove leading or trailing spaces
-        next if /^$/;       # Skip lines which are now blank
-        my ($user_name, @allowed_datasets) = split;
-        $user_name = lc($user_name);
-        $usr_hash->{$user_name} ||= {}; # accept "authorised for no datasets", for code testing
-        foreach my $ds (@allowed_datasets) {
-            $usr_hash->{$user_name}{$ds} = 1;
-        }
-    }
-    close $list or die "Error closing '$usr_file'; $!";
-
-    return $usr_hash;
-}
-
-
-
 =head2 get_file($name)
 
 Return the contents of the Otter Server config file C<$name> for the

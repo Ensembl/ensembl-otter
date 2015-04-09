@@ -22,13 +22,6 @@ Bio::Otter::Auth::Access - authorisation for authors' dataset access
  my $ds = $user->write_dataset($dataset_name)
    or die "User not authorised on that dataset";
 
- # Old style / legacy
- my $users_txt = Bio::Otter::Server::Config->users_hash;
- my $user = $users_txt->{lc($email)}; # nb. explicit downcasing
- my $authorised = _allow_implicit_access($email, $dataset_name)
-   or try { $user->{$dataset_name} };
-
-
 =head1 DESCRIPTION
 
 Class to collect all access control for users to datasets.
@@ -237,42 +230,6 @@ sub legacy_access {
     }
 
     return;
-}
-
-=head2 legacy_users_hash(@opt)
-
-Return a reconstruction of the C<users_hash()> made from the old
-F<users.txt> .  This ignores users' read-only datasets.
-
-=cut
-
-sub legacy_users_hash {
-    my ($self, @opt) = @_;
-    my $preserve_case = ("@opt" eq 'samecase'); # for testing
-
-    my %main; # names of the unrestricted datasets
-    {
-        my @name = Bio::Otter::Auth::DsList->new($self, [ ':main' ])->expanded_names;
-        @main{@name} = (1) x @name;
-    }
-
-    my %out;
-    foreach my $user (values %{ $self->all_users }) {
-        my $ds = $user->write_datasets;
-
-        # for "legacy" users_hash, skip the explicit default staff access
-        if (my $is_staff = $user->email !~ /@/) {
-            delete @{ $ds }{ keys %main };
-            next if !keys %$ds;
-        }
-
-        my $email = $user->email;
-        $email = lc($email) unless $preserve_case; # done in old _read_user_file
-
-        $out{$email} = { map {($_ => 1)} keys %$ds };
-    }
-
-    return \%out;
 }
 
 
