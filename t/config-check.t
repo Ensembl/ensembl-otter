@@ -7,7 +7,7 @@ use Time::HiRes qw( gettimeofday tv_interval );
 
 use Bio::Otter::Server::Config;
 
-my $T_LIM = 0.1; # limit chosen arbitrarily, could fail by NFS lag
+my $T_LIM = 0.2; # limit chosen arbitrarily, could fail by NFS lag
 
 sub main {
     plan tests => 4;
