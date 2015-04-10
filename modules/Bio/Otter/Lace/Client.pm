@@ -1597,6 +1597,7 @@ sub recover_session {
     }
 
     unless ($adb->db_initialized) {
+        # get the adb-with-slice back, for possible lock release and cleanup in sessions_needing_recovery()
         try { $adb->recover_slice_from_region_xml; }
         catch { $self->logger->warn($_); };
         return $adb;
