@@ -1,0 +1,108 @@
+* New session selection
+
+** tk/otterlace->run_gui()
+   + creates and displays a MCW:SpeciesListWindow
+
+** MCW:SpeciesListWindow->open_dataset_by_name()
+   + loads the DataSet via the Client
+   + calls $ds->load_client_config
+   + creates a CW:SequenceSetChooser
+
+** CW:SequenceSetChooser->open_sequence_set_by_ssname_subset()
+   + creates a CW:SequenceNotes
+
+
+* Session Startup
+
+** CW:SequenceNotes->open_SequenceSet()
+*** creates slice B:O:L:Slice
+*** creates adb   B:O:L:AceDatabase via
+    + Client->new_AceDatabase()
+      - chooses but does not create the session path
+*** on adb:
+    + calls adb->make_database_directory()
+      - creates the session directory and fetches the AceDB tarball
+    + calls adb->load_dataset_info()
+      - delegates to B:O:L:DB to fetch meta, coord, attrib info
+        and store these into SQLite
+*** locks the slice, if the session is to be write-enabled
+*** creates the MCW::ColumnChooser with init_flag set.
+
+** Column Chooser's Load button calls MCW:ColumnChooser->load_filters()
+*** saves filter selection state to AceDatabase
+*** if init_flag is set (which it will be for a new session):
+    + calls AceDatabase->init_AceDatabase()
+      + fetches the XML region
+      + saves a copy of the XML
+      + parses XML to a B:V:Region region
+      + creates the ace file from the region [AceDB]
+      + fetches the DNA and tiles
+      + writes the dna and tile data to ace files [AceDB]
+      + stores region and dna to SQLite [SQLite]
+      + writes the methods_acefile [AceDB]
+      + saves the XML, less loci and feature_sets, to SQLite [SQLite]
+        - for subsequent recovery in recover_slice_from_region_xml()
+        - this will be redundant soon, region is now in SQLite EnsEMBL
+      + calls initialize_database()
+        - launches tace which parses the ace files. [AceDB]
+*** unless there's a SessionWindow
+    + sets up a MCW:SessionWindow, optionally passing in an existing Zircon::ZMap
+      SessionWindow->initialise()
+      + calls AceDatabase->zmap_dir_init() to set up ZMap and blixem configs
+        + calls zmap_config()
+          + calls ace_config()
+            + calls ace_server()
+              - fires off sgifaceserver() {*YUCK* long tree} [AceDB]
+      + calls _zmap_view_new()
+        - launches a new ZMap (unless using existing)
+        - sets up Zircon comms
+        - creates view
+      + creates a B:O:RequestQueuer
+*** queues feature requests via the SessionWindow's RequestQueuer.
+
+
+* Session Recovery
+
+** MCW:SpeciesListWindow->recover_some_sessions()
+*** calls B:O:L:Client->recover_session() to get the adb
+    + kills any sgifaceserver associated with the directory
+    + calls self->new_AceDatabase()
+    + renames existing session directory to the new path set by new_AceDatabase.
+    + calls adb->recover_slice_from_region_xml()
+    + calls adb->DataSet->load_client_config() {this is done in SpeciesListWindow->open_dataset_by_name() for new session}
+    + calls adb->reload_filter_state() {originally saved by ColumnChooser->load_filters()}
+*** connects a MCW:ColumnChooser to the adb.
+*** calls ColumnChooser->load_filters()
+
+
+* Session Editing
+  Handled via MCW:SessionWindow
+
+** MCW:TranscriptWindow->_do_save_subseq_work()
+   + calls MCW:SessionWindow->replace_SubSeq() {the workhorse}
+     + saves to ace via self->save_ace()
+     + updates ZMap
+     + updates internal state (Assembly and _subsequence_cache)
+
+** MCW:SessionWindow also supplies:
+   + add_SubSeq() {just caches it in the SessionWindow's _subsequence_cache}
+   + delete_subsequences()
+     + deletes from acedb
+     + calls self->delete_SubSeq()
+       + deletes from Assembly
+       + deletes from _subsequence_cache
+     + deletes from ZMap
+
+
+* Session Save to Server
+
+** MCW:SessionWindow->save_data()
+   + calls adb->generate_XML_from_acedb()
+   + passes the XML to Client->save_otter_xml()
+   + receives XML in return
+   + parses this to a B:V:Region
+   + makes Ace via B:V:Region::Ace->make_ace_genes_transcripts
+   + saves the region to AceDB via self->save_ace()
+   + calls self->resync_with_db() to rebuild internal state from AceDB
+     + calls self->Assembly()
+
