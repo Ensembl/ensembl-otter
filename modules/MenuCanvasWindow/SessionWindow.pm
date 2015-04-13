@@ -1919,11 +1919,12 @@ sub get_all_Subseq_clusters {
 sub Assembly {
     my ($self) = @_;
 
-    my $canvas = $self->canvas;
-    my $slice_name = $self->slice_name;
-    my $ace  = $self->AceDatabase->aceperl_db_handle;
-
     unless ($self->{'_assembly'}) {
+
+        my $canvas = $self->canvas;
+        my $slice_name = $self->slice_name;
+        my $ace  = $self->AceDatabase->aceperl_db_handle;
+
         my $before = time();
         my $busy = Tk::ScopedBusy->new($canvas, -recurse => 0);
 
