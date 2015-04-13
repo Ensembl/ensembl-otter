@@ -259,8 +259,6 @@ sub init_AceDatabase {
     my ($raw_dna, @tiles) = $self->Client->get_assembly_dna($self->slice);
     $self->write_dna_data($raw_dna, @tiles);
 
-    $self->DB->species($region->species);
-
     my $storer = Bio::Vega::Region::Store->new(
         vega_dba => $self->DB->vega_dba,
         coord_system_factory => $cs_factory,
@@ -356,6 +354,7 @@ sub recover_slice_from_region_xml {
         $chr_slice->end,
         );
     $self->slice($slice);
+    $self->DB->species($region->species);
     $self->DB->session_slice($self->slice->ensembl_slice);
 
     return;
