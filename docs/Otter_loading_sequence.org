@@ -53,6 +53,8 @@
           + calls ace_config()
             + calls ace_server()
               - fires off sgifaceserver() {*YUCK* long tree} [AceDB]
+      + calls self->Assembly()
+        - builds _assembly via Hum::Ace::Assembly->express_data_fetch() on AceDB.
       + calls _zmap_view_new()
         - launches a new ZMap (unless using existing)
         - sets up Zircon comms
@@ -73,6 +75,7 @@
     + calls adb->reload_filter_state() {originally saved by ColumnChooser->load_filters()}
 *** connects a MCW:ColumnChooser to the adb.
 *** calls ColumnChooser->load_filters()
+    - see above under 'Session Startup' for details
 
 
 * Session Editing
