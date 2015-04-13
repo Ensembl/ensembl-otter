@@ -128,7 +128,9 @@ sub initialise {
                     );
     }
 
-    $self->Assembly;
+    $self->_Assembly_acedb;
+    $self->_Assembly_sqlite;
+
     # Drawing the sequence list can take a long time the first time it is
     # called (QC checks not yet cached), so do it before zmap is launched.
     $self->draw_subseq_list;
@@ -1894,8 +1896,13 @@ sub _get_all_Subseq_clusters {
 
 sub Assembly {
     my ($self) = @_;
+    return $self->_Assembly_acedb;
+}
 
-    unless ($self->{'_assembly'}) {
+sub _Assembly_acedb {
+    my ($self) = @_;
+
+    unless ($self->{'_assembly_acedb'}) {
 
         my $canvas = $self->canvas;
         my $slice_name = $self->slice_name;
@@ -1914,18 +1921,9 @@ sub Assembly {
         }
         or return;
 
-        foreach my $sub ($assembly->get_all_SubSeqs) {
-            $self->_add_SubSeq($sub);
+        $self->{'_assembly_acedb'} = $assembly;
 
-            # Ignore loci from non-editable SubSeqs
-            next unless $sub->is_mutable;
-            if (my $s_loc = $sub->Locus) {
-                my $locus = $self->_locus_cache->get_or_this($s_loc);
-                $sub->Locus($locus);
-            }
-        }
-
-        $self->{'_assembly'} = $assembly;
+        $self->_set_SubSeqs_from_assembly;
         $self->_set_known_GeneMethods;
 
         my $after  = time();
@@ -1934,7 +1932,74 @@ sub Assembly {
                     $slice_name, $after - $before)
             );
     }
-    return $self->{'_assembly'};
+    return $self->{'_assembly_acedb'};
+}
+
+sub _set_SubSeqs_from_assembly {
+    my ($self) = @_;
+
+    foreach my $sub ($self->Assembly->get_all_SubSeqs) {
+        $self->_add_SubSeq($sub);
+
+        # Ignore loci from non-editable SubSeqs
+        next unless $sub->is_mutable;
+        if (my $s_loc = $sub->Locus) {
+            my $locus = $self->_locus_cache->get_or_this($s_loc);
+            $sub->Locus($locus);
+        }
+    }
+
+    return;
+}
+
+sub _Assembly_sqlite {
+    my ($self) = @_;
+
+    unless ($self->{'_assembly_sqlite'}) {
+
+        my $canvas = $self->canvas;
+        my $slice_name = $self->slice_name;
+
+        my $before = time();
+        my $busy = Tk::ScopedBusy->new($canvas, -recurse => 0);
+
+        my $assembly;
+
+        try {
+            my $ensembl_slice = $self->AceDatabase->DB->session_slice;
+            my $vega_dba      = $self->AceDatabase->DB->vega_dba;
+
+            my $region = Bio::Vega::Region->new_from_otter_db(
+                otter_dba => $vega_dba,
+                slice     => $ensembl_slice,
+                );
+
+            my $ace_maker = Bio::Vega::Region::Ace->new;
+            $assembly = $ace_maker->make_assembly(
+                $region,
+                {
+                    name             => $self->slice_name,
+                    MethodCollection => $self->AceDatabase->MethodCollection, # FIXME: Where will this come from?
+                }
+                );
+            return 1;
+        }
+        catch {
+            $self->exception_message($_, "Can't fetch Assembly '$slice_name' from SQLite");
+            return 0;
+        }
+        or return;
+
+        $self->{'_assembly_sqlite'} = $assembly;
+
+        # Do here once this takes over from AceDB version:
+        # $self->_set_SubSeqs_from_assembly;
+        # $self->_set_known_GeneMethods;
+
+        my $after  = time();
+        $self->logger->info(sprintf("SQLite fetch for '%s' took %d second(s)\n", $slice_name, $after - $before));
+    }
+    return $self->{'_assembly_sqlite'};
 }
 
 
@@ -1993,7 +2058,8 @@ sub save_Assembly { ## no critic (Subroutines::RequireFinalReturn)
 sub _empty_Assembly_cache {
     my ($self) = @_;
 
-    $self->{'_assembly'} = undef;
+    $self->{'_assembly_acedb'} = undef;
+    $self->{'_assembly_sqlite'} = undef;
 
     return;
 }
