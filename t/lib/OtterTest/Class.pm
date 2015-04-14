@@ -1,6 +1,6 @@
 package OtterTest::Class;
 
-use Test::Class::Most           # autmogically becomes our parent
+use Test::Class::Most           # automagically becomes our parent
     is_abstract => 1,
     attributes  => [ qw( our_object our_args ) ];
 
