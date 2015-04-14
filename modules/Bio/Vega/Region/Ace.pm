@@ -26,7 +26,7 @@ sub new {
 
 ### Where should we add "-D" commands to the ace data?
 
-sub make_ace {
+sub make_ace_string {
     my ($self, $region) = @_;
 
     # New top level object to generate whole chromosome coordinates
