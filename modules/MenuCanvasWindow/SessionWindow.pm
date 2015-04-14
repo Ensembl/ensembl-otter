@@ -846,7 +846,7 @@ sub close_GenomicFeaturesWindow {
                 $new->Locus($paste_locus);
                 $self->add_SubSeq($new);
                 push(@new_subseq, $new);
-                print STDERR "Internal paste result:\n", $new->ace_string;
+                $self->logger->info("Internal paste result:\n", $new->ace_string);
             } else {
                 $self->message("Got zero exons from realigning '$name'");
             }
@@ -1957,9 +1957,10 @@ sub Assembly {
         $self->set_known_GeneMethods;
 
         my $after  = time();
-        printf
-            "Express fetch for '%s' took %d second(s)\n",
-            $self->slice_name, $after - $before;
+        $self->logger->info(
+            sprintf("Express fetch for '%s' took %d second(s)\n",
+                    $slice_name, $after - $before)
+            );
     }
     return $self->{'_assembly'};
 }
