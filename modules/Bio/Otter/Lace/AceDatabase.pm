@@ -286,7 +286,7 @@ sub write_otter_acefile {
     # Storing ace_text in a file
     my $ace_filename = $self->home . '/rawdata/otter.ace';
     open my $ace_fh, '>', $ace_filename or $self->logger->logdie("Can't write to '$ace_filename'");
-    print $ace_fh $ace_maker->make_ace($region);
+    print $ace_fh $ace_maker->make_ace_string($region);
     close $ace_fh or $self->logger->logconfess("Error writing to '$ace_filename' : $!");
     $self->add_acefile($ace_filename);
 
