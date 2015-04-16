@@ -8,46 +8,12 @@ use SangerPaths qw{ core bioperl123 otter };
 use Bio::Otter::Git qw{ :server_ensembl :match };
 
 use Bio::Otter::Server::Support::Web;
-
-# Don't show any mysql connection details to clients Outside.
-my %secret_params = map { ( $_ => 1 ) }
-  qw{ DBNAME DBSPEC  DNA_DBSPEC DNA_DBNAME };
-
-# DBI params no longer go over HTTP anywhere.  Whitelist the rest.
-my %good_params = map { ( $_ => 1 ) }
-  qw{ READONLY ALIAS  DBNAME DBSPEC  DNA_DBSPEC DNA_DBNAME };
-  # HEADCODE, TYPE, RESTRICTED : obsolete
+use Bio::Otter::ServerAction::Datasets;
 
 sub get_datasets {
     my ($server) = @_;
     $server->content_type('application/json');
-
-    # Only local users get to see mysql connection details
-    my $show_details = $server->local_user;
-
-    my %datasets;
-    foreach my $dataset (@{$server->allowed_datasets}) {
-        my $name   = $dataset->name;
-        my $params = $dataset->ds_all_params;
-
-        my %ds;
-        foreach my $key (keys %$params) {
-            unless ($good_params{$key}) {
-                warn "Redacted key=$key - old species.dat?";
-                next;
-            }
-            unless ($show_details) {
-                next if $secret_params{$key};
-            }
-            my $lckey = lc($key);   ### Why do we bother lower casing this?
-            # BOL:Client upcases it, to make property accessor names
-            $ds{$lckey} = $params->{$key};
-        }
-
-        $datasets{$name} = \%ds;
-    }
-
-    return \%datasets;
+    return Bio::Otter::ServerAction::Datasets->new($server)->get_datasets;
 }
 
 Bio::Otter::Server::Support::Web->send_response(\&get_datasets);
