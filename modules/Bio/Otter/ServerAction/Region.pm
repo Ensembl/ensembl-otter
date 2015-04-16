@@ -160,10 +160,6 @@ sub DE_region {
         }
     }
 
-    # Patterns for clone accession or clone name based gene names
-    my $clone_accession = qr{^[A-Z]{1,2}\d{5,6}(\.\d{1,3})?$};
-    my $clone_name      = qr{^[A-Z]{1,2}\d{1,3}-?\d{1,3}[A-Z]\d{1,3}(\.\d{1,3})?$};
-
     my @keywords;
     my $novel_gene_count      = 0;
     my $part_novel_gene_count = 0;
@@ -171,64 +167,14 @@ sub DE_region {
 
     # Loop through the loci in 5' -> 3' order
     foreach my $gene (sort {$a->start <=> $b->start} @loci) {
-        my ($name_attrib) = @{ $gene->get_all_Attributes('name') };
-        my $gene_name = $name_attrib ? $name_attrib->value : $gene->stable_id;
-
-        my $desc = $gene->description
-          or next;
-        next if $desc =~ /artefact|artifact/i;
-
-        my $line = '';
-
-        # Is all of the gene in the slice?
-        if ($gene->start < 1 and $gene->end > $slice->length) {
-            $line = 'an internal part of ';
-        }
-        elsif ($gene->start < 1 and $gene->end <= $slice->length) {
-            my $end = $gene->strand == 1 ? q{3'} : q{5'};
-            $line = "the $end end of ";
-        }
-        elsif ($gene->start >= 1 and $gene->end > $slice->length) {
-            my $end = $gene->strand == 1 ? q{5'} : q{3'};
-            $line = "the $end end of ";
-        }
-
-        if ($desc =~ /novel\s+(protein|transcript|gene)\s+similar/i) {
-            $line .= "the gene for " . A($desc);
-            push @DEline, $line;
-        }
-        elsif (($desc =~ /(novel|putative) (protein|transcript|gene)/i)) {
-            if ($desc =~ /(zgc:\d+)/) {
-                $line .= "a gene for a novel protein ($1)";
-                push @DEline, $line;
-            }
-            else {
-                $line ? $part_novel_gene_count++ : $novel_gene_count++;
-            }
-        }
-        elsif ($desc =~ /pseudogene/i) {
-            if (   $gene_name !~ /$clone_accession/
-                && $gene_name !~ /$clone_name/)
-            {
-                $line .= A($desc) . ' ' . $gene_name;
-            }
-            else {
-
-                # in a pseudogene named after its clones,
-                # locusname is not interesting
-                $line .= A($desc);
-            }
-            push @DEline, $line;
-        }
-        elsif ($gene_name !~ /\.\d/) {
-            $line .= "the $gene_name gene for $desc";
-            push @DEline,   $line;
-            push @keywords, $gene_name;
-        }
-        else {
-            $line .= "a gene for " . A($desc);
-            push @DEline, $line;
-        }
+        my $gene_result = $self->_DE_gene($gene,
+                                          $slice->length,
+                                          sub { $novel_gene_count++ },
+                                          sub { $part_novel_gene_count++ }
+            );
+        next unless $gene_result;
+        push @keywords, @{$gene_result->{keywords}};
+        push @DEline,   $gene_result->{DE_line} if $gene_result->{DE_line};
     }
 
     if ($novel_gene_count) {
@@ -271,6 +217,81 @@ sub DE_region {
         keywords    => join("\n", @keywords),
         description => $final_line,
     };
+}
+
+sub _DE_gene {  ## no critic (Subroutines::ProhibitExcessComplexity)
+
+    my ($self, $gene, $slice_length, $inc_novel, $inc_part_novel) = @_;
+
+    my ($name_attrib) = @{ $gene->get_all_Attributes('name') };
+    my $gene_name = $name_attrib ? $name_attrib->value : $gene->stable_id;
+
+    my $desc = $gene->description;
+    return unless $desc;
+    return if     $desc =~ /artefact|artifact/i;
+
+    my $line = '';
+    my @keywords;
+
+    # Is all of the gene in the slice?
+    if ($gene->start < 1 and $gene->end > $slice_length) {
+        $line = 'an internal part of ';
+    }
+    elsif ($gene->start < 1 and $gene->end <= $slice_length) {
+        my $end = $gene->strand == 1 ? q{3'} : q{5'};
+        $line = "the $end end of ";
+    }
+    elsif ($gene->start >= 1 and $gene->end > $slice_length) {
+        my $end = $gene->strand == 1 ? q{5'} : q{3'};
+        $line = "the $end end of ";
+    }
+
+  DESC_SWITCH: {
+
+      # Patterns for clone accession or clone name based gene names
+      my $clone_accession = qr{^[A-Z]{1,2}\d{5,6}(\.\d{1,3})?$};
+      my $clone_name      = qr{^[A-Z]{1,2}\d{1,3}-?\d{1,3}[A-Z]\d{1,3}(\.\d{1,3})?$};
+
+      if ($desc =~ /novel\s+(protein|transcript|gene)\s+similar/i) {
+          $line .= "the gene for " . A($desc);
+          last DESC_SWITCH;
+      }
+      if (($desc =~ /(novel|putative) (protein|transcript|gene)/i)) {
+          if ($desc =~ /(zgc:\d+)/) {
+              $line .= "a gene for a novel protein ($1)";
+          }
+          else {
+              $line ? &$inc_part_novel : &$inc_novel;
+              $line = '';       # don't want to cause anything to be added to DE_line array here
+          }
+          last DESC_SWITCH;
+      }
+      if ($desc =~ /pseudogene/i) {
+          if (   $gene_name !~ /$clone_accession/
+                 && $gene_name !~ /$clone_name/)
+          {
+              $line .= A($desc) . ' ' . $gene_name;
+          }
+          else {
+
+              # in a pseudogene named after its clones,
+              # locusname is not interesting
+              $line .= A($desc);
+          }
+          last DESC_SWITCH;
+      }
+      if ($gene_name !~ /\.\d/) {
+          $line .= "the $gene_name gene for $desc";
+          push @keywords, $gene_name;
+          last DESC_SWITCH;
+      }
+      {
+          # DEFAULT
+          $line .= "a gene for " . A($desc);
+      }
+    } # DESC_SWITCH
+
+    return { DE_line => $line, keywords => \@keywords };
 }
 
 
