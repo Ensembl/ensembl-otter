@@ -281,7 +281,13 @@ sub _DE_region_equiv {
            $slice->start + $clone->assembly_end);
         # untested, is this the right patch?
 
-        my $remote_desc = $client->get_slice_DE($clone_slice);
+        # Make the server_action region for this slice
+        my $local_server = Bio::Otter::Server::Support::Local->new;
+        $local_server->authorized_user('anacode');
+        $local_server->set_params(Bio::Otter::Lace::Client->_slice_query($clone_slice));
+        my $sa_region = $modules{region}->new_with_slice($local_server);
+
+        my $remote_desc = $sa_region->DE_region()->{'description'};
         my $orig_desc = $remote_desc;
 
         my $strip_punct = qr/[,;]/;
@@ -294,8 +300,8 @@ sub _DE_region_equiv {
         $remote_desc =~ s/an internal part/part/g;
 
         is($remote_desc, $ace_desc,
-           "desc for ".$clone->clone_name." vs. ".$clone_slice->name)
-          and diag explain $orig_desc;
+           "desc for ".$clone->clone_name." vs. ".$clone_slice->name);
+        note $orig_desc;
     }
 
     return;
