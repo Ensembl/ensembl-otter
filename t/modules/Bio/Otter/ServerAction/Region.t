@@ -8,7 +8,7 @@ use Test::CriticModule;
 use Test::SetupLog4perl;
 
 use Sys::Hostname;
-use Test::More tests => 5;
+use Test::More tests => 6;
 use Text::Diff;
 use Try::Tiny;
 
@@ -35,8 +35,8 @@ BEGIN {
 sub main {
     subtest critic_tt => \&critic_tt;
     subtest test_regions_tt => \&test_regions_tt;
-#    subtest DE_line_equiv_tt => \&DE_line_equiv_tt;
-#    subtest DE_line_cases_tt => \&DE_line_cases_tt;
+    subtest DE_line_equiv_tt => \&DE_line_equiv_tt;
+#    subtest DE_line_cases_tt => \&DE_line_cases_tt; # no cases yet
     return 0;
 }
 
@@ -282,9 +282,20 @@ sub _DE_region_equiv {
         # untested, is this the right patch?
 
         my $remote_desc = $client->get_slice_DE($clone_slice);
+        my $orig_desc = $remote_desc;
+
+        my $strip_punct = qr/[,;]/;
+        $ace_desc    =~ s/$strip_punct//g;
+        $remote_desc =~ s/$strip_punct//g;
+
+        $ace_desc =~ s/\s+[A-Z]+\d+-\d+[A-Z]+\d+\.\d+//g; # ' RP11-551L14.1' => ''
+
+        $remote_desc =~ s/the [35]' end/part/g;
+        $remote_desc =~ s/an internal part/part/g;
+
         is($remote_desc, $ace_desc,
            "desc for ".$clone->clone_name." vs. ".$clone_slice->name)
-          and diag explain $remote_desc;
+          and diag explain $orig_desc;
     }
 
     return;
