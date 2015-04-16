@@ -150,14 +150,17 @@ sub _add_zmap_source_config_one {
         group       => 'always',
     };
 
-    my $zmap_column = $source->zmap_column;
-    push @{$config->{'columns'}{$zmap_column}}, @{$source->featuresets} if $zmap_column;
+    if (my $zmap_column = $source->zmap_column) {
+        push @{$config->{'columns'}{$zmap_column}}, @{$source->featuresets};
+    }
 
-    my $zmap_style = $source->zmap_style;
-    $config->{'featureset-style'}{$name} = $zmap_style if $zmap_style;
+    if (my $zmap_style = $source->zmap_style) {
+        $config->{'featureset-style'}{$name} = $zmap_style;
+    }
 
-    my $description = $source->description;
-    $config->{'featureset-description'}->{$name} = $description if $description;
+    if (my $description = $source->description) {
+        $config->{'featureset-description'}->{$name} = $description;
+    }
 
     return;
 }
