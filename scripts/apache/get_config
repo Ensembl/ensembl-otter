@@ -8,45 +8,11 @@ use SangerPaths qw{ core bioperl123 otter };
 use Bio::Otter::Git qw{ :server_ensembl :match };
 
 use Bio::Otter::Server::Support::Web;
-use Bio::Otter::Server::Config;
-
-my %PERMITTED = (
-    lace_acedb_tar => { filename => 'lace_acedb.tar.gz', content_type => 'application/x-tar-gzip' },
-    loutre_schema  => { filename => 'loutre_schema_sqlite.sql' },
-    methods_ace    => { filename => 'methods.ace'      },
-    otter_config   => { filename => 'otter_config'     },
-    otter_schema   => { filename => 'otter_schema.sql' },
-    otter_styles   => { filename => 'otter_styles.ini' },
-    designations   => { code => \&_designations, content_type => 'application/json' },
-    ensembl_version => { code => \&_ens_version },
-);
+use Bio::Otter::ServerAction::Config;
 
 sub get_config {
     my ($server) = @_;
-    my $key = $server->require_argument('key');
-
-    my $spec = $PERMITTED{$key};
-    die "No such config '$key'" unless $spec;
-
-    my $content_type = $spec->{content_type};
-    $server->content_type($content_type) if $content_type;
-
-    if ($spec->{filename}) {
-        return Bio::Otter::Server::Config->get_file($spec->{filename});
-    } elsif ($spec->{code}) {
-        return $spec->{code}->();
-    } else {
-        die "Bad spec '$key'";
-    }
-}
-
-sub _ens_version {
-    require Bio::EnsEMBL::ApiVersion;
-    return Bio::EnsEMBL::ApiVersion::software_version()."\n";
-}
-
-sub _designations {
-    return Bio::Otter::Server::Config->designations;
+    return Bio::Otter::ServerAction::Config->new($server)->get_config; # sets $server->content_type appropriately
 }
 
 Bio::Otter::Server::Support::Web->send_response(\&get_config);
