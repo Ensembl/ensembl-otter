@@ -67,7 +67,7 @@ sub _get_requested_slice {
 
 =head1 METHODS
 
-=head2 get_assembly_data
+=head2 get_assembly_dna
 
 =cut
 
