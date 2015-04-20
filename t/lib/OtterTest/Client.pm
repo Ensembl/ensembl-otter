@@ -8,6 +8,7 @@ use warnings;
 use Bio::Otter::Server::Config;
 use Bio::Otter::Server::Support::Local;
 use Bio::Otter::ServerAction::AccessionInfo;
+use Bio::Otter::ServerAction::Config;
 use Bio::Otter::ServerAction::LoutreDB;
 use Bio::Otter::Version;
 
@@ -45,18 +46,32 @@ sub sa_accession_info {
     return $self->{_sa_accession_info} ||= Bio::Otter::ServerAction::AccessionInfo->new($self->local_server);
 }
 
-# FIXME: scripts/apache/get_config needs reimplementing with a Bio::Otter::ServerAction:: class,
-#        which we can then use here rather than duplicating the file names.
-#
+sub _get_config_file {
+    my ($self, $key) = @_;
+    my $local_server = $self->local_server;
+    $local_server->set_params(key => $key);
+    return Bio::Otter::ServerAction::Config->new($local_server)->get_config;
+}
+
+# FIXME: not cached; duplication with B:O:L:Client
+# vvvvvv
+
 sub get_otter_schema {
     my $self = shift;
-    return Bio::Otter::Server::Config->get_file('otter_schema.sql');
+    return $self->_get_config_file('otter_schema');
 }
 
 sub get_loutre_schema {
     my $self = shift;
-    return Bio::Otter::Server::Config->get_file('loutre_schema_sqlite.sql');
+    return $self->_get_config_file('loutre_schema');
 }
+
+sub get_lace_acedb_tar {
+    my $self = shift;
+    return $self->_get_config_file('lace_acedb_tar');
+}
+
+# ^^^^^^
 
 sub get_meta {
     my ($self, $dsname) = @_;
