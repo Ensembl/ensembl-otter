@@ -86,6 +86,13 @@ sub get_db_info {
 {
     my %_config_hash;
 
+    # FIXME: duplication with B:O:L:Client
+    sub config_value {
+        my ($self, $key) = @_;
+
+        return $self->config_section_value(client => $key);
+    }
+
     sub config_section_value {
         my ($self, $section, $key) = @_;
         return $_config_hash{$section}->{$key};
