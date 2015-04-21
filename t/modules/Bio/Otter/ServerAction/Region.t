@@ -284,7 +284,7 @@ sub _DE_region_equiv {
         # Make the server_action region for this slice
         my $local_server = Bio::Otter::Server::Support::Local->new;
         $local_server->authorized_user('anacode');
-        $local_server->set_params(Bio::Otter::Lace::Client->_slice_query($clone_slice));
+        $local_server->set_params(Bio::Otter::Lace::Client->slice_query($clone_slice));
         my $sa_region = $modules{region}->new_with_slice($local_server);
 
         my $remote_desc = $sa_region->DE_region()->{'description'};
