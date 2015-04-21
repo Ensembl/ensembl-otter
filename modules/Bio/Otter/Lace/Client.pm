@@ -331,14 +331,6 @@ sub new_AceDatabase {
     return $adb;
 }
 
-sub lock {
-    my ($self, @args) = @_;
-
-    $self->logger->logconfess("lock takes no arguments") if @args;
-
-    return $self->write_access ? 'true' : 'false';
-}
-
 sub client_hostname {
     my ($self, $client_hostname) = @_;
 
