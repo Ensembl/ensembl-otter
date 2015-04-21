@@ -337,7 +337,7 @@ sub send_response {
     if (my ($num, $txt) = $error =~ m{^(\d{3}) (.*)}s) {
         # Specific HTTP status.  Error text already logged.
         #
-        # B:O:L:C->general_http_dialog uses 403 to trigger password
+        # B:O:L:C->_general_http_dialog uses 403 to trigger password
         # request, so we have to bodge.
         $num = 412 if $num == 403;
         $self->_send_response($self->$encode_error($txt), $num);
