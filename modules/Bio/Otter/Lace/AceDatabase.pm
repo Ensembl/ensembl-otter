@@ -1348,7 +1348,7 @@ sub http_response_content {
 sub _query_hash {
     my ($self, @args) = @_;
 
-    my $hash = { $self->Client->_slice_query($self->slice), @args };
+    my $hash = { $self->Client->slice_query($self->slice), @args };
 
     return $hash;
 }

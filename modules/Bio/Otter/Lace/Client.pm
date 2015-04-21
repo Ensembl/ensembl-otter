@@ -1240,12 +1240,12 @@ sub designate_this {
 sub get_slice_DE {
     my ($self, $slice) = @_;
     my $resp = $self->otter_response_content
-      ('GET', 'DE_region', { $self->_slice_query($slice) });
+      ('GET', 'DE_region', { $self->slice_query($slice) });
     return $resp->{description};
 }
 
 # Give a B:O:L:Slice
-sub _slice_query {
+sub slice_query {
     my ($self, $slice) = @_;
     die unless wantarray;
     return ('dataset' => $slice->dsname(),
