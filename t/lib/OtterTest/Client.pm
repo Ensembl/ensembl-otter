@@ -56,15 +56,12 @@ BEGIN {
         push_sequence_note
         get_all_DataSets
         get_server_otter_config
-        get_otter_styles
-        get_server_ensembl_version
         designate_this
         get_slice_DE
         slice_query
         do_authentication
         get_all_SequenceSets_for_DataSet
         get_all_CloneSequences_for_DataSet_SequenceSet
-        get_methods_ace
         save_otter_xml
         config_value_list
         config_value_list_merged
@@ -111,32 +108,23 @@ sub _s_a_accession_info {
     return $self->{_s_a_accession_info} ||= Bio::Otter::ServerAction::AccessionInfo->new($self->_local_server);
 }
 
-sub _get_config_file {
+# Overrides private method in B:O:L:Client.
+# We choose not to cache, despite the name.
+#
+# Provides:
+#   get_otter_styles
+#   get_otter_schema
+#   get_loutre_schema
+#   get_server_ensembl_version
+#   get_lace_acedb_tar
+#   get_methods_ace
+#
+sub _get_cache_config_file {
     my ($self, $key) = @_;
     my $_local_server = $self->_local_server;
     $_local_server->set_params(key => $key);
     return Bio::Otter::ServerAction::Config->new($_local_server)->get_config;
 }
-
-# FIXME: not cached; duplication with B:O:L:Client
-# vvvvvv
-
-sub get_otter_schema {
-    my $self = shift;
-    return $self->_get_config_file('otter_schema');
-}
-
-sub get_loutre_schema {
-    my $self = shift;
-    return $self->_get_config_file('loutre_schema');
-}
-
-sub get_lace_acedb_tar {
-    my $self = shift;
-    return $self->_get_config_file('lace_acedb_tar');
-}
-
-# ^^^^^^
 
 sub get_meta {
     my ($self, $dsname) = @_;
