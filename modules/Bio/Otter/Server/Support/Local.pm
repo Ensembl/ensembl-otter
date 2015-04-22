@@ -54,6 +54,12 @@ sub best_client_hostname {
     return $h;
 }
 
+# If we're working locally, we assume we are a local user, but we warn about it.
+sub local_user {
+    warn __PACKAGE__, ": permitting local_user() access.\n";
+    return 1;
+}
+
 ### Accessors
 
 sub content_type {

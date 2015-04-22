@@ -1047,8 +1047,7 @@ sub get_all_DataSets {
     my $ds = $self->{'_datasets'};
     if (! $ds) {
 
-        my $datasets_hash = $self->otter_response_content
-          ('GET', 'get_datasets', {});
+        my $datasets_hash = $self->_get_DataSets_hash;
 
         my @datasets = map {
             $self->_make_DataSet($_, $datasets_hash->{$_});
@@ -1059,6 +1058,16 @@ sub get_all_DataSets {
     }
 
     return @$ds;
+}
+
+# Factored out to allow override in OtterTest::Client
+sub _get_DataSets_hash {
+    my ($self) = @_;
+
+    my $datasets_hash = $self->otter_response_content
+        ('GET', 'get_datasets', {});
+
+    return $datasets_hash;
 }
 
 sub _make_DataSet {
