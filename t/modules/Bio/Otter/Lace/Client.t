@@ -49,7 +49,7 @@ sub designations_tt {
          80     80
          79     79.07
          78     78.12 );
-    $BOLC_A->mock(get_designations => sub { return \%desigA });
+    $BOLC_A->mock(_get_designations => sub { return \%desigA });
 
     # designate_this doesn't need a real instance of BOLC,
     # iff we feed it all the necessary %test_input

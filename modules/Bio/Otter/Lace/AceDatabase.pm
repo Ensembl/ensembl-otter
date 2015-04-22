@@ -1348,7 +1348,7 @@ sub http_response_content {
 sub _query_hash {
     my ($self, @args) = @_;
 
-    my $hash = { $self->Client->_slice_query($self->slice), @args };
+    my $hash = { $self->Client->slice_query($self->slice), @args };
 
     return $hash;
 }
@@ -1386,7 +1386,7 @@ sub DESTROY {
     my $writable = try { $self->write_access } catch { "unknown: $_" };
     if ($writable eq '0') {
         # clean, mark it done
-        rename($home, "${home}.done") # DUP: $client->move_to_done
+        rename($home, "${home}.done") # DUP: $client->_move_to_done
           or $logger->logdie("Error renaming the session directory; $!");
     } else {
         $logger->info("Cleanup '$home' failed, write_access=$writable");

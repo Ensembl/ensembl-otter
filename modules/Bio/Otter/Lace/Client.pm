@@ -126,30 +126,30 @@ sub email {
     return $self->config_value('email') || (getpwuid($<))[0];
 }
 
-sub client_name {
+sub _client_name {
     my ($self) = @_;
     return $self->{'_client_name'};
 }
 
-sub debug_client {
+sub _debug_client {
     my ($self) = @_;
     # backwards compatibility with "debug=1" and "debug=2"
-    my $debug_client = 0
+    my $_debug_client = 0
         || Bio::Otter::Debug->debug('Client')
         || Bio::Otter::Debug->debug('1')
         || Bio::Otter::Debug->debug('2')
         ;
-    return $debug_client;
+    return $_debug_client;
 }
 
-sub debug_server {
+sub _debug_server {
     my ($self) = @_;
     # backwards compatibility with "debug=2"
-    my $debug_server = 0
+    my $_debug_server = 0
         || Bio::Otter::Debug->debug('Server')
         || Bio::Otter::Debug->debug('2')
         ;
-    return $debug_server;
+    return $_debug_server;
 }
 
 sub no_user_config {
@@ -157,16 +157,16 @@ sub no_user_config {
     return !-f $cfg;
 }
 
-sub password_attempts {
-    my ($self, $password_attempts) = @_;
+sub _password_attempts {
+    my ($self, $_password_attempts) = @_;
 
-    if (defined $password_attempts) {
-        $self->{'_password_attempts'} = $password_attempts;
+    if (defined $_password_attempts) {
+        $self->{'_password_attempts'} = $_password_attempts;
     }
     return $self->{'_password_attempts'} || 3;
 }
 
-sub config_path_default_rel_dot_otter {
+sub _config_path_default_rel_dot_otter {
     my ($self, $key) = @_;
 
     my $path = $self->config_value($key) or return;
@@ -200,10 +200,10 @@ sub get_log_dir {
     return $log_dir;
 }
 
-sub get_log_config_file {
+sub _get_log_config_file {
     my ($self) = @_;
 
-    my $config_file = $self->config_path_default_rel_dot_otter('log_config') or return;
+    my $config_file = $self->_config_path_default_rel_dot_otter('log_config') or return;
 
     unless ( -f -r $config_file ) {
         warn "log_config file '$config_file' not readable, will use defaults";
@@ -226,17 +226,17 @@ sub make_log_file {
     } while (-e $log_file);
 
     my $log_level = $self->config_value('log_level');
-    my $config_file = $self->get_log_config_file;
+    my $config_file = $self->_get_log_config_file;
     # logging not set up, so must use 'warn'
     if ($config_file) {
         warn "Using log config file '$config_file'\n";
     } else {
-        if($self->debug_client) {
+        if($self->_debug_client) {
             warn "Logging output to '$log_file'\n";
         }
     }
     Bio::Otter::LogFile::make_log($log_file, $log_level, $config_file);
-    $self->client_logger->level($DEBUG) if $self->debug_client;
+    $self->_client_logger->level($DEBUG) if $self->_debug_client;
     return;
 }
 
@@ -266,7 +266,7 @@ sub _session_root {
     return '/var/tmp/lace_'.$version;
 }
 
-sub all_sessions {
+sub _all_sessions {
     my ($self) = @_;
 
     my @sessions = map {
@@ -314,7 +314,7 @@ sub new_AceDatabase {
     while(1) {
         $dir = $self->_new_session_path;
         my @used = grep { -e $_ } ($dir, "$dir.done");
-        # Latter will be used later in move_to_done.  RT410906
+        # Latter will be used later in _move_to_done.  RT410906
         #
         # There is no race (vs. an honest Otterlace) because existing
         # directories would have been made by a previous run with what
@@ -329,14 +329,6 @@ sub new_AceDatabase {
     $adb->home($dir);
 
     return $adb;
-}
-
-sub lock {
-    my ($self, @args) = @_;
-
-    $self->logger->logconfess("lock takes no arguments") if @args;
-
-    return $self->write_access ? 'true' : 'false';
 }
 
 sub client_hostname {
@@ -423,11 +415,11 @@ sub reauthorize_if_cookie_will_expire_soon {
 
     # Soon is if cookie expires less than half an hour from now
     my $soon = time + (30 * 60);
-    my $expiry = $self->cookie_expiry_time;
+    my $expiry = $self->_cookie_expiry_time;
     if ($expiry < $soon) {
         $self->logger->warn(
             sprintf("reauthorize_if_cookie_will_expire_soon: expiry expected at %s", scalar localtime($expiry)));
-        my $password_attempts = $self->password_attempts;
+        my $password_attempts = $self->_password_attempts;
         while ($password_attempts) {
             return 1 if $self->authorize;
             $password_attempts--;
@@ -455,7 +447,7 @@ sub config_set {
 
     if ($target eq '[client]author') {
         try {
-            $self->ensure_authorised;
+            $self->_ensure_authorised;
         } catch {
             $self->logger->warn("After config_set $target, auth failed: $_");
             # we now have no valid authorisation
@@ -469,7 +461,7 @@ sub config_set {
     return ();
 }
 
-sub authorize {
+sub _authorize {
     my ($self) = @_;
 
     my $user = $self->author;
@@ -482,7 +474,7 @@ sub authorize {
     if (!$failed) {
         # Cookie will have been given to UserAgent
         $self->logger->info(sprintf("Authenticated as %s: %s\n", $self->author, $status));
-        $self->save_CookieJar;
+        $self->_save_CookieJar;
         return 1;
     } else {
         $self->logger->warn(sprintf("Authentication as %s failed: %s (((%s)))\n", $self->author, $status, $detail));
@@ -496,10 +488,10 @@ sub authorize {
 sub get_UserAgent {
     my ($self) = @_;
 
-    return $self->{'_lwp_useragent'} ||= $self->create_UserAgent;
+    return $self->{'_lwp_useragent'} ||= $self->_create_UserAgent;
 }
 
-sub create_UserAgent {
+sub _create_UserAgent {
     my ($self) = @_;
 
     my $ua = LWP::UserAgent->new(timeout => 9000);
@@ -510,7 +502,7 @@ sub create_UserAgent {
     $ua->cookie_jar($self->get_CookieJar);
 
     my $json_impl = JSON->backend;
-    $self->client_logger->warn("Slow JSON decoder '$json_impl' in use?")
+    $self->_client_logger->warn("Slow JSON decoder '$json_impl' in use?")
       unless $json_impl->is_xs;
 
     return $ua;
@@ -519,12 +511,12 @@ sub create_UserAgent {
 # Call it early, but after loggers are ready
 sub env_config {
     my ($self) = @_;
-    $self->ua_tell_hostinfo;
-    $self->setup_pfetch_env;
+    $self->_ua_tell_hostinfo;
+    $self->_setup_pfetch_env;
     return;
 }
 
-sub ua_tell_hostinfo {
+sub _ua_tell_hostinfo {
     my ($self) = @_;
     my $ua = $self->get_UserAgent;
     my %info;
@@ -542,24 +534,24 @@ sub ua_tell_hostinfo {
           map {( $_, uc($_) )}
             qw( http_proxy https_proxy no_proxy );
 
-    $self->client_logger->info('Hostname: ', hostfqdn());
-    $self->client_logger->info('Proxy:', map {" $_=$info{$_}"} sort keys %info);
+    $self->_client_logger->info('Hostname: ', hostfqdn());
+    $self->_client_logger->info('Proxy:', map {" $_=$info{$_}"} sort keys %info);
     return;
 }
 
 sub get_CookieJar {
     my ($self) = @_;
-    return $self->{'_cookie_jar'} ||= $self->create_CookieJar;
+    return $self->{'_cookie_jar'} ||= $self->_create_CookieJar;
 }
 
-sub create_CookieJar {
+sub _create_CookieJar {
     my ($self) = @_;
 
     my $jar = $self->{'_cookie_jar_file'};
     return HTTP::Cookies::Netscape->new(file => $jar);
 }
 
-sub save_CookieJar {
+sub _save_CookieJar {
     my ($self) = @_;
 
     my $jar = $self->{'_cookie_jar_file'};
@@ -588,7 +580,7 @@ sub save_CookieJar {
     return;
 }
 
-sub cookie_expiry_time {
+sub _cookie_expiry_time {
     my ($self) = @_;
 
     my $jar = $self->get_CookieJar;
@@ -643,7 +635,7 @@ sub pfetch_url {
     return $self->url_root . '/pfetch';
 }
 
-sub setup_pfetch_env {
+sub _setup_pfetch_env {
     my ($self) = @_;
 
     # Need to use pfetch via HTTP proxy if we are outside Sanger
@@ -663,7 +655,7 @@ sub setup_pfetch_env {
     my $new_PW = defined $ENV{'PFETCH_WWW'} ? "'$ENV{'PFETCH_WWW'}'" : "undef";
     my $blix_cfg = __user_home()."/.blixemrc";
     my $blix_cfg_exist = -f $blix_cfg ? "exists" : "not present";
-    $self->client_logger->info("setup_pfetch_env: PFETCH_WWW was $old_PW, now $new_PW; $blix_cfg $blix_cfg_exist");
+    $self->_client_logger->info("setup_pfetch_env: PFETCH_WWW was $old_PW, now $new_PW; $blix_cfg $blix_cfg_exist");
 
     return;
 }
@@ -674,7 +666,7 @@ sub setup_pfetch_env {
 sub otter_response_content { ## no critic (Subroutines::RequireFinalReturn)
     my ($self, $method, $scriptname, $params) = @_;
 
-    my $response = $self->general_http_dialog($method, $scriptname, $params);
+    my $response = $self->_general_http_dialog($method, $scriptname, $params);
 
     return $self->_json_content($response)
       if $response->content_type =~ m{^application/json($|;)}; # charset ignored
@@ -682,8 +674,8 @@ sub otter_response_content { ## no critic (Subroutines::RequireFinalReturn)
     my $xml = $response->decoded_content();
 
     if (my ($content) = $xml =~ m{<otter[^\>]*\>\s*(.*)</otter>}s) {
-        my $cl = $self->client_logger;
-        $cl->debug($self->response_info($scriptname, $params, length($content).' (unwrapped)')) if $cl->is_debug;
+        my $cl = $self->_client_logger;
+        $cl->debug($self->_response_info($scriptname, $params, length($content).' (unwrapped)')) if $cl->is_debug;
         return $content;
     } else {
         $self->logger->logconfess("No <otter> tags in response content: [$xml]");
@@ -699,17 +691,17 @@ sub _json_content {
 sub http_response_content {
     my ($self, $method, $scriptname, $params) = @_;
 
-    my $response = $self->general_http_dialog($method, $scriptname, $params);
+    my $response = $self->_general_http_dialog($method, $scriptname, $params);
 
     my $txt = $response->decoded_content();
     # $self->logger->debug($txt);
 
-    my $cl = $self->client_logger;
-    $cl->debug($self->response_info($scriptname, $params, length($txt))) if $cl->is_debug;
+    my $cl = $self->_client_logger;
+    $cl->debug($self->_response_info($scriptname, $params, length($txt))) if $cl->is_debug;
     return $txt;
 }
 
-sub response_info {
+sub _response_info {
     my ($self, $scriptname, $params, $length) = @_;
 
     my $ana = $params->{'analysis'}
@@ -718,18 +710,18 @@ sub response_info {
     return "$scriptname$ana - client received $length bytes from server\n";
 }
 
-sub general_http_dialog {
+sub _general_http_dialog {
     my ($self, $method, $scriptname, $params) = @_;
 
-    $params->{'log'} = 1 if $self->debug_server;
-    $params->{'client'} = $self->client_name;
-    my $clogger = $self->client_logger;
+    $params->{'log'} = 1 if $self->_debug_server;
+    $params->{'client'} = $self->_client_name;
+    my $clogger = $self->_client_logger;
 
-    my $password_attempts = $self->password_attempts;
+    my $password_attempts = $self->_password_attempts;
     my ($response, $content);
 
     REQUEST: while (1) {
-        $response = $self->do_http_request($method, $scriptname, $params);
+        $response = $self->_do_http_request($method, $scriptname, $params);
         $content = $response->decoded_content;
         if ($response->is_success) {
             last REQUEST;
@@ -742,7 +734,7 @@ sub general_http_dialog {
             while ($password_attempts) {
                 $password_attempts--;
                 # Try the request again if we manage to authorize
-                if ($self->authorize) {
+                if ($self->_authorize) {
                     next REQUEST;
                 }
             }
@@ -815,17 +807,17 @@ sub __truncdent_for_log {
 }
 
 
-sub escaped_param_string {
+sub _escaped_param_string {
     my ($self, $params) = @_;
 
     return join '&', map { $_ . '=' . uri_escape($params->{$_}) } (keys %$params);
 }
 
-sub do_http_request {
+sub _do_http_request {
     my ($self, $method, $scriptname, $params) = @_;
 
     my $url = $self->url_root.'/'.$scriptname;
-    my $paramstring = $self->escaped_param_string($params);
+    my $paramstring = $self->_escaped_param_string($params);
 
     my $request = HTTP::Request->new;
     $request->method($method);
@@ -834,14 +826,14 @@ sub do_http_request {
         my $get = $url . ($paramstring ? "?$paramstring" : '');
         $request->uri($get);
 
-        $self->client_logger->debug("GET  $get");
+        $self->_client_logger->debug("GET  $get");
     }
     elsif ($method eq 'POST') {
         $request->uri($url);
         $request->content($paramstring);
 
-        $self->client_logger->debug("POST  $url");
-        # $self->client_logger->debug("paramstring: $paramstring");
+        $self->_client_logger->debug("POST  $url");
+        # $self->_client_logger->debug("paramstring: $paramstring");
     }
     else {
         $self->logger->logconfess("method '$method' is not supported");
@@ -1055,8 +1047,7 @@ sub get_all_DataSets {
     my $ds = $self->{'_datasets'};
     if (! $ds) {
 
-        my $datasets_hash = $self->otter_response_content
-          ('GET', 'get_datasets', {});
+        my $datasets_hash = $self->_get_DataSets_hash;
 
         my @datasets = map {
             $self->_make_DataSet($_, $datasets_hash->{$_});
@@ -1067,6 +1058,16 @@ sub get_all_DataSets {
     }
 
     return @$ds;
+}
+
+# Factored out to allow override in OtterTest::Client
+sub _get_DataSets_hash {
+    my ($self) = @_;
+
+    my $datasets_hash = $self->otter_response_content
+        ('GET', 'get_datasets', {});
+
+    return $datasets_hash;
 }
 
 sub _make_DataSet {
@@ -1092,14 +1093,14 @@ sub _make_DataSet {
 sub get_server_otter_config {
     my ($self) = @_;
 
-    $self->ensure_authorised;
+    $self->_ensure_authorised;
     my $content = $self->_get_config_file('otter_config');
     Bio::Otter::Lace::Defaults::save_server_otter_config($content);
 
     return;
 }
 
-sub ensure_authorised {
+sub _ensure_authorised {
     my ($self) = @_;
 
     # Is user associated with the cookiejar the one configured?
@@ -1158,7 +1159,7 @@ sub get_server_ensembl_version {
 }
 
 # same as Bio::Otter::Server::Config->designations (fresh every time)
-sub get_designations {
+sub _get_designations {
     my ($self) = @_;
     my $hashref = $self->otter_response_content(GET => 'get_config', { key => 'designations' });
     return $hashref;
@@ -1169,7 +1170,7 @@ sub get_designations {
 sub designate_this {
     my ($self, %test_input) = @_;
 
-    my $desig = $self->get_designations;
+    my $desig = $self->_get_designations;
     my $major = $test_input{major} || Bio::Otter::Version->version;
 
     my $BOG = $test_input{BOG} || 'Bio::Otter::Git';
@@ -1248,12 +1249,12 @@ sub designate_this {
 sub get_slice_DE {
     my ($self, $slice) = @_;
     my $resp = $self->otter_response_content
-      ('GET', 'DE_region', { $self->_slice_query($slice) });
+      ('GET', 'DE_region', { $self->slice_query($slice) });
     return $resp->{description};
 }
 
 # Give a B:O:L:Slice
-sub _slice_query {
+sub slice_query {
     my ($self, $slice) = @_;
     die unless wantarray;
     return ('dataset' => $slice->dsname(),
@@ -1524,17 +1525,17 @@ sub sessions_needing_recovery {
 
     my $to_recover = [];
 
-    foreach ( $self->all_sessions ) {
+    foreach ( $self->_all_sessions ) {
         my ( $lace_dir, $pid, $mtime ) = @{$_};
         next if $existing_pid{$pid};
 
         my $ace_wrm = "$lace_dir/database/ACEDB.wrm";
         if (-e $ace_wrm) {
-            if (my $name = $self->get_name($lace_dir)) {
+            if (my $name = $self->_get_name($lace_dir)) {
                 push(@$to_recover, [$lace_dir, $mtime, $name]);
             }
             else {
-                my $done = $self->move_to_done($lace_dir);
+                my $done = $self->_move_to_done($lace_dir);
                 $self->logger->logdie("Session with uninitialised or corrupted SQLite DB renamed to '$done'");
             }
         } else {
@@ -1551,7 +1552,7 @@ sub sessions_needing_recovery {
             catch { $self->logger->error("error while recoving session '$lace_dir': $_"); };
             if (-d $lace_dir) {
                 # Belt and braces - if the session was unrecoverable we want it to be deleted.
-                my $done = $self->move_to_done($lace_dir);
+                my $done = $self->_move_to_done($lace_dir);
                 $self->logger->logdie("No such file: '$lace_dir/database/ACEDB.wrm'\nDatabase moved to '$done'");
             }
         }
@@ -1563,7 +1564,7 @@ sub sessions_needing_recovery {
     return $to_recover;
 }
 
-sub move_to_done {
+sub _move_to_done {
     my ($self, $lace_dir) = @_;
 
     my $done = "$lace_dir.done"; # string also in new_AceDatabase
@@ -1574,7 +1575,7 @@ sub move_to_done {
     return $done;
 }
 
-sub get_name {
+sub _get_name {
     my ($self, $home_dir) = @_;
 
     my $db = Bio::Otter::Lace::DB->new(home => $home_dir, client => $self);
@@ -1584,7 +1585,7 @@ sub get_name {
 sub recover_session {
     my ($self, $dir) = @_;
 
-    $self->kill_old_sgifaceserver($dir);
+    $self->_kill_old_sgifaceserver($dir);
 
     my $adb = $self->new_AceDatabase;
     $adb->error_flag(1);
@@ -1613,7 +1614,7 @@ sub recover_session {
     return $adb;
 }
 
-sub kill_old_sgifaceserver {
+sub _kill_old_sgifaceserver {
     my ($self, $dir) = @_;
 
     # Kill any sgifaceservers from crashed otterlace
@@ -1632,10 +1633,10 @@ sub kill_old_sgifaceserver {
 
 ############## Session recovery methods end here ############################
 
-# This is under the control of $self->debug_client() and should match the corresponding
+# This is under the control of $self->_debug_client() and should match the corresponding
 # log4perl.logger.client in Bio::Otter::LogFile::make_log().
 #
-sub client_logger {
+sub _client_logger {
     return logger('otter.client');
 }
 

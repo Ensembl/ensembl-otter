@@ -299,7 +299,7 @@ sub user_agent {
     return $getscript_user_agent;
 }
 
-# FIXME: duplication with B:O:L:Client->do_http_request()
+# FIXME: duplication with B:O:L:Client->_do_http_request()
 #
 sub do_http_request {
     my ($self, $method, $scriptname, $params, $context) = @_;
