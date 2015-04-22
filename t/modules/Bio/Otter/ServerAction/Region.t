@@ -13,11 +13,14 @@ use Text::Diff;
 use Try::Tiny;
 
 use File::Temp qw( tempdir );
+
+use Bio::Otter::Lace::AceDatabase;
 use Bio::Otter::Lace::Slice;
 use Hum::Ace::Assembly;
 
 use Test::Otter qw( ^db_or_skipall ^data_dir_or_skipall OtterClient ); # may skip test
 
+use OtterTest::Client;
 use OtterTest::TestRegion;
 
 my %modules;
@@ -246,7 +249,7 @@ sub _DE_region_equiv {
     ### Get DE-line the old way
     #
     # B:O:L:C new_AceDatabase
-    my $client = OtterClient();
+    my $client = OtterTest::Client->new;
     my $slice = Bio::Otter::Lace::Slice->new($client, @region);
     my $adb = Bio::Otter::Lace::AceDatabase->new;
     $adb->Client($client);
@@ -261,7 +264,9 @@ sub _DE_region_equiv {
     $adb->load_dataset_info;
     #
     # MCW:ColumnChooser load_filters
-    try { $adb->init_AceDatabase } finally { $adb->error_flag(0) };
+    try     { $adb->init_AceDatabase }
+    catch   { die "init_AceDatabase failed: $_" }
+    finally { $adb->error_flag(0) };
     #
     # MCW:SessionWindow Assembly
     my $ace  = $adb->aceperl_db_handle;
