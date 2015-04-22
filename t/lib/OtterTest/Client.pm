@@ -95,20 +95,20 @@ sub _local_server {
 sub get_accession_types {
     my ($self, @accessions) = @_;
     $self->_local_server->set_params(accessions => \@accessions);
-    my $response = $self->sa_accession_info->get_accession_types;
+    my $response = $self->_s_a_accession_info->get_accession_types;
     return $response;
 }
 
 sub get_taxonomy_info {
     my ($self, @taxon_ids) = @_;
     $self->_local_server->set_params(id => \@taxon_ids);
-    my $response = $self->sa_accession_info->get_taxonomy_info;
+    my $response = $self->_s_a_accession_info->get_taxonomy_info;
     return $response;
 }
 
-sub sa_accession_info {
+sub _s_a_accession_info {
     my $self = shift;
-    return $self->{_sa_accession_info} ||= Bio::Otter::ServerAction::AccessionInfo->new($self->_local_server);
+    return $self->{_s_a_accession_info} ||= Bio::Otter::ServerAction::AccessionInfo->new($self->_local_server);
 }
 
 sub _get_config_file {
