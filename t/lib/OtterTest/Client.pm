@@ -87,35 +87,35 @@ sub new {
     return bless {}, $pkg;
 }
 
-sub local_server {
+sub _local_server {
     my $self = shift;
     return $self->{_local_server} ||= Bio::Otter::Server::Support::Local->new;
 }
 
 sub get_accession_types {
     my ($self, @accessions) = @_;
-    $self->local_server->set_params(accessions => \@accessions);
+    $self->_local_server->set_params(accessions => \@accessions);
     my $response = $self->sa_accession_info->get_accession_types;
     return $response;
 }
 
 sub get_taxonomy_info {
     my ($self, @taxon_ids) = @_;
-    $self->local_server->set_params(id => \@taxon_ids);
+    $self->_local_server->set_params(id => \@taxon_ids);
     my $response = $self->sa_accession_info->get_taxonomy_info;
     return $response;
 }
 
 sub sa_accession_info {
     my $self = shift;
-    return $self->{_sa_accession_info} ||= Bio::Otter::ServerAction::AccessionInfo->new($self->local_server);
+    return $self->{_sa_accession_info} ||= Bio::Otter::ServerAction::AccessionInfo->new($self->_local_server);
 }
 
 sub _get_config_file {
     my ($self, $key) = @_;
-    my $local_server = $self->local_server;
-    $local_server->set_params(key => $key);
-    return Bio::Otter::ServerAction::Config->new($local_server)->get_config;
+    my $_local_server = $self->_local_server;
+    $_local_server->set_params(key => $key);
+    return Bio::Otter::ServerAction::Config->new($_local_server)->get_config;
 }
 
 # FIXME: not cached; duplication with B:O:L:Client
@@ -206,10 +206,10 @@ sub _get_fresh_json {
     try {
         my $tb = Test::Builder->new;
 
-        my $local_server = $self->local_server;
-        $local_server->set_params(dataset => $dsname);
+        my $_local_server = $self->_local_server;
+        $_local_server->set_params(dataset => $dsname);
 
-        my $ldb = Bio::Otter::ServerAction::LoutreDB->new($local_server);
+        my $ldb = Bio::Otter::ServerAction::LoutreDB->new($_local_server);
         $response = $ldb->$what;
         $tb->note("OtterTest::Client::$what: fetched fresh copy");
 
