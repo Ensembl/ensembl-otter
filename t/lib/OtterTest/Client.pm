@@ -128,12 +128,12 @@ sub _get_cache_config_file {
 
 sub get_meta {
     my ($self, $dsname) = @_;
-    return $self->_cached_response('get_meta', $dsname);
+    return $self->_cached_loutre_db_response('get_meta', $dsname);
 }
 
 sub get_db_info {
     my ($self, $dsname) = @_;
-    return $self->_cached_response('get_db_info', $dsname);
+    return $self->_cached_loutre_db_response('get_db_info', $dsname);
 }
 
 {
@@ -152,7 +152,7 @@ sub get_db_info {
     }
 }
 
-sub _cached_response {
+sub _cached_loutre_db_response {
     my ($self, $what, $dsname) = @_;
 
     my $tb = Test::Builder->new;
@@ -167,7 +167,7 @@ sub _cached_response {
     } else {
         # probably need to fetch it
         my $error;
-        ($error, $response) = $self->_get_fresh_json($what, $dsname, $fn);
+        ($error, $response) = $self->_get_fresh_loutre_db_json($what, $dsname, $fn);
         if ($error && -f $fn) {
             my $age = -M $fn;
             $tb->diag("Proceeding with $age-day stale $fn because cannot fetch fresh ($error)");
@@ -180,7 +180,7 @@ sub _cached_response {
     return $self->_decode_json($response);
 }
 
-sub _get_fresh_json {
+sub _get_fresh_loutre_db_json {
     my ($self, $what, $dsname, $fn) = @_;
 
     my ($error, $response);
