@@ -17,6 +17,71 @@ use JSON;
 use Test::Builder;
 use Try::Tiny;
 
+use parent 'Bio::Otter::Lace::Client';
+
+# For caution, we deliberately black-list methods we have not decided to allow or override
+# This doesn't necessarily mean they cannot be used, just that they have yet to be inspected.
+BEGIN {
+    my @blacklist = qw(
+        the
+        write_access
+        author
+        email
+        no_user_config
+        get_log_dir
+        make_log_file
+        cleanup
+        all_session_dirs
+        new_AceDatabase
+        client_hostname
+        chr_start_end_from_contig
+        get_DataSet_by_name
+        password_prompt
+        password_problem
+        reauthorize_if_cookie_will_expire_soon
+        config_set
+        get_UserAgent
+        env_config
+        get_CookieJar
+        url_root
+        url_root_is_default
+        pfetch_url
+        otter_response_content
+        http_response_content
+        status_refresh_for_DataSet_SequenceSet
+        find_clones
+        lock_refresh_for_DataSet_SequenceSet
+        fetch_all_SequenceNotes_for_DataSet_SequenceSet
+        change_sequence_note
+        push_sequence_note
+        get_all_DataSets
+        get_server_otter_config
+        get_otter_styles
+        get_server_ensembl_version
+        designate_this
+        get_slice_DE
+        slice_query
+        do_authentication
+        get_all_SequenceSets_for_DataSet
+        get_all_CloneSequences_for_DataSet_SequenceSet
+        get_methods_ace
+        save_otter_xml
+        config_value_list
+        config_value_list_merged
+        config_section
+        config_keys
+        sessions_needing_recovery
+        recover_session
+        );
+    foreach my $method ( @blacklist ) {
+        my $sub = sub {
+            die "Client->${method}() blacklisted in OtterTest.\nYou should inspect it before allowing or overriding.\n";
+        };
+        no strict 'refs';
+        *{$method} = $sub;
+    }
+}
+
 sub new {
     my ($pkg) = @_;
     return bless {}, $pkg;
