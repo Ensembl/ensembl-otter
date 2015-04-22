@@ -245,8 +245,7 @@ sub empty_acefile_list {
 sub init_AceDatabase {
     my ($self) = @_;
 
-    my $xml_string = $self->http_response_content(
-        'GET', 'get_region');
+    my $xml_string = $self->Client->get_region_xml($self->slice);
     $self->write_file('01_before.xml', $xml_string);
 
     my $parser = Bio::Vega::Transform::XMLToRegion->new;
@@ -257,7 +256,7 @@ sub init_AceDatabase {
     my $region = $parser->parse($xml_string);
     $self->write_otter_acefile($region);
 
-    my ($raw_dna, @tiles) = $self->get_assembly_dna;
+    my ($raw_dna, @tiles) = $self->Client->get_assembly_dna($self->slice);
     $self->write_dna_data($raw_dna, @tiles);
 
     $self->DB->species($region->species);
@@ -302,9 +301,7 @@ sub try_to_lock_the_block {
 
     # could usefully pass "intent" here, but there is no UI for it
 
-    my $hash = $client->otter_response_content
-      ('POST', 'lock_region',
-       $self->_query_hash(hostname => $client->client_hostname));
+    my $hash = $client->lock_region($self->slice);
     die "Locking failed but no error?" unless $hash && $hash->{locknums};
     $self->save_lock_token($hash->{locknums});
     return 1;
@@ -903,10 +900,7 @@ sub unlock_otter_slice {
         return 1;
     }
 
-    my $hash = $self->Client->otter_response_content
-      ('POST', 'unlock_region',
-       { dataset  => $dsname,
-         locknums => $token });
+    my $hash = $client->unlock_region($dsname, $token);
     die "Unlock request failed without error?"
       unless $hash && ($hash->{unlocked} || $hash->{already});
 
@@ -1087,15 +1081,6 @@ sub write_dna_data {
     close $ace_fh;
 
     return;
-}
-
-sub get_assembly_dna {
-    my ($self) = @_;
-
-    my ($dna, @tiles) = split /\n/
-        , $self->http_response_content('GET', 'get_assembly_dna');
-
-    return ($dna, @tiles);
 }
 
 sub dna_ace_data {
@@ -1333,16 +1318,6 @@ sub script_arguments {
     };
 
     return $arguments;
-}
-
-sub http_response_content {
-    my ($self, $command, $script, $args) = @_;
-
-    my $query = $self->_query_hash(%{ $args || {} });
-    my $response = $self->Client->http_response_content(
-        $command, $script, $query);
-
-    return $response;
 }
 
 sub _query_hash {
