@@ -9,9 +9,11 @@ use Bio::Otter::Server::Config;
 use Bio::Otter::Server::Support::Local;
 use Bio::Otter::ServerAction::AccessionInfo;
 use Bio::Otter::ServerAction::Config;
+use Bio::Otter::ServerAction::Datasets;
 use Bio::Otter::ServerAction::LoutreDB;
 use Bio::Otter::Version;
 
+use Carp;
 use File::Slurp qw( slurp write_file );
 use JSON;
 use Test::Builder;
@@ -35,7 +37,6 @@ BEGIN {
         new_AceDatabase
         client_hostname
         chr_start_end_from_contig
-        get_DataSet_by_name
         password_prompt
         password_problem
         reauthorize_if_cookie_will_expire_soon
@@ -54,7 +55,6 @@ BEGIN {
         fetch_all_SequenceNotes_for_DataSet_SequenceSet
         change_sequence_note
         push_sequence_note
-        get_all_DataSets
         get_server_otter_config
         designate_this
         get_slice_DE
@@ -72,7 +72,7 @@ BEGIN {
         );
     foreach my $method ( @blacklist ) {
         my $sub = sub {
-            die "Client->${method}() blacklisted in OtterTest.\nYou should inspect it before allowing or overriding.\n";
+            confess "Client->${method}() blacklisted in OtterTest.\nYou should inspect it before allowing or overriding.\n";
         };
         no strict 'refs';
         *{$method} = $sub;
@@ -134,6 +134,11 @@ sub get_meta {
 sub get_db_info {
     my ($self, $dsname) = @_;
     return $self->_cached_loutre_db_response('get_db_info', $dsname);
+}
+
+sub _get_DataSets_hash {
+    my ($self) = @_;
+    return Bio::Otter::ServerAction::Datasets->new($self->_local_server)->get_datasets;
 }
 
 {
