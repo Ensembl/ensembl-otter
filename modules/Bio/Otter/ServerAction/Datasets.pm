@@ -34,6 +34,8 @@ sub get_datasets {
     # Only local users get to see mysql connection details
     my $show_details = $server->local_user;
 
+    my $is_local = $server->isa('Bio::Otter::Server::Support::Local');
+
     my %datasets;
     foreach my $dataset (@{$server->allowed_datasets}) {
         my $name   = $dataset->name;
@@ -42,7 +44,7 @@ sub get_datasets {
         my %ds;
         foreach my $key (keys %$params) {
             unless ($good_params{$key}) {
-                warn "Redacted key=$key - old species.dat?";
+                warn "Redacted key=$key - old species.dat?" unless $is_local;
                 next;
             }
             unless ($show_details) {
