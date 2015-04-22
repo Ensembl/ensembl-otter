@@ -69,6 +69,10 @@ BEGIN {
         config_keys
         sessions_needing_recovery
         recover_session
+        get_region_xml
+        get_assembly_dna
+        lock_region
+        unlock_region
         );
     foreach my $method ( @blacklist ) {
         my $sub = sub {

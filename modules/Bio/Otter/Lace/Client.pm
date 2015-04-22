@@ -1633,6 +1633,60 @@ sub _kill_old_sgifaceserver {
 
 ############## Session recovery methods end here ############################
 
+
+############## server requests for AceDatabase ##############################
+
+sub get_region_xml {
+    my ($self, $slice) = @_;
+    my $xml = $self->http_response_content(
+        'GET',
+        'get_region',
+        { $self->slice_query($slice) },
+        );
+    return $xml;
+}
+
+sub get_assembly_dna {
+    my ($self, $slice) = @_;
+
+    my ($dna, @tiles) = split /\n/
+        , $self->http_response_content(
+        'GET',
+        'get_assembly_dna',
+        { $self->slice_query($slice) },
+        );
+
+    return ($dna, @tiles);
+}
+
+sub lock_region {
+    my ($self, $slice) = @_;
+    my $hash = $self->otter_response_content(
+        'POST',
+        'lock_region',
+        {
+            $self->slice_query($slice),
+            hostname => $self->client_hostname,
+        },
+        );
+    return $hash;
+}
+
+sub unlock_region {
+    my ($self, $dataset_name, $locknums) = @_;
+    my $hash = $self->otter_response_content(
+        'POST',
+        'unlock_region',
+        {
+            dataset  => $dataset_name,
+            locknums => $locknums,
+        },
+        );
+    return $hash;
+}
+
+############## server requests for AceDatabase end here #####################
+
 # This is under the control of $self->_debug_client() and should match the corresponding
 # log4perl.logger.client in Bio::Otter::LogFile::make_log().
 #
