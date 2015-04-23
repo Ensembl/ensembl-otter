@@ -85,8 +85,7 @@ my $_new_feature_id_sub = sub {
     }
 
     sub _gff_feature {
-        my $feature = 'sequence_feature';
-        return $feature;
+        return 'sequence_feature';
     }
 }
 
@@ -160,8 +159,7 @@ my $_new_feature_id_sub = sub {
     }
 
     sub _gff_feature {
-        my $feature = 'match';
-        return $feature;
+        return 'match';
     }
 }
 
@@ -183,8 +181,7 @@ my $_new_feature_id_sub = sub {
     package Bio::EnsEMBL::DnaPepAlignFeature;
 
     sub _gff_feature {
-        my $feature = 'protein_match';
-        return $feature;
+        return 'protein_match';
     }
 }
 
@@ -193,8 +190,7 @@ my $_new_feature_id_sub = sub {
     package Bio::EnsEMBL::DnaDnaAlignFeature;
 
     sub _gff_feature {
-        my $feature = 'nucleotide_match';
-        return $feature;
+        return 'nucleotide_match';
     }
 }
 
@@ -422,8 +418,7 @@ my $_new_feature_id_sub = sub {
     }
 
     sub _gff_feature {
-        my $feature = 'transcript';
-        return $feature;
+        return 'transcript';
     }
 }
 
@@ -441,8 +436,7 @@ my $_new_feature_id_sub = sub {
     }
 
     sub _gff_feature {
-        my $feature = 'exon';
-        return $feature;
+        return 'exon';
     }
 }
 
@@ -451,8 +445,7 @@ my $_new_feature_id_sub = sub {
     package Bio::EnsEMBL::Intron;
 
     sub _gff_feature {
-        my $feature = 'intron';
-        return $feature;
+        return 'intron';
     }
 }
 
@@ -535,8 +528,7 @@ my $_new_feature_id_sub = sub {
     }
 
     sub _gff_feature {
-        my $feature = 'repeat_region';
-        return $feature;
+        return 'repeat_region';
     }
 }
 
