@@ -40,7 +40,7 @@ my $_new_feature_id_sub = sub {
         my ($self, %args) = @_;
 
         my $gff_seqname = $args{'gff_seqname'} || $self->slice->seq_region_name;
-        my $gff_source  = $args{'gff_source'} || $self->_gff_source;
+        my $gff_source  = $args{'gff_source'}  || $self->_gff_source;
         my $gff_feature = $args{'gff_feature'} || $self->_gff_feature;
 
         my $gff = {
@@ -66,8 +66,7 @@ my $_new_feature_id_sub = sub {
         my $gff_format = $args->{'gff_format'};
         my $gff_str =
             $gff_format->gff_line(
-                @{$gff}{qw( seqname source feature start end score strand phase attributes )},
-                $args);
+                @{$gff}{qw( seqname source feature start end score strand phase attributes )});
 
         return $gff_str;
     }

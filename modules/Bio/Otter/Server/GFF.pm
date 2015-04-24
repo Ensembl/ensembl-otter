@@ -103,22 +103,41 @@ sub do_send_features {
         sub {
             my ($self) = @_;
             my $features = $self->get_requested_features;
-            my $sequence_db = $self->param('sequence_db');
-            my $target_hash = $sequence_db ? { } : undef;
-            my $features_gff = $self->_features_gff($features, $target_hash);
-            my $gff = $self->gff_header . $features_gff;
-            if ($target_hash && keys %{$target_hash}) {
-                require Bio::Otter::Utils::AccessionInfo;
-                my @sequence_db = split /\s*,\s*/, $sequence_db;
-                my $mm = Bio::Otter::Utils::AccessionInfo->new('db_categories' => \@sequence_db);
-                my $accession_info = $mm->get_accession_info([keys %{$target_hash}]);
-                if (keys %{$accession_info}) {
-                    $gff .= ("##FASTA\n" . _fasta($accession_info));
+
+            my $fasta_gff = '';
+            my $accession_info;
+            if (my $seq_db_list = $self->sequence_database_list) {
+                my %hseq;
+                foreach my $feat (@$features) {
+                    # Here we assume that all features where a sequence_db list
+                    # is provided will have the hseqname method.
+                    $hseq{$feat->hseqname} = 1;
+                }
+                if (keys %hseq) {
+                    require Bio::Otter::Utils::AccessionInfo;
+                    my $mm = Bio::Otter::Utils::AccessionInfo->new('db_categories' => $seq_db_list);
+                    my $accession_info = $mm->get_accession_info([keys %hseq]);
+                    if (keys %{$accession_info}) {
+                        $fasta_gff = ("##FASTA\n" . _fasta($accession_info));
+                    }
                 }
             }
-            return $gff;
+
+            return $self->gff_header . $self->_features_gff($features, $accession_info) . $fasta_gff;
         });
 
+    return;
+}
+
+sub sequence_database_list {
+    my ($self) = @_;
+
+    if (my $txt = $self->param('sequence_db')) {
+        my $db_list = [ split /\s*,\s*/, $txt ];
+        if (@$db_list) {
+            return $db_list;
+        }
+    }
     return;
 }
 
@@ -224,11 +243,13 @@ sub gff_header {
 }
 
 sub _features_gff {
-    my ($self, $features, $target_hash) = @_;
+    my ($self, $features, $accesion_info) = @_;
 
     my %gff_args = ();
-    $gff_args{$_} = $self->param($_) for $self->_gff_keys;
-    $gff_args{'target_hash'} = $target_hash;
+    foreach my $key ($self->_gff_keys) {
+        $gff_args{$key} = $self->param($key);
+    }
+    $gff_args{'accession_info'} = $accesion_info;
     my $gff_version = $self->param('gff_version');
     $gff_args{'gff_format'} = Bio::Vega::Utils::GFF::gff_format($gff_version);
 
