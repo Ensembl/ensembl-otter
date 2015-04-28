@@ -9,7 +9,7 @@ use Bio::Otter::Log::WithContext;
 
 use OtterTest::Client;
 
-sub new {
+sub new_mock {
     my ($pkg) = @_;
 
     my $self = bless {}, $pkg;

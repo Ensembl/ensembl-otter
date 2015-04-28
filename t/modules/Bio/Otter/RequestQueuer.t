@@ -20,7 +20,7 @@ BEGIN {
 
 critic_module_ok($module);
 
-my $sw = OtterTest::SessionWindow->new;
+my $sw = OtterTest::SessionWindow->new_mock;
 my $rq = new_ok($module => [ $sw ]);
 
 done_testing;
