@@ -14,13 +14,11 @@ use Try::Tiny;
 
 use File::Temp qw( tempdir );
 
-use Bio::Otter::Lace::AceDatabase;
-use Bio::Otter::Lace::Slice;
 use Hum::Ace::Assembly;
 
 use Test::Otter qw( ^db_or_skipall ^data_dir_or_skipall OtterClient ); # may skip test
 
-use OtterTest::Client;
+use OtterTest::AceDatabase;
 use OtterTest::TestRegion;
 
 my %modules;
@@ -247,27 +245,13 @@ sub DE_line_equiv_tt {
 sub _DE_region_equiv {
     my ($acehome, $label, @region) = @_;
     ### Get DE-line the old way
-    #
-    # B:O:L:C new_AceDatabase
-    my $client = OtterTest::Client->new;
-    my $slice = Bio::Otter::Lace::Slice->new($client, @region);
-    my $adb = Bio::Otter::Lace::AceDatabase->new;
-    $adb->Client($client);
-    $adb->home($acehome);
-    #
-    # CW:SequenceNotes open_SequenceSet
-    $adb->error_flag(0);
-    $adb->make_database_directory;
-    $adb->write_access(0);
-    $adb->name("DE_line_cmp:$label");
-    $adb->slice($slice);
-    $adb->load_dataset_info;
-    #
-    # MCW:ColumnChooser load_filters
-    try     { $adb->init_AceDatabase }
-    catch   { die "init_AceDatabase failed: $_" }
-    finally { $adb->error_flag(0) };
-    #
+
+    my $adb = OtterTest::AceDatabase->new_with_slice(
+        $acehome,
+        "DE_line_cmp:$label",
+        @region,
+        );
+
     # MCW:SessionWindow Assembly
     my $ace  = $adb->aceperl_db_handle;
     my $assembly = Hum::Ace::Assembly->new;
@@ -276,6 +260,8 @@ sub _DE_region_equiv {
     $assembly->express_data_fetch($ace);
     # Do we need to load up all the SubSeqs from a GFF?
     # Is it worth having a SessionWindow here to do that?
+
+    my $slice = $adb->slice;
 
     foreach my $clone ($assembly->get_all_Clones) {
         my $ace_desc = $assembly->generate_description_for_clone($clone);
