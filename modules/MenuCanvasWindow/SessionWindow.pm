@@ -20,7 +20,6 @@ require Tk::Balloon;
 use Hum::Ace::SubSeq;
 use Bio::Otter::ZMap::XML::SubSeq;
 use Hum::Ace::Locus;
-use Hum::Ace::Assembly;
 use Hum::Analysis::Factory::ExonLocator;
 use Hum::Sort qw{ ace_sort };
 use Hum::ClipboardUtils qw{ text_is_zmap_clip };
@@ -1923,17 +1922,13 @@ sub Assembly {
 
         my $canvas = $self->canvas;
         my $slice_name = $self->slice_name;
-        my $ace  = $self->AceDatabase->aceperl_db_handle;
 
         my $before = time();
         my $busy = Tk::ScopedBusy->new($canvas, -recurse => 0);
 
         my( $assembly );
         try {
-            $assembly = Hum::Ace::Assembly->new;
-            $assembly->name($slice_name);
-            $assembly->MethodCollection($self->AceDatabase->MethodCollection);
-            $assembly->express_data_fetch($ace);
+            $assembly = $self->AceDatabase->fetch_assembly;
             return 1;
         }
         catch {
