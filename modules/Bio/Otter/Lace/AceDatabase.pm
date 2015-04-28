@@ -341,21 +341,11 @@ sub recover_slice_from_region_xml {
     $parser->coord_system_factory(Bio::Vega::CoordSystemFactory->new); # Should we get this from somewhere else?
     my $region = $parser->parse($xml);
 
-    # Perhaps we need Bio::Otter::Lace::Slice->new_from_region()
-    my $chr_slice = $region->slice;
-    my $slice = Bio::Otter::Lace::Slice->new(
-        $client,
-        $region->species,
-        $chr_slice->seq_region_name,
-        $chr_slice->coord_system->name,
-        $chr_slice->coord_system->version,
-        $region->chromosome_name,
-        $chr_slice->start,
-        $chr_slice->end,
-        );
+    my $slice = Bio::Otter::Lace::Slice->new_from_region($client, $region);
     $self->slice($slice);
+
     $self->DB->species($region->species);
-    $self->DB->session_slice($self->slice->ensembl_slice);
+    $self->DB->session_slice($slice->ensembl_slice);
 
     return;
 }
