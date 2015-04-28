@@ -251,13 +251,8 @@ sub _DE_region_equiv {
         "DE_line_cmp:$label",
         @region,
         );
+    my $assembly = $adb->fetch_assembly;
 
-    # MCW:SessionWindow Assembly
-    my $ace  = $adb->aceperl_db_handle;
-    my $assembly = Hum::Ace::Assembly->new;
-    $assembly->name( $adb->slice_name );
-    $assembly->MethodCollection($adb->MethodCollection);
-    $assembly->express_data_fetch($ace);
     # Do we need to load up all the SubSeqs from a GFF?
     # Is it worth having a SessionWindow here to do that?
 

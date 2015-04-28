@@ -29,6 +29,7 @@ use Bio::Otter::Lace::Slice; # a new kind of Slice that knows how to get pipelin
 use Bio::Otter::Lace::ProcessGFF;
 use Bio::Otter::Utils::Config::Ini qw( config_ini_format );
 
+use Hum::Ace::Assembly;
 use Hum::Ace::LocalServer;
 use Hum::Ace::MethodCollection;
 use Hum::ZMapStyleCollection;
@@ -348,6 +349,19 @@ sub recover_slice_from_region_xml {
     $self->DB->session_slice($slice->ensembl_slice);
 
     return;
+}
+
+sub fetch_assembly {
+    my ($self) = @_;
+
+    my $ace  = $self->aceperl_db_handle;
+
+    my $assembly = Hum::Ace::Assembly->new;
+    $assembly->name($self->slice_name);
+    $assembly->MethodCollection($self->MethodCollection);
+    $assembly->express_data_fetch($ace);
+
+    return $assembly;
 }
 
 sub slice {
