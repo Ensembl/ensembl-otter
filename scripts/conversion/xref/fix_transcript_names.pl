@@ -82,11 +82,13 @@ my $support = new Bio::EnsEMBL::Utils::VegaCuration::Transcript($SERVERROOT);
 $support->parse_common_options(@_);
 $support->parse_extra_options(
   'prune',
-  'update');
+  'update',
+  'live_update');
 $support->allowed_params(
   $support->get_common_params,
   'prune',
-  'update');
+  'update',
+  'live_update');
 
 if ($support->param('help') or $support->error) {
   warn $support->error if $support->error;
@@ -105,6 +107,7 @@ my $sa  = $dba->get_SliceAdaptor;
 my $aa  = $dba->get_AttributeAdaptor;
 my $dbh = $dba->dbc->db_handle;
 my $fix_names = 0;
+
 
 my $dbname = $support->param('dbname');
 my $n_flist_fh;
@@ -163,9 +166,10 @@ $support->log("fix names = $fix_names\n");
 
 foreach my $chrom_name (@top_slices) {
   my $chrom = $sa->fetch_by_region('toplevel',$chrom_name);
+
   $support->log_stamped("Checking chromosome $chrom_name\n");
  GENE:
-  my ($genes) = $support->get_unique_genes($chrom);
+  my ($genes) = $support->get_unique_genes($chrom,$dba);
   foreach my $gene (@$genes){
     my $gsi    = $gene->stable_id;
     my $transnames;
@@ -331,8 +335,13 @@ sub check_remarks_and_update_names {
   my $coding_trans = [];
   my $noncoding_trans = [];
   foreach my $trans ( @{$gene->get_all_Transcripts()} ) {
-    if ($trans->translate) {
-      push @$coding_trans, $trans;
+    if (! $support->param('live_update')) {
+      if ($trans->translate) {
+        push @$coding_trans, $trans;
+      }
+      else {
+        push @$noncoding_trans, $trans;
+      }
     }
     else {
       push @$noncoding_trans, $trans;
