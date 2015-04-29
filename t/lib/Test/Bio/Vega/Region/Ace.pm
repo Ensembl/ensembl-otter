@@ -18,7 +18,7 @@ sub make_ace_string : Tests {
 
     my $ace = $bvra->make_ace_string($test->parsed_region);
     ok ($ace, '... produces output');
-    note ("ace_string (first 200 chrs):\n", substr($ace, 0, 200));
+    note ("ace_string (first 2000 chrs):\n", substr($ace, 0, 2000));
 
     return;
 }
@@ -48,6 +48,17 @@ sub make_assembly : Tests {
     isa_ok($ha, 'Hum::Ace::Assembly', '...and result of make_assembly()');
 
     eq_or_diff($ha->ace_string, $ea->ace_string, '...and ace_string matches');
+
+    my @e_clones = $ea->get_all_Clones;
+    my @h_clones = $ha->get_all_Clones;
+    is (scalar(@h_clones), scalar(@e_clones), '...n(Clones)');
+
+    subtest 'clones' => sub {
+        foreach my $i ( 0 .. $#e_clones ) {
+            fail "clone[$i] missing" unless $h_clones[$i];
+            eq_or_diff($h_clones[$i]->ace_string, $e_clones[$i]->ace_string, "clone[$i] ace_string");
+        }
+    };
 
     return;
 }
