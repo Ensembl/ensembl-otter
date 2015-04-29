@@ -35,15 +35,35 @@ sub logger {
 
 # -------- perhaps this should be a different module? --------
 
-sub new_with_slice {
+sub new_from_slice_params {
     my ($pkg, $ace_home, $name, @slice_region_param_list) = @_;
+
+    my $slicer = sub {
+        my ($client) = @_;
+        return Bio::Otter::Lace::Slice->new($client, @slice_region_param_list);
+    };
+    return $pkg->_new_from_slicer($ace_home, $name, $slicer);
+}
+
+sub new_from_region {
+    my ($pkg, $ace_home, $name, $region) = @_;
+
+    my $slicer = sub {
+        my ($client) = @_;
+        return Bio::Otter::Lace::Slice->new_from_region($client, $region);
+    };
+    return $pkg->_new_from_slicer($ace_home, $name, $slicer);
+}
+
+sub _new_from_slicer {
+    my ($pkg, $ace_home, $name, $slicer) = @_;
 
     require Bio::Otter::Lace::AceDatabase;
     require Bio::Otter::Lace::Slice;
 
     # B:O:L:C new_AceDatabase
     my $client = OtterTest::Client->new;
-    my $slice = Bio::Otter::Lace::Slice->new($client, @slice_region_param_list);
+    my $slice = $slicer->($client);
     my $adb = Bio::Otter::Lace::AceDatabase->new;
     $adb->Client($client);
     $adb->home($ace_home);
