@@ -246,7 +246,7 @@ sub _DE_region_equiv {
     my ($acehome, $label, @region) = @_;
     ### Get DE-line the old way
 
-    my $adb = OtterTest::AceDatabase->new_with_slice(
+    my $adb = OtterTest::AceDatabase->new_from_slice_params(
         $acehome,
         "DE_line_cmp:$label",
         @region,
