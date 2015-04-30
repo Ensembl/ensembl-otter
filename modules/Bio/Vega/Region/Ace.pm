@@ -498,9 +498,9 @@ sub make_assembly {
     my ($self, $region, $attrs) = @_;
 
     my $assembly = $self->_make_assembly($region, $attrs);
-    $self->_add_simple_features($region, $assembly);
-    $self->_add_contigs(        $region, $assembly);
-
+    $self->_add_simple_features($assembly, $region->seq_features);
+    $self->_add_contigs(        $assembly, $region->clone_sequences);
+    $self->_add_genes(          $assembly, $region->genes);
     return $assembly;
 }
 
@@ -525,7 +525,7 @@ sub _make_assembly {
 }
 
 sub _add_simple_features {
-    my ($self, $region, $assembly) = @_;
+    my ($self, $assembly, @seq_features) = @_;
 
     # FIXME: dup with Hum::Ace::Assembly
     my $coll = $assembly->MethodCollection
@@ -536,7 +536,7 @@ sub _add_simple_features {
       map { lc $_->name, $_ } $coll->get_all_mutable_non_transcript_Methods;
 
     my @simple_features;
-    foreach my $feat ($region->seq_features) {
+    foreach my $feat (@seq_features) {
 
         my $type = $feat->analysis->logic_name;
         my $method = $mutable_method{lc $type}
@@ -573,11 +573,11 @@ sub _dna {
 }
 
 sub _add_contigs {
-    my ($self, $region, $assembly) = @_;
+    my ($self, $assembly, @clone_sequences) = @_;
 
     # Duplication with Hum::Ace::Assembly->express_data_fetch()
     my %name_clone;
-    foreach my $cs ($region->clone_sequences) {
+    foreach my $cs (@clone_sequences) {
         my $start      = $cs->chr_start;
         my $end        = $cs->chr_end;
         my $ctg_slice  = $cs->ContigInfo->slice;
@@ -619,6 +619,95 @@ sub _add_contigs {
         }
     }
     return $assembly;
+}
+
+sub _add_genes {
+    my ($self, $assembly, @genes) = @_;
+
+    # DUP Hum::Ace::Assembly->express_data_fetch
+    my %name_method = map {$_->name, $_} $assembly->MethodCollection->get_all_transcript_Methods;
+
+    foreach my $gene (@genes) {
+
+        my $locus = Hum::Ace::Locus->new;
+        $locus->name(get_first_attrib_value($gene, 'name'));
+        $locus->gene_type_prefix($gene->source eq 'havana' ? '' : $gene->source . ':'); # FIXME: dup
+
+        $locus->description( $gene->description);
+        $locus->is_truncated($gene->truncated_flag);
+        $locus->known(       $gene->is_known);
+        $locus->otter_id(    $gene->stable_id);
+
+        $self->_add_attributes_to_HumAce($gene => 'synonym',       $locus => 'set_aliases');
+        $self->_add_attributes_to_HumAce($gene => 'remark',        $locus => 'set_remarks');
+        $self->_add_attributes_to_HumAce($gene => 'hidden_remark', $locus => 'set_annotation_remarks');
+
+        foreach my $tsct (@{$gene->get_all_Transcripts}) {
+
+            my $subseq = Hum::Ace::SubSeq->new;
+            $subseq->name(get_first_attrib_value($tsct, 'name'));
+            $subseq->Locus($locus);
+            $subseq->clone_Sequence($assembly->Sequence);
+
+            $subseq->strand( $tsct->strand);
+            $subseq->otter_id($tsct->stable_id);
+
+            if (my $translation = $tsct->translation) {
+                if ($tsct->strand == 1) {
+                    $subseq->translation_region($translation->genomic_start, $translation->genomic_end);
+                } else {
+                    $subseq->translation_region($translation->genomic_end, $translation->genomic_start);
+                }
+                $subseq->translation_otter_id($translation->stable_id);
+            }
+
+            $self->_add_attributes_to_HumAce($tsct => 'remark',        $subseq => 'set_remarks');
+            $self->_add_attributes_to_HumAce($tsct => 'hidden_remark', $subseq => 'set_annotation_remarks');
+
+            foreach my $exon (@{$tsct->get_all_Exons}) {
+
+                my $ha_exon = Hum::Ace::Exon->new;
+                $ha_exon->start(   $exon->start);
+                $ha_exon->end(     $exon->end);
+                $ha_exon->otter_id($exon->stable_id);
+
+                $subseq->add_Exon($ha_exon);
+            }
+
+            # DUP from make_ace_genes_transcripts() above
+            my $method_name = sprintf('%s%s%s',
+                                      $locus->gene_type_prefix,
+                                      biotype_status2method($tsct->biotype, $tsct->status),
+                                      $gene->truncated_flag ? '_trunc' : '');
+            my $method = $name_method{$method_name};
+            unless ($method) {
+                confess "No transcript Method called '$method_name'";
+            }
+            $subseq->GeneMethod($method);
+
+            # DUP Hum::Ace::SubSeq->process_ace_start_end_transcript_seq()
+            my %evidence;
+            foreach my $ev (@{$tsct->evidence_list}) {
+                push @{$evidence{$ev->type}}, $ev->name;
+            }
+            foreach my $type (keys %evidence) {
+                $subseq->add_evidence_list($type, $evidence{$type});
+            }
+
+            $assembly->add_SubSeq($subseq);
+        }
+    }
+
+    return $assembly;
+}
+
+sub _add_attributes_to_HumAce {
+    my ($self, $vega_obj, $attrib_code, $hum_obj, $hum_method) = @_;
+
+    my @values = map { $_->value } @{$vega_obj->get_all_Attributes($attrib_code)};
+    $hum_obj->$hum_method(@values);
+
+    return;
 }
 
 1;

@@ -16,6 +16,10 @@ sub make_ace_string : Tests {
     my $bvra = $test->our_object;
     can_ok $bvra, 'make_ace_string';
 
+    # quick check on _process_contig_attribs for 'annotated'
+    my $cs = ($test->parsed_region->clone_sequences)[0];
+    $cs->ContigInfo->add_Attributes(Bio::EnsEMBL::Attribute->new(-CODE => 'annotated', -VALUE => 'T'));
+
     my $ace = $bvra->make_ace_string($test->parsed_region);
     ok ($ace, '... produces output');
     note ("ace_string (first 2000 chrs):\n", substr($ace, 0, 2000));
@@ -55,8 +59,25 @@ sub make_assembly : Tests {
 
     subtest 'clones' => sub {
         foreach my $i ( 0 .. $#e_clones ) {
-            fail "clone[$i] missing" unless $h_clones[$i];
+            unless ($h_clones[$i]) {
+                fail "clone[$i] missing";
+                next;
+            }
             eq_or_diff($h_clones[$i]->ace_string, $e_clones[$i]->ace_string, "clone[$i] ace_string");
+        }
+    };
+
+    my @e_subseqs = $ea->get_all_SubSeqs;
+    my @h_subseqs = $ha->get_all_SubSeqs;
+    is (scalar(@h_subseqs), scalar(@e_subseqs), '...n(SubSeqs)');
+
+    subtest 'subseqs' => sub {
+        foreach my $i ( 0 .. $#e_subseqs ) {
+            unless ($h_subseqs[$i]) {
+                fail "SubSeq[$i] missing";
+                next;
+            }
+            eq_or_diff($h_subseqs[$i]->ace_string, $e_subseqs[$i]->ace_string, "SubSeq[$i] ace_string");
         }
     };
 
