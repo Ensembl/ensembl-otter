@@ -499,7 +499,7 @@ sub make_assembly {
 
     my $assembly = $self->_make_assembly($region, $attrs);
     $self->_add_simple_features($assembly, $region->seq_features);
-    $self->_add_contigs(        $assembly, $region->clone_sequences);
+    $self->_add_contigs(        $assembly, $region->sorted_clone_sequences);
     $self->_add_genes(          $assembly, $region->genes);
     return $assembly;
 }
@@ -577,9 +577,10 @@ sub _add_contigs {
 
     # Duplication with Hum::Ace::Assembly->express_data_fetch()
     my %name_clone;
+    my $chr_offset = $clone_sequences[0]->chr_start - 1;
     foreach my $cs (@clone_sequences) {
-        my $start      = $cs->chr_start;
-        my $end        = $cs->chr_end;
+        my $start      = $cs->chr_start - $chr_offset;
+        my $end        = $cs->chr_end   - $chr_offset;
         my $ctg_slice  = $cs->ContigInfo->slice;
         my $clone_name = $ctg_slice->seq_region_name;
         my $strand     = $ctg_slice->strand;
@@ -613,6 +614,10 @@ sub _add_contigs {
                                                $clone->$method($value);
                                            });
 
+            # Not sure whether we need this, but it allows for deep testing
+            $clone->golden_start(1);
+            $clone->golden_end($clone->sequence_length);
+
             $assembly->add_Clone($clone);
 
             $name_clone{$clone_name} = $clone;
@@ -631,12 +636,14 @@ sub _add_genes {
 
         my $locus = Hum::Ace::Locus->new;
         $locus->name(get_first_attrib_value($gene, 'name'));
-        $locus->gene_type_prefix($gene->source eq 'havana' ? '' : $gene->source . ':'); # FIXME: dup
+        # Check this, cf express_data_fetch:
+        # $locus->gene_type_prefix($gene->source eq 'havana' ? '' : $gene->source . ':'); # FIXME: dup
 
         $locus->description( $gene->description);
-        $locus->is_truncated($gene->truncated_flag);
-        $locus->known(       $gene->is_known);
+        $locus->is_truncated($gene->truncated_flag) if $gene->truncated_flag;
+        $locus->known(       $gene->is_known)       if $gene->is_known;
         $locus->otter_id(    $gene->stable_id);
+        $locus->author_name( $gene->gene_author->name);
 
         $self->_add_attributes_to_HumAce($gene => 'synonym',       $locus => 'set_aliases');
         $self->_add_attributes_to_HumAce($gene => 'remark',        $locus => 'set_remarks');
@@ -649,8 +656,9 @@ sub _add_genes {
             $subseq->Locus($locus);
             $subseq->clone_Sequence($assembly->Sequence);
 
-            $subseq->strand( $tsct->strand);
-            $subseq->otter_id($tsct->stable_id);
+            $subseq->author_name($tsct->transcript_author->name);
+            $subseq->strand(     $tsct->strand);
+            $subseq->otter_id(   $tsct->stable_id);
 
             if (my $translation = $tsct->translation) {
                 if ($tsct->strand == 1) {
@@ -693,6 +701,9 @@ sub _add_genes {
             foreach my $type (keys %evidence) {
                 $subseq->add_evidence_list($type, $evidence{$type});
             }
+
+            # Flag that the sequence is in the db - CHECK ME!!
+            $subseq->is_archival(1);
 
             $assembly->add_SubSeq($subseq);
         }
