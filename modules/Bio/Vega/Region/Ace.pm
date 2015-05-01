@@ -8,6 +8,8 @@ use warnings;
 use Carp;
 
 use Hum::Ace::AceText;
+use Hum::Ace::Assembly;
+
 use Bio::Vega::Utils::GeneTranscriptBiotypeStatus 'biotype_status2method';
 
 my %ens2ace_phase = (
@@ -446,6 +448,88 @@ sub make_ace_genomic_features {
     return $ace->ace_string;
 }
 
+
+# ---------- build a Hum::Ace::Assembly from region, a la express_data_fetch ----------
+
+sub make_assembly {
+    my ($self, $region, $attrs) = @_;
+
+    my $assembly = $self->_make_assembly($region, $attrs);
+    $self->_add_contigs($region, $assembly);
+
+    return $assembly;
+}
+
+sub _make_assembly {
+    my ($self, $region, $attrs) = @_;
+
+    my $chr_slice = $region->slice;
+
+    my $assembly = Hum::Ace::Assembly->new;
+    if ($attrs) {
+        foreach my $key ( keys %$attrs ) {
+            $assembly->$key($attrs->{$key});
+        }
+    }
+    $assembly->species($region->species);
+    $assembly->assembly_name($chr_slice->seq_region_name);
+
+    $assembly->Sequence($self->_dna($region, $assembly->name));
+
+    return $assembly;
+}
+
+sub _dna {
+    my ($self, $region, $name) = @_;
+
+    my $dna = $region->slice->seq;
+
+    my $seq = Hum::Sequence::DNA->new;
+    $seq->name($name);
+    $seq->sequence_string($dna);
+
+    warn "Sequence '$name' is ", $seq->sequence_length, " long\n"; # FIXME: logger
+    return $seq;
+}
+
+sub _add_contigs {
+    my ($self, $region, $assembly) = @_;
+
+    # Duplication with Hum::Ace::Assembly->express_data_fetch()
+    my %name_clone;
+    foreach my $cs ($region->clone_sequences) {
+        my $start      = $cs->chr_start;
+        my $end        = $cs->chr_end;
+        my $ctg_slice  = $cs->ContigInfo->slice;
+        my $clone_name = $ctg_slice->seq_region_name;
+        my $strand     = $ctg_slice->strand;
+
+        if (my $clone = $name_clone{$clone_name}) {
+            if ($clone->assembly_strand != $strand) {
+                $clone->assembly_strand(0);
+            }
+            if ($start < $clone->assembly_start) {
+                $clone->assembly_start($start);
+            }
+            if ($end > $clone->assembly_end) {
+                $clone->assembly_end($end);
+            }
+        } else {
+            $clone = Hum::Ace::Clone->new;
+            # Probably need to do more here a la H:A:Clone->express_data_fetch
+            $clone->name(           $clone_name);
+            $clone->sequence_length($ctg_slice->length);
+            $clone->assembly_start( $start);
+            $clone->assembly_end(   $end);
+            $clone->assembly_strand($strand);
+
+            $assembly->add_Clone($clone);
+
+            $name_clone{$clone_name} = $clone;
+        }
+    }
+    return $assembly;
+}
 
 1;
 
