@@ -744,9 +744,10 @@ sub open_SequenceSet {
     my $adb = $self->Client->new_AceDatabase;
     $adb->error_flag(1);
     $adb->make_database_directory;
-    $adb->write_access($adb_write_access);
-    $adb->name($name);
+    $adb->DB->species($dsname);
     $adb->slice($slice);
+    $adb->name($name);
+    $adb->write_access($adb_write_access);
     $adb->load_dataset_info;
 
     if ($adb_write_access) {

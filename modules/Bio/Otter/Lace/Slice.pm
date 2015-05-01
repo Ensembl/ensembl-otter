@@ -37,6 +37,22 @@ sub new {
     return bless $self, $pkg;
 }
 
+sub new_from_region {
+    my ($pkg, $client, $region) = @_;
+
+    my $chr_slice = $region->slice;
+    return Bio::Otter::Lace::Slice->new(
+        $client,
+        $region->species,
+        $chr_slice->seq_region_name,
+        $chr_slice->coord_system->name,
+        $chr_slice->coord_system->version,
+        $region->chromosome_name,
+        $chr_slice->start,
+        $chr_slice->end,
+        );
+}
+
 sub clone_near { # new from old, different coords
     my ($old, $start, $end) = @_;
     my $new =

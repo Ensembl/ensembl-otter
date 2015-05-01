@@ -29,6 +29,7 @@ use Bio::Otter::Lace::Slice; # a new kind of Slice that knows how to get pipelin
 use Bio::Otter::Lace::ProcessGFF;
 use Bio::Otter::Utils::Config::Ini qw( config_ini_format );
 
+use Hum::Ace::Assembly;
 use Hum::Ace::LocalServer;
 use Hum::Ace::MethodCollection;
 use Hum::ZMapStyleCollection;
@@ -259,8 +260,6 @@ sub init_AceDatabase {
     my ($raw_dna, @tiles) = $self->Client->get_assembly_dna($self->slice);
     $self->write_dna_data($raw_dna, @tiles);
 
-    $self->DB->species($region->species);
-
     my $storer = Bio::Vega::Region::Store->new(
         vega_dba => $self->DB->vega_dba,
         coord_system_factory => $cs_factory,
@@ -343,22 +342,26 @@ sub recover_slice_from_region_xml {
     $parser->coord_system_factory(Bio::Vega::CoordSystemFactory->new); # Should we get this from somewhere else?
     my $region = $parser->parse($xml);
 
-    # Perhaps we need Bio::Otter::Lace::Slice->new_from_region()
-    my $chr_slice = $region->slice;
-    my $slice = Bio::Otter::Lace::Slice->new(
-        $client,
-        $region->species,
-        $chr_slice->seq_region_name,
-        $chr_slice->coord_system->name,
-        $chr_slice->coord_system->version,
-        $region->chromosome_name,
-        $chr_slice->start,
-        $chr_slice->end,
-        );
+    my $slice = Bio::Otter::Lace::Slice->new_from_region($client, $region);
     $self->slice($slice);
-    $self->DB->session_slice($self->slice->ensembl_slice);
+
+    $self->DB->species($region->species);
+    $self->DB->session_slice($slice->ensembl_slice);
 
     return;
+}
+
+sub fetch_assembly {
+    my ($self) = @_;
+
+    my $ace  = $self->aceperl_db_handle;
+
+    my $assembly = Hum::Ace::Assembly->new;
+    $assembly->name($self->slice_name);
+    $assembly->MethodCollection($self->MethodCollection);
+    $assembly->express_data_fetch($ace);
+
+    return $assembly;
 }
 
 sub slice {

@@ -5,11 +5,13 @@ package OtterTest::AceDatabase;
 use strict;
 use warnings;
 
+use Try::Tiny;
+
 use Bio::Otter::Log::WithContext;
 
 use OtterTest::Client;
 
-sub new {
+sub new_mock {
     my ($pkg) = @_;
 
     my $self = bless {}, $pkg;
@@ -29,6 +31,57 @@ sub logger {
     my ($self, $category) = @_;
     $category = scalar caller unless defined $category;
     return Bio::Otter::Log::WithContext->get_logger($category, name => 'OtterTest.AceDatabase');
+}
+
+# -------- perhaps this should be a different module? --------
+
+sub new_from_slice_params {
+    my ($pkg, $ace_home, $name, @slice_region_param_list) = @_;
+
+    my $slicer = sub {
+        my ($client) = @_;
+        return Bio::Otter::Lace::Slice->new($client, @slice_region_param_list);
+    };
+    return $pkg->_new_from_slicer($ace_home, $name, $slicer);
+}
+
+sub new_from_region {
+    my ($pkg, $ace_home, $name, $region) = @_;
+
+    my $slicer = sub {
+        my ($client) = @_;
+        return Bio::Otter::Lace::Slice->new_from_region($client, $region);
+    };
+    return $pkg->_new_from_slicer($ace_home, $name, $slicer);
+}
+
+sub _new_from_slicer {
+    my ($pkg, $ace_home, $name, $slicer) = @_;
+
+    require Bio::Otter::Lace::AceDatabase;
+    require Bio::Otter::Lace::Slice;
+
+    # B:O:L:C new_AceDatabase
+    my $client = OtterTest::Client->new;
+    my $slice = $slicer->($client);
+    my $adb = Bio::Otter::Lace::AceDatabase->new;
+    $adb->Client($client);
+    $adb->home($ace_home);
+
+    # CW:SequenceNotes open_SequenceSet
+    $adb->error_flag(0);
+    $adb->make_database_directory;
+    $adb->write_access(0);
+    $adb->name($name);
+    $adb->slice($slice);
+    $adb->load_dataset_info;
+    #
+    # MCW:ColumnChooser load_filters
+    try     { $adb->init_AceDatabase }
+    catch   { die "init_AceDatabase failed: $_" }
+    finally { $adb->error_flag(0) };
+
+    return $adb;
 }
 
 1;

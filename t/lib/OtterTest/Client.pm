@@ -11,6 +11,7 @@ use Bio::Otter::ServerAction::AccessionInfo;
 use Bio::Otter::ServerAction::Config;
 use Bio::Otter::ServerAction::Datasets;
 use Bio::Otter::ServerAction::LoutreDB;
+use Bio::Otter::ServerAction::XML::Region;
 use Bio::Otter::Version;
 
 use Carp;
@@ -58,7 +59,6 @@ BEGIN {
         get_server_otter_config
         designate_this
         get_slice_DE
-        slice_query
         do_authentication
         get_all_SequenceSets_for_DataSet
         get_all_CloneSequences_for_DataSet_SequenceSet
@@ -69,8 +69,6 @@ BEGIN {
         config_keys
         sessions_needing_recovery
         recover_session
-        get_region_xml
-        get_assembly_dna
         lock_region
         unlock_region
         );
@@ -159,6 +157,24 @@ sub _get_DataSets_hash {
         %_config_hash = ( %$config );
         return;
     }
+}
+
+sub get_region_xml {
+    my ($self, $slice) = @_;
+    my $_local_server = $self->_local_server;
+    $_local_server->set_params($self->slice_query($slice));
+    return Bio::Otter::ServerAction::XML::Region->new_with_slice($_local_server)->get_region;
+}
+
+sub get_assembly_dna {
+    my ($self, $slice) = @_;
+    my $_local_server = $self->_local_server;
+    $_local_server->set_params($self->slice_query($slice));
+
+    my $raw = Bio::Otter::ServerAction::XML::Region->new_with_slice($_local_server)->get_assembly_dna;
+    my ($dna, @tiles) = split /\n/, $raw;
+
+    return ($dna, @tiles);
 }
 
 sub _cached_loutre_db_response {
