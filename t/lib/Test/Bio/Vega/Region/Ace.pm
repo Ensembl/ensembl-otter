@@ -57,7 +57,18 @@ sub make_assembly : Tests {
     isa_ok($ha, 'Hum::Ace::Assembly', '...and result of make_assembly()');
 
     my $ace_string = $ha->ace_string;
-    eq_or_diff($ace_string, $ea->ace_string, '...and ace_string matches');
+    subtest 'assembly' => sub {
+        eq_or_diff($ace_string, $ea->ace_string, 'ace_string matches');
+        cmp_deeply($ha,
+                   listmethods(
+                       name          => [ $ha->name ],
+                       assembly_name => [ $ha->assembly_name ],
+                       species       => [ $ha->species ],
+                       Sequence      => [ $ha->Sequence ],
+                       get_all_SimpleFeatures => [ $ha->get_all_SimpleFeatures ],
+                   ),
+                   'deep');
+    };
 
     my @e_clones = $ea->get_all_Clones;
     my @h_clones = $ha->get_all_Clones;
