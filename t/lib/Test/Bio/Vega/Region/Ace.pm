@@ -19,4 +19,23 @@ sub make_ace_string : Tests {
     return;
 }
 
+sub make_assembly : Tests {
+    my $test = shift;
+
+    my $bvra = $test->our_object;
+    can_ok $bvra, 'make_assembly';
+
+    my $ha = $bvra->make_assembly(
+        $test->parsed_region,
+        {
+            name             => $test->test_region->xml_parsed->{'sequence_set'}->{'assembly_type'}, # FIXME
+            MethodCollection => bless {}, 'Hum::Ace::MethodCollection', # FIXME
+        },
+        );
+    isa_ok($ha, 'Hum::Ace::Assembly', '...and result of make_assembly()');
+    note("ace_string:\n", $ha->ace_string);
+
+    return;
+}
+
 1;
