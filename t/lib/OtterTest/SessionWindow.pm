@@ -7,11 +7,11 @@ use warnings;
 
 use OtterTest::AceDatabase;
 
-sub new {
+sub new_mock {
     my ($pkg) = @_;
 
     my $self = bless {}, $pkg;
-    $self->AceDatabase(OtterTest::AceDatabase->new);
+    $self->AceDatabase(OtterTest::AceDatabase->new_mock);
 
     return $self;
 }
