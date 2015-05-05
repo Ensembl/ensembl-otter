@@ -229,27 +229,28 @@ sub try_unlock_region {
 # Requires making an Ace database for each region.
 sub DE_line_equiv_tt {
     my $tmpdir = tempdir('DE_line_equiv.XXXXXX', TMPDIR => 1, CLEANUP => 1);
-    my @r =
-      ([qw[ human_test chr12-38 chromosome Otter 12 30351955 34820185 ]], # 420..474
+    my @r = (
+        OtterTest::TestRegion->new('human_test:chr12-38:30351955-34820185'),
       );
 
     for (my $i=0; $i<@r; $i++) {
-        my $r = $r[$i];
-        diag "Next: $i : @$r";
-        _DE_region_equiv("$tmpdir/ace_$i", $i, @$r);
+        my $test_region = $r[$i];
+        diag "Next: $i : ", $test_region->base_name;
+        _DE_region_equiv("$tmpdir/ace_$i", $i, $test_region);
     }
 
     return;
 }
 
 sub _DE_region_equiv {
-    my ($acehome, $label, @region) = @_;
+    my ($acehome, $label, $test_region) = @_;
     ### Get DE-line the old way
 
+    my $rp = $test_region->region_params;
     my $adb = OtterTest::AceDatabase->new_from_slice_params(
         $acehome,
         "DE_line_cmp:$label",
-        @region,
+        @{$rp}{qw( dataset chr cs csver name start end )},
         );
     my $assembly = $adb->fetch_assembly;
 

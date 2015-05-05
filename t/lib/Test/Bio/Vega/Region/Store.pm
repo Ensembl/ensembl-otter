@@ -76,7 +76,7 @@ sub our_object {
     return $our_object;
 }
 
-sub store : Test(8) {
+sub store : Test(12) {
     my $test = shift;
 
     # First with standard object and test region
@@ -87,6 +87,15 @@ sub store : Test(8) {
     $test->teardown;
 
     $test->test_region(OtterTest::TestRegion->new(0));
+    $test->setup;
+
+    $test->_store_extract_compare;
+
+    # And then with a humungous region
+
+    $test->teardown;
+
+    $test->test_region(OtterTest::TestRegion->new(2));
     $test->setup;
 
     $test->_store_extract_compare;
