@@ -30,6 +30,7 @@ Readonly my $REGION_PATH => abs_path(dirname(__FILE__) . "/../../etc/test_region
 Readonly my @TEST_REGIONS => qw(
     human_test:chr6-38:2557766-2647766
     human_test:chr2-38:929903-1379472
+    human_test:chr12-38:30351955-34820185
 );
 
 sub new {
@@ -41,7 +42,7 @@ sub new {
     if ($name_or_index =~ /^\d+$/) {
         $name = $TEST_REGIONS[$name_or_index];
     }
-    $self->{'_base_name'} = $name;
+    $self->{'base_name'} = $name;
 
     return $self;
 }
@@ -74,7 +75,7 @@ sub extra_gene {
     my ($self, $slice) = @_;
 
     my $expected = $TEST_REGIONS[0];
-    croak "extra_gene() only works for '$expected'" unless $self->_base_name eq $expected;
+    croak "extra_gene() only works for '$expected'" unless $self->base_name eq $expected;
 
     my $bvt_otter = Bio::Vega::Transform::XMLToRegion->new; # just for utility methods
 
@@ -279,10 +280,10 @@ __EO_GENE_XML__
     }
 }
 
-sub _base_name {
+sub base_name {
     my ($self) = @_;
-    my $_base_name = $self->{'_base_name'};
-    return $_base_name;
+    my $base_name = $self->{'base_name'};
+    return $base_name;
 }
 
 sub xml_region {
@@ -290,7 +291,7 @@ sub xml_region {
     my $xml_region = $self->{'xml_region'};
     return $xml_region if $xml_region;
 
-    my $name =  $self->_base_name;
+    my $name =  $self->base_name;
     $xml_region = read_file("${REGION_PATH}/${name}.xml");
     chomp $xml_region;
 
@@ -358,7 +359,7 @@ sub assembly_dna {
     my $assembly_dna = $self->{'assembly_dna'};
     return $assembly_dna if $assembly_dna;
 
-    my $name =  $self->_base_name;
+    my $name =  $self->base_name;
     $assembly_dna = read_file("${REGION_PATH}/${name}.assembly_dna.txt");
 
     return $self->{'assembly_dna'} = $assembly_dna;
