@@ -83,12 +83,21 @@ $support->parse_common_options(@_);
 $support->parse_extra_options(
   'prune',
   'update',
-  'live_update');
+  'live_update',
+  'currentdbname=s',
+  'currenthost=s',
+  'currentport=s',
+  'currentuser=s',
+);
 $support->allowed_params(
   $support->get_common_params,
   'prune',
   'update',
-  'live_update');
+  'live_update',
+  'currentdbname',
+  'currenthost',
+  'currentport',
+  'currentuser',);
 
 if ($support->param('help') or $support->error) {
   warn $support->error if $support->error;
@@ -107,7 +116,6 @@ my $sa  = $dba->get_SliceAdaptor;
 my $aa  = $dba->get_AttributeAdaptor;
 my $dbh = $dba->dbc->db_handle;
 my $fix_names = 0;
-
 
 my $dbname = $support->param('dbname');
 my $n_flist_fh;
@@ -157,6 +165,13 @@ else {
     push @top_slices, $chr;
   }
 }
+
+
+if ($support->param('live_update')) {
+  my $c_dba = $support->get_database('ensembl','current');
+  $dba->dnadb($c_dba);
+}
+
 
 ### SIZE # (\d+|X|Y)+ # 0.25 ###
 ### SIZE # # 0.05 ###
@@ -335,13 +350,8 @@ sub check_remarks_and_update_names {
   my $coding_trans = [];
   my $noncoding_trans = [];
   foreach my $trans ( @{$gene->get_all_Transcripts()} ) {
-    if (! $support->param('live_update')) {
-      if ($trans->translate) {
-        push @$coding_trans, $trans;
-      }
-      else {
-        push @$noncoding_trans, $trans;
-      }
+    if ($trans->translate) {
+      push @$coding_trans, $trans;
     }
     else {
       push @$noncoding_trans, $trans;
