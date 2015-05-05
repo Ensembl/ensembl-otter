@@ -1,0 +1,666 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<diagram program="umlet" version="13.2">
+  <zoom_level>10</zoom_level>
+  <element>
+    <id>UMLGeneric</id>
+    <coordinates>
+      <x>450</x>
+      <y>40</y>
+      <w>350</w>
+      <h>530</h>
+    </coordinates>
+    <panel_attributes>/nfs/anacode/WEBVM_docs.{stream}
+halign=left
+bg=pink
+
+layer=1</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>UMLGeneric</id>
+    <coordinates>
+      <x>470</x>
+      <y>70</y>
+      <w>130</w>
+      <h>60</h>
+    </coordinates>
+    <panel_attributes>cgi-bin/otter/92
+halign=left
+bg=white
+layer=2</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>UMLGeneric</id>
+    <coordinates>
+      <x>470</x>
+      <y>190</y>
+      <w>130</w>
+      <h>60</h>
+    </coordinates>
+    <panel_attributes>lib/otter/92
+halign=left
+bg=white
+layer=2</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>UMLGeneric</id>
+    <coordinates>
+      <x>480</x>
+      <y>90</y>
+      <w>130</w>
+      <h>60</h>
+    </coordinates>
+    <panel_attributes>cgi-bin/otter/91
+halign=left
+bg=white
+layer=2</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>UMLGeneric</id>
+    <coordinates>
+      <x>490</x>
+      <y>110</y>
+      <w>130</w>
+      <h>60</h>
+    </coordinates>
+    <panel_attributes>cgi-bin/otter/90
+halign=left
+bg=white
+layer=2</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>UMLGeneric</id>
+    <coordinates>
+      <x>480</x>
+      <y>210</y>
+      <w>130</w>
+      <h>60</h>
+    </coordinates>
+    <panel_attributes>lib/otter/91
+halign=left
+bg=white
+layer=2</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>UMLGeneric</id>
+    <coordinates>
+      <x>490</x>
+      <y>230</y>
+      <w>130</w>
+      <h>60</h>
+    </coordinates>
+    <panel_attributes>lib/otter/90
+halign=left
+bg=white
+layer=2</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>UMLGeneric</id>
+    <coordinates>
+      <x>470</x>
+      <y>310</y>
+      <w>130</w>
+      <h>70</h>
+    </coordinates>
+    <panel_attributes>data/otter/
+  access.yaml
+  species.dat
+  ...
+halign=left
+bg=white
+layer=2</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>UMLGeneric</id>
+    <coordinates>
+      <x>620</x>
+      <y>310</y>
+      <w>130</w>
+      <h>90</h>
+    </coordinates>
+    <panel_attributes>data/otter/92/
+  otter_config
+  otter_styles.ini
+  ...
+halign=left
+bg=white
+layer=2</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>UMLGeneric</id>
+    <coordinates>
+      <x>630</x>
+      <y>330</y>
+      <w>130</w>
+      <h>90</h>
+    </coordinates>
+    <panel_attributes>data/otter/91
+halign=left
+valign=bottom
+bg=white
+layer=2</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>UMLGeneric</id>
+    <coordinates>
+      <x>640</x>
+      <y>350</y>
+      <w>130</w>
+      <h>90</h>
+    </coordinates>
+    <panel_attributes>data/otter/92
+halign=left
+valign=bottom
+bg=white
+layer=2</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>UMLGeneric</id>
+    <coordinates>
+      <x>470</x>
+      <y>460</y>
+      <w>130</w>
+      <h>90</h>
+    </coordinates>
+    <panel_attributes>webvm
+  htdocs
+  ServerRoot
+  tools
+  ...
+halign=left
+bg=pink
+layer=2
+lt=.</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>UMLGeneric</id>
+    <coordinates>
+      <x>620</x>
+      <y>460</y>
+      <w>160</w>
+      <h>90</h>
+    </coordinates>
+    <panel_attributes>apps/webvm-deps
+  bioperl
+  ensembl-branch-76
+  ensembl-branch-77
+  ...
+halign=left
+bg=white
+layer=2
+</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>UMLGeneric</id>
+    <coordinates>
+      <x>20</x>
+      <y>70</y>
+      <w>130</w>
+      <h>60</h>
+    </coordinates>
+    <panel_attributes>cgi-bin/otter/92
+halign=left
+bg=white
+layer=2
+group=2</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>UMLGeneric</id>
+    <coordinates>
+      <x>20</x>
+      <y>190</y>
+      <w>130</w>
+      <h>60</h>
+    </coordinates>
+    <panel_attributes>lib/otter/92
+halign=left
+bg=white
+layer=2
+group=2</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>UMLGeneric</id>
+    <coordinates>
+      <x>30</x>
+      <y>90</y>
+      <w>130</w>
+      <h>60</h>
+    </coordinates>
+    <panel_attributes>cgi-bin/otter/91
+halign=left
+bg=white
+layer=2
+group=2</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>UMLGeneric</id>
+    <coordinates>
+      <x>40</x>
+      <y>110</y>
+      <w>130</w>
+      <h>60</h>
+    </coordinates>
+    <panel_attributes>cgi-bin/otter/90
+halign=left
+bg=white
+layer=2
+group=2</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>UMLGeneric</id>
+    <coordinates>
+      <x>30</x>
+      <y>210</y>
+      <w>130</w>
+      <h>60</h>
+    </coordinates>
+    <panel_attributes>lib/otter/91
+halign=left
+bg=white
+layer=2
+group=2</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>UMLGeneric</id>
+    <coordinates>
+      <x>40</x>
+      <y>230</y>
+      <w>130</w>
+      <h>60</h>
+    </coordinates>
+    <panel_attributes>lib/otter/90
+halign=left
+bg=white
+layer=2
+group=2</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>UMLGeneric</id>
+    <coordinates>
+      <x>20</x>
+      <y>310</y>
+      <w>130</w>
+      <h>70</h>
+    </coordinates>
+    <panel_attributes>data/otter/
+  access.yaml
+  species.dat
+  ...
+halign=left
+bg=white
+layer=2
+group=2</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>UMLGeneric</id>
+    <coordinates>
+      <x>170</x>
+      <y>310</y>
+      <w>130</w>
+      <h>90</h>
+    </coordinates>
+    <panel_attributes>data/otter/92/
+  otter_config
+  otter_styles.ini
+  ...
+halign=left
+bg=white
+layer=2
+group=2</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>UMLGeneric</id>
+    <coordinates>
+      <x>180</x>
+      <y>330</y>
+      <w>130</w>
+      <h>90</h>
+    </coordinates>
+    <panel_attributes>data/otter/91
+halign=left
+valign=bottom
+bg=white
+layer=2
+group=2</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>UMLGeneric</id>
+    <coordinates>
+      <x>190</x>
+      <y>350</y>
+      <w>130</w>
+      <h>90</h>
+    </coordinates>
+    <panel_attributes>data/otter/92
+halign=left
+valign=bottom
+bg=white
+layer=2
+group=2</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>UMLGeneric</id>
+    <coordinates>
+      <x>20</x>
+      <y>460</y>
+      <w>130</w>
+      <h>90</h>
+    </coordinates>
+    <panel_attributes>webvm
+  htdocs
+  ServerRoot
+  tools
+  ...
+halign=left
+bg=yellow
+layer=2
+lt=.
+group=2</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>UMLGeneric</id>
+    <coordinates>
+      <x>170</x>
+      <y>460</y>
+      <w>160</w>
+      <h>90</h>
+    </coordinates>
+    <panel_attributes>apps/webvm-deps
+  bioperl
+  ensembl-branch-76
+  ensembl-branch-77
+  ...
+halign=left
+bg=white
+layer=2
+
+group=2</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>UMLGeneric</id>
+    <coordinates>
+      <x>0</x>
+      <y>40</y>
+      <w>350</w>
+      <h>530</h>
+    </coordinates>
+    <panel_attributes>Web VM
+halign=left
+bg=yellow
+layer=1
+group=2</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>340</x>
+      <y>80</y>
+      <w>130</w>
+      <h>30</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;.</panel_attributes>
+    <additional_attributes>10.0;10.0;110.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>Text</id>
+    <coordinates>
+      <x>360</x>
+      <y>330</y>
+      <w>100</w>
+      <h>70</h>
+    </coordinates>
+    <panel_attributes>pubweblish
+(git hook)</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>340</x>
+      <y>200</y>
+      <w>130</w>
+      <h>30</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;.</panel_attributes>
+    <additional_attributes>10.0;10.0;110.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>Text</id>
+    <coordinates>
+      <x>810</x>
+      <y>330</y>
+      <w>140</w>
+      <h>70</h>
+    </coordinates>
+    <panel_attributes>git hook
+(on git push)</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>340</x>
+      <y>320</y>
+      <w>130</w>
+      <h>30</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;.</panel_attributes>
+    <additional_attributes>10.0;10.0;110.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>Text</id>
+    <coordinates>
+      <x>360</x>
+      <y>210</y>
+      <w>100</w>
+      <h>70</h>
+    </coordinates>
+    <panel_attributes>pubweblish</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>Text</id>
+    <coordinates>
+      <x>360</x>
+      <y>490</y>
+      <w>100</w>
+      <h>70</h>
+    </coordinates>
+    <panel_attributes>pubweblish</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>340</x>
+      <y>480</y>
+      <w>130</w>
+      <h>30</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;.</panel_attributes>
+    <additional_attributes>10.0;10.0;110.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>UMLGeneric</id>
+    <coordinates>
+      <x>950</x>
+      <y>40</y>
+      <w>320</w>
+      <h>530</h>
+    </coordinates>
+    <panel_attributes>git
+halign=left
+lt=.
+</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>UMLGeneric</id>
+    <coordinates>
+      <x>970</x>
+      <y>70</y>
+      <w>130</w>
+      <h>90</h>
+    </coordinates>
+    <panel_attributes>ensembl-otter
+halign=left
+bg=white
+layer=2</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>790</x>
+      <y>80</y>
+      <w>180</w>
+      <h>30</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;.</panel_attributes>
+    <additional_attributes>10.0;10.0;160.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>Text</id>
+    <coordinates>
+      <x>360</x>
+      <y>90</y>
+      <w>100</w>
+      <h>70</h>
+    </coordinates>
+    <panel_attributes>pubweblish</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>790</x>
+      <y>110</y>
+      <w>110</w>
+      <h>120</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;.</panel_attributes>
+    <additional_attributes>10.0;100.0;90.0;100.0;90.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>UMLGeneric</id>
+    <coordinates>
+      <x>970</x>
+      <y>310</y>
+      <w>130</w>
+      <h>90</h>
+    </coordinates>
+    <panel_attributes>server-config
+halign=left
+bg=white
+layer=2</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>UMLGeneric</id>
+    <coordinates>
+      <x>970</x>
+      <y>460</y>
+      <w>130</w>
+      <h>90</h>
+    </coordinates>
+    <panel_attributes>webvm
+halign=left
+bg=white
+layer=2</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>790</x>
+      <y>320</y>
+      <w>180</w>
+      <h>30</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;.</panel_attributes>
+    <additional_attributes>10.0;10.0;160.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>Text</id>
+    <coordinates>
+      <x>810</x>
+      <y>90</y>
+      <w>140</w>
+      <h>70</h>
+    </coordinates>
+    <panel_attributes>otterlace_build -S</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>UMLGeneric</id>
+    <coordinates>
+      <x>1120</x>
+      <y>460</y>
+      <w>130</w>
+      <h>90</h>
+    </coordinates>
+    <panel_attributes>webvm-deps
+halign=left
+bg=white
+layer=2</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>790</x>
+      <y>480</y>
+      <w>180</w>
+      <h>30</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;..</panel_attributes>
+    <additional_attributes>10.0;10.0;160.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>Text</id>
+    <coordinates>
+      <x>0</x>
+      <y>0</y>
+      <w>140</w>
+      <h>70</h>
+    </coordinates>
+    <panel_attributes>*Web VM anatomy*</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>Text</id>
+    <coordinates>
+      <x>810</x>
+      <y>490</y>
+      <w>140</w>
+      <h>70</h>
+    </coordinates>
+    <panel_attributes>by hand</panel_attributes>
+    <additional_attributes/>
+  </element>
+</diagram>
