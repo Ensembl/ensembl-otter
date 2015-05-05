@@ -10,6 +10,14 @@ use OtterTest::AceDatabase;
 sub test_bio_vega_features { return { test_region => 1, parsed_region => 1 }; }
 sub build_attributes       { return; } # no test_attributes tests required
 
+# DUP with Store.pm
+sub teardown {
+    my $test = shift;
+    Bio::EnsEMBL::Registry->clear; # nasty nasty caches!
+    $test->SUPER::teardown;
+    return;
+}
+
 sub make_ace_string : Tests {
     my $test = shift;
 
@@ -50,6 +58,15 @@ sub make_assembly : Tests {
     $test->teardown;
 
     $test->test_region(OtterTest::TestRegion->new(2));
+    $test->setup;
+
+    $test->_do_make_assembly;
+
+    # And then with a mouse region with KO gene
+
+    $test->teardown;
+
+    $test->test_region(OtterTest::TestRegion->new('mouse:chr1-38:3009920-3786391'));
     $test->setup;
 
     $test->_do_make_assembly;
