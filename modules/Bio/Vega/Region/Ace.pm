@@ -660,12 +660,9 @@ sub _add_genes {
             $subseq->strand(     $tsct->strand);
             $subseq->otter_id(   $tsct->stable_id);
 
-            if (my $translation = $tsct->translation) {
-                if ($tsct->strand == 1) {
-                    $subseq->translation_region($translation->genomic_start, $translation->genomic_end);
-                } else {
-                    $subseq->translation_region($translation->genomic_end, $translation->genomic_start);
-                }
+            my $translation = $tsct->translation;
+            if ($translation) {
+                $subseq->translation_region($translation->genomic_start, $translation->genomic_end);
                 $subseq->translation_otter_id($translation->stable_id);
             }
 
