@@ -31,6 +31,35 @@ sub make_ace_string : Tests {
 sub make_assembly : Tests {
     my $test = shift;
 
+    # FIXME: dupication with T:B:V:Region::Store
+
+    # First with standard object and test region
+    $test->_do_make_assembly;
+
+    # Now re-run with the first simpler region
+
+    $test->teardown;
+
+    $test->test_region(OtterTest::TestRegion->new(0));
+    $test->setup;
+
+    $test->_do_make_assembly;
+
+    # And then with a humungous region
+
+    $test->teardown;
+
+    $test->test_region(OtterTest::TestRegion->new(2));
+    $test->setup;
+
+    $test->_do_make_assembly;
+
+    return;
+}
+
+sub _do_make_assembly {
+    my $test = shift;
+
     my $bvra = $test->our_object;
     can_ok $bvra, 'make_assembly';
 
