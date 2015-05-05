@@ -679,6 +679,32 @@ sub _add_genes {
                 $subseq->add_Exon($ha_exon);
             }
 
+            # partial DUP from fill_transcript_AceText() above
+            # mRNA and CDS start not found tags
+            if (get_first_attrib_value($tsct, 'cds_start_NF')) {
+
+                $translation
+                or confess sprintf("Transcript '%s' has 'CDS start not found' set, but does not have a Translation",
+                                   $subseq->name);
+
+                my $first_exon_phase = $translation->start_Exon->phase;
+
+                my $ace_phase = $ens2ace_phase{$first_exon_phase}
+                or confess "No Ace phase for Ensembl exon phase '$first_exon_phase'";
+
+                $subseq->start_not_found($ace_phase);
+            }
+            elsif (get_first_attrib_value($tsct, 'mRNA_start_NF')) {
+                $subseq->utr_start_not_found(1);
+            }
+
+            # mRNA and CDS end not found tags
+            if (get_first_attrib_value($tsct, 'cds_end_NF') or
+                get_first_attrib_value($tsct, 'mRNA_end_NF'))
+            {
+                $subseq->end_not_found(1);
+            }
+
             # DUP from make_ace_genes_transcripts() above
             my $method_name = sprintf('%s%s%s',
                                       $locus->gene_type_prefix,
