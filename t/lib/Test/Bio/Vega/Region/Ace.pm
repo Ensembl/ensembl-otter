@@ -39,37 +39,28 @@ sub make_ace_string : Tests {
 sub make_assembly : Tests {
     my $test = shift;
 
-    # FIXME: dupication with T:B:V:Region::Store
+    # FIXME: duplication (now only of intent) with T:B:V:Region::Store
 
-    # First with standard object and test region
-    $test->_do_make_assembly;
+    my @make_assembly_regions = (
+        undef,                      # use default human_test:chr2-38:929903-1379472
+        'human_test:chr6-38:2557766-2647766',
+        'human_test:chr12-38:30351955-34820185',
+        'mouse:chr1-38:3009920-3786391',
+        );
 
-    # Now re-run with the first simpler region
+    my $need_teardown_setup;
+    foreach my $test_region (@make_assembly_regions) {
 
-    $test->teardown;
+        if ($test_region or $need_teardown_setup) {
+            $test->teardown;
+            $test->test_region(OtterTest::TestRegion->new($test_region));
+            $test->setup;
+        }
 
-    $test->test_region(OtterTest::TestRegion->new(0));
-    $test->setup;
+        $test->_do_make_assembly;
 
-    $test->_do_make_assembly;
-
-    # And then with a humungous region
-
-    $test->teardown;
-
-    $test->test_region(OtterTest::TestRegion->new(2));
-    $test->setup;
-
-    $test->_do_make_assembly;
-
-    # And then with a mouse region with KO gene
-
-    $test->teardown;
-
-    $test->test_region(OtterTest::TestRegion->new('mouse:chr1-38:3009920-3786391'));
-    $test->setup;
-
-    $test->_do_make_assembly;
+        $need_teardown_setup = 1;
+    }
 
     return;
 }
