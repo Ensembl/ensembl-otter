@@ -550,7 +550,7 @@ sub _add_simple_features {
         $ha_feat->seq_end(     $feat->end);
         $ha_feat->seq_strand(  $feat->strand);
         $ha_feat->score(       $feat->score // 1);
-        $ha_feat->text(        $type);
+        $ha_feat->text(        $feat->display_label);
 
         push @simple_features, $ha_feat;
     }
@@ -636,8 +636,10 @@ sub _add_genes {
 
         my $locus = Hum::Ace::Locus->new;
         $locus->name(get_first_attrib_value($gene, 'name'));
-        # Check this, cf express_data_fetch:
-        # $locus->gene_type_prefix($gene->source eq 'havana' ? '' : $gene->source . ':'); # FIXME: dup
+
+        unless ($gene->source eq 'havana') {
+            $locus->gene_type_prefix($gene->source);
+        }
 
         $locus->description( $gene->description);
         $locus->is_truncated($gene->truncated_flag) if $gene->truncated_flag;
@@ -706,8 +708,7 @@ sub _add_genes {
             }
 
             # DUP from make_ace_genes_transcripts() above
-            my $method_name = sprintf('%s%s%s',
-                                      $locus->gene_type_prefix,
+            my $method_name = sprintf('%s%s',
                                       biotype_status2method($tsct->biotype, $tsct->status),
                                       $gene->truncated_flag ? '_trunc' : '');
             my $method = $name_method{$method_name};
