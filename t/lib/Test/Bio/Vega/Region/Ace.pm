@@ -31,8 +31,6 @@ sub make_ace_string : Test(2) {
     my $ace = $bvra->make_ace_string($test->parsed_region);
     ok ($ace, '... produces output');
 
-    $test->_save_ace('make_ace_string', $ace);
-
     return;
 }
 
@@ -95,9 +93,8 @@ sub _do_make_assembly {
         );
     isa_ok($ha, 'Hum::Ace::Assembly', '...and result of make_assembly()');
 
-    my $ace_string = $ha->ace_string;
     subtest 'assembly' => sub {
-        eq_or_diff($ace_string, $ea->ace_string, 'ace_string matches');
+        eq_or_diff($ha->ace_string, $ea->ace_string, 'ace_string matches');
         cmp_deeply($ha,
                    listmethods(
                        name          => [ $ha->name ],
@@ -120,7 +117,6 @@ sub _do_make_assembly {
                 next;
             }
             my $clone_ace_string = $h_clones[$i]->ace_string;
-            $ace_string .= $clone_ace_string;
             eq_or_diff($clone_ace_string, $e_clones[$i]->ace_string, "clone[$i] ace_string");
             cmp_deeply($h_clones[$i], $e_clones[$i], "clone[$i] deeply");
         }
@@ -137,25 +133,11 @@ sub _do_make_assembly {
                 next;
             }
             my $substr_ace_string = $h_subseqs[$i]->ace_string;
-            $ace_string .= $substr_ace_string;
             eq_or_diff($substr_ace_string, $e_subseqs[$i]->ace_string, "SubSeq[$i] ace_string");
             cmp_deeply($h_subseqs[$i], $e_subseqs[$i], "SubSeq[$i] deeply");
         }
     };
 
-    $test->_save_ace('make_assembly', $ace_string);
-
-    return;
-}
-
-sub _save_ace {
-    my ($test, $desc, $ace_string) = @_;
-
-    my ($fh, $filename) = tempfile("B:V:R:Ace.${desc}.XXXXXX", TMPDIR => 1, CLEANUP => 0, SUFFIX => '.ace');
-    print $fh $ace_string;
-    close $fh;
-
-    diag("Ace for '$desc' saved to: $filename");
     return;
 }
 
