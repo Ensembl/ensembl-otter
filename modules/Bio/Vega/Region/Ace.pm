@@ -9,6 +9,11 @@ use Carp;
 
 use Hum::Ace::AceText;
 use Hum::Ace::Assembly;
+use Hum::Ace::Clone;
+use Hum::Ace::Exon;
+use Hum::Ace::Locus;
+use Hum::Ace::SubSeq;
+use Hum::Ace::SeqFeature::Simple;
 
 use Bio::Vega::Utils::GeneTranscriptBiotypeStatus 'biotype_status2method';
 
