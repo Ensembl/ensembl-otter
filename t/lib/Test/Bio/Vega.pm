@@ -5,7 +5,7 @@ use Test::Class::Most
     is_abstract => 1,
     attributes  => [ qw( test_region parsed_region ) ];
 
-sub startup : Tests(startup) {
+sub startup : Test(startup => +0) {
     my $test = shift;
     $test->SUPER::startup;
 

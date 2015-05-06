@@ -73,7 +73,7 @@ sub _set_class {
     return $class;
 }
 
-sub startup : Tests(startup => 1) {
+sub startup : Test(startup => 1) {
     my $test  = shift;
     return 'abstract base class' if $test->is_abstract;
 
