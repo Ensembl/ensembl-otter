@@ -18,7 +18,7 @@ sub teardown {
     return;
 }
 
-sub make_ace_string : Tests {
+sub make_ace_string : Test(2) {
     my $test = shift;
 
     my $bvra = $test->our_object;
@@ -36,8 +36,11 @@ sub make_ace_string : Tests {
     return;
 }
 
-sub make_assembly : Tests {
+sub make_assembly : Test(25) {  # n = 1 + 6 * @make_assembly_regions
     my $test = shift;
+
+    my $bvra = $test->our_object;
+    can_ok $bvra, 'make_assembly';
 
     # FIXME: duplication (now only of intent) with T:B:V:Region::Store
 
@@ -68,9 +71,6 @@ sub make_assembly : Tests {
 sub _do_make_assembly {
     my $test = shift;
 
-    my $bvra = $test->our_object;
-    can_ok $bvra, 'make_assembly';
-
     my $tmpdir = tempdir('B:V:R:Ace.make_assembly.XXXXXX', TMPDIR => 1, CLEANUP => 1);
 
     my $adb = OtterTest::AceDatabase->new_from_region(
@@ -83,6 +83,8 @@ sub _do_make_assembly {
     # $adb has already fetched DNA, so we pluck it from there for our test region.
     # YUCK: playing with EnsEMBL internals:
     $test->parsed_region->slice->{'seq'} = $ea->Sequence->sequence_string;
+
+    my $bvra = $test->our_object;
 
     my $ha = $bvra->make_assembly(
         $test->parsed_region,
