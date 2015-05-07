@@ -97,13 +97,44 @@ sub _do_make_assembly {
         eq_or_diff($ha->ace_string, $ea->ace_string, 'ace_string matches');
         cmp_deeply($ha,
                    listmethods(
-                       name          => [ $ha->name ],
-                       assembly_name => [ $ha->assembly_name ],
-                       species       => [ $ha->species ],
-                       Sequence      => [ $ha->Sequence ],
-                       get_all_SimpleFeatures => [ $ha->get_all_SimpleFeatures ],
+                       name          => [ $ea->name ],
+                       assembly_name => [ $ea->assembly_name ],
+                       species       => [ $ea->species ],
+                       Sequence      => [ $ea->Sequence ],
                    ),
                    'deep');
+    };
+
+    my @e_SimpleFeatures = $ea->get_all_SimpleFeatures;
+    my @h_SimpleFeatures = $ha->get_all_SimpleFeatures;
+    is (scalar(@h_SimpleFeatures), scalar(@e_SimpleFeatures), '...n(SimpleFeatures)');
+
+    subtest 'SimpleFeatures' => sub {
+        unless (@e_SimpleFeatures) {
+            pass 'No SimpleFeatures';
+            return;
+        }
+        foreach my $i ( 0 .. $#e_SimpleFeatures ) {
+
+            my $e_sf = $e_SimpleFeatures[$i];
+            my $h_sf = $h_SimpleFeatures[$i];
+            my $n_sf = "SimpleFeature[$i]";
+
+            unless ($h_sf) {
+                fail "$n_sf missing";
+                next;
+            }
+            eq_or_diff($h_sf->ace_string, $e_sf->ace_string, "$n_sf ace_string");
+            ok(exists $h_sf->{_ensembl_dbID}, "$n_sf has ensembl_dbID");
+            delete $h_sf->{_ensembl_dbID}; # pre cmp_deeply()
+            if (my $e_score = $e_sf->score) {
+                my $tol = abs($h_sf->score - $e_score) / $e_score;
+                ok($tol < 0.0000001, '$n_sf score');
+                delete $e_sf->{_score};
+                delete $h_sf->{_score};
+            }
+            cmp_deeply($h_sf, $e_sf, "$n_sf deeply");
+        }
     };
 
     my @e_clones = $ea->get_all_Clones;
@@ -116,9 +147,32 @@ sub _do_make_assembly {
                 fail "clone[$i] missing";
                 next;
             }
-            my $clone_ace_string = $h_clones[$i]->ace_string;
-            eq_or_diff($clone_ace_string, $e_clones[$i]->ace_string, "clone[$i] ace_string");
+            eq_or_diff($h_clones[$i]->ace_string, $e_clones[$i]->ace_string, "clone[$i] ace_string");
             cmp_deeply($h_clones[$i], $e_clones[$i], "clone[$i] deeply");
+        }
+    };
+
+    my @e_loci = $ea->get_all_Loci;
+    my @h_loci = $ha->get_all_Loci;
+    is (scalar(@h_loci), scalar(@e_loci), '...n(Loci)');
+
+    subtest 'loci' => sub {
+
+        foreach my $i ( 0 .. $#e_loci ) {
+
+            my $e_locus = $e_loci[$i];
+            my $h_locus = $h_loci[$i];
+            my $n_locus = "Locus[$i]";
+
+            unless ($h_locus) {
+                fail "$n_locus missing";
+                next;
+            }
+            eq_or_diff($h_locus->ace_string, $e_locus->ace_string, "$n_locus ace_string");
+            ok(exists $h_locus->{_ensembl_dbID}, "$n_locus has ensembl_dbID");
+            delete $h_locus->{_ensembl_dbID};
+            # cmp_deeply occurs via SubSeqs
+            # cmp_deeply($h_locus, $e_locus, "$n_locus deeply");
         }
     };
 
@@ -128,13 +182,38 @@ sub _do_make_assembly {
 
     subtest 'subseqs' => sub {
         foreach my $i ( 0 .. $#e_subseqs ) {
-            unless ($h_subseqs[$i]) {
-                fail "SubSeq[$i] missing";
+
+            my $e_subseq = $e_subseqs[$i];
+            my $h_subseq = $h_subseqs[$i];
+            my $n_subseq = "SubSeq[$i]";
+
+            unless ($h_subseq) {
+                fail "$n_subseq missing";
                 next;
             }
-            my $substr_ace_string = $h_subseqs[$i]->ace_string;
-            eq_or_diff($substr_ace_string, $e_subseqs[$i]->ace_string, "SubSeq[$i] ace_string");
-            cmp_deeply($h_subseqs[$i], $e_subseqs[$i], "SubSeq[$i] deeply");
+            eq_or_diff($h_subseq->ace_string, $e_subseq->ace_string, "$n_subseq ace_string");
+
+            ok(exists $h_subseq->{_ensembl_dbID}, "$n_subseq has ensembl_dbID");
+            delete $h_subseq->{_ensembl_dbID};
+
+            my @e_exons = $e_subseq->get_all_Exons;
+            my @h_exons = $h_subseq->get_all_Exons;
+            is (scalar(@h_exons), scalar(@e_exons), "$n_subseq n_Exons");
+            subtest 'exons' => sub {
+                foreach my $i ( 0 .. $#e_exons ) {
+                    unless ($h_exons[$i]) {
+                        fail "Exon[$i] missing";
+                        next;
+                    }
+
+                    ok(exists $h_exons[$i]->{_ensembl_dbID}, "Exon[$i] has ensembl_dbID");
+                    delete $h_exons[$i]->{_ensembl_dbID};
+
+                    # cmp_deeply happens below
+                }
+            };
+
+            cmp_deeply($h_subseq, $e_subseq, "$n_subseq deeply");
         }
     };
 
