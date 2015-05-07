@@ -556,6 +556,7 @@ sub _add_simple_features {
         $ha_feat->seq_strand(  $feat->strand);
         $ha_feat->score(       $feat->score // 1);
         $ha_feat->text(        $feat->display_label);
+        $ha_feat->ensembl_dbID($feat->dbID);
 
         push @simple_features, $ha_feat;
     }
@@ -641,6 +642,7 @@ sub _add_genes {
 
         my $locus = Hum::Ace::Locus->new;
         $locus->name(get_first_attrib_value($gene, 'name'));
+        $locus->ensembl_dbID($gene->dbID);
 
         unless ($gene->source eq 'havana') {
             $locus->gene_type_prefix($gene->source);
@@ -660,6 +662,8 @@ sub _add_genes {
 
             my $subseq = Hum::Ace::SubSeq->new;
             $subseq->name(get_first_attrib_value($tsct, 'name'));
+            $subseq->ensembl_dbID($tsct->dbID);
+
             $subseq->Locus($locus);
             $subseq->clone_Sequence($assembly->Sequence);
 
@@ -679,6 +683,8 @@ sub _add_genes {
             foreach my $exon (@{$tsct->get_all_Exons}) {
 
                 my $ha_exon = Hum::Ace::Exon->new;
+                $ha_exon->ensembl_dbID($exon->dbID);
+
                 $ha_exon->start(   $exon->start);
                 $ha_exon->end(     $exon->end);
                 $ha_exon->otter_id($exon->stable_id);
