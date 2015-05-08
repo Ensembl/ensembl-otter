@@ -7,9 +7,9 @@
 # otter_perl
 
 # In a development environment, the caller can set:
-# ENSEMBL_OTTER_DEV    to override the location of ensembl-otter.
-# ENSEMBL_DEV          to override the location of all EnsEMBL packages.
-# ANACODE_PERL_MODULES to override the location of PerlModules.
+# ENSEMBL_OTTER_DEV        to override the location of ensembl-otter.
+# ENSEMBL_DEV              to override the location of all EnsEMBL packages.
+# ANACODE_PERL_MODULES_DEV to override the location of PerlModules.
 
 # check that the installation script has set things up
 if [ -z "$version" ] || [ -z "$otter_perl" ]
