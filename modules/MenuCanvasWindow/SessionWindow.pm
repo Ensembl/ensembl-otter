@@ -198,6 +198,7 @@ sub get_GeneMethod {
     return $meth;
 }
 
+# unused
 sub get_all_GeneMethods {
     my ($self) = @_;
 
@@ -1332,10 +1333,6 @@ sub _clipboard_contents {
 }
 
 
-sub max_seq_list_length {
-    return 1000;
-}
-
 sub slice_name {
     my ($self) = @_;
     return $self->{_slice_name} ||=
@@ -2207,32 +2204,6 @@ sub OTF_Genomic_columns {
 sub OTF_Transcript_columns {
     my ($self) = @_;
     return $self->_cached_columns_by_internal_type('on_the_fly_transcript', 'OTF_Transcript_columns');
-}
-
-sub ace_DNA {
-    my ($self, $name, $seq) = @_;
-
-    my $ace = qq{\nSequence "$name"\n\nDNA "$name"\n};
-
-    my $dna_string = $seq->sequence_string;
-
-    while ($dna_string =~ /(.{1,60})/g) {
-        $ace .= $1 . "\n";
-    }
-
-    return $ace;
-}
-
-sub ace_PEPTIDE {
-    my ($self, $name, $seq) = @_;
-
-    my $ace = qq{\nProtein "$name"\n\nPEPTIDE "$name"\n};
-
-    my $prot_string = $seq->sequence_string;
-    while ($prot_string =~ /(.{1,60})/g) {
-        $ace .= $1 . "\n";
-    }
-    return $ace;
 }
 
 sub draw_sequence_list {
