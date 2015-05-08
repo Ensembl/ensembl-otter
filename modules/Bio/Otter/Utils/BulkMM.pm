@@ -36,6 +36,12 @@ Readonly my @DEFAULT_DB_CATEGORIES => qw(
     uniprot_archive
 );
 
+Readonly my %DB_NAME_TO_SOURCE => (
+    emblnew     => 'EMBL',
+    emblrelease => 'EMBL',
+    refseq      => 'RefSeq',
+    );
+
 Readonly my %CLASS_TO_SOURCE => (
     STD => 'Swissprot',
     PRE => 'TrEMBL',
@@ -344,7 +350,7 @@ sub _get_accessions {
                   $self->_set_currency($db_name, $row);
                   $self->_debug_result($db_name, $row) if $self->debug;
 
-                  if ($self->_classify_result($row)) {
+                  if ($self->_classify_result($db_name, $row)) {
                       $results->{$name} = $row;
                       push @get_seq, $row;
                   }
@@ -419,7 +425,7 @@ sub _classify_search {
 }
 
 sub _classify_result {
-    my ($self, $row) = @_;
+    my ($self, $db_name, $row) = @_;
 
     my ($name, $type, $class) = @$row{qw(name molecule_type data_class)};
 
@@ -427,14 +433,14 @@ sub _classify_result {
 
       if ($class eq 'EST') {
           $row->{evi_type} = 'EST';
-          $row->{source}   = 'EMBL';
+          $row->{source}   = $DB_NAME_TO_SOURCE{$db_name};
           last SWITCH;
       }
       if ($type eq 'mRNA') {
           # Here we return cDNA, which is more technically correct since
           # both ESTs and cDNAs are mRNAs.
           $row->{evi_type} = 'cDNA';
-          $row->{source}   = 'EMBL';
+          $row->{source}   = $DB_NAME_TO_SOURCE{$db_name};
           last SWITCH;
       }
       if ($type eq 'protein') {
@@ -447,7 +453,7 @@ sub _classify_result {
       }
       if ($type eq 'other RNA' or $type eq 'transcribed RNA') {
           $row->{evi_type} = 'ncRNA';
-          $row->{source}   = 'EMBL';
+          $row->{source}   = $DB_NAME_TO_SOURCE{$db_name};
           last SWITCH;
       }
 

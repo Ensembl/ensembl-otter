@@ -116,7 +116,7 @@ sub do_send_features {
                 if (keys %hseq) {
                     require Bio::Otter::Utils::AccessionInfo;
                     my $mm = Bio::Otter::Utils::AccessionInfo->new('db_categories' => $seq_db_list);
-                    my $accession_info = $mm->get_accession_info([keys %hseq]);
+                    $accession_info = $mm->get_accession_info([keys %hseq]);
                     if (keys %{$accession_info}) {
                         $fasta_gff = ("##FASTA\n" . _fasta($accession_info));
                     }
@@ -263,7 +263,11 @@ sub _features_gff {
         $gff_args{'species.url'} =
             $self->otter_dba->get_MetaContainer->single_value_by_key('species.url', 1);
     }
-    my $features_gff = join '', map { $_->to_gff(%gff_args) || '' } @{$features};
+
+    my $features_gff = '';
+    foreach my $feat (@$features) {
+        $features_gff .= $feat->to_gff(%gff_args) || '';
+    }
 
     return $features_gff;
 };
@@ -294,9 +298,12 @@ sub Bio::EnsEMBL::Slice::get_all_ExonSupportingFeatures {
 
 sub _fasta {
     my ($accession_info) = @_;
-    return join '', map {
-        _fasta_item($accession_info->{$_});
-    } sort keys %{$accession_info};
+
+    my $fasta = '';
+    foreach my $name (sort keys %$accession_info) {
+        $fasta .= _fasta_item($accession_info->{$name});
+    }
+    return $fasta;
 }
 
 sub _fasta_item {

@@ -65,14 +65,18 @@ sub enrich {
 
 sub Bio::EnsEMBL::Slice::get_all_DnaDnaAlignFeatures {
     my ($self, @args) = @_;
-    my $naked_features = $self->get_all_DnaAlignFeatures(@args);
-    return enrich($naked_features, 'Bio::Vega::DnaDnaAlignFeature');
+
+    return $self->get_all_DnaAlignFeatures(@args);
+    # my $naked_features = $self->get_all_DnaAlignFeatures(@args);
+    # return enrich($naked_features, 'Bio::Vega::DnaDnaAlignFeature');
 }
 
 sub Bio::EnsEMBL::Slice::get_all_DnaPepAlignFeatures {
     my ($self, @args) = @_;
-    my $naked_features = $self->get_all_ProteinAlignFeatures(@args);
-    return enrich($naked_features, 'Bio::Vega::DnaPepAlignFeature');
+
+    return $self->get_all_ProteinAlignFeatures(@args);
+    # my $naked_features = $self->get_all_ProteinAlignFeatures(@args);
+    # return enrich($naked_features, 'Bio::Vega::DnaPepAlignFeature');
 }
 
 1;
