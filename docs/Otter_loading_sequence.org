@@ -88,13 +88,16 @@
      + updates internal state (Assembly and _subsequence_cache)
 
 ** MCW:SessionWindow also supplies:
-   + add_SubSeq() {just caches it in the SessionWindow's _subsequence_cache}
-   + delete_subsequences()
-     + deletes from acedb
+*** add_SubSeq() {just caches it in the SessionWindow's _subsequence_cache}
+*** delete_subsequences()
+     + deletes from acedb, via save_ace()
      + calls self->delete_SubSeq()
        + deletes from Assembly
        + deletes from _subsequence_cache
      + deletes from ZMap
+*** do_rename_locus(), via save_ace()
+*** exit_save_data(), via save_ace(), to update annotation_in_progress.
+*** save_Assembly(), vai save_ace(), called from MCW:GenomicFeaturesWindow->save_to_ace()
 
 
 * Session Save to Server
