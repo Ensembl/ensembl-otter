@@ -1659,6 +1659,7 @@ sub _process_hits_proc {
             '-processed_callback' => \&_processed_column,
             '-update_callback'    => \&_update_column_status,
             '-log_context'        => $self->AceDatabase->log_context,
+            $self->_zircon_timeouts,
             );
         $_process_hits_proc = $self->{'_process_hits_proc'} = $proc;
     }
@@ -2600,21 +2601,31 @@ sub _zmap_new {
     } else { # RT#387856
         push @$arg_list, Tk::Screens->nxt( $self->top_window )->gtk_arg;
     }
-    my $handshake_to   = $client->config_section_value(Peer => 'handshake-timeout-secs');
-    my $delay          = $client->config_section_value(Peer => 'post-handshake-delay-msecs');
-    my $to_list_config = $client->config_section_value(Peer => 'timeout-list');
-    my @to_list = split(',', $to_list_config);
     my $zmap =
         Zircon::ZMap->new(
             '-app_id'     => $self->_zircon_app_id,
             '-context'    => $self->_new_zircon_context,
             '-arg_list'   => $arg_list,
-            '-timeout_list'               => \@to_list,
-            '-handshake_timeout_secs'     => $handshake_to,
-            '-post_handshake_delay_msecs' => $delay,
+            $self->_zircon_timeouts,
         );
     $self->logger->debug(sprintf('New zmap: %s', $zmap));
     return $zmap;
+}
+
+sub _zircon_timeouts {
+    my ($self) = @_;
+
+    my $client = $self->AceDatabase->Client;
+    my $handshake_to   = $client->config_section_value(Peer => 'handshake-timeout-secs');
+    my $delay          = $client->config_section_value(Peer => 'post-handshake-delay-msecs');
+    my $to_list_config = $client->config_section_value(Peer => 'timeout-list');
+    my @to_list = split(',', $to_list_config);
+
+    return (
+        '-timeout_list'               => \@to_list,
+        '-handshake_timeout_secs'     => $handshake_to,
+        '-post_handshake_delay_msecs' => $delay,
+        );
 }
 
 sub _zircon_app_id {
