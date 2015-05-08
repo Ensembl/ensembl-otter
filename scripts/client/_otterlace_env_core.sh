@@ -10,6 +10,7 @@
 # ENSEMBL_OTTER_DEV        to override the location of ensembl-otter.
 # ENSEMBL_DEV              to override the location of all EnsEMBL packages.
 # ANACODE_PERL_MODULES_DEV to override the location of PerlModules.
+# OTTER_LIB_PERL5_DEV      to override the location of other perl modules (Zircon).
 
 # check that the installation script has set things up
 if [ -z "$version" ] || [ -z "$otter_perl" ]
@@ -92,7 +93,7 @@ export ACEDB_NO_BANNER
 
 if [ -n "$ENSEMBL_OTTER_DEV" ]
 then
-    echo "  DEVEL override for ensembl-otter=$ENSEMBL_OTTER_DEV"
+    echo "  DEVEL override for ensembl-otter=        $ENSEMBL_OTTER_DEV"
     ensembl_otter_home="$ENSEMBL_OTTER_DEV"
     ensembl_otter_path="$ENSEMBL_OTTER_DEV/scripts/client"
 fi
@@ -100,23 +101,30 @@ fi
 
 if [ -n "$ENSEMBL_DEV" ]
 then
-    echo "  DEVEL override for all EnsEMBL=$ENSEMBL_DEV"
+    echo "  DEVEL override for all EnsEMBL=          $ENSEMBL_DEV"
     ensembl_home="$ENSEMBL_DEV"
 fi
 : ${ensembl_home:=$OTTER_HOME}
 
 if [ -n "$ANACODE_PERL_MODULES_DEV" ]
 then
-    echo "  DEVEL override for Anacode Perl Modules=$ANACODE_PERL_MODULES_DEV"
+    echo "  DEVEL override for Anacode Perl Modules= $ANACODE_PERL_MODULES_DEV"
     anacode_perl_modules="$ANACODE_PERL_MODULES_DEV"
 fi
 : ${anacode_perl_modules:=$OTTER_HOME/PerlModules}
+
+if [ -n "$OTTER_LIB_PERL5_DEV" ]
+then
+    echo "  DEVEL override for Otter Perl Modules=   $OTTER_LIB_PERL5_DEV"
+    otter_lib_perl5="$OTTER_LIB_PERL5_DEV"
+fi
+: ${otter_lib_perl5:=$OTTER_HOME/lib/perl5}
 
 PERL5LIB="\
 $anacode_perl_modules:\
 $ensembl_otter_home/modules:\
 $ensembl_home/ensembl/modules:\
-$OTTER_HOME/lib/perl5:\
+$otter_lib_perl5:\
 $ensembl_otter_home/tk\
 "
 
