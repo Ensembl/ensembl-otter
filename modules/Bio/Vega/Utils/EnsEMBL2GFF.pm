@@ -171,16 +171,24 @@ my $_new_feature_id_sub = sub {
 
         my $gff = $self->SUPER::_gff_hash(%args);
         $gff->{'attributes'}{'cigar_ensembl'} = $self->cigar_string;
+        if (my $inf = $args{'accession_info'}{$self->hseqname}) {
+        
+            if (my $hit_length = $inf->{'sequence_length'}) {
+                $gff->{'attributes'}{'length'} = $hit_length;
+            }
+            if (my $taxon_id = $inf->{'taxon_id'}) {
+                $gff->{'attributes'}{'taxon_id'} = $taxon_id;
+            }
+            if (my $db_name = $inf->{'source'}) {
+                $gff->{'attributes'}{'db_name'} = $db_name;
+            }
+            if (my $desc = $inf->{'description'}) {
+                $desc =~ s/"/\\"/g;
+                $gff->{'attributes'}{'Note'} = $desc;
+            }
+        }
+
         return $gff;
-    }
-}
-
-{
-
-    package Bio::EnsEMBL::DnaPepAlignFeature;
-
-    sub _gff_feature {
-        return 'protein_match';
     }
 }
 
@@ -190,6 +198,15 @@ my $_new_feature_id_sub = sub {
 
     sub _gff_feature {
         return 'nucleotide_match';
+    }
+}
+
+{
+
+    package Bio::EnsEMBL::DnaPepAlignFeature;
+
+    sub _gff_feature {
+        return 'protein_match';
     }
 }
 
@@ -687,9 +704,6 @@ my $_new_feature_id_sub = sub {
             if (my $desc = $hd->description) {
                 $desc =~ s/"/\\"/g;
                 $gff->{'attributes'}{'Note'} = $desc;
-            }
-            if (my $seq = $hd->get_and_unset_hit_sequence_string) {
-                $gff->{'attributes'}{'sequence'} = $seq;
             }
         }
 
