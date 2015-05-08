@@ -83,32 +83,32 @@
 
 ** MCW:TranscriptWindow->_do_save_subseq_work()
    + calls MCW:SessionWindow->replace_SubSeq() {the workhorse}
-     + saves to ace via self->save_ace()
+     + saves to ace via self->_save_ace()
      + updates ZMap
      + updates internal state (Assembly and _subsequence_cache)
 
 ** MCW:SessionWindow also supplies:
-*** add_SubSeq() {just caches it in the SessionWindow's _subsequence_cache}
-*** delete_subsequences()
-     + deletes from acedb, via save_ace()
-     + calls self->delete_SubSeq()
+*** _add_SubSeq() {just caches it in the SessionWindow's _subsequence_cache}
+*** _delete_subsequences()
+     + deletes from acedb, via _save_ace()
+     + calls self->_delete_SubSeq()
        + deletes from Assembly
        + deletes from _subsequence_cache
      + deletes from ZMap
-*** do_rename_locus(), via save_ace()
-*** exit_save_data(), via save_ace(), to update annotation_in_progress.
-*** save_Assembly(), vai save_ace(), called from MCW:GenomicFeaturesWindow->save_to_ace()
+*** do_rename_locus(), via _save_ace()
+*** _exit_save_data(), via _save_ace(), to update annotation_in_progress.
+*** save_Assembly(),   via _save_ace(), called from MCW:GenomicFeaturesWindow->save_to_ace()
 
 
 * Session Save to Server
 
-** MCW:SessionWindow->save_data()
+** MCW:SessionWindow->_save_data()
    + calls adb->generate_XML_from_acedb()
    + passes the XML to Client->save_otter_xml()
    + receives XML in return
    + parses this to a B:V:Region
    + makes Ace via B:V:Region::Ace->make_ace_genes_transcripts
-   + saves the region to AceDB via self->save_ace()
-   + calls self->resync_with_db() to rebuild internal state from AceDB
+   + saves the region to AceDB via self->_save_ace()
+   + calls self->_resync_with_db() to rebuild internal state from AceDB
      + calls self->Assembly()
 

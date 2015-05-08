@@ -66,12 +66,12 @@ sub new {
 
     $self->zmap_select_initialize;
 
-    $self->populate_menus;
-    $self->make_status_panel;
-    $self->make_search_panel;
-    $self->bind_events;
+    $self->_populate_menus;
+    $self->_make_status_panel;
+    $self->_make_search_panel;
+    $self->_bind_events;
     $self->minimum_scroll_bbox(0,0, 380,200);
-    $self->flag_db_edits(1);
+    $self->_flag_db_edits(1);
 
     return $self;
 }
@@ -113,7 +113,7 @@ sub RequestQueuer {
 sub initialise {
     my ($self) = @_;
 
-    $self->set_window_title;
+    $self->_set_window_title;
     $self->_colour_init;
 
 
@@ -176,7 +176,7 @@ sub default_log_context {
     return $log_context || '-no-acedb-';
 }
 
-sub set_known_GeneMethods {
+sub _set_known_GeneMethods {
     my ($self) = @_;
 
     my $lst = $self->{'_gene_methods_list'} = [
@@ -248,7 +248,7 @@ sub get_Locus {
     }
 }
 
-sub set_Locus {
+sub _set_Locus {
     my ($self, $locus) = @_;
 
     my $name = $locus->name;
@@ -257,7 +257,7 @@ sub set_Locus {
     return;
 }
 
-sub get_all_Loci {
+sub _get_all_Loci {
     my ($self) = @_;
     my $lc = $self->{'_locus_cache'};
     return values %$lc;
@@ -265,11 +265,11 @@ sub get_all_Loci {
 
 sub list_Locus_names {
     my ($self) = @_;
-    my @names = sort {lc $a cmp lc $b} map { $_->name } $self->get_all_Loci;
+    my @names = sort {lc $a cmp lc $b} map { $_->name } $self->_get_all_Loci;
     return @names;
 }
 
-sub empty_Locus_cache {
+sub _empty_Locus_cache {
     my ($self) = @_;
 
     $self->{'_locus_cache'} = undef;
@@ -282,9 +282,9 @@ sub update_Locus {
 
     my $locus_name = $new_locus->name;
 
-    $self->set_Locus($new_locus);
+    $self->_set_Locus($new_locus);
 
-    foreach my $sub_name ($self->list_all_SubSeq_names) {
+    foreach my $sub_name ($self->_list_all_SubSeq_names) {
         my $sub = $self->get_SubSeq($sub_name) or next;
         my $old_locus = $sub->Locus or next;
 
@@ -293,7 +293,7 @@ sub update_Locus {
             $sub->Locus($new_locus);
 
             # Is there a transcript window open?
-            if (my $transcript_window = $self->get_transcript_window($sub_name)) {
+            if (my $transcript_window = $self->_get_transcript_window($sub_name)) {
                 $transcript_window->update_Locus($new_locus);
             }
         }
@@ -309,7 +309,7 @@ sub do_rename_locus {
     return try {
         my @delete_xml;
         my $offset = $self->AceDatabase->offset;
-        foreach my $sub ($self->fetch_SubSeqs_by_locus_name($old_name)) {
+        foreach my $sub ($self->_fetch_SubSeqs_by_locus_name($old_name)) {
             push @delete_xml, $sub->zmap_delete_xml_string($offset);
         }
 
@@ -328,7 +328,7 @@ sub do_rename_locus {
         }
 
         $locus->name($new_name);
-        $self->set_Locus($locus);
+        $self->_set_Locus($locus);
         $done{'int'} = 1;
 
         my $ace = qq{\n-R Locus "$old_name" "$new_name"\n};
@@ -345,11 +345,11 @@ sub do_rename_locus {
 
         # Now we need to update ZMap with the new locus names
         my @create_xml;
-        foreach my $sub ($self->fetch_SubSeqs_by_locus_name($new_name)) {
+        foreach my $sub ($self->_fetch_SubSeqs_by_locus_name($new_name)) {
             push @create_xml, $sub->zmap_create_xml_string($offset);
         }
 
-        $self->save_ace($ace);
+        $self->_save_ace($ace);
         $done{'ace'} = 1;
 
         my $zmap = $self->zmap;
@@ -383,11 +383,11 @@ sub do_rename_locus {
     }
 }
 
-sub fetch_SubSeqs_by_locus_name {
+sub _fetch_SubSeqs_by_locus_name {
    my ($self, $locus_name) = @_;
 
    my @list;
-   foreach my $name ($self->list_all_SubSeq_names) {
+   foreach my $name ($self->_list_all_SubSeq_names) {
        my $sub = $self->get_SubSeq($name) or next;
        my $locus = $sub->Locus or next;
        if ($locus->name eq $locus_name) {
@@ -400,7 +400,7 @@ sub fetch_SubSeqs_by_locus_name {
 
 #------------------------------------------------------------------------------------------
 
-sub populate_menus {
+sub _populate_menus {
     my ($self) = @_;
 
     my $top = $self->top_window;
@@ -410,11 +410,11 @@ sub populate_menus {
 
     # Save annotations to otter
     my $save_command = sub {
-        unless ($self->close_all_edit_windows) {
+        unless ($self->_close_all_edit_windows) {
             $self->message('Not saving because some editing windows are still open');
             return;
         }
-        $self->save_data;
+        $self->_save_data;
         };
     $file->add('command',
         -label          => 'Save',
@@ -426,7 +426,7 @@ sub populate_menus {
     $top->bind('<Control-S>', $save_command);
 
     # Resync with database
-    my $resync_command = sub { $self->resync_with_db };
+    my $resync_command = sub { $self->_resync_with_db };
     $file->add('command',
         -label          => 'Resync',
         -hidemargin     => 1,
@@ -451,7 +451,7 @@ sub populate_menus {
                      -command => sub { $self->_clipboard_setup(1) });
 
     # Close window
-    my $exit_command = $self->bind_WM_DELETE_WINDOW('delete_window');
+    my $exit_command = $self->bind_WM_DELETE_WINDOW('_delete_window');
     $file->add('command',
         -label          => 'Close',
         -command        => $exit_command,
@@ -466,7 +466,7 @@ sub populate_menus {
 
     # Edit subsequence
     my $edit_command = sub{
-        $self->edit_selected_subsequences;
+        $self->_edit_selected_subsequences;
         };
     $subseq->add('command',
         -label          => 'Edit',
@@ -479,7 +479,7 @@ sub populate_menus {
 
     # Close all open subseq windows
     my $close_subseq_command = sub{
-        $self->close_all_transcript_windows;
+        $self->_close_all_transcript_windows;
         };
     $subseq->add('command',
         -label          => 'Close all',
@@ -492,7 +492,7 @@ sub populate_menus {
 
     # Copy selected subseqs to holding pen
     my $copy_subseq = sub{
-        $self->copy_selected_subseqs;
+        $self->_copy_selected_subseqs;
         };
     $subseq->add('command',
         -label          => 'Copy',
@@ -505,7 +505,7 @@ sub populate_menus {
 
     # Paste selected subseqs, realigning them to the genomic sequence
     my $paste_subseq = sub{
-        try { $self->paste_selected_subseqs; }
+        try { $self->_paste_selected_subseqs; }
         catch { $self->exception_message($_); };
     };
     $subseq->add('command',
@@ -522,7 +522,7 @@ sub populate_menus {
 
     # New subsequence
     my $new_command = sub{
-        $self->edit_new_subsequence;
+        $self->_edit_new_subsequence;
         };
     $subseq->add('command',
         -label          => 'New',
@@ -535,7 +535,7 @@ sub populate_menus {
 
     # Make a variant of the current selected sequence
     my $variant_command = sub{
-        $self->make_variant_subsequence;
+        $self->_make_variant_subsequence;
         };
     $subseq->add('command',
         -label          => 'Variant',
@@ -548,7 +548,7 @@ sub populate_menus {
 
     # Delete subsequence
     my $delete_command = sub {
-        $self->delete_subsequences;
+        $self->_delete_subsequences;
         };
     $subseq->add('command',
         -label          => 'Delete',
@@ -562,7 +562,7 @@ sub populate_menus {
     my $tools_menu = $self->make_menu("Tools");
 
     # Genomic Features editing window
-    my $gf_command = sub { $self->launch_GenomicFeaturesWindow };
+    my $gf_command = sub { $self->_launch_GenomicFeaturesWindow };
     $tools_menu->add('command' ,
         -label          => 'Genomic Features',
         -command        => $gf_command,
@@ -573,7 +573,7 @@ sub populate_menus {
     $top->bind('<Control-G>', $gf_command);
 
     ## Spawn dotter Ctrl .
-    my $run_dotter_command = sub { $self->run_dotter };
+    my $run_dotter_command = sub { $self->_run_dotter };
     $tools_menu->add('command',
         -label          => 'Dotter ZMap hit',
         -command        => $run_dotter_command,
@@ -617,7 +617,7 @@ sub populate_menus {
 
     $tools_menu->add('command',
                -label          => 'Load column data',
-               -command        => sub {$self->show_column_chooser()},
+               -command        => sub {$self->_show_column_chooser()},
     );
 
     # launch in ZMap
@@ -640,16 +640,16 @@ sub populate_menus {
       );
 
     # Show selected subsequence in ZMap
-    my $show_subseq = [ $self, 'show_subseq' ];
+    my $_show_subseq = [ $self, '_show_subseq' ];
     $tools_menu->add
       ('command',
        -label          => 'Hunt in ZMap',
-       -command        => $show_subseq,
+       -command        => $_show_subseq,
        -accelerator    => 'Ctrl+H',
        -underline      => 0,
       );
-    $top->bind('<Control-h>',   $show_subseq);
-    $top->bind('<Control-H>',   $show_subseq);
+    $top->bind('<Control-h>',   $_show_subseq);
+    $top->bind('<Control-H>',   $_show_subseq);
 
     $subseq->bind('<Destroy>', sub{
         $self = undef;
@@ -658,9 +658,9 @@ sub populate_menus {
     return;
 }
 
-sub delete_window {
+sub _delete_window {
     my ($self) = @_;
-    $self->exit_save_data or return;
+    $self->_exit_save_data or return;
     $self->_delete_zmap_view;
     $self->_shutdown_process_hits_proc;
     $self->ColumnChooser->top_window->destroy;
@@ -675,7 +675,7 @@ sub ColumnChooser {
     return $self->{'_ColumnChooser'};
 }
 
-sub show_column_chooser {
+sub _show_column_chooser {
     my ($self) = @_;
 
     my $cc = $self->ColumnChooser;
@@ -686,10 +686,10 @@ sub show_column_chooser {
     return;
 }
 
-sub show_subseq {
+sub _show_subseq {
     my ($self) = @_;
 
-    my @subseq = $self->list_selected_subseq_objs;
+    my @subseq = $self->_list_selected_subseq_objs;
     if (1 == @subseq) {
         my $success = $self->zmap->zoom_to_subseq($subseq[0]);
         $self->message("ZMap: zoom to subsequence failed") unless $success;
@@ -700,27 +700,27 @@ sub show_subseq {
     return;
 }
 
-sub bind_events {
+sub _bind_events {
     my ($self) = @_;
 
     my $canvas = $self->canvas;
 
     $canvas->Tk::bind('<Button-1>', [
-        sub{ $self->left_button_handler(@_); },
+        sub{ $self->_left_button_handler(@_); },
         Tk::Ev('x'), Tk::Ev('y') ]);
     $canvas->Tk::bind('<Shift-Button-1>', [
-        sub{ $self->shift_left_button_handler(@_); },
+        sub{ $self->_shift_left_button_handler(@_); },
         Tk::Ev('x'), Tk::Ev('y') ]);
     $canvas->Tk::bind('<Double-Button-1>', [
         sub{
-            $self->left_button_handler(@_);
-            $self->edit_double_clicked;
+            $self->_left_button_handler(@_);
+            $self->_edit_double_clicked;
             },
         Tk::Ev('x'), Tk::Ev('y') ]);
 
     $canvas->Tk::bind('<Escape>',   sub{ $self->deselect_all        });
-    $canvas->Tk::bind('<Return>',   sub{ $self->edit_double_clicked });
-    $canvas->Tk::bind('<KP_Enter>', sub{ $self->edit_double_clicked });
+    $canvas->Tk::bind('<Return>',   sub{ $self->_edit_double_clicked });
+    $canvas->Tk::bind('<KP_Enter>', sub{ $self->_edit_double_clicked });
 
     # Clipboard
     $canvas->SelectionHandle( sub{ $self->selected_text_to_clipboard(@_) });
@@ -747,17 +747,17 @@ sub highlight {
     return;
 }
 
-sub GenomicFeaturesWindow {
+sub _GenomicFeaturesWindow {
     my ($self) = @_;
-    return $self->{'_gfs'}; # set in launch_GenomicFeaturesWindow
+    return $self->{'_GenomicFeaturesWindow'}; # set in _launch_GenomicFeaturesWindow
 }
 
-sub launch_GenomicFeaturesWindow {
+sub _launch_GenomicFeaturesWindow {
     my ($self) = @_;
     try {
         my $gfs = MenuCanvasWindow::GenomicFeaturesWindow->in_Toplevel
           (# -title is set during initialise
-           { reuse_ref => \$self->{'_gfs'},
+           { reuse_ref => \$self->{'_GenomicFeaturesWindow'},
              raise => 1,
              init => { SessionWindow => $self },
              from => $self->canvas });
@@ -770,10 +770,10 @@ sub launch_GenomicFeaturesWindow {
     return;
 }
 
-sub close_GenomicFeaturesWindow {
+sub _close_GenomicFeaturesWindow {
     my ($self) = @_;
 
-    if(my $gfs = $self->GenomicFeaturesWindow()) {
+    if(my $gfs = $self->_GenomicFeaturesWindow()) {
         $gfs->try2save_and_quit();
     }
 
@@ -783,7 +783,7 @@ sub close_GenomicFeaturesWindow {
 {
     my( @holding_pen );
 
-    sub copy_selected_subseqs {
+    sub _copy_selected_subseqs {
         my ($self) = @_;
 
         # Empty holding pen
@@ -803,7 +803,7 @@ sub close_GenomicFeaturesWindow {
         return;
     }
 
-    sub paste_selected_subseqs {
+    sub _paste_selected_subseqs {
         my ($self) = @_;
 
         unless (@holding_pen) {
@@ -844,7 +844,7 @@ sub close_GenomicFeaturesWindow {
                 }
                 my $paste_locus = $self->_paste_locus($sub->Locus);
                 $new->Locus($paste_locus);
-                $self->add_SubSeq($new);
+                $self->_add_SubSeq($new);
                 push(@new_subseq, $new);
                 $self->logger->info("Internal paste result:\n", $new->ace_string);
             } else {
@@ -852,10 +852,10 @@ sub close_GenomicFeaturesWindow {
             }
         }
         $self->draw_subseq_list;
-        $self->highlight_by_name(map { $_->name } @new_subseq);
+        $self->_highlight_by_name(map { $_->name } @new_subseq);
         $self->message(@msg) if @msg;
         foreach my $new (@new_subseq) {
-            $self->make_transcript_window($new);
+            $self->_make_transcript_window($new);
         }
 
         return;
@@ -899,21 +899,21 @@ sub _paste_locus {
 }
 
 
-sub exit_save_data {
+sub _exit_save_data {
     my ($self) = @_;
 
     my $adb = $self->AceDatabase;
-    my $dir = $self->ace_path;
+    my $dir = $self->_ace_path;
     unless ($adb->write_access) {
         $adb->error_flag(0);
-        $self->close_GenomicFeaturesWindow;   ### Why is this special?
+        $self->_close_GenomicFeaturesWindow;   ### Why is this special?
         my $changed = $self->AceDatabase->unsaved_changes;
         $changed = 'not set' unless defined $changed;
         $self->logger->info("Closing $dir (no write access, changed = $changed)");
         return 1;
     }
 
-    $self->close_all_edit_windows or return;
+    $self->_close_all_edit_windows or return;
 
     if (my @loci = $self->Assembly->get_all_annotation_in_progress_Loci) {
 
@@ -945,11 +945,11 @@ sub exit_save_data {
                 $self->update_Locus($locus);
             }
 
-            try { $self->save_ace($ace); return 1; }
+            try { $self->_save_ace($ace); return 1; }
             catch  { $self->logger->error("Aborting lace session exit:\n$_"); return 0; }
             or return;
 
-            if ($self->save_data) {
+            if ($self->_save_data) {
                 $adb->error_flag(0);
                 $self->logger->info("Closing $dir (saved data, annotation is complete)");
                 return 1;
@@ -976,7 +976,7 @@ sub exit_save_data {
         }
         elsif ($ans eq 'Yes') {
             # Return false if there is a problem saving
-            $self->save_data or return;
+            $self->_save_data or return;
             $self->logger->info("Closing $dir (saved data)");
         } else {
             $self->logger->info("Closing $dir (Save = $ans)");
@@ -992,15 +992,15 @@ sub exit_save_data {
     return 1;
 }
 
-sub close_all_edit_windows {
+sub _close_all_edit_windows {
     my ($self) = @_;
 
-    $self->close_all_transcript_windows or return;
-    $self->close_GenomicFeaturesWindow;
+    $self->_close_all_transcript_windows or return;
+    $self->_close_GenomicFeaturesWindow;
     return 1;
 }
 
-sub save_data {
+sub _save_data {
     my ($self) = @_;
 
     my $adb = $self->AceDatabase;
@@ -1028,29 +1028,29 @@ sub save_data {
         my $ace_data = $ace_maker->make_ace_genes_transcripts($region);
 
         $adb->unsaved_changes(0);
-        $self->flag_db_edits(0);    # or the save_ace() will set unsaved_changes back to "1"
-        $self->save_ace($ace_data);
-        $self->flag_db_edits(1);
-        $self->resync_with_db;
+        $self->_flag_db_edits(0);    # or the _save_ace() will set unsaved_changes back to "1"
+        $self->_save_ace($ace_data);
+        $self->_flag_db_edits(1);
+        $self->_resync_with_db;
 
-        $self->set_window_title;
+        $self->_set_window_title;
         return 1;
     }
     catch { $self->exception_message($_, 'Error saving to otter'); return 0; }
     finally { $top->Unbusy; };
 }
 
-sub edit_double_clicked {
+sub _edit_double_clicked {
     my ($self) = @_;
 
     return unless $self->list_selected;
 
-    $self->edit_selected_subsequences;
+    $self->_edit_selected_subsequences;
 
     return;
 }
 
-sub left_button_handler {
+sub _left_button_handler {
     my ($self, $canvas, $x, $y) = @_;
 
     return if $self->delete_message;
@@ -1063,7 +1063,7 @@ sub left_button_handler {
     return;
 }
 
-sub shift_left_button_handler {
+sub _shift_left_button_handler {
     my ($self, $canvas, $x, $y) = @_;
 
     return if $self->delete_message;
@@ -1082,7 +1082,7 @@ sub shift_left_button_handler {
 Readonly my @display_statuses =>
     qw( Selected Queued Loading Processing HitsQueued HitsProcess Visible Hidden Empty Error );
 
-sub make_status_panel {
+sub _make_status_panel {
     my ($self) = @_;
 
     my $status_colors = Bio::Otter::Lace::Chooser::Item::Column->STATUS_COLORS_HASHREF();
@@ -1132,7 +1132,7 @@ sub _status_bar {
     return $_status_bar;
 }
 
-sub make_search_panel {
+sub _make_search_panel {
     my ($self) = @_;
 
     my $top = $self->top_window();
@@ -1198,7 +1198,7 @@ sub _do_search {
 
     my @matching_sub_names;
     my @ace_fail_names;
-    foreach my $name ($self->list_all_SubSeq_names) {
+    foreach my $name ($self->_list_all_SubSeq_names) {
         my $sub = $self->get_SubSeq($name) or next;
         try {
             push @matching_sub_names, $name
@@ -1220,7 +1220,7 @@ sub _do_search {
 
     if (@matching_sub_names) {
         # highlight the hits
-        $self->highlight_by_name(@matching_sub_names);
+        $self->_highlight_by_name(@matching_sub_names);
         # also report any errors
         if (@ace_fail_names) {
             $self->message("Search: I also saw some errors while searching.  Search for 'wibble' to highlight those.");
@@ -1228,7 +1228,7 @@ sub _do_search {
     }
     elsif (@ace_fail_names) {
         # highlight the errors
-        $self->highlight_by_name(@ace_fail_names);
+        $self->_highlight_by_name(@ace_fail_names);
     }
     elsif ($query_str ne $query_str_stripped) {
         $self->message("Can't find '$query_str'\nStripped non-printing characters from\nsearch term, please try again");
@@ -1254,13 +1254,13 @@ sub _search_regex {
     return $regex;
 }
 
-sub ace_path {
+sub _ace_path {
     my ($self) = @_;
 
     return $self->AceDatabase->home;
 }
 
-sub save_ace {
+sub _save_ace {
     my ($self, @args) = @_;
 
     my $adb = $self->AceDatabase;
@@ -1272,15 +1272,15 @@ sub save_ace {
         $self->logger->logconfess("Error saving to acedb: $_");
     };
 
-    if ($self->flag_db_edits) {
+    if ($self->_flag_db_edits) {
         $self->AceDatabase->unsaved_changes(1);
-        $self->set_window_title;
+        $self->_set_window_title;
     }
 
     return $val;
 }
 
-sub flag_db_edits {
+sub _flag_db_edits {
     my ($self, $flag) = @_;
 
     if (defined $flag) {
@@ -1289,25 +1289,25 @@ sub flag_db_edits {
     return $self->{'_flag_db_edits'};
 }
 
-sub resync_with_db {
+sub _resync_with_db {
     my ($self) = @_;
 
 
-    unless ($self->close_all_edit_windows) {
+    unless ($self->_close_all_edit_windows) {
         $self->message("All editor windows must be closed before a ReSync");
         return;
     }
 
     my $busy = Tk::ScopedBusy->new($self->canvas, -recurse => 0);
 
-    $self->empty_Assembly_cache;
-    $self->empty_SubSeq_cache;
-    $self->empty_Locus_cache;
+    $self->_empty_Assembly_cache;
+    $self->_empty_SubSeq_cache;
+    $self->_empty_Locus_cache;
 
     # Refetch transcripts
     $self->Assembly;
     my @visible_columns = $self->AceDatabase->ColumnCollection->list_Columns_with_status('Visible');
-    $self->process_and_update_columns(@visible_columns);
+    $self->_process_and_update_columns(@visible_columns);
     $self->update_status_bar;
 
     return;
@@ -1339,13 +1339,13 @@ sub slice_name {
         $self->AceDatabase->slice_name;
 }
 
-sub edit_selected_subsequences {
+sub _edit_selected_subsequences {
     my ($self) = @_;
-    $self->edit_subsequences($self->list_selected_subseq_names);
+    $self->_edit_subsequences($self->list_selected_subseq_names);
     return;
 }
 
-sub edit_subsequences {
+sub _edit_subsequences {
     my ($self, @sub_names) = @_;
 
     my $busy = Tk::ScopedBusy->new($self->canvas);
@@ -1353,7 +1353,7 @@ sub edit_subsequences {
 
     foreach my $sub_name (@sub_names) {
         # Just show the edit window if present
-        next if $self->raise_transcript_window($sub_name);
+        next if $self->_raise_transcript_window($sub_name);
 
         # Get a copy of the subseq
         if (my $sub = $self->get_SubSeq($sub_name)) {
@@ -1363,7 +1363,7 @@ sub edit_subsequences {
             $edit->is_archival($sub->is_archival);
             $edit->locus_level_errors($sub->locus_level_errors);
 
-            $self->make_transcript_window($edit);
+            $self->_make_transcript_window($edit);
         } else {
             $self->logger->warn("Failed to get_SubSeq($sub_name)");
             $retval = 0;
@@ -1373,22 +1373,22 @@ sub edit_subsequences {
     return $retval;
 }
 
-sub default_locus_prefix {
+sub _default_locus_prefix {
     my ($self) = @_;
     return $self->{_default_locus_prefix} ||=
-        $self->_default_locus_prefix;
+        $self->_get_default_locus_prefix;
 }
 
-sub _default_locus_prefix {
+sub _get_default_locus_prefix {
     my ($self) = @_;
     my $client = $self->AceDatabase->Client;
     return $client->config_value('gene_type_prefix') || '';
 }
 
-sub edit_new_subsequence {
+sub _edit_new_subsequence {
     my ($self) = @_;
 
-    my @subseq = $self->list_selected_subseq_objs;
+    my @subseq = $self->_list_selected_subseq_objs;
     my $clip      = $self->get_clipboard_text || '';
 
     my ($new);
@@ -1405,9 +1405,9 @@ sub edit_new_subsequence {
         $new->clone_Sequence($self->Assembly->Sequence);
     }
 
-    my ($region_name, $max) = $self->region_name_and_next_locus_number($new);
+    my ($region_name, $max) = $self->_region_name_and_next_locus_number($new);
 
-    my $prefix = $self->default_locus_prefix;
+    my $prefix = $self->_default_locus_prefix;
     my $loc_name = $prefix ? "$prefix:$region_name.$max" : "$region_name.$max";
     my $locus = $self->get_Locus($loc_name);
     $locus->gene_type_prefix($prefix);
@@ -1430,12 +1430,12 @@ sub edit_new_subsequence {
         $new->translation_region($new->translation_region);
     }
 
-    $self->add_SubSeq_and_paste_evidence($new, $clip);
+    $self->_add_SubSeq_and_paste_evidence($new, $clip);
 
     return;
 }
 
-sub region_name_and_next_locus_number {
+sub _region_name_and_next_locus_number {
     my ($self, $new) = @_;
 
     my $most_3prime = $new->strand == 1 ? $new->end : $new->start;
@@ -1467,13 +1467,13 @@ sub region_name_and_next_locus_number {
     return ($region_name, $max);
 }
 
-sub make_variant_subsequence {
+sub _make_variant_subsequence {
     my ($self) = @_;
 
     my $clip      = $self->get_clipboard_text || '';
     my @sub_names = $self->list_selected_subseq_names;
     unless (@sub_names) {
-        @sub_names = $self->list_was_selected_subseq_names;
+        @sub_names = $self->_list_was_selected_subseq_names;
     }
 
     # $self->logger->info("Got subseq names: (@sub_names)");
@@ -1533,28 +1533,28 @@ sub make_variant_subsequence {
         $var->replace_all_Exons($clip_sub->get_all_Exons);
     }
 
-    $self->add_SubSeq_and_paste_evidence($var, $clip);
+    $self->_add_SubSeq_and_paste_evidence($var, $clip);
 
     return;
 }
 
-sub add_SubSeq_and_paste_evidence {
+sub _add_SubSeq_and_paste_evidence {
     my ($self, $sub, $clip) = @_;
 
     $self->Assembly->add_SubSeq($sub);
 
-    $self->add_SubSeq($sub);
+    $self->_add_SubSeq($sub);
     $self->draw_subseq_list;
-    $self->highlight_by_name($sub->name);
+    $self->_highlight_by_name($sub->name);
 
-    my $transcript_window = $self->make_transcript_window($sub);
+    my $transcript_window = $self->_make_transcript_window($sub);
     $transcript_window->merge_position_pairs;  # Useful if multiple overlapping evidence selected
     $transcript_window->EvidencePaster->add_evidence_from_text($clip);
 
     return;
 }
 
-sub add_external_SubSeqs {
+sub _add_external_SubSeqs {
     my ($self, @ext_subs) = @_;
 
     # Subsequences from ZMap gff which are not in acedb database
@@ -1575,7 +1575,7 @@ sub add_external_SubSeqs {
         }
         $sub->clone_Sequence($dna);
         $asm->add_SubSeq($sub);
-        $self->add_SubSeq($sub);
+        $self->_add_SubSeq($sub);
     }
 
     return;
@@ -1583,7 +1583,7 @@ sub add_external_SubSeqs {
 
 # Does hits and transcripts for now - will separate later
 #
-sub process_and_update_columns {
+sub _process_and_update_columns {
     my ($self, @columns) = @_;
 
     my (@alignment_cols, @transcript_cols, @other_cols);
@@ -1607,7 +1607,7 @@ sub process_and_update_columns {
         my ($transcripts, $failed) = @{$transcript_result}{qw( -results -failed )};
 
         if ($transcripts and @$transcripts) {
-            $self->add_external_SubSeqs(@{$transcripts});
+            $self->_add_external_SubSeqs(@{$transcripts});
             $self->draw_subseq_list;
         }
 
@@ -1652,8 +1652,8 @@ sub _process_hits_proc {
         my @arg_list = map { sprintf('%s=%s', $_, $core_script_args->{$_}) } keys %$core_script_args;
 
         my $proc = Bio::Otter::Zircon::ProcessHits->new(
-            '-app_id'             => $self->zircon_app_id,
-            '-context'            => $self->new_zircon_context('PHO'),
+            '-app_id'             => $self->_zircon_app_id,
+            '-context'            => $self->_new_zircon_context('PHO'),
             '-arg_list'           => \@arg_list,
             '-session_window'     => $self,
             '-processed_callback' => \&_processed_column,
@@ -1671,7 +1671,7 @@ sub _shutdown_process_hits_proc {
     return;
 }
 
-sub delete_subsequences {
+sub _delete_subsequences {
     my ($self) = @_;
 
     # Make a list of editable SubSeqs from those selected,
@@ -1689,7 +1689,7 @@ sub delete_subsequences {
     # Check that none of the sequences to be deleted are being edited
     my $in_edit = 0;
     foreach my $sub (@to_die) {
-        $in_edit += $self->raise_transcript_window($sub->name);
+        $in_edit += $self->_raise_transcript_window($sub->name);
     }
     if ($in_edit) {
         $self->message("Must close edit windows before calling delete");
@@ -1735,7 +1735,7 @@ sub delete_subsequences {
     }
 
     # delete from acedb
-    try { $self->save_ace($ace); return 1; }
+    try { $self->_save_ace($ace); return 1; }
     catch {
         $self->exception_message($_, 'Aborted delete, failed to save to Ace');
         return 0;
@@ -1744,7 +1744,7 @@ sub delete_subsequences {
 
     # Remove from our objects
     foreach my $sub (@to_die) {
-        $self->delete_SubSeq($sub);
+        $self->_delete_SubSeq($sub);
     }
     $self->draw_subseq_list;
 
@@ -1764,7 +1764,7 @@ sub delete_subsequences {
     return;
 }
 
-sub make_transcript_window {
+sub _make_transcript_window {
     my ($self, $sub) = @_;
 
     my $sub_name = $sub->name;
@@ -1780,17 +1780,17 @@ sub make_transcript_window {
     $transcript_window->SubSeq($sub);
     $transcript_window->initialise;
 
-    $self->save_transcript_window($sub_name, $transcript_window);
+    $self->_save_transcript_window($sub_name, $transcript_window);
 
     return $transcript_window;
 }
 
-sub raise_transcript_window {
+sub _raise_transcript_window {
     my ($self, $name) = @_;
 
     $self->logger->logconfess("no name given") unless $name;
 
-    if (my $transcript_window = $self->get_transcript_window($name)) {
+    if (my $transcript_window = $self->_get_transcript_window($name)) {
         my $top = $transcript_window->canvas->toplevel;
         $top->deiconify;
         $top->raise;
@@ -1800,19 +1800,19 @@ sub raise_transcript_window {
     }
 }
 
-sub get_transcript_window {
+sub _get_transcript_window {
     my ($self, $name) = @_;
 
     return $self->{'_transcript_window'}{$name};
 }
 
-sub list_all_transcript_window_names {
+sub _list_all_transcript_window_names {
     my ($self) = @_;
 
     return keys %{$self->{'_transcript_window'}};
 }
 
-sub save_transcript_window {
+sub _save_transcript_window {
     my ($self, $name, $transcript_window) = @_;
 
     $self->{'_transcript_window'}{$name} = $transcript_window;
@@ -1821,7 +1821,7 @@ sub save_transcript_window {
     return;
 }
 
-sub delete_transcript_window {
+sub _delete_transcript_window {
     my ($self, $name) = @_;
 
     delete($self->{'_transcript_window'}{$name});
@@ -1829,22 +1829,22 @@ sub delete_transcript_window {
     return;
 }
 
-sub rename_transcript_window {
+sub _rename_transcript_window {
     my ($self, $old_name, $new_name) = @_;
 
-    my $transcript_window = $self->get_transcript_window($old_name)
+    my $transcript_window = $self->_get_transcript_window($old_name)
         or return;
-    $self->delete_transcript_window($old_name);
-    $self->save_transcript_window($new_name, $transcript_window);
+    $self->_delete_transcript_window($old_name);
+    $self->_save_transcript_window($new_name, $transcript_window);
 
     return;
 }
 
-sub close_all_transcript_windows {
+sub _close_all_transcript_windows {
     my ($self) = @_;
 
-    foreach my $name ($self->list_all_transcript_window_names) {
-        my $transcript_window = $self->get_transcript_window($name) or next;
+    foreach my $name ($self->_list_all_transcript_window_names) {
+        my $transcript_window = $self->_get_transcript_window($name) or next;
         $transcript_window->window_close or return 0;
     }
 
@@ -1858,18 +1858,18 @@ sub draw_subseq_list {
 
     my $slist = [];
     my $counter = 1;
-    foreach my $clust ($self->get_all_Subseq_clusters) {
+    foreach my $clust ($self->_get_all_Subseq_clusters) {
         push(@$slist, "") if @$slist;
         push(@$slist, @$clust);
     }
 
-    $self->draw_sequence_list($slist);
+    $self->_draw_sequence_list($slist);
     $self->fix_window_min_max_sizes;
 
     return;
 }
 
-sub get_all_Subseq_clusters {
+sub _get_all_Subseq_clusters {
     my ($self) = @_;
 
     my $assembly = $self->Assembly;
@@ -1935,7 +1935,7 @@ sub Assembly {
         or return;
 
         foreach my $sub ($assembly->get_all_SubSeqs) {
-            $self->add_SubSeq($sub);
+            $self->_add_SubSeq($sub);
 
             # Ignore loci from non-editable SubSeqs
             next unless $sub->is_mutable;
@@ -1946,7 +1946,7 @@ sub Assembly {
         }
 
         $self->{'_assembly'} = $assembly;
-        $self->set_known_GeneMethods;
+        $self->_set_known_GeneMethods;
 
         my $after  = time();
         $self->logger->info(
@@ -1969,7 +1969,7 @@ sub save_Assembly { ## no critic (Subroutines::RequireFinalReturn)
     my $done_ace = 0;
     my $err = undef;
     my $done_zmap = try {
-        $self->save_ace($ace);
+        $self->_save_ace($ace);
         $done_ace = 1;
         if ($delete_xml) {
             $self->zmap->send_command_and_xml('delete_feature', $delete_xml);
@@ -2010,7 +2010,7 @@ sub save_Assembly { ## no critic (Subroutines::RequireFinalReturn)
     }
 }
 
-sub empty_Assembly_cache {
+sub _empty_Assembly_cache {
     my ($self) = @_;
 
     $self->{'_assembly'} = undef;
@@ -2053,7 +2053,7 @@ sub replace_SubSeq {
     my ($done_ace, $done_zmap, $err);
     my $offset = $self->AceDatabase->offset;
     try {
-        $self->save_ace($ace);
+        $self->_save_ace($ace);
         $done_ace = 1;
         if ($old->is_archival) {
             $self->zmap->send_command_and_xml('delete_feature', $old->zmap_delete_xml_string($offset));
@@ -2070,7 +2070,7 @@ sub replace_SubSeq {
 
         if ($new_name ne $old_name) {
             $self->{'_subsequence_cache'}{$old_name} = undef;
-            $self->rename_transcript_window($old_name, $new_name);
+            $self->_rename_transcript_window($old_name, $new_name);
         }
         $self->{'_subsequence_cache'}{$new_name} = $new;
 
@@ -2079,7 +2079,7 @@ sub replace_SubSeq {
             $self->logger->info("Unsetting otter_id for locus '$prev_name'");
             $self->get_Locus($prev_name)->drop_otter_id;
         }
-        $self->set_Locus($locus);
+        $self->_set_Locus($locus);
     }
 
     if ($done_zmap) {
@@ -2099,7 +2099,7 @@ sub replace_SubSeq {
     }
 }
 
-sub add_SubSeq {
+sub _add_SubSeq {
     my ($self, $sub) = @_;
 
     my $name = $sub->name;
@@ -2112,7 +2112,7 @@ sub add_SubSeq {
     return;
 }
 
-sub delete_SubSeq {
+sub _delete_SubSeq {
     my ($self, $sub) = @_;
 
     my $name = $sub->name;
@@ -2133,7 +2133,7 @@ sub get_SubSeq {
     return $self->{'_subsequence_cache'}{$name};
 }
 
-sub list_all_SubSeq_names {
+sub _list_all_SubSeq_names {
     my ($self) = @_;
 
     if (my $sub_hash = $self->{'_subsequence_cache'}) {
@@ -2143,7 +2143,7 @@ sub list_all_SubSeq_names {
     }
 }
 
-sub empty_SubSeq_cache {
+sub _empty_SubSeq_cache {
     my ($self) = @_;
 
     $self->{'_subsequence_cache'} = undef;
@@ -2151,7 +2151,7 @@ sub empty_SubSeq_cache {
     return;
 }
 
-sub row_count {
+sub _row_count {
     my ($self, $slist) = @_;
 
     # Work out number of rows to keep the session
@@ -2172,12 +2172,12 @@ sub row_count {
     return $rows;
 }
 
-sub update_SubSeq_locus_level_errors {
+sub _update_SubSeq_locus_level_errors {
     my ($self) = @_;
 
     $self->Assembly->set_SubSeq_locus_level_errors;
-    foreach my $sub_name ($self->list_all_transcript_window_names) {
-        my $transcript_window = $self->get_transcript_window($sub_name) or next;
+    foreach my $sub_name ($self->_list_all_transcript_window_names) {
+        my $transcript_window = $self->_get_transcript_window($sub_name) or next;
         my $sub = $self->get_SubSeq($sub_name) or next;
         $transcript_window->SubSeq->locus_level_errors($sub->locus_level_errors);
     }
@@ -2206,17 +2206,17 @@ sub OTF_Transcript_columns {
     return $self->_cached_columns_by_internal_type('on_the_fly_transcript', 'OTF_Transcript_columns');
 }
 
-sub draw_sequence_list {
+sub _draw_sequence_list {
     my ($self, $slist) = @_;
 
-    $self->update_SubSeq_locus_level_errors;
+    $self->_update_SubSeq_locus_level_errors;
 
     my $canvas = $self->canvas;
     my (undef, $size) = $self->named_font('mono', 'linespace');
     my $pad  = 0; # int($size / 6); # linespace includes some padding
     my $half = int($size / 2);
 
-    my $rows = $self->row_count($slist);
+    my $rows = $self->_row_count($slist);
 
     # Delete everything apart from messages
     $canvas->delete('!msg');
@@ -2225,7 +2225,7 @@ sub draw_sequence_list {
     my $y = 0;
     my $err_hash = {};
     my $locus_type_pattern;
-    if (my $pre = $self->default_locus_prefix) {
+    if (my $pre = $self->_default_locus_prefix) {
         $locus_type_pattern = qr{^$pre:};
     } else {
         $locus_type_pattern = qr{^[^:]+$};
@@ -2298,25 +2298,25 @@ sub draw_sequence_list {
     return;
 }
 
-sub highlight_by_name {
+sub _highlight_by_name {
     my ($self, @names) = @_;
 
-    $self->highlight($self->subseq_names_to_canvas_obj(@names));
+    $self->highlight($self->_subseq_names_to_canvas_obj(@names));
 
     return;
 }
 
-sub highlight_by_name_without_owning_clipboard {
+sub _highlight_by_name_without_owning_clipboard {
     my ($self, @names) = @_;
 
-    if (my @obj_list = $self->subseq_names_to_canvas_obj(@names)) {
+    if (my @obj_list = $self->_subseq_names_to_canvas_obj(@names)) {
         $self->CanvasWindow::highlight(@obj_list);
     }
 
     return;
 }
 
-sub subseq_names_to_canvas_obj {
+sub _subseq_names_to_canvas_obj {
     my ($self, @names) = @_;
 
     my $canvas = $self->canvas;
@@ -2333,7 +2333,7 @@ sub subseq_names_to_canvas_obj {
     return @to_select;
 }
 
-sub canvas_obj_to_subseq_names {
+sub _canvas_obj_to_subseq_names {
     my ($self, @obj_list) = @_;
 
     my $canvas = $self->canvas;
@@ -2351,18 +2351,18 @@ sub canvas_obj_to_subseq_names {
 sub list_selected_subseq_names {
     my ($self) = @_;
 
-    return $self->canvas_obj_to_subseq_names($self->list_selected);
+    return $self->_canvas_obj_to_subseq_names($self->list_selected);
 }
 
-sub list_selected_subseq_objs {
+sub _list_selected_subseq_objs {
     my ($self) = @_;
     return map { $self->get_SubSeq($_) } $self->list_selected_subseq_names;
 }
 
-sub list_was_selected_subseq_names {
+sub _list_was_selected_subseq_names {
     my ($self) = @_;
 
-    return $self->canvas_obj_to_subseq_names($self->list_was_selected);
+    return $self->_canvas_obj_to_subseq_names($self->list_was_selected);
 }
 
 sub rename_locus {
@@ -2370,7 +2370,7 @@ sub rename_locus {
 
     $self->logger->info("Renaming locus '$locus_name'");
 
-    unless ($self->close_all_transcript_windows) {
+    unless ($self->_close_all_transcript_windows) {
         $self->message('Must close all transcript editing windows before renaming locus');
         return;
     }
@@ -2392,7 +2392,7 @@ sub rename_locus {
     return 1;
 }
 
-sub run_dotter {
+sub _run_dotter {
     my ($self) = @_;
 
     my $dw = EditWindow::Dotter->in_Toplevel
@@ -2452,10 +2452,10 @@ sub remove_exonerate_callback {
     return delete $self->_exonerate_callbacks->{$key};
 }
 
-sub exonerate_done_callback {
+sub _exonerate_done_callback {
     my ($self, @feature_sets) = @_;
 
-    $self->logger->debug('exonerate_done_callback: [', join(',', @feature_sets), ']');
+    $self->logger->debug('_exonerate_done_callback: [', join(',', @feature_sets), ']');
 
     my $request_adaptor = $self->AceDatabase->DB->OTFRequestAdaptor;
     my (@requests, @requests_with_feedback);
@@ -2495,7 +2495,7 @@ sub get_mark_in_slice_coords {
     return @mark;
 }
 
-sub set_window_title {
+sub _set_window_title {
     my ($self) = @_;
 
     my $name = $self->AceDatabase->name;
@@ -2513,7 +2513,7 @@ sub name { # used by the bind_WM_DELETE_WINDOW method
 }
 
 
-sub zmap_view_arg_hash {
+sub _zmap_view_arg_hash {
     my ($self) = @_;
     my $config_file = sprintf "%s/ZMap", $self->AceDatabase->zmap_dir;
     my $slice = $self->AceDatabase->slice;
@@ -2571,7 +2571,7 @@ sub zmap_configs_dir {
 
 ### BEGIN: ZMap control interface
 
-sub new_zircon_context {
+sub _new_zircon_context {
     my ($self, $prefix) = @_;
     $prefix //= 'SW';
     my $context = Zircon::Context::ZMQ::Tk->new(
@@ -2582,7 +2582,7 @@ sub new_zircon_context {
     return $context;
 }
 
-sub zmap_new {
+sub _zmap_new {
     my ($self) = @_;
     mac_os_x_set_proxy_vars(\%ENV) if $^O eq 'darwin';
     my $DataSet = $self->AceDatabase->DataSet;
@@ -2606,8 +2606,8 @@ sub zmap_new {
     my @to_list = split(',', $to_list_config);
     my $zmap =
         Zircon::ZMap->new(
-            '-app_id'     => $self->zircon_app_id,
-            '-context'    => $self->new_zircon_context,
+            '-app_id'     => $self->_zircon_app_id,
+            '-context'    => $self->_new_zircon_context,
             '-arg_list'   => $arg_list,
             '-timeout_list'               => \@to_list,
             '-handshake_timeout_secs'     => $handshake_to,
@@ -2617,21 +2617,21 @@ sub zmap_new {
     return $zmap;
 }
 
-sub zircon_app_id {
+sub _zircon_app_id {
     my ($self) = @_;
     my $widget_id = $self->top_window->id;
-    my $zircon_app_id = "Otterlace_${widget_id}";
-    return $zircon_app_id;
+    my $_zircon_app_id = "Otterlace_${widget_id}";
+    return $_zircon_app_id;
 }
 
 sub _zmap_view_new {
     my ($self, $zmap) = @_;
     $self->logger->debug($zmap ? sprintf('_zmap_view_new using zmap: %s', $zmap) : '_zmap_view_new will create new zmap');
-    $zmap ||= $self->zmap_new;
+    $zmap ||= $self->_zmap_new;
     $self->_delete_zmap_view;
     $self->{'_zmap_view'} =
         $zmap->new_view(
-            %{$self->zmap_view_arg_hash},
+            %{$self->_zmap_view_arg_hash},
             '-handler' => $self,
         );
     $self->logger->debug(sprintf('New _zmap_view: %s', $self->{'_zmap_view'}));
@@ -2711,8 +2711,8 @@ sub zircon_zmap_view_features_loaded {
     # This will get called by Tk event loop when idle
     $self->top_window->afterIdle(
         sub{
-            $self->exonerate_done_callback(@otf_loaded) if @otf_loaded;
-            $self->process_and_update_columns(@columns_to_process) if @columns_to_process;
+            $self->_exonerate_done_callback(@otf_loaded) if @otf_loaded;
+            $self->_process_and_update_columns(@columns_to_process) if @columns_to_process;
             $self->RequestQueuer->features_loaded_callback(@featuresets);
             return;
         });
@@ -2745,7 +2745,7 @@ sub zircon_zmap_view_edit {
             or $self->logger->logconfess("Unexpected feature format for ${name}");
         for my $s (@$sub_list) {
             if ($s->{'ontology'} eq 'exon') {
-                return $self->edit_subsequences($name);
+                return $self->_edit_subsequences($name);
             }
         }
         return 0;
@@ -2808,7 +2808,7 @@ sub _feature_evidence_xml {
         $feat_name =~ /\A[[:alnum:]]{2}:/;
 
     my $subseq_list = [];
-    foreach my $name ($self->list_all_SubSeq_names) {
+    foreach my $name ($self->_list_all_SubSeq_names) {
         if (my $subseq = $self->get_SubSeq($name)) {
             push(@$subseq_list, $subseq);
         }
@@ -2893,14 +2893,14 @@ sub zircon_zmap_view_zoom_to_subseq_xml {
 sub zircon_zmap_view_single_select {
     my ($self, $name_list) = @_;
     $self->deselect_all();
-    $self->highlight_by_name_without_owning_clipboard($_)
+    $self->_highlight_by_name_without_owning_clipboard($_)
         for @{$name_list};
     return;
 }
 
 sub zircon_zmap_view_multiple_select {
     my ($self, $name_list) = @_;
-    $self->highlight_by_name_without_owning_clipboard($_)
+    $self->_highlight_by_name_without_owning_clipboard($_)
         for @{$name_list};
     return;
 }
@@ -2917,7 +2917,7 @@ sub zmap {
 sub DESTROY {
     my ($self) = @_;
 
-    $self->logger->info("Destroying SessionWindow for ", $self->ace_path);
+    $self->logger->info("Destroying SessionWindow for ", $self->_ace_path);
 
     $self->zmap_select_destroy;
 
