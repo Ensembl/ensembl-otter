@@ -264,6 +264,11 @@ sub _cache_Locus {
     return $self->{'_locus_cache'}{$name} = $locus;
 }
 
+sub _get_delete_cached_Locus_by_name {
+    my ($self, $name) = @_;
+    return delete $self->{'_locus_cache'}->{$name};
+}
+
 sub _get_all_Loci {
     my ($self) = @_;
     my $lc = $self->{'_locus_cache'};
@@ -320,15 +325,12 @@ sub do_rename_locus {
             push @delete_xml, $sub->zmap_delete_xml_string($offset);
         }
 
-        my $locus_cache = $self->{'_locus_cache'}
-            or confess "Did not get locus cache";
-
-        if ($locus_cache->{$new_name}) {
+        if ($self->get_Locus_by_name($new_name)) {
             $self->message("Cannot rename to '$new_name'; Locus already exists");
             return 0;
         }
 
-        my $locus = delete $locus_cache->{$old_name};
+        my $locus = $self->_get_delete_cached_Locus_by_name($old_name);
         if (!$locus) {
             $self->message("Cannot find locus called '$old_name'");
             return 0;
