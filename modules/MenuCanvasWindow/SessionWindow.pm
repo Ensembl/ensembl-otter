@@ -227,34 +227,41 @@ sub get_default_mutable_GeneMethod {
     }
 }
 
-sub get_Locus {
+sub get_Locus_by_name {
     my ($self, $name) = @_;
-
-    my( $locus );
-    if (ref($name)) {
-        $locus = $name;
-        $name = $locus->name;
-    }
-
-    if (my $cached = $self->{'_locus_cache'}{$name}) {
-        return $cached;
-    } else {
-        unless ($locus) {
-            $locus = Hum::Ace::Locus->new;
-            $locus->name($name);
-        }
-        $self->{'_locus_cache'}{$name} = $locus;
-        return $locus;
-    }
+    return $self->{'_locus_cache'}->{$name};
 }
 
-sub _set_Locus {
+sub _get_cached_or_new_Locus_by_name {
+    my ($self, $name) = @_;
+
+    if (my $cached = $self->get_Locus_by_name($name)) {
+        return $cached;
+    }
+
+    my $locus = Hum::Ace::Locus->new;
+    $locus->name($name);
+
+    return $self->_cache_Locus($locus);
+}
+
+sub _get_cached_or_cache_this_Locus {
     my ($self, $locus) = @_;
 
     my $name = $locus->name;
-    $self->{'_locus_cache'}{$name} = $locus;
 
-    return;
+    if (my $cached = $self->get_Locus_by_name($name)) {
+        return $cached;
+    }
+
+    return $self->_cache_Locus($locus);
+}
+
+sub _cache_Locus {
+    my ($self, $locus) = @_;
+
+    my $name = $locus->name;
+    return $self->{'_locus_cache'}{$name} = $locus;
 }
 
 sub _get_all_Loci {
@@ -282,7 +289,7 @@ sub update_Locus {
 
     my $locus_name = $new_locus->name;
 
-    $self->_set_Locus($new_locus);
+    $self->_cache_Locus($new_locus);
 
     foreach my $sub_name ($self->_list_all_SubSeq_names) {
         my $sub = $self->get_SubSeq($sub_name) or next;
@@ -328,7 +335,7 @@ sub do_rename_locus {
         }
 
         $locus->name($new_name);
-        $self->_set_Locus($locus);
+        $self->_cache_Locus($locus);
         $done{'int'} = 1;
 
         my $ace = qq{\n-R Locus "$old_name" "$new_name"\n};
@@ -895,7 +902,7 @@ sub _paste_locus {
     $dup_locus->set_annotation_in_progress;
     # return either the locus we already have with the same name, or
     # put $dup_locus in the cache and use that
-    return $self->get_Locus($dup_locus);
+    return $self->_get_cached_or_cache_this_Locus($dup_locus);
 }
 
 
@@ -1409,7 +1416,7 @@ sub _edit_new_subsequence {
 
     my $prefix = $self->_default_locus_prefix;
     my $loc_name = $prefix ? "$prefix:$region_name.$max" : "$region_name.$max";
-    my $locus = $self->get_Locus($loc_name);
+    my $locus = $self->_get_cached_or_new_Locus_by_name($loc_name);
     $locus->gene_type_prefix($prefix);
 
     my $seq_name = "$loc_name-001";
@@ -1941,7 +1948,7 @@ sub Assembly {
             # Ignore loci from non-editable SubSeqs
             next unless $sub->is_mutable;
             if (my $s_loc = $sub->Locus) {
-                my $locus = $self->get_Locus($s_loc);
+                my $locus = $self->_get_cached_or_cache_this_Locus($s_loc);
                 $sub->Locus($locus);
             }
         }
@@ -2078,9 +2085,9 @@ sub replace_SubSeq {
         my $locus = $new->Locus;
         if (my $prev_name = $locus->drop_previous_name) {
             $self->logger->info("Unsetting otter_id for locus '$prev_name'");
-            $self->get_Locus($prev_name)->drop_otter_id;
+            $self->get_Locus_by_name($prev_name)->drop_otter_id;
         }
-        $self->_set_Locus($locus);
+        $self->_cache_Locus($locus);
     }
 
     if ($done_zmap) {

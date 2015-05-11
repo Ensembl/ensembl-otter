@@ -1122,7 +1122,7 @@ sub add_locus_editing_widgets {
         -command    => sub{
             #warn "Locus is now '${$self->{'_locus_name_var'}}'\n";
             my $name = ${$self->{'_locus_name_var'}};
-            my $locus = $self->SessionWindow->get_Locus($name);
+            my $locus = $self->SessionWindow->get_Locus_by_name($name);
             $self->update_Locus_tk_fields($locus);
             },
         -exportselection    => 1,
@@ -2701,8 +2701,8 @@ sub manage_locus_otter_ids {
     my $new_locus_name = $new_locus->name;
 
     # Copy locus otter_id from existing Locus of same name if present
-    my $SessionWindow_locus = $self->SessionWindow->get_Locus($new_locus_name);
-    if (my $SessionWindow_locus_otter_id = $SessionWindow_locus->otter_id) {
+    my $SessionWindow_locus = $self->SessionWindow->get_Locus_by_name($new_locus_name);
+    if ($SessionWindow_locus and my $SessionWindow_locus_otter_id = $SessionWindow_locus->otter_id) {
         $new_locus->otter_id($SessionWindow_locus_otter_id);
     }
     elsif (my $old_locus = $old->Locus) {
