@@ -2077,10 +2077,10 @@ sub replace_SubSeq {
         $self->Assembly->replace_SubSeq($new, $old_name);
 
         if ($new_name ne $old_name) {
-            $self->{'_subsequence_cache'}{$old_name} = undef;
+            $self->_delete_Subseq_by_name($old_name);
             $self->_rename_transcript_window($old_name, $new_name);
         }
-        $self->{'_subsequence_cache'}{$new_name} = $new;
+        $self->_add_or_replace_SubSeq($new);
 
         my $locus = $new->Locus;
         if (my $prev_name = $locus->drop_previous_name) {
@@ -2111,13 +2111,19 @@ sub _add_SubSeq {
     my ($self, $sub) = @_;
 
     my $name = $sub->name;
-    if ($self->{'_subsequence_cache'}{$name}) {
+    if ($self->get_SubSeq($name)) {
         $self->logger->logconfess("already have SubSeq '$name'");
     } else {
-        $self->{'_subsequence_cache'}{$name} = $sub;
+        $self->_add_or_replace_SubSeq($sub);
     }
 
     return;
+}
+
+sub _add_or_replace_SubSeq {
+    my ($self, $sub) = @_;
+    my $name = $sub->name;
+    return $self->{'_subsequence_cache'}{$name} = $sub;
 }
 
 sub _delete_SubSeq {
@@ -2125,6 +2131,12 @@ sub _delete_SubSeq {
 
     my $name = $sub->name;
     $self->Assembly->delete_SubSeq($name);
+
+    return $self->_delete_SubSeq_by_name($name);
+}
+
+sub _delete_SubSeq_by_name {
+    my ($self, $name) = @_;
 
     if ($self->{'_subsequence_cache'}{$name}) {
         $self->{'_subsequence_cache'}{$name} = undef;
