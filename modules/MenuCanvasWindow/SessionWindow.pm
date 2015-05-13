@@ -38,6 +38,7 @@ use Zircon::ZMap;
 use Bio::Otter::Lace::Chooser::Item::Column;
 use Bio::Otter::Lace::Client;
 use Bio::Otter::RequestQueuer;
+use Bio::Otter::Utils::CacheByName;
 use Bio::Otter::Zircon::ProcessHits;
 use Bio::Otter::ZMap::XML;
 use Bio::Vega::Region::Ace;
@@ -227,66 +228,28 @@ sub get_default_mutable_GeneMethod {
     }
 }
 
-sub get_Locus_by_name {
-    my ($self, $name) = @_;
-    return $self->{'_locus_cache'}->{$name};
-}
-
-sub _get_cached_or_new_Locus_by_name {
-    my ($self, $name) = @_;
-
-    if (my $cached = $self->get_Locus_by_name($name)) {
-        return $cached;
-    }
-
-    my $locus = Hum::Ace::Locus->new;
-    $locus->name($name);
-
-    return $self->_cache_Locus($locus);
-}
-
-sub _get_cached_or_cache_this_Locus {
-    my ($self, $locus) = @_;
-
-    my $name = $locus->name;
-
-    if (my $cached = $self->get_Locus_by_name($name)) {
-        return $cached;
-    }
-
-    return $self->_cache_Locus($locus);
-}
-
-sub _cache_Locus {
-    my ($self, $locus) = @_;
-
-    my $name = $locus->name;
-    return $self->{'_locus_cache'}{$name} = $locus;
-}
-
-sub _get_delete_cached_Locus_by_name {
-    my ($self, $name) = @_;
-    return delete $self->{'_locus_cache'}->{$name};
-}
-
-sub _get_all_Loci {
+sub _locus_cache {
     my ($self) = @_;
-    my $lc = $self->{'_locus_cache'};
-    return values %$lc;
-}
-
-sub list_Locus_names {
-    my ($self) = @_;
-    my @names = sort {lc $a cmp lc $b} map { $_->name } $self->_get_all_Loci;
-    return @names;
+    $self->{'_locus_cache'} //= Bio::Otter::Utils::CacheByName->new;
+    return $self->{'_locus_cache'};
 }
 
 sub _empty_Locus_cache {
     my ($self) = @_;
-
     $self->{'_locus_cache'} = undef;
-
     return;
+}
+
+# For external callers only - internal should use $self->_locus_cache->get() for now
+sub get_Locus_by_name {
+    my ($self, $name) = @_;
+    return $self->_locus_cache->get($name);
+}
+
+sub list_Locus_names {
+    my ($self) = @_;
+    my @names = sort {lc $a cmp lc $b} $self->_locus_cache->names;
+    return @names;
 }
 
 sub update_Locus {
@@ -294,7 +257,7 @@ sub update_Locus {
 
     my $locus_name = $new_locus->name;
 
-    $self->_cache_Locus($new_locus);
+    $self->_locus_cache->set($new_locus);
 
     foreach my $sub_name ($self->_list_all_SubSeq_names) {
         my $sub = $self->get_SubSeq($sub_name) or next;
@@ -325,19 +288,19 @@ sub do_rename_locus {
             push @delete_xml, $sub->zmap_delete_xml_string($offset);
         }
 
-        if ($self->get_Locus_by_name($new_name)) {
+        if ($self->_locus_cache->get($new_name)) {
             $self->message("Cannot rename to '$new_name'; Locus already exists");
             return 0;
         }
 
-        my $locus = $self->_get_delete_cached_Locus_by_name($old_name);
+        my $locus = $self->_locus_cache->delete($old_name);
         if (!$locus) {
             $self->message("Cannot find locus called '$old_name'");
             return 0;
         }
 
         $locus->name($new_name);
-        $self->_cache_Locus($locus);
+        $self->_locus_cache->set($locus);
         $done{'int'} = 1;
 
         my $ace = qq{\n-R Locus "$old_name" "$new_name"\n};
@@ -904,7 +867,7 @@ sub _paste_locus {
     $dup_locus->set_annotation_in_progress;
     # return either the locus we already have with the same name, or
     # put $dup_locus in the cache and use that
-    return $self->_get_cached_or_cache_this_Locus($dup_locus);
+    return $self->_locus_cache->get_or_this($dup_locus);
 }
 
 
@@ -1416,9 +1379,16 @@ sub _edit_new_subsequence {
 
     my ($region_name, $max) = $self->_region_name_and_next_locus_number($new);
 
+    my $locus_constructor = sub {
+        my ($name) = @_;
+        my $locus = Hum::Ace::Locus->new;
+        $locus->name($name);
+        return $locus;
+    };
+
     my $prefix = $self->_default_locus_prefix;
     my $loc_name = $prefix ? "$prefix:$region_name.$max" : "$region_name.$max";
-    my $locus = $self->_get_cached_or_new_Locus_by_name($loc_name);
+    my $locus = $self->_locus_cache->get_or_new($loc_name, $locus_constructor);
     $locus->gene_type_prefix($prefix);
 
     my $seq_name = "$loc_name-001";
@@ -1950,7 +1920,7 @@ sub Assembly {
             # Ignore loci from non-editable SubSeqs
             next unless $sub->is_mutable;
             if (my $s_loc = $sub->Locus) {
-                my $locus = $self->_get_cached_or_cache_this_Locus($s_loc);
+                my $locus = $self->_locus_cache->get_or_this($s_loc);
                 $sub->Locus($locus);
             }
         }
@@ -2087,9 +2057,9 @@ sub replace_SubSeq {
         my $locus = $new->Locus;
         if (my $prev_name = $locus->drop_previous_name) {
             $self->logger->info("Unsetting otter_id for locus '$prev_name'");
-            $self->get_Locus_by_name($prev_name)->drop_otter_id;
+            $self->_locus_cache->get($prev_name)->drop_otter_id;
         }
-        $self->_cache_Locus($locus);
+        $self->_locus_cache->set($locus);
     }
 
     if ($done_zmap) {
