@@ -421,7 +421,7 @@ sub reauthorize_if_cookie_will_expire_soon {
             sprintf("reauthorize_if_cookie_will_expire_soon: expiry expected at %s", scalar localtime($expiry)));
         my $password_attempts = $self->_password_attempts;
         while ($password_attempts) {
-            return 1 if $self->authorize;
+            return 1 if $self->_authorize;
             $password_attempts--;
         }
         return 0;
