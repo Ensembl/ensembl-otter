@@ -187,7 +187,7 @@ sub exit_callback {
             use Data::Dumper;
             print Dumper($self->{_transcript}->transcript_info);
             if (my $transcript_window = $self->TranscriptWindow) {
-                $transcript_window->save_OtterTranscript_evidence($self->{_transcript});
+                $transcript_window->_save_OtterTranscript_evidence($self->{_transcript});
             }
         } else {
             warn "Refused to save the changes";

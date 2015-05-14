@@ -41,15 +41,15 @@ sub initialise {
     my $canvas = $self->canvas;
     my $top = $canvas->toplevel;
 
-    $self->draw_subseq;
+    $self->_draw_subseq;
 
     # Routines to handle the clipboard
-    my $deselect_sub = sub{ $self->deselect_all };
+    my $deselect_sub = sub{ $self->_deselect_all };
     $canvas->SelectionHandle(
-        sub { $self->export_highlighted_text_to_selection(@_); }
+        sub { $self->_export_highlighted_text_to_selection(@_); }
         );
     my $select_all_sub = sub{
-        $self->select_all_exon_pos;
+        $self->_select_all_exon_pos;
         if ($self->list_selected) {
             $canvas->SelectionOwn( -command => $deselect_sub );
         } else {
@@ -62,7 +62,7 @@ sub initialise {
         my $file_menu = $self->make_menu('File');
 
         # Show the peptide
-        my $show_pep_command = sub{ $self->show_peptide };
+        my $show_pep_command = sub{ $self->_show_peptide };
         $file_menu->add('command',
             -label          => 'Show Peptide',
             -command        => $show_pep_command,
@@ -79,21 +79,21 @@ sub initialise {
         $top->bind('<Control-w>',   $window_close);
         $top->bind('<Control-W>',   $window_close);
 
-        if ($self->is_mutable) {
+        if ($self->_is_mutable) {
 
             # Select supporting evidence for the transcript
-            my $select_evidence = sub{ $self->select_evidence };
+            my $_select_evidence = sub{ $self->_select_evidence };
             $file_menu->add('command',
                 -label          => 'Select evidence',
-                -command        => $select_evidence,
+                -command        => $_select_evidence,
                 -accelerator    => 'Ctrl+E',
                 -underline      => 1,
                 );
-            $canvas->Tk::bind('<Control-e>',   $select_evidence);
-            $canvas->Tk::bind('<Control-E>',   $select_evidence);
+            $canvas->Tk::bind('<Control-e>',   $_select_evidence);
+            $canvas->Tk::bind('<Control-E>',   $_select_evidence);
 
             # Save into db via sgifaceserver
-            my $save_command = sub{ $self->save_if_changed };
+            my $save_command = sub{ $self->_save_if_changed };
             $file_menu->add('command',
                 -label          => 'Save',
                 -command        => $save_command,
@@ -135,12 +135,12 @@ sub initialise {
         $canvas->Tk::bind('<Control-A>', $select_all_sub);
 
         # Deselect all
-        $canvas->Tk::bind('<Escape>', sub{ $self->deselect_all });
+        $canvas->Tk::bind('<Escape>', sub{ $self->_deselect_all });
 
-        if ($self->is_mutable) {
+        if ($self->_is_mutable) {
 
             # Flip strands
-            my $reverse_command = sub { $self->toggle_tk_strand };
+            my $reverse_command = sub { $self->_toggle_tk_strand };
             $exon_menu->add('command',
                 -label          => 'Reverse',
                 -command        => $reverse_command,
@@ -165,7 +165,7 @@ sub initialise {
             $exon_menu->add('separator');
 
             # Sort the positions
-            my $sort_command = sub{ $self->sort_all_coordinates };
+            my $sort_command = sub{ $self->_sort_all_coordinates };
             $exon_menu->add('command',
                 -label          => 'Sort',
                 -command        => $sort_command,
@@ -187,7 +187,7 @@ sub initialise {
             $canvas->Tk::bind('<Control-M>', $merge_overlapping_exons);
 
             # Delete selected Exons
-            my $delete_exons = sub{ $self->delete_selected_exons };
+            my $delete_exons = sub{ $self->_delete_selected_exons };
             $exon_menu->add('command',
                 -label          => 'Delete',
                 -command        => $delete_exons,
@@ -203,9 +203,9 @@ sub initialise {
     {
         my $tools_menu = $self->make_menu('Tools');
 
-        if ($self->is_mutable) {
+        if ($self->_is_mutable) {
             # Check for annotation errors
-            my $error_check = sub { $self->check_for_errors };
+            my $error_check = sub { $self->_check_for_errors };
             $tools_menu->add('command',
                 -label          => 'Check annotation',
                 -command        => $error_check,
@@ -217,29 +217,29 @@ sub initialise {
         }
 
         # Show the subsequence in fMap
-        my $show_subseq = sub{ $self->show_subseq };
+        my $_show_subseq = sub{ $self->_show_subseq };
         $tools_menu->add('command',
             -label          => 'Hunt in ZMap',
-            -command        => $show_subseq,
+            -command        => $_show_subseq,
             -accelerator    => 'Ctrl+H',
             -underline      => 0,
             );
-        $top->bind('<Control-h>',   $show_subseq);
-        $top->bind('<Control-H>',   $show_subseq);
+        $top->bind('<Control-h>',   $_show_subseq);
+        $top->bind('<Control-H>',   $_show_subseq);
 
         # Run dotter
-        my $run_dotter = sub{ $self->run_dotter };
+        my $_run_dotter = sub{ $self->_run_dotter };
         $tools_menu->add('command',
             -label          => 'Dotter',
-            -command        => $run_dotter,
+            -command        => $_run_dotter,
             -accelerator    => 'Ctrl+.',
             -underline      => 0,
             );
-        $top->bind('<Control-period>',  $run_dotter);
-        $top->bind('<Control-greater>', $run_dotter);
+        $top->bind('<Control-period>',  $_run_dotter);
+        $top->bind('<Control-greater>', $_run_dotter);
 
         # Search Pfam
-        my $search_pfam_command = sub{ $self->search_pfam };
+        my $search_pfam_command = sub{ $self->_search_pfam };
         $tools_menu->add('command',
             -label          => 'Search Pfam',
             -command        => $search_pfam_command,
@@ -249,21 +249,21 @@ sub initialise {
         $top->bind('<Control-p>',       $search_pfam_command);
         $top->bind('<Control-P>',       $search_pfam_command);
 
-        if ($self->is_mutable) {
+        if ($self->_is_mutable) {
             # Show dialog for renaming the locus attached to this subseq
-            my $rename_locus = sub { $self->rename_locus };
+            my $_rename_locus = sub { $self->_rename_locus };
             $tools_menu->add('command',
                 -label          => 'Rename locus',
-                -command        => $rename_locus,
+                -command        => $_rename_locus,
                 -accelerator    => 'Ctrl+L',
                 -underline      => 0,
                 );
-            $top->bind('<Control-l>',  $rename_locus);
-            $top->bind('<Control-L>',  $rename_locus);
+            $top->bind('<Control-l>',  $_rename_locus);
+            $top->bind('<Control-L>',  $_rename_locus);
         }
     }
 
-    if ($self->is_mutable) {
+    if ($self->_is_mutable) {
 
         my $attrib_menu = $self->make_menu('Attributes');
 
@@ -282,25 +282,25 @@ sub initialise {
             );
 
         # Keyboard editing commands
-        $canvas->Tk::bind('<Left>',      sub{ $self->canvas_text_go_left   });
-        $canvas->Tk::bind('<Right>',     sub{ $self->canvas_text_go_right  });
-        $canvas->Tk::bind('<BackSpace>', sub{ $self->canvas_backspace      });
+        $canvas->Tk::bind('<Left>',      sub{ $self->_canvas_text_go_left   });
+        $canvas->Tk::bind('<Right>',     sub{ $self->_canvas_text_go_right  });
+        $canvas->Tk::bind('<BackSpace>', sub{ $self->_canvas_backspace      });
 
         # For entering digits into the text object which has keyboard focus
         $canvas->eventAdd('<<digit>>', map { "<KeyPress-$_>" } 0..9);
-        $canvas->Tk::bind('<<digit>>', [sub{ $self->canvas_insert_character(@_) }, Tk::Ev('A')]);
+        $canvas->Tk::bind('<<digit>>', [sub{ $self->_canvas_insert_character(@_) }, Tk::Ev('A')]);
 
         # Increases the number which has keyboard focus
         $canvas->eventAdd('<<increment>>', qw{ <Up> <plus> <KP_Add> <equal> });
-        $canvas->Tk::bind('<<increment>>', sub{ $self->increment_int });
+        $canvas->Tk::bind('<<increment>>', sub{ $self->_increment_int });
 
         # Decreases the number which has keyboard focus
         $canvas->eventAdd('<<decrement>>', qw{ <Down> <minus> <KP_Subtract> <underscore> });
-        $canvas->Tk::bind('<<decrement>>', sub{ $self->decrement_int });
+        $canvas->Tk::bind('<<decrement>>', sub{ $self->_decrement_int });
 
         # Control-Left mouse for switching strand
         $canvas->Tk::bind('<Control-Button-1>', sub{
-            $self->control_left_button_handler;
+            $self->_control_left_button_handler;
             if ($self->count_selected) {
                 $canvas->SelectionOwn( -command => $deselect_sub );
             }
@@ -308,7 +308,7 @@ sub initialise {
 
         # Middle mouse pastes in coords from clipboard
         $canvas->Tk::bind('<Button-2>', sub{
-            $self->middle_button_paste;
+            $self->_middle_button_paste;
             if ($self->count_selected) {
                 $canvas->SelectionOwn( -command => $deselect_sub );
             }
@@ -316,8 +316,8 @@ sub initialise {
 
         # Handle left mouse
         $canvas->Tk::bind('<Button-1>', sub{
-            $self->left_button_handler;
-            $self->focus_on_current_text;
+            $self->_left_button_handler;
+            $self->_focus_on_current_text;
             if ($self->count_selected) {
                 $canvas->SelectionOwn( -command => $deselect_sub );
             }
@@ -333,11 +333,11 @@ sub initialise {
                 );
 
         # Widget for changing name
-        $self->add_subseq_rename_widget($frame);
+        $self->_add_subseq_rename_widget($frame);
 
         # Widget for changing transcript type (acedb method).
         my $current_method = $self->SubSeq->GeneMethod->name;
-        $self->method_name_var(\$current_method);
+        $self->_method_name_var(\$current_method);
         my @mutable_gene_methods = $self->SessionWindow->get_all_mutable_GeneMethods;
 
         my $type_frame = $frame->Frame(
@@ -357,18 +357,18 @@ sub initialise {
             -options => $menu_list,
             -variable => \$current_method,
             -command => sub{
-                    $self->draw_translation_region;
+                    $self->_draw_translation_region;
                     $self->fix_window_min_max_sizes;
                     $top->focus;  # Need this
                 },
             )->pack(-side => 'left');
 
         # Start not found and end not found and method widgets
-        $self->add_start_end_method_widgets($frame);
+        $self->_add_start_end_method_widgets($frame);
 
         # Transcript remark widget
-        $self->add_transcript_remark_widget($frame, $tsct_attrib_menu);
-        $self->populate_transcript_attribute_menu($tsct_attrib_menu);
+        $self->_add_transcript_remark_widget($frame, $tsct_attrib_menu);
+        $self->_populate_transcript_attribute_menu($tsct_attrib_menu);
 
         # Widget for changing locus properties
         my $locus_frame = $canvas->toplevel->LabFrame(
@@ -379,14 +379,14 @@ sub initialise {
                 -side => 'top',
                 -fill => 'x',
                 );
-        $self->add_locus_editing_widgets($locus_frame, $locus_attrib_menu);
-        $self->populate_locus_attribute_menu($locus_attrib_menu);
+        $self->_add_locus_editing_widgets($locus_frame, $locus_attrib_menu);
+        $self->_populate_locus_attribute_menu($locus_attrib_menu);
     } else {
         # SubSeq with an immutable method - won't display entry widgets for updating things
 
         # Only select current text - no focus
         $canvas->Tk::bind('<Button-1>', sub{
-            $self->left_button_handler;
+            $self->_left_button_handler;
             if ($self->count_selected) {
                 $canvas->SelectionOwn( -command => $deselect_sub );
             }
@@ -395,7 +395,7 @@ sub initialise {
 
     # For extending selection
     $canvas->Tk::bind('<Shift-Button-1>', sub{
-        $self->shift_left_button_handler;
+        $self->_shift_left_button_handler;
         if ($self->count_selected) {
             $canvas->SelectionOwn( -command => $deselect_sub )
         }
@@ -433,10 +433,10 @@ sub SubSeq {
     return $self->{'_SubSeq'};
 }
 
-sub current_SubSeq {
+sub _current_SubSeq {
     my ($self) = @_;
-    if ($self->is_mutable) {
-        return $self->new_SubSeq_from_tk;
+    if ($self->_is_mutable) {
+        return $self->_new_SubSeq_from_tk;
     } else {
         return $self->SubSeq;
     }
@@ -452,12 +452,12 @@ sub SessionWindow { # method used by Bio::Otter::UI::TextWindow
     return $self->{'_SessionWindow'};
 }
 
-sub DataSet {
+sub _SW_AceDB_DataSet {
     my ($self) = @_;
     return $self->SessionWindow->AceDatabase->DataSet;
 }
 
-sub add_subseq_exons {
+sub _add_subseq_exons {
     my ($self, $subseq) = @_;
 
     my $expected = 'Hum::Ace::SubSeq';
@@ -468,10 +468,10 @@ sub add_subseq_exons {
     my $strand = $subseq->strand;
 
     foreach my $ex ($subseq->get_all_Exons_in_transcript_order) {
-        $self->add_exon_holder($ex->start, $ex->end, $strand);
+        $self->_add_exon_holder($ex->start, $ex->end, $strand);
     }
 
-    $self->remove_spurious_splice_sites;
+    $self->_remove_spurious_splice_sites;
 
     return;
 }
@@ -485,7 +485,7 @@ sub _colour_init {
 {
     my $pp_field = '_position_pairs';
 
-    sub position_pairs {
+    sub _position_pairs {
         my ($self, @pairs) = @_;
 
         if (@pairs) {
@@ -499,7 +499,7 @@ sub _colour_init {
         }
     }
 
-    sub add_position_pair {
+    sub _add_position_pair {
         my ($self, @pair_and_id) = @_;
 
         unless (@pair_and_id == 3) {
@@ -511,7 +511,7 @@ sub _colour_init {
         return;
     }
 
-    sub next_position_pair_index {
+    sub _next_position_pair_index {
         my ($self) = @_;
 
         if (my $pp = $self->{$pp_field}) {
@@ -521,7 +521,7 @@ sub _colour_init {
         }
     }
 
-    sub trim_position_pairs {
+    sub _trim_position_pairs {
         my ($self, $length, $strand) = @_;
 
         if (my $pp = $self->{$pp_field}) {
@@ -533,25 +533,25 @@ sub _colour_init {
             foreach my $exon_id (map { $_->[2] } @del) {
                 $canvas->delete($exon_id);
             }
-            $self->decrement_exon_counter($length);
+            $self->_decrement_exon_counter($length);
         } else {
             confess "No pairs to trim";
         }
-        $self->set_tk_strand($strand) if $strand;
-        $self->position_mobile_elements;
+        $self->_set_tk_strand($strand) if $strand;
+        $self->_position_mobile_elements;
 
         return;
     }
 }
 
 
-sub all_position_pair_text {
+sub _all_position_pair_text {
     my ($self) = @_;
 
     my $canvas = $self->canvas;
-    my $empty  = $self->empty_string;
+    my $empty  = $self->_empty_string;
     my( @pos );
-    foreach my $pair ($self->position_pairs) {
+    foreach my $pair ($self->_position_pairs) {
         my $start = $canvas->itemcget($pair->[0], 'text');
         my $end   = $canvas->itemcget($pair->[1], 'text');
         foreach my $p ($start, $end) {
@@ -566,72 +566,72 @@ sub all_position_pair_text {
     return @pos;
 }
 
-sub set_position_pair_text {
+sub _set_position_pair_text {
     my ($self, $pp, $text_pair, $strand) = @_;
 
-    $strand ||= $self->strand_from_tk;
+    $strand ||= $self->_strand_from_tk;
 
     my $canvas = $self->canvas;
     my @txt = @$text_pair;
     @txt = reverse @txt if $strand == -1;
     foreach my $i (0,1) {
         my $obj = $pp->[$i];
-        my $pos = $txt[$i] || $self->empty_string;
+        my $pos = $txt[$i] || $self->_empty_string;
         $canvas->itemconfigure($obj, -text => $pos);
     }
-    $self->update_splice_strings($text_pair->[0]);
+    $self->_update_splice_strings($text_pair->[0]);
 
     return;
 }
 
-sub set_all_position_pair_text {
+sub _set_all_position_pair_text {
     my ($self, @coord) = @_;
 
-    my @pp_list = $self->position_pairs;
+    my @pp_list = $self->_position_pairs;
     if (@pp_list != @coord) {
         confess "position pair number '", scalar(@pp_list),
             "' doesn't match number of coordinates '", scalar(@coord), "'";
     }
     for (my $i = 0; $i < @pp_list; $i++) {
-        $self->set_position_pair_text($pp_list[$i], $coord[$i]);
+        $self->_set_position_pair_text($pp_list[$i], $coord[$i]);
     }
-    $self->update_splice_strings('exon_start');
+    $self->_update_splice_strings('exon_start');
 
     return;
 }
 
-sub sort_all_coordinates {
+sub _sort_all_coordinates {
     my ($self) = @_;
 
     $self->delete_was_selected;
-    $self->sort_position_pairs;
-    $self->sort_translation_region;
+    $self->_sort_position_pairs;
+    $self->_sort_translation_region;
 
     return;
 }
 
-sub sort_position_pairs {
+sub _sort_position_pairs {
     my ($self) = @_;
 
     my %was_selected = map { $_ => 1 } $self->get_all_selected_text;
-    $self->deselect_all;
+    $self->_deselect_all;
 
-    my $empty  = $self->empty_string;
+    my $empty  = $self->_empty_string;
     my $canvas = $self->canvas;
-    my $strand = $self->strand_from_tk;
+    my $strand = $self->_strand_from_tk;
 
     my( @sort );
     if ($strand == 1) {
         @sort = sort {$a->[0] <=> $b->[0] || $a->[1] <=> $b->[1]}
-            $self->all_position_pair_text;
+            $self->_all_position_pair_text;
     } else {
         @sort = sort {$b->[0] <=> $a->[0] || $b->[1] <=> $a->[1]}
-            $self->all_position_pair_text;
+            $self->_all_position_pair_text;
     }
 
     my $n = 0;
     my( @select );
-    foreach my $pp ($self->position_pairs) {
+    foreach my $pp ($self->_position_pairs) {
         my @num = @{$sort[$n]};
         @num = reverse @num if $strand == -1;
         foreach my $i (0,1) {
@@ -643,23 +643,23 @@ sub sort_position_pairs {
         $n++;
     }
     $self->highlight(@select) if @select;
-    $self->update_splice_strings('exon_start');
-    $self->remove_spurious_splice_sites;
+    $self->_update_splice_strings('exon_start');
+    $self->_remove_spurious_splice_sites;
 
     return;
 }
 
-sub sort_translation_region {
+sub _sort_translation_region {
     my ($self) = @_;
 
-    my @region  = $self->translation_region_from_tk or return;
-    my $strand  = $self->strand_from_tk;
+    my @region  = $self->_translation_region_from_tk or return;
+    my $strand  = $self->_strand_from_tk;
     if ($strand == 1) {
-        $self->tk_t_start($region[0]);
-        $self->tk_t_end  ($region[1]);
+        $self->_tk_t_start($region[0]);
+        $self->_tk_t_end  ($region[1]);
     } else {
-        $self->tk_t_start($region[1]);
-        $self->tk_t_end  ($region[0]);
+        $self->_tk_t_start($region[1]);
+        $self->_tk_t_end  ($region[0]);
     }
 
     return;
@@ -668,11 +668,11 @@ sub sort_translation_region {
 sub merge_position_pairs {
     my ($self) = @_;
 
-    $self->deselect_all;
-    $self->sort_position_pairs;
-    my @pos = $self->all_position_pair_text;
+    $self->_deselect_all;
+    $self->_sort_position_pairs;
+    my @pos = $self->_all_position_pair_text;
     my $i = 0;
-    my $strand = $self->strand_from_tk;
+    my $strand = $self->_strand_from_tk;
     while (1) {
         my $this = $pos[$i];
         my $next = $pos[$i + 1] or last;
@@ -692,26 +692,26 @@ sub merge_position_pairs {
         }
     }
 
-    my @pairs  = $self->position_pairs;
+    my @pairs  = $self->_position_pairs;
     for (my $j = 0; $j < @pos; $j++) {
-        $self->set_position_pair_text($pairs[$j], $pos[$j]);
+        $self->_set_position_pair_text($pairs[$j], $pos[$j]);
     }
     if (my $over = @pairs - @pos) {
-        $self->trim_position_pairs($over);
+        $self->_trim_position_pairs($over);
         $self->fix_window_min_max_sizes;
     }
 
-    $self->remove_spurious_splice_sites;
+    $self->_remove_spurious_splice_sites;
 
     return;
 }
 
-sub delete_selected_exons {
+sub _delete_selected_exons {
     my ($self) = @_;
 
     my $canvas = $self->canvas;
     my @selected = $self->list_selected;
-    $self->deselect_all;
+    $self->_deselect_all;
     my( %del_exon );
     foreach my $obj (@selected) {
         my ($exon_id) = grep { /^exon_id/ } $canvas->gettags($obj);
@@ -721,8 +721,8 @@ sub delete_selected_exons {
     }
 
     my $strand = 0;
-    my @text    = $self->all_position_pair_text;
-    my @pp_list = $self->position_pairs;
+    my @text    = $self->_all_position_pair_text;
+    my @pp_list = $self->_position_pairs;
     my $trim = 0;
     my( @keep );
     for (my $i = 0; $i < @pp_list; $i++) {
@@ -731,7 +731,7 @@ sub delete_selected_exons {
         if ($count and $count == 2) {
             $trim++;
         } else {
-            $strand += $self->exon_strand_from_tk($exon_id);
+            $strand += $self->_exon_strand_from_tk($exon_id);
             push(@keep, $text[$i]);
         }
     }
@@ -740,14 +740,14 @@ sub delete_selected_exons {
 
     $strand = $strand < 0 ? -1 : 1;
 
-    $self->trim_position_pairs($trim, $strand);
-    $self->set_all_position_pair_text(@keep);   # Also updates splice site strings
-    $self->remove_spurious_splice_sites;
+    $self->_trim_position_pairs($trim, $strand);
+    $self->_set_all_position_pair_text(@keep);   # Also updates splice site strings
+    $self->_remove_spurious_splice_sites;
     $self->delete_was_selected;
 
     # Put in an empty exon holder if we have deleted them all
-    unless ($self->position_pairs) {
-        $self->add_exon_holder(undef, undef, 1);
+    unless ($self->_position_pairs) {
+        $self->_add_exon_holder(undef, undef, 1);
     }
 
     $self->fix_window_min_max_sizes;
@@ -755,7 +755,7 @@ sub delete_selected_exons {
     return;
 }
 
-sub exon_strand_from_tk {
+sub _exon_strand_from_tk {
     my ($self, $exon_id) = @_;
 
     confess "exon_id not given" unless $exon_id;
@@ -766,7 +766,7 @@ sub exon_strand_from_tk {
     }
 }
 
-sub add_coordinate_pair {
+sub _add_coordinate_pair {
     my ($self, $start, $end) = @_;
 
     my $strand = 1;
@@ -774,23 +774,23 @@ sub add_coordinate_pair {
         $strand = -1;
         ($start, $end) = ($end, $start);
     }
-    $self->add_exon_holder($start, $end, $strand);
+    $self->_add_exon_holder($start, $end, $strand);
 
     return;
 }
 
-sub draw_subseq {
+sub _draw_subseq {
     my ($self) = @_;
 
     my $sub = $self->SubSeq;
-    $self->add_subseq_exons($sub);
-    $self->draw_translation_region($sub);
-    $self->evidence_hash($sub->clone_evidence_hash);
+    $self->_add_subseq_exons($sub);
+    $self->_draw_translation_region($sub);
+    $self->_evidence_hash($sub->clone_evidence_hash);
 
     return;
 }
 
-sub is_mutable {
+sub _is_mutable {
     my ($self) = @_;
 
     return $self->SubSeq->is_mutable;
@@ -801,10 +801,10 @@ sub window_close {
 
     my $SessionWindow = $self->SessionWindow;
 
-    if ($self->is_mutable && $SessionWindow->AceDatabase->write_access) {
+    if ($self->_is_mutable && $SessionWindow->AceDatabase->write_access) {
         my ($sub, $err);
         my $ok =
-            try { $sub = $self->get_SubSeq_if_changed; return 1; }
+            try { $sub = $self->_get_SubSeq_if_changed; return 1; }
             catch { $err = $_; return 0; };
 
         my $name = $self->name;
@@ -839,7 +839,7 @@ sub window_close {
                 return; # Abandon window close
             }
             elsif ($ans eq 'Yes') {
-                $self->save_sub($sub) or return;
+                $self->_save_sub($sub) or return;
             }
         }
     }
@@ -849,7 +849,7 @@ sub window_close {
     return 1;
 }
 
-sub show_subseq {
+sub _show_subseq {
     my ($self) = @_;
 
     my $success = $self->SessionWindow->zmap->zoom_to_subseq($self->SubSeq);
@@ -859,7 +859,7 @@ sub show_subseq {
     return;
 }
 
-sub show_peptide {
+sub _show_peptide {
     my ($self) = @_;
 
     my $peptext = $self->{'_pep_peptext'};
@@ -877,10 +877,10 @@ sub show_peptide {
     return;
 }
 
-sub search_pfam {
+sub _search_pfam {
     my ($self) = @_;
 
-    my $sub = $self->current_SubSeq;
+    my $sub = $self->_current_SubSeq;
     unless ($sub->GeneMethod->coding) {
         $self->message("non-coding transcript type");
         return;
@@ -941,7 +941,7 @@ sub update_translation {
 
     my $peptext = $self->{'_pep_peptext'} or return;
 
-    my $sub = $self->current_SubSeq;
+    my $sub = $self->_current_SubSeq;
     unless ($sub->GeneMethod->coding) {
         if ($peptext) {
             $peptext->window->toplevel->withdraw;
@@ -953,20 +953,20 @@ sub update_translation {
     return $peptext->update_translation($sub);
 }
 
-sub evidence_hash {
-    my ($self, $evidence_hash) = @_;
+sub _evidence_hash {
+    my ($self, $_evidence_hash) = @_;
 
-    if ($evidence_hash) {
-        $self->{'_evidence_hash'} = $evidence_hash;
+    if ($_evidence_hash) {
+        $self->{'_evidence_hash'} = $_evidence_hash;
         if (my $paster = $self->{'_evi_window'}) {
-            $paster->evidence_hash($evidence_hash);
+            $paster->evidence_hash($_evidence_hash);
             $paster->draw_evidence;
         }
     }
     return $self->{'_evidence_hash'};
 }
 
-sub select_evidence {
+sub _select_evidence {
     my ($self) = @_;
 
     my $paster_top = $self->EvidencePaster->canvas->toplevel;
@@ -978,7 +978,7 @@ sub select_evidence {
 sub EvidencePaster {
     my ($self) = @_;
 
-    my $evi = $self->evidence_hash;
+    my $evi = $self->_evidence_hash;
 
     my $paster;
     if ($paster = $self->{'_evi_window'}) {
@@ -994,7 +994,7 @@ sub EvidencePaster {
     return $paster;
 }
 
-sub save_OtterTranscript_evidence {
+sub _save_OtterTranscript_evidence {
     my ($self, $transcript) = @_;
 
     my $info = $transcript->transcript_info;
@@ -1005,7 +1005,7 @@ sub save_OtterTranscript_evidence {
         my $evi_list = $evi_hash->{$type} ||= [];
         push @$evi_list, $name;
     }
-    $self->evidence_hash($evi_hash);
+    $self->_evidence_hash($evi_hash);
 
     return;
 }
@@ -1013,9 +1013,9 @@ sub save_OtterTranscript_evidence {
 sub adjust_tk_t_start {
     my ($self, $new) = @_;
 
-    $self->deselect_all;
-    my $original = $self->tk_t_start;
-    $self->tk_t_start($new);
+    $self->_deselect_all;
+    my $original = $self->_tk_t_start;
+    $self->_tk_t_start($new);
 
     # Highlight the translation end if we have changed it
     $self->highlight('t_start') if $new != $original;
@@ -1026,23 +1026,23 @@ sub adjust_tk_t_start {
 sub trim_cds_coord_to_first_stop {
     my ($self) = @_;
 
-    unless ($self->get_GeneMethod_from_tk->coding) {
+    unless ($self->_get_GeneMethod_from_tk->coding) {
         $self->message('non-coding transcript type');
         return;
     }
 
-    $self->deselect_all;
-    my $sub = $self->new_SubSeq_from_tk;
+    $self->_deselect_all;
+    my $sub = $self->_new_SubSeq_from_tk;
     my $strand = $sub->strand;
-    my $original = $self->tk_t_end;
+    my $original = $self->_tk_t_end;
     if ($strand == 1) {
-        $self->tk_t_end($sub->end);
+        $self->_tk_t_end($sub->end);
     } else {
-        $self->tk_t_end($sub->start);
+        $self->_tk_t_end($sub->start);
     }
 
     # Translate the subsequence
-    $sub = $self->new_SubSeq_from_tk;
+    $sub = $self->_new_SubSeq_from_tk;
     my $pep = $sub->translator->translate($sub->translatable_Sequence);
     my $pep_str = $pep->sequence_string;
 
@@ -1081,7 +1081,7 @@ sub trim_cds_coord_to_first_stop {
             } else {
                 $new = $ex->end + 1 - $exon_offset;
             }
-            $self->tk_t_end($new);
+            $self->_tk_t_end($new);
 
             # Highlight the translation end if we have changed it
             $self->highlight('t_end') if $new != $original;
@@ -1094,7 +1094,7 @@ sub trim_cds_coord_to_first_stop {
     return;
 }
 
-sub add_locus_editing_widgets {
+sub _add_locus_editing_widgets {
     my ($self, $widget, $locus_attrib_menu) = @_;
 
     # Get the Locus name
@@ -1123,7 +1123,7 @@ sub add_locus_editing_widgets {
             #warn "Locus is now '${$self->{'_locus_name_var'}}'\n";
             my $name = ${$self->{'_locus_name_var'}};
             my $locus = $self->SessionWindow->get_Locus_by_name($name);
-            $self->update_Locus_tk_fields($locus);
+            $self->_update_Locus_tk_fields($locus);
             },
         -exportselection    => 1,
         -background         => 'white',
@@ -1168,16 +1168,16 @@ sub add_locus_editing_widgets {
         );
     $de->pack(-side => 'left');
     $de->insert(0, $locus_description);
-    $self->locus_description_Entry($de);
+    $self->_locus_description_Entry($de);
 
-    my $ae = $self->make_labelled_entry_widget($widget, 'Alias(es)', $locus_alias, 30, -side => 'top');
-    $self->locus_alias_Entry($ae);
+    my $ae = $self->_make_labelled_entry_widget($widget, 'Alias(es)', $locus_alias, 30, -side => 'top');
+    $self->_locus_alias_Entry($ae);
 
     # Locus remark widget
-    my $re = $self->make_labelled_text_widget($widget, 'Remarks', $locus_attrib_menu, -anchor => 'se');
-    $self->locus_remark_Entry($re);
+    my $re = $self->_make_labelled_text_widget($widget, 'Remarks', $locus_attrib_menu, -anchor => 'se');
+    $self->_locus_remark_Entry($re);
     if (my $locus = $self->SubSeq->Locus) {
-        $self->update_locus_remark_widget($locus);
+        $self->_update_locus_remark_widget($locus);
     }
 
     # Avoid memory cycle created by ref to $self in above closure
@@ -1186,32 +1186,32 @@ sub add_locus_editing_widgets {
     return $be;
 }
 
-sub get_locus_known {
+sub _get_locus_known {
     my ($self) = @_;
 
     return ${$self->{'_locus_is_known_var'}} ? 1 : 0;
 }
 
-sub update_Locus_tk_fields {
+sub _update_Locus_tk_fields {
     my ($self, $locus) = @_;
 
     ${$self->{'_locus_name_var'}} = $locus->name;
 
     ${$self->{'_locus_is_known_var'}} = $locus->known;
 
-    my $de = $self->locus_description_Entry;
+    my $de = $self->_locus_description_Entry;
     $de->delete(0, 'end');
     if (my $desc = $locus->description) {
         $de->insert(0, $desc);
     }
 
-    my $ae = $self->locus_alias_Entry;
+    my $ae = $self->_locus_alias_Entry;
     $ae->delete(0, 'end');
     if (my $alias_str = join(' ', $locus->list_aliases)) {
         $ae->insert(0, $alias_str);
     }
 
-    $self->update_locus_remark_widget($locus);
+    $self->_update_locus_remark_widget($locus);
 
     return;
 }
@@ -1225,13 +1225,13 @@ sub update_Locus_tk_fields {
 #   saved, and keeps its otter_id.
 
 
-sub get_Locus_from_tk {
+sub _get_Locus_from_tk {
     my ($self) = @_;
 
-    my $name    = $self->get_locus_name or return;
-    my $known   = $self->get_locus_known;
-    my $desc    = $self->get_locus_description;
-    my @aliases = $self->get_locus_aliases;
+    my $name    = $self->_get_locus_name or return;
+    my $known   = $self->_get_locus_known;
+    my $desc    = $self->_get_locus_description;
+    my @aliases = $self->_get_locus_aliases;
 
     #warn "name '$name'\ndesc '$desc'\nremark '$remark'\n";
 
@@ -1244,12 +1244,12 @@ sub get_Locus_from_tk {
     $locus->description($desc) if $desc;
     $locus->set_aliases(@aliases);
 
-    $self->get_locus_remarks($locus);
+    $self->_get_locus_remarks($locus);
 
     return $locus;
 }
 
-sub get_locus_name {
+sub _get_locus_name {
     my ($self) = @_;
 
     my $name = ${$self->{'_locus_name_var'}} or return;
@@ -1260,10 +1260,10 @@ sub get_locus_name {
     return $name;
 }
 
-sub rename_locus {
+sub _rename_locus {
     my ($self) = @_;
 
-    my $name = $self->get_locus_name or return;
+    my $name = $self->_get_locus_name or return;
     $self->SessionWindow->rename_locus($name);
 
     return;
@@ -1272,7 +1272,7 @@ sub rename_locus {
 sub update_Locus {
     my ($self, $locus) = @_;
 
-    $self->update_Locus_tk_fields($locus);
+    $self->_update_Locus_tk_fields($locus);
     $self->SubSeq->Locus($locus);
 
     return;
@@ -1281,27 +1281,27 @@ sub update_Locus {
 my $ann_tag = 'Annotation';
 my $voc_tag = 'Controlled_Vocabulary';
 
-sub update_transcript_remark_widget {
+sub _update_transcript_remark_widget {
     my ($self, $sub) = @_;
 
-    $self->update_remark_Entry($self->transcript_remark_Entry,
-                               $self->DataSet->vocab_transcript,
+    $self->_update_remark_Entry($self->_transcript_remark_Entry,
+                               $self->_SW_AceDB_DataSet->vocab_transcript,
                                $sub);
 
     return;
 }
 
-sub update_locus_remark_widget {
+sub _update_locus_remark_widget {
     my ($self, $locus) = @_;
 
-    $self->update_remark_Entry($self->locus_remark_Entry,
-                               $self->DataSet->vocab_locus,
+    $self->_update_remark_Entry($self->_locus_remark_Entry,
+                               $self->_SW_AceDB_DataSet->vocab_locus,
                                $locus);
 
     return;
 }
 
-sub update_remark_Entry {
+sub _update_remark_Entry {
     my ($self, $remark_text, $vocab, $obj) = @_;
 
     $remark_text->delete('1.0', 'end');
@@ -1323,47 +1323,47 @@ sub update_remark_Entry {
     return;
 }
 
-sub add_transcript_remark_widget {
+sub _add_transcript_remark_widget {
     my ($self, $widget, $tsct_attrib_menu) = @_;
 
-    my $rt = $self->make_labelled_text_widget($widget, 'Remarks', $tsct_attrib_menu, -anchor => 'se');
-    $self->transcript_remark_Entry($rt);
-    $self->update_transcript_remark_widget($self->SubSeq);
+    my $rt = $self->_make_labelled_text_widget($widget, 'Remarks', $tsct_attrib_menu, -anchor => 'se');
+    $self->_transcript_remark_Entry($rt);
+    $self->_update_transcript_remark_widget($self->SubSeq);
 
     return;
 }
 
-sub add_subseq_rename_widget {
+sub _add_subseq_rename_widget {
     my ($self, $widget) = @_;
 
-    $self->subseq_name_Entry(
-        $self->make_labelled_entry_widget($widget, 'Name', $self->SubSeq->name, 22, -side => 'top')
+    $self->_subseq_name_Entry(
+        $self->_make_labelled_entry_widget($widget, 'Name', $self->SubSeq->name, 22, -side => 'top')
         );
 
     return;
 }
 
-sub populate_transcript_attribute_menu {
+sub _populate_transcript_attribute_menu {
     my ($self, $menu) = @_;
 
-    $self->populate_attribute_menu($menu,
-                                   $self->transcript_remark_Entry,
-                                   $self->DataSet->vocab_transcript);
+    $self->_populate_attribute_menu($menu,
+                                    $self->_transcript_remark_Entry,
+                                    $self->_SW_AceDB_DataSet->vocab_transcript);
 
     return;
 }
 
-sub populate_locus_attribute_menu {
+sub _populate_locus_attribute_menu {
     my ($self, $menu) = @_;
 
-    $self->populate_attribute_menu($menu,
-                                   $self->locus_remark_Entry,
-                                   $self->DataSet->vocab_locus);
+    $self->_populate_attribute_menu($menu,
+                                    $self->_locus_remark_Entry,
+                                    $self->_SW_AceDB_DataSet->vocab_locus);
 
     return;
 }
 
-sub populate_attribute_menu {
+sub _populate_attribute_menu {
     my ($self, $parent_menu, $text, $attribs) = @_;
 
     my %sub_menus;
@@ -1378,7 +1378,7 @@ sub populate_attribute_menu {
         $menu->add('command',
             -label      => $phrase,
             -command    => sub {
-                insert_phrase($text, $phrase);
+                _insert_phrase($text, $phrase);
             },
         );
     }
@@ -1395,7 +1395,7 @@ sub populate_attribute_menu {
     return;
 }
 
-sub make_labelled_text_widget {
+sub _make_labelled_text_widget {
     my ($self, $widget, $name, $menu, @pack) = @_;
 
     @pack = (-side => 'left') unless @pack;
@@ -1470,7 +1470,7 @@ sub make_labelled_text_widget {
         <F2>  <F3>
 
     }) {
-        $tw->bind($seq, [\&ignore_in_controlled_vocab, Tk::Ev('K')]);
+        $tw->bind($seq, [\&_ignore_in_controlled_vocab, Tk::Ev('K')]);
     }
 
     # Keyboard sequences which delete backwards need to take out the whole
@@ -1482,7 +1482,7 @@ sub make_labelled_text_widget {
         <Meta-Key-BackSpace>
 
     }) {
-        $tw->bind($seq, [\&backspace_delete_whole_ctrl_vocab_line, Tk::Ev('K')]);
+        $tw->bind($seq, [\&_backspace_delete_whole_ctrl_vocab_line, Tk::Ev('K')]);
     }
 
     # ... as do sequences which delete forwards.
@@ -1495,18 +1495,18 @@ sub make_labelled_text_widget {
         <Control-Key-d>
 
     }) {
-        $tw->bind($seq, [\&forward_delete_whole_ctrl_vocab_line, Tk::Ev('K')]);
+        $tw->bind($seq, [\&_forward_delete_whole_ctrl_vocab_line, Tk::Ev('K')]);
     }
 
     # Do not post the Text class's built in popup menu
     $tw->bind($class, '<Button-3>', '');
-    $tw->bind('<Button-3>', [\&post_ctrl_vocab_menu, $menu, Tk::Ev('X'), Tk::Ev('Y')]);
+    $tw->bind('<Button-3>', [\&_post_ctrl_vocab_menu, $menu, Tk::Ev('X'), Tk::Ev('Y')]);
 
     # Remove key binding for keyboard input and replace with our own which
     # inserts characters using the same tag as the rest of the line, or
     # which ignores characters with the controlled vocabulary tag.
     $tw->bind($class, '<Key>', '');
-    $tw->bind('<Key>', [\&insert_char, Tk::Ev('A')]);
+    $tw->bind('<Key>', [\&_insert_char, Tk::Ev('A')]);
 
 
     my (@tags) = $tw->bindtags;
@@ -1531,7 +1531,7 @@ sub make_labelled_text_widget {
     return $tw;
 }
 
-sub post_ctrl_vocab_menu {
+sub _post_ctrl_vocab_menu {
     my ($text, $menu, $x, $y) = @_;
 
     $menu->Post($x, $y);
@@ -1539,7 +1539,7 @@ sub post_ctrl_vocab_menu {
     return;
 }
 
-sub insert_phrase {
+sub _insert_phrase {
     my ($text, $phrase) = @_;
 
     my @vocab_lines = $text->tagRanges($voc_tag);
@@ -1564,18 +1564,18 @@ sub insert_phrase {
     return;
 }
 
-sub backspace_delete_whole_ctrl_vocab_line {
+sub _backspace_delete_whole_ctrl_vocab_line {
     my ($text, $keysym) = @_;
 
     my $prev = $text->index('insert - 1 chars');
 
-    if (is_ctrl_vocab_char($text, $prev)) {
+    if (_is_ctrl_vocab_char($text, $prev)) {
         $text->delete("$prev linestart", "$prev lineend");
         $text->break;
     }
     elsif ($text->compare('insert', '==', 'insert linestart')) {
         # If this or the previous line is controlled vocab, just move the cursor
-        if (is_ctrl_vocab_char($text, "$prev - 1 chars") or is_ctrl_vocab_char($text, 'insert')) {
+        if (_is_ctrl_vocab_char($text, "$prev - 1 chars") or _is_ctrl_vocab_char($text, 'insert')) {
             $text->SetCursor('insert - 1 chars');
             $text->break;
         }
@@ -1584,16 +1584,16 @@ sub backspace_delete_whole_ctrl_vocab_line {
     return;
 }
 
-sub forward_delete_whole_ctrl_vocab_line {
+sub _forward_delete_whole_ctrl_vocab_line {
     my ($text, $keysym) = @_;
 
-    if (is_ctrl_vocab_char($text, 'insert')) {
+    if (_is_ctrl_vocab_char($text, 'insert')) {
         $text->delete('insert linestart', 'insert lineend');
         $text->break;
     }
     elsif ($text->compare('insert', '==', 'insert lineend')) {
         # If this or the next line is controlled vocab, just move the cursor
-        if (is_ctrl_vocab_char($text, 'insert + 1 chars') or is_ctrl_vocab_char($text, 'insert - 1 chars')) {
+        if (_is_ctrl_vocab_char($text, 'insert + 1 chars') or _is_ctrl_vocab_char($text, 'insert - 1 chars')) {
             $text->SetCursor('insert + 1 chars');
             $text->break;
         }
@@ -1602,7 +1602,7 @@ sub forward_delete_whole_ctrl_vocab_line {
     return;
 }
 
-sub ignore_in_controlled_vocab {
+sub _ignore_in_controlled_vocab {
     my ($text, $keysym) = @_;
 
     # Need to choose "insert" for keyboard events
@@ -1614,21 +1614,21 @@ sub ignore_in_controlled_vocab {
         return if $keysym eq 'Return';
     }
 
-    if (is_ctrl_vocab_char($text, $posn)) {
+    if (_is_ctrl_vocab_char($text, $posn)) {
         $text->break;
     }
 
     return;
 }
 
-sub is_ctrl_vocab_char {
+sub _is_ctrl_vocab_char {
     my ($text, $posn) = @_;
 
     return grep { $_ eq $voc_tag } $text->tagNames($posn);
 }
 
 # Inserts (printing) characters with the same style as the rest of the line
-sub insert_char {
+sub _insert_char {
     my ($text, $char) = @_;
 
     # We only want to insert printing characters in the Text box!
@@ -1653,7 +1653,7 @@ sub insert_char {
     return;
 }
 
-sub make_labelled_entry_widget {
+sub _make_labelled_entry_widget {
     my ($self, $widget, $name, $value, $size, @pack) = @_;
 
     @pack = (-side => 'left') unless @pack;
@@ -1677,7 +1677,7 @@ sub make_labelled_entry_widget {
     return $entry;
 }
 
-sub add_start_end_method_widgets {
+sub _add_start_end_method_widgets {
     my ($self, $widget) = @_;
 
     my $top = $widget->toplevel;
@@ -1750,60 +1750,60 @@ sub add_start_end_method_widgets {
     return;
 }
 
-sub start_not_found_from_tk {
+sub _start_not_found_from_tk {
     my ($self) = @_;
     return ${$self->{'_start_not_found_variable'}} || 0;
 }
 
-sub end_not_found_from_tk {
+sub _end_not_found_from_tk {
     my ($self) = @_;
     return ${$self->{'_end_not_found_variable'}} || 0;
 }
 
-sub subseq_name_Entry {
+sub _subseq_name_Entry {
     my ($self, $entry) = @_;
 
     if ($entry) {
-        $self->{'_subseq_name_entry'} = $entry;
+        $self->{'_subseq_name_Entry'} = $entry;
     }
-    return $self->{'_subseq_name_entry'};
+    return $self->{'_subseq_name_Entry'};
 }
 
-sub transcript_remark_Entry {
-    my ($self, $transcript_remark_Entry) = @_;
+sub _transcript_remark_Entry {
+    my ($self, $_transcript_remark_Entry) = @_;
 
-    if ($transcript_remark_Entry) {
-        $self->{'_transcript_remark_Entry'} = $transcript_remark_Entry;
+    if ($_transcript_remark_Entry) {
+        $self->{'_transcript_remark_Entry'} = $_transcript_remark_Entry;
     }
     return $self->{'_transcript_remark_Entry'};
 }
 
-sub locus_remark_Entry {
-    my ($self, $locus_remark_Entry) = @_;
+sub _locus_remark_Entry {
+    my ($self, $_locus_remark_Entry) = @_;
 
-    if ($locus_remark_Entry) {
-        $self->{'_locus_remark_Entry'} = $locus_remark_Entry;
+    if ($_locus_remark_Entry) {
+        $self->{'_locus_remark_Entry'} = $_locus_remark_Entry;
     }
     return $self->{'_locus_remark_Entry'};
 }
 
-sub get_transcript_remarks {
+sub _get_transcript_remarks {
     my ($self, $sub) = @_;
 
     confess "Missing SubSeq argument" unless $sub;
 
-    return $self->get_remarks_from_Entry($self->transcript_remark_Entry, $sub);
+    return $self->_get_remarks_from_Entry($self->_transcript_remark_Entry, $sub);
 }
 
-sub get_locus_remarks {
+sub _get_locus_remarks {
     my ($self, $locus) = @_;
 
     confess "Missing Locus argument" unless $locus;
 
-    return $self->get_remarks_from_Entry($self->locus_remark_Entry, $locus);
+    return $self->_get_remarks_from_Entry($self->_locus_remark_Entry, $locus);
 }
 
-sub get_remarks_from_Entry {
+sub _get_remarks_from_Entry {
     my ($self, $text, $obj) = @_;
 
     my %ann_index = $text->tagRanges($ann_tag);
@@ -1824,19 +1824,19 @@ sub get_remarks_from_Entry {
     return;
 }
 
-sub locus_description_Entry {
-    my ($self, $locus_description_Entry) = @_;
+sub _locus_description_Entry {
+    my ($self, $_locus_description_Entry) = @_;
 
-    if ($locus_description_Entry) {
-        $self->{'_locus_description_Entry'} = $locus_description_Entry;
+    if ($_locus_description_Entry) {
+        $self->{'_locus_description_Entry'} = $_locus_description_Entry;
     }
     return $self->{'_locus_description_Entry'};
 }
 
-sub get_locus_description {
+sub _get_locus_description {
     my ($self) = @_;
 
-    my $desc = $self->locus_description_Entry->get;
+    my $desc = $self->_locus_description_Entry->get;
     $desc =~ s/(^\s+|\s+$)//g;
     if ($desc) {
         return $desc;
@@ -1845,19 +1845,19 @@ sub get_locus_description {
     }
 }
 
-sub locus_alias_Entry {
-    my ($self, $locus_alias_Entry) = @_;
+sub _locus_alias_Entry {
+    my ($self, $_locus_alias_Entry) = @_;
 
-    if ($locus_alias_Entry) {
-        $self->{'_locus_alias_Entry'} = $locus_alias_Entry;
+    if ($_locus_alias_Entry) {
+        $self->{'_locus_alias_Entry'} = $_locus_alias_Entry;
     }
     return $self->{'_locus_alias_Entry'};
 }
 
-sub get_locus_aliases {
+sub _get_locus_aliases {
     my ($self) = @_;
 
-    my $alias_str = $self->locus_alias_Entry->get;
+    my $alias_str = $self->_locus_alias_Entry->get;
     $alias_str =~ s/(^\s+|\s+$)//g;
     my @aliases = split /\s+/, $alias_str;
     if (@aliases) {
@@ -1867,25 +1867,26 @@ sub get_locus_aliases {
     }
 }
 
-sub get_subseq_name {
+sub _get_subseq_name {
     my ($self) = @_;
 
-    my $name = $self->subseq_name_Entry->get;
+    my $name = $self->_subseq_name_Entry->get;
     $name =~ s/\s+//g;
     return $name || 'NO-NAME';
 }
 
-sub set_subseq_name {
+# Not used
+sub _set_subseq_name {
     my ($self, $new) = @_;
 
-    my $entry = $self->subseq_name_Entry;
+    my $entry = $self->_subseq_name_Entry;
     $entry->delete(0, 'end');
     $entry->insert(0, $new);
 
     return;
 }
 
-sub method_name_var {
+sub _method_name_var {
     my ($self, $var_ref) = @_;
 
     if ($var_ref) {
@@ -1894,26 +1895,26 @@ sub method_name_var {
     return $self->{'_method_name_var'};
 }
 
-sub get_GeneMethod_from_tk {
+sub _get_GeneMethod_from_tk {
     my ($self) = @_;
 
-    my $meth_name = ${$self->method_name_var};
+    my $meth_name = ${$self->_method_name_var};
     return $self->SessionWindow->get_GeneMethod($meth_name);
 }
 
-sub canvas_insert_character {
+sub _canvas_insert_character {
     my ($self, $canvas, $char) = @_;
 
     my $text = $canvas->focus or return;
     $canvas->insert($text, 'insert', $char);
     $self->re_highlight($text);
-    $self->update_splice_strings($text);
-    $self->remove_spurious_splice_sites;
+    $self->_update_splice_strings($text);
+    $self->_remove_spurious_splice_sites;
 
     return;
 }
 
-sub increment_int {
+sub _increment_int {
     my ($self) = @_;
 
     my $canvas = $self->canvas;
@@ -1923,14 +1924,14 @@ sub increment_int {
         $num++;
         $canvas->itemconfigure($text, -text => $num);
         $self->re_highlight($text);
-        $self->update_splice_strings($text);
-        $self->remove_spurious_splice_sites;
+        $self->_update_splice_strings($text);
+        $self->_remove_spurious_splice_sites;
     }
 
     return;
 }
 
-sub decrement_int {
+sub _decrement_int {
     my ($self) = @_;
 
     my $canvas = $self->canvas;
@@ -1940,14 +1941,14 @@ sub decrement_int {
         $num--;
         $canvas->itemconfigure($text, -text => $num);
         $self->re_highlight($text);
-        $self->update_splice_strings($text);
-        $self->remove_spurious_splice_sites;
+        $self->_update_splice_strings($text);
+        $self->_remove_spurious_splice_sites;
     }
 
     return;
 }
 
-sub canvas_text_go_left {
+sub _canvas_text_go_left {
     my ($self) = @_;
 
     my $canvas = $self->canvas;
@@ -1958,7 +1959,7 @@ sub canvas_text_go_left {
     return;
 }
 
-sub canvas_text_go_right {
+sub _canvas_text_go_right {
     my ($self) = @_;
 
     my $canvas = $self->canvas;
@@ -1969,7 +1970,7 @@ sub canvas_text_go_right {
     return;
 }
 
-sub canvas_backspace {
+sub _canvas_backspace {
     my ($self) = @_;
 
     my $canvas = $self->canvas;
@@ -1978,30 +1979,30 @@ sub canvas_backspace {
         or return;  # Don't delete when at beginning of string
     $canvas->dchars($text, $pos - 1);
     $self->re_highlight($text);
-    $self->update_splice_strings($text);
-    $self->remove_spurious_splice_sites;
+    $self->_update_splice_strings($text);
+    $self->_remove_spurious_splice_sites;
 
     return;
 }
 
-sub select_all_exon_pos {
+sub _select_all_exon_pos {
     my ($self) = @_;
 
     my $canvas = $self->canvas;
     return $self->highlight($canvas->find('withtag', 'exon_pos'));
 }
 
-sub left_button_handler {
+sub _left_button_handler {
     my ($self) = @_;
 
     return if $self->delete_message;
-    $self->deselect_all;
-    $self->shift_left_button_handler;
+    $self->_deselect_all;
+    $self->_shift_left_button_handler;
 
     return;
 }
 
-sub focus_on_current_text {
+sub _focus_on_current_text {
     my ($self) = @_;
 
     my $canvas = $self->canvas;
@@ -2012,7 +2013,7 @@ sub focus_on_current_text {
         # Position the icursor at the end of the text
         $canvas->icursor($obj, 'end');
 
-        if ($canvas->itemcget($obj, 'text') eq $self->empty_string) {
+        if ($canvas->itemcget($obj, 'text') eq $self->_empty_string) {
             $canvas->itemconfigure($obj,
                 -text   => '',
                 );
@@ -2023,7 +2024,7 @@ sub focus_on_current_text {
     return;
 }
 
-sub shift_left_button_handler {
+sub _shift_left_button_handler {
     my ($self) = @_;
 
     my $canvas = $self->canvas;
@@ -2055,34 +2056,34 @@ sub shift_left_button_handler {
     return;
 }
 
-sub control_left_button_handler {
+sub _control_left_button_handler {
     my ($self) = @_;
 
     my $canvas = $self->canvas;
     my ($obj) = $canvas->find('withtag', 'current') or return;
     my %tags = map { $_ => 1 } $canvas->gettags($obj);
     if ($tags{'plus_strand'}) {
-        $self->set_tk_strand(-1);
+        $self->_set_tk_strand(-1);
     }
     elsif ($tags{'minus_strand'}) {
-        $self->set_tk_strand(1);
+        $self->_set_tk_strand(1);
     }
-    $self->update_splice_strings($obj);
-    $self->remove_spurious_splice_sites;
+    $self->_update_splice_strings($obj);
+    $self->_remove_spurious_splice_sites;
 
     return;
 }
 
-sub set_tk_strand {
+sub _set_tk_strand {
     my ($self, $strand) = @_;
 
     my( $del_tag, $draw_method );
     if ($strand == 1) {
         $del_tag = 'minus_strand';
-        $draw_method = 'draw_plus';
+        $draw_method = '_draw_plus';
     } else {
         $del_tag = 'plus_strand';
-        $draw_method = 'draw_minus';
+        $draw_method = '_draw_minus';
     }
 
     my $canvas = $self->canvas;
@@ -2092,33 +2093,33 @@ sub set_tk_strand {
         my ($i) = map { /exon_id-(\d+)/ } @tags;
         #warn "Drawing strand indicator for exon $i\n";
         my( $size, $half, $pad, $text_len,
-            $x1, $y1, $x2, $y2 ) = $self->exon_holder_coords($i - 1);
+            $x1, $y1, $x2, $y2 ) = $self->_exon_holder_coords($i - 1);
         $self->$draw_method($x1 + $half, $y1, $size, @tags);
     }
 
-    $self->sort_all_coordinates;
-    $self->remove_spurious_splice_sites;
+    $self->_sort_all_coordinates;
+    $self->_remove_spurious_splice_sites;
 
     return;
 }
 
-sub toggle_tk_strand {
+sub _toggle_tk_strand {
     my ($self) = @_;
 
-    if ($self->strand_from_tk == 1) {
-        $self->set_tk_strand(-1);
+    if ($self->_strand_from_tk == 1) {
+        $self->_set_tk_strand(-1);
     } else {
-        $self->set_tk_strand(1);
+        $self->_set_tk_strand(1);
     }
 
     return;
 }
 
-sub empty_string {
+sub _empty_string {
     return '<empty>';
 }
 
-sub deselect_all {
+sub _deselect_all {
     my ($self) = @_;
 
     my $canvas = $self->canvas;
@@ -2129,7 +2130,7 @@ sub deselect_all {
             my $text_string = $canvas->itemcget($obj, 'text');
             unless ($text_string) {
                 $canvas->itemconfigure($obj,
-                    -text   => $self->empty_string,
+                    -text   => $self->_empty_string,
                     );
             }
         }
@@ -2141,7 +2142,7 @@ sub deselect_all {
     return;
 }
 
-sub export_highlighted_text_to_selection {
+sub _export_highlighted_text_to_selection {
     my ($self, $offset, $max_bytes) = @_;
 
     my @text = $self->get_all_selected_text;
@@ -2151,7 +2152,7 @@ sub export_highlighted_text_to_selection {
     } else {
         for (my $i = 0; $i < @text; $i += 2) {
             my($start, $end) = @text[$i, $i + 1];
-            $end ||= $self->empty_string;
+            $end ||= $self->_empty_string;
             $clip .= "$start  $end\n";
         }
     }
@@ -2159,15 +2160,16 @@ sub export_highlighted_text_to_selection {
     return substr($clip, $offset, $max_bytes);
 }
 
-sub export_ace_subseq_to_selection {
+# not used
+sub _export_ace_subseq_to_selection {
     my ($self, $offset, $max_bytes) = @_;
 
-    my $sub = $self->new_SubSeq_from_tk;
+    my $sub = $self->_new_SubSeq_from_tk;
 
     return substr($sub->ace_string, $offset, $max_bytes);
 }
 
-sub middle_button_paste {
+sub _middle_button_paste {
     my ($self) = @_;
 
     my $canvas = $self->canvas;
@@ -2175,7 +2177,7 @@ sub middle_button_paste {
     my @ints = $self->integers_from_clipboard;
     return unless @ints;
 
-    $self->deselect_all;
+    $self->_deselect_all;
 
     my $did_paste = 0;
     if (my ($obj)  = $canvas->find('withtag', 'current')) {
@@ -2190,8 +2192,8 @@ sub middle_button_paste {
                 -text   => $ints[0],
                 );
             $self->highlight($obj);
-            $self->update_splice_strings($obj) if $obj_tags{'exon_pos'};
-            #$self->remove_spurious_splice_sites;
+            $self->_update_splice_strings($obj) if $obj_tags{'exon_pos'};
+            #$self->_remove_spurious_splice_sites;
         }
         elsif ($obj_tags{'exon_furniture'}) {
             # Set coordinates with middle button on strand indicator
@@ -2202,42 +2204,42 @@ sub middle_button_paste {
             }
             my ($exon_num) = map { /exon_id-(\d+)/ } keys %obj_tags;
             warn "start=$start end=$end exon=$exon_num";
-            my $pp = ($self->position_pairs)[$exon_num - 1];
-            $self->set_position_pair_text($pp, [$start, $end]);
+            my $pp = ($self->_position_pairs)[$exon_num - 1];
+            $self->_set_position_pair_text($pp, [$start, $end]);
             $self->highlight(@$pp[0,1]);
         }
     }
 
     unless ($did_paste) {
-        my @pos = $self->all_position_pair_text;
+        my @pos = $self->_all_position_pair_text;
 
         # If there is only 1 <empty> pair, write to it
         my $was_empty = 0;
         if (@pos == 1 and $pos[0][0] == 0 and $pos[0][1] == 0) {
-            $self->trim_position_pairs(1);
+            $self->_trim_position_pairs(1);
             $was_empty = 1;
         }
 
         for (my $i = 0; $i < @ints; $i += 2) {
-            $self->add_coordinate_pair(@ints[$i, $i + 1]);
+            $self->_add_coordinate_pair(@ints[$i, $i + 1]);
         }
 
         $self->fix_window_min_max_sizes;
     }
 
-    $self->remove_spurious_splice_sites;
+    $self->_remove_spurious_splice_sites;
 
     return;
 }
 
-sub next_exon_holder_coords {
+sub _next_exon_holder_coords {
     my ($self) = @_;
 
-    my $i = $self->next_position_pair_index;
-    return $self->exon_holder_coords($i);
+    my $i = $self->_next_position_pair_index;
+    return $self->_exon_holder_coords($i);
 }
 
-sub exon_holder_coords {
+sub _exon_holder_coords {
     my ($self, $i) = @_;
 
     $i++;   # Move exons down 1 line to make space for splice site sequence
@@ -2285,7 +2287,7 @@ sub _coord_matrix {
     return @$m;
 }
 
-sub update_splice_strings {
+sub _update_splice_strings {
     my ($self, $tag_or_id) = @_;
 
     my $canvas = $self->canvas;
@@ -2312,8 +2314,8 @@ sub update_splice_strings {
             ($start, $end) = ($end, $start);
         }
 
-        my $strand = $self->exon_strand_from_tk($exon_id);
-        my ($acc_str, $don_str) = $self->get_splice_acceptor_donor_strings($start, $end, $strand);
+        my $strand = $self->_exon_strand_from_tk($exon_id);
+        my ($acc_str, $don_str) = $self->_get_splice_acceptor_donor_strings($start, $end, $strand);
 
 
         my ($acceptor_txt) = $canvas->find('withtag', "$exon_id&&splice_acceptor");
@@ -2334,19 +2336,19 @@ sub update_splice_strings {
     return;
 }
 
-sub remove_spurious_splice_sites {
+sub _remove_spurious_splice_sites {
     my ($self) = @_;
 
     my $canvas = $self->canvas;
 
-    my @pps = sort { $a->[0] <=> $b->[0] } $self->position_pairs;
+    my @pps = sort { $a->[0] <=> $b->[0] } $self->_position_pairs;
 
     return unless @pps;
 
     my $initial_exon_id = $pps[0]->[2];
     my $terminal_exon_id = $pps[-1]->[2];
 
-    $self->update_splice_strings('exon_end');
+    $self->_update_splice_strings('exon_end');
 
     my ($acceptor_txt) = $canvas->find('withtag', "$initial_exon_id&&splice_acceptor");
     $canvas->itemconfigure($acceptor_txt, -text => '');
@@ -2357,7 +2359,7 @@ sub remove_spurious_splice_sites {
     return;
 }
 
-sub get_splice_acceptor_donor_strings {
+sub _get_splice_acceptor_donor_strings {
     my ($self, $start, $end, $strand) = @_;
 
     # Fetch the splice donor and acceptor sequences before switching start/end for reverse strand
@@ -2372,10 +2374,10 @@ sub get_splice_acceptor_donor_strings {
     return ($splice_acceptor_str, $splice_donor_str);
 }
 
-sub add_exon_holder {
+sub _add_exon_holder {
     my ($self, $start, $end, $strand) = @_;
-    $start ||= $self->empty_string;
-    $end   ||= $self->empty_string;
+    $start ||= $self->_empty_string;
+    $end   ||= $self->_empty_string;
 
     my $arrow = ($strand == 1) ? 'last' : 'first';
     if ($strand == -1) {
@@ -2384,9 +2386,9 @@ sub add_exon_holder {
 
     my $canvas  = $self->canvas;
     my $font    = $self->named_font('mono');
-    my $exon_id = 'exon_id-'. $self->next_exon_number;
+    my $exon_id = 'exon_id-'. $self->_next_exon_number;
     my( $size, $half, $pad, $text_len,
-        $x1, $y1, $x2, $y2 ) = $self->next_exon_holder_coords;
+        $x1, $y1, $x2, $y2 ) = $self->_next_exon_holder_coords;
     my $arrow_size = $half - $pad;
 
     $canvas->createText(
@@ -2406,9 +2408,9 @@ sub add_exon_holder {
         );
 
     if ($strand == 1) {
-        $self->draw_plus ($x1 + $half, $y1, $size, $exon_id, 'exon_furniture');
+        $self->_draw_plus ($x1 + $half, $y1, $size, $exon_id, 'exon_furniture');
     } else {
-        $self->draw_minus($x1 + $half, $y1, $size, $exon_id, 'exon_furniture');
+        $self->_draw_minus($x1 + $half, $y1, $size, $exon_id, 'exon_furniture');
     }
 
     my $end_text = $canvas->createText(
@@ -2419,7 +2421,7 @@ sub add_exon_holder {
         -tags       => [$exon_id, 'exon_pos', 'exon_end'],
         );
 
-    $self->add_position_pair($start_text, $end_text, $exon_id);
+    $self->_add_position_pair($start_text, $end_text, $exon_id);
 
     $canvas->createText(
         $x2 + $text_len, $y1 + $half,
@@ -2438,20 +2440,20 @@ sub add_exon_holder {
         );
     $canvas->lower($bkgd, $start_text);
 
-    $self->update_splice_strings($exon_id);
+    $self->_update_splice_strings($exon_id);
 
-    $self->position_mobile_elements;
+    $self->_position_mobile_elements;
 
     # Return how big we were
     return $size + $pad;
 }
 
-sub position_mobile_elements {
+sub _position_mobile_elements {
     my ($self) = @_;
 
     my $canvas = $self->canvas;
     return unless $canvas->find('withtag', 'mobile');
-    my ($font, # as in add_exon_holder
+    my ($font, # as in _add_exon_holder
         $size) = $self->named_font('mono', 'linespace');
     my $pad  = int($size / 2);
 
@@ -2463,7 +2465,7 @@ sub position_mobile_elements {
     return;
 }
 
-sub draw_plus {
+sub _draw_plus {
     my ($self, $x, $y, $size, @tags) = @_;
 
     # size is now entire line height
@@ -2495,7 +2497,7 @@ sub draw_plus {
     return;
 }
 
-sub draw_minus {
+sub _draw_minus {
     my ($self, $x, $y, $size, @tags) = @_;
 
     # size is now entire line height
@@ -2516,7 +2518,7 @@ sub draw_minus {
     return;
 }
 
-sub strand_from_tk {
+sub _strand_from_tk {
     my ($self, $keep_quiet) = @_;
 
     my $canvas = $self->canvas;
@@ -2545,7 +2547,7 @@ sub strand_from_tk {
 {
     my $tr_tag = 'translation_region';
 
-    sub draw_translation_region {
+    sub _draw_translation_region {
         my ($self, $sub) = @_;
 
         # Get the translation region from the
@@ -2555,7 +2557,7 @@ sub strand_from_tk {
             return unless $sub->translation_region_is_set;  ### Why is this needed?
             @trans = $sub->translation_region;
         } else {
-            @trans = $self->translation_region_from_tk;
+            @trans = $self->_translation_region_from_tk;
             unless (@trans) {
                 @trans = $self->SubSeq->translation_region;
             }
@@ -2579,8 +2581,8 @@ sub strand_from_tk {
             $meth = $sub->GeneMethod;
             $strand = $sub->strand;
         } else {
-            $meth = $self->get_GeneMethod_from_tk;
-            $strand = $self->strand_from_tk;
+            $meth = $self->_get_GeneMethod_from_tk;
+            $strand = $self->_strand_from_tk;
         }
         return unless $meth->coding;
 
@@ -2619,7 +2621,7 @@ sub strand_from_tk {
         return;
     }
 
-    sub translation_region_from_tk {
+    sub _translation_region_from_tk {
         my ($self) = @_;
 
         my $canvas = $self->canvas;
@@ -2631,7 +2633,7 @@ sub strand_from_tk {
     }
 }
 
-sub tk_t_start {
+sub _tk_t_start {
     my ($self, $start) = @_;
 
     my $canvas = $self->canvas;
@@ -2645,7 +2647,7 @@ sub tk_t_start {
     return $start;
 }
 
-sub tk_t_end {
+sub _tk_t_end {
     my ($self, $end) = @_;
 
     my $canvas = $self->canvas;
@@ -2659,18 +2661,18 @@ sub tk_t_end {
     return $end;
 }
 
-sub get_SubSeq_if_changed {
+sub _get_SubSeq_if_changed {
     my ($self) = @_;
 
     my $old = $self->SubSeq;
-    my $new = $self->new_SubSeq_from_tk;
+    my $new = $self->_new_SubSeq_from_tk;
 
     # Preserve Otter ids in SubSeq (not attached Locus)
     $new->take_otter_ids($old);
 
     # Get the otter_id for the locus, or take it from
     # an existing locus if we are renaming.
-    $self->manage_locus_otter_ids($old, $new);
+    $self->_manage_locus_otter_ids($old, $new);
 
     # warn sprintf "Comparing old:\n%s\nTo new:\n%s",
     #     $old->ace_string, $new->ace_string;
@@ -2694,7 +2696,7 @@ sub get_SubSeq_if_changed {
     return $new;
 }
 
-sub manage_locus_otter_ids {
+sub _manage_locus_otter_ids {
     my ($self, $old, $new) = @_;
 
     my $new_locus = $new->Locus;
@@ -2728,23 +2730,23 @@ sub manage_locus_otter_ids {
     return;
 }
 
-sub new_SubSeq_from_tk {
+sub _new_SubSeq_from_tk {
     my ($self) = @_;
 
     my $new = $self->SubSeq->clone;
     $new->unset_Locus;
     $new->unset_translation_region;
-    $new->translation_region     ( $self->translation_region_from_tk  );
-    $new->name                   ( $self->get_subseq_name             );
-    $new->replace_all_Exons      ( $self->Exons_from_canvas           );
-    $new->GeneMethod             ( $self->get_GeneMethod_from_tk      );
-    $new->strand                 ( $self->strand_from_tk              );
-    $new->end_not_found          ( $self->end_not_found_from_tk       );
-    $new->evidence_hash          ( $self->evidence_hash               );
-    $new->Locus                  ( $self->get_Locus_from_tk           );
-    $self->get_transcript_remarks($new);
+    $new->translation_region     ( $self->_translation_region_from_tk  );
+    $new->name                   ( $self->_get_subseq_name             );
+    $new->replace_all_Exons      ( $self->_Exons_from_canvas           );
+    $new->GeneMethod             ( $self->_get_GeneMethod_from_tk      );
+    $new->strand                 ( $self->_strand_from_tk              );
+    $new->end_not_found          ( $self->_end_not_found_from_tk       );
+    $new->evidence_hash          ( $self->_evidence_hash               );
+    $new->Locus                  ( $self->_get_Locus_from_tk           );
+    $self->_get_transcript_remarks($new);
 
-    my $snf = $self->start_not_found_from_tk;
+    my $snf = $self->_start_not_found_from_tk;
     if ($snf eq 'utr') {
         $new->utr_start_not_found(1);
         $new->start_not_found(0);
@@ -2753,8 +2755,8 @@ sub new_SubSeq_from_tk {
         $new->start_not_found($snf);
     }
 
-    # warn "Start not found ", $self->start_not_found_from_tk, "\n",
-    #      "  End not found ", $self->end_not_found_from_tk,   "\n";
+    # warn "Start not found ", $self->_start_not_found_from_tk, "\n",
+    #      "  End not found ", $self->_end_not_found_from_tk,   "\n";
     return $new;
 }
 
@@ -2763,13 +2765,13 @@ sub new_SubSeq_from_tk {
 sub ensEMBL_Transcript_from_tk {
     my ($self) = @_;
 
-    my $strand = $self->strand_from_tk;
+    my $strand = $self->_strand_from_tk;
 
     my $ts = Bio::Vega::Transcript->new;
     $ts->strand($strand);
-    $self->add_EnsEMBL_Attribute($ts, 'name', $self->get_subseq_name);
+    $self->_add_EnsEMBL_Attribute($ts, 'name', $self->_get_subseq_name);
 
-    foreach my $pp ($self->all_position_pair_text) {
+    foreach my $pp ($self->_all_position_pair_text) {
         my $exon = Bio::Vega::Exon->new;
         $exon->start($pp->[0]);
         $exon->end(  $pp->[1]);
@@ -2785,7 +2787,7 @@ sub ensEMBL_Transcript_from_tk {
 
 # FIXME: duplication with Bio::Vega::AceConverter->create_Attribute()
 #
-sub add_EnsEMBL_Attribute {
+sub _add_EnsEMBL_Attribute {
     my ($self, $e_obj, $code, $value) = @_;
 
     $e_obj->add_Attributes(
@@ -2810,8 +2812,8 @@ sub store_Transcript {
     } else {
         # For now, we blindly store a new copy each time, to ensure up-to-dateness
 
-        $transcript->analysis(         $self->otter_analysis) unless $transcript->analysis;
-        $transcript->transcript_author($self->author_object ) unless $transcript->transcript_author;
+        $transcript->analysis(         $self->_otter_analysis) unless $transcript->analysis;
+        $transcript->transcript_author($self->_author_object ) unless $transcript->transcript_author;
 
         $transcript->slice($db_slice) unless $transcript->slice;
         foreach my $exon (@{$transcript->get_all_Exons}) {
@@ -2826,34 +2828,34 @@ sub store_Transcript {
 
 # FIXME: this belongs elsewhere, in due course.
 {
-    my $author_object;
+    my $_author_object;
 
-    sub author_object {
+    sub _author_object {
         my ($self) = @_;
-        return $author_object if $author_object;
+        return $_author_object if $_author_object;
 
         my $user = getpwuid($<);
-        return $author_object = Bio::Vega::Author->new(-name => $user);
+        return $_author_object = Bio::Vega::Author->new(-name => $user);
     }
 }
 
 # FIXME: this belongs elsewhere, in due course.
 {
-    my $otter_analysis;
+    my $_otter_analysis;
 
-    sub otter_analysis {
+    sub _otter_analysis {
         my ($self) = @_;
-        return $otter_analysis if $otter_analysis;
+        return $_otter_analysis if $_otter_analysis;
 
-        return $otter_analysis = Bio::EnsEMBL::Analysis->new(-logic_name => 'Otter');
+        return $_otter_analysis = Bio::EnsEMBL::Analysis->new(-logic_name => 'Otter');
     }
 }
 
-sub save_if_changed {
+sub _save_if_changed {
     my ($self) = @_;
 
     my $sub = try {
-        $self->get_SubSeq_if_changed;
+        $self->_get_SubSeq_if_changed;
     }
     catch {
         # Make sure the annotators see the messages!
@@ -2862,14 +2864,14 @@ sub save_if_changed {
     };
 
     if ($sub) {
-        return $self->save_sub($sub);
+        return $self->_save_sub($sub);
     }
     else {
         return;
     }
 }
 
-sub save_sub {
+sub _save_sub {
     my ($self, $sub) = @_;
 
     my $top = $self->top_window;
@@ -2915,9 +2917,9 @@ sub _do_save_subseq_work {
         # more updating of internal state - if we're OK to do that
 
         $self->SubSeq($sub);
-        $self->update_transcript_remark_widget($sub);
+        $self->_update_transcript_remark_widget($sub);
         $self->name($new_name);
-        $self->evidence_hash($sub->clone_evidence_hash);
+        $self->_evidence_hash($sub->clone_evidence_hash);
 
         # update_Locus in this object will be called
         # from update_Locus in the SessionWindow
@@ -2932,12 +2934,12 @@ sub _do_save_subseq_work {
     return 1;
 }
 
-sub Exons_from_canvas {
+sub _Exons_from_canvas {
     my ($self) = @_;
 
     my $done_message = 0;
     my( @exons );
-    foreach my $pp ($self->all_position_pair_text) {
+    foreach my $pp ($self->_all_position_pair_text) {
         confess "Error: Empty coordinate" if grep { $_ == 0 } @$pp;
         my $ex = Hum::Ace::Exon->new;
         $ex->start($pp->[0]);
@@ -2957,10 +2959,10 @@ sub Exons_from_canvas {
     return @exons;
 }
 
-sub check_for_errors {
+sub _check_for_errors {
     my ($self) = @_;
 
-    my $sub = $self->new_SubSeq_from_tk;
+    my $sub = $self->_new_SubSeq_from_tk;
     $sub->locus_level_errors($self->SubSeq->locus_level_errors);
     if (my $err = $sub->pre_otter_save_error) {
         $err =~ s/\n$//;
@@ -2977,7 +2979,7 @@ sub check_get_mRNA_Sequence {
 
     my( $cdna );
     try {
-        my $sub = $self->current_SubSeq;
+        my $sub = $self->_current_SubSeq;
         $sub->validate;
         $cdna = $sub->mRNA_Sequence;
     } catch {
@@ -2987,7 +2989,7 @@ sub check_get_mRNA_Sequence {
     return $cdna;
 }
 
-sub run_dotter {
+sub _run_dotter {
     my ($self) = @_;
 
     my( $hit_name );
@@ -3023,20 +3025,20 @@ sub launch_dotter {
     return $dotter->fork_dotter($self->SessionWindow);
 }
 
-sub max_exon_number {
+sub _max_exon_number {
     my ($self) = @_;
 
     return $self->{'_max_exon_number'} || 0;
 }
 
-sub next_exon_number {
+sub _next_exon_number {
     my ($self) = @_;
 
     $self->{'_max_exon_number'}++;
     return $self->{'_max_exon_number'};
 }
 
-sub decrement_exon_counter {
+sub _decrement_exon_counter {
     my ($self, $count) = @_;
 
     confess "No count given" unless defined $count;
