@@ -31,6 +31,7 @@ Readonly my @TEST_REGIONS => qw(
     human_test:chr6-38:2557766-2647766
     human_test:chr2-38:929903-1379472
     human_test:chr12-38:30351955-34820185
+    mouse:chr1-38:3009920-3786391
 );
 
 sub new {
