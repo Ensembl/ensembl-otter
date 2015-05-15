@@ -807,7 +807,7 @@ sub _close_GenomicFeaturesWindow {
             return;
         }
 
-        my $assembly = $self->Assembly;
+        my $assembly = $self->Assembly_x;
 
         # The ExonLocator finds exons in a genomic sequence
         my $finder = Hum::Analysis::Factory::ExonLocator->new;
@@ -911,7 +911,7 @@ sub _exit_save_data {
 
     $self->_close_all_edit_windows or return;
 
-    if (my @loci = $self->Assembly->get_all_annotation_in_progress_Loci) {
+    if (my @loci = $self->Assembly_x->get_all_annotation_in_progress_Loci) {
 
         # Format the text for the dialog
         my $loci_str = join('', map {sprintf "\t%s\n", $_->name} @loci);
@@ -1301,7 +1301,7 @@ sub _resync_with_db {
     $self->_empty_Locus_cache;
 
     # Refetch transcripts
-    $self->Assembly;
+    $self->Assembly_x;
     my @visible_columns = $self->AceDatabase->ColumnCollection->list_Columns_with_status('Visible');
     $self->_process_and_update_columns(@visible_columns);
     $self->update_status_bar;
@@ -1490,7 +1490,7 @@ sub _make_variant_subsequence {
     }
     my $name = $sub_names[0];
     my $sub = $self->_subsequence_cache_x->get($name);
-    my $assembly = $self->Assembly;
+    my $assembly = $self->Assembly_x;
 
     # Work out a name for the new variant
     my $var_name = $name;
@@ -1544,7 +1544,7 @@ sub _make_variant_subsequence {
 sub _add_SubSeq_and_paste_evidence {
     my ($self, $sub, $clip) = @_;
 
-    $self->Assembly->add_SubSeq($sub);
+    $self->Assembly_x->add_SubSeq($sub);
 
     $self->_add_SubSeq_x($sub);
     $self->draw_subseq_list;
@@ -1924,6 +1924,12 @@ sub Assembly {
     return $self->_confess_bad_master_db;
 }
 
+sub Assembly_x {
+    my ($self) = @_;
+    $self->logger->warn(longmess('Assembly_x() call: needs review!'));
+    return $self->Assembly;
+}
+
 sub _Assembly_acedb {
     my ($self) = @_;
 
@@ -2045,7 +2051,7 @@ sub save_Assembly { ## no critic (Subroutines::RequireFinalReturn)
     my ($self, $new) = @_;
 
     my ($delete_xml, $create_xml) = Bio::Otter::ZMap::XML::update_SimpleFeatures_xml(
-        $self->Assembly, $new, $self->AceDatabase->offset);
+        $self->Assembly_x, $new, $self->AceDatabase->offset);
     my $ace = $new->ace_string;
 
     my $done_ace = 0;
@@ -2067,7 +2073,7 @@ sub save_Assembly { ## no critic (Subroutines::RequireFinalReturn)
 
     # Set internal state only if we saved to Ace OK
     if ($done_ace) {
-        $self->Assembly->set_SimpleFeature_list($new->get_all_SimpleFeatures);
+        $self->Assembly_x->set_SimpleFeature_list($new->get_all_SimpleFeatures);
     }
 
     if ($done_zmap) {
@@ -2149,7 +2155,7 @@ sub replace_SubSeq {
     if ($done_ace) {
 
         # update internal state
-        $self->Assembly->replace_SubSeq($new, $old_name);
+        $self->Assembly_x->replace_SubSeq($new, $old_name);
 
         if ($new_name ne $old_name) {
             $self->_subsequence_cache_x->delete($old_name);
@@ -2291,7 +2297,7 @@ sub _row_count {
 sub _update_SubSeq_locus_level_errors {
     my ($self) = @_;
 
-    $self->Assembly->set_SubSeq_locus_level_errors;
+    $self->Assembly_x->set_SubSeq_locus_level_errors;
     foreach my $sub_name ($self->_list_all_transcript_window_names) {
         my $transcript_window = $self->_get_transcript_window($sub_name) or next;
         my $sub = $self->_subsequence_cache_x->get($sub_name) or next;
