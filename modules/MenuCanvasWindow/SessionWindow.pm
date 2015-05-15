@@ -65,6 +65,8 @@ sub new {
 
     my $self = $pkg->SUPER::new($tk);
 
+    $self->_master_db('acedb');
+
     $self->zmap_select_initialize;
 
     $self->_populate_menus;
@@ -2956,6 +2958,30 @@ sub zmap {
 }
 
 ### END: ZMap control interface
+
+
+sub _master_db {
+    my ($self, @args) = @_;
+    ($self->{'_master_db'}) = @args if @args;
+    my $_master_db = $self->{'_master_db'};
+    return $_master_db;
+}
+
+sub _master_db_is_acedb {
+    my ($self) = @_;
+    return $self->_master_db eq 'acedb';
+}
+
+sub _master_db_is_sqlite {
+    my ($self) = @_;
+    return $self->_master_db eq 'sqlite';
+}
+
+sub _confess_bad_master_db {
+    my ($self) = @_;
+    my $mdb = $self->_master_db;
+    $self->logger->logconfess("Bad master_db '$mdb'");
+}
 
 
 sub DESTROY {
