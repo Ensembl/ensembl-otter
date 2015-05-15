@@ -1352,11 +1352,12 @@ sub _edit_subsequences {
         next if $self->_raise_transcript_window($sub_name);
 
         # Get a copy of the subseq
-        if (my $sub = $self->_subsequence_cache_x->get($sub_name)) {
+        if (my $sub = $self->_subsequence_cache->get($sub_name)) {
             my $edit = $sub->clone;
             $edit->otter_id($sub->otter_id);
             $edit->translation_otter_id($sub->translation_otter_id);
             $edit->is_archival($sub->is_archival);
+            $edit->ensembl_dbID($sub->ensembl_dbID);
             $edit->locus_level_errors($sub->locus_level_errors);
 
             $self->_make_transcript_window($edit);
