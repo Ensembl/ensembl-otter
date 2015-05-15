@@ -2295,13 +2295,14 @@ sub _row_count {
     return $rows;
 }
 
+# Only track errors via master db & assembly
 sub _update_SubSeq_locus_level_errors {
     my ($self) = @_;
 
-    $self->Assembly_x->set_SubSeq_locus_level_errors;
+    $self->Assembly->set_SubSeq_locus_level_errors;
     foreach my $sub_name ($self->_list_all_transcript_window_names) {
         my $transcript_window = $self->_get_transcript_window($sub_name) or next;
-        my $sub = $self->_subsequence_cache_x->get($sub_name) or next;
+        my $sub = $self->_subsequence_cache->get($sub_name) or next;
         $transcript_window->SubSeq->locus_level_errors($sub->locus_level_errors);
     }
 
