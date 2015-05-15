@@ -283,8 +283,8 @@ sub update_Locus {
 
     $self->_locus_cache_x->set($new_locus);
 
-    foreach my $sub_name ($self->_subsequence_cache->names) {
-        my $sub = $self->_subsequence_cache->get($sub_name) or next;
+    foreach my $sub_name ($self->_subsequence_cache_x->names) {
+        my $sub = $self->_subsequence_cache_x->get($sub_name) or next;
         my $old_locus = $sub->Locus or next;
 
         if ($old_locus->name eq $locus_name) {
@@ -383,8 +383,8 @@ sub _fetch_SubSeqs_by_locus_name {
    my ($self, $locus_name) = @_;
 
    my @list;
-   foreach my $name ($self->_subsequence_cache->names) {
-       my $sub = $self->_subsequence_cache->get($name) or next;
+   foreach my $name ($self->_subsequence_cache_x->names) {
+       my $sub = $self->_subsequence_cache_x->get($name) or next;
        my $locus = $sub->Locus or next;
        if ($locus->name eq $locus_name) {
            push(@list, $sub);
@@ -791,7 +791,7 @@ sub _close_GenomicFeaturesWindow {
             return;
         }
         foreach my $name (@select) {
-            my $sub = $self->_subsequence_cache->get($name)->clone;
+            my $sub = $self->_subsequence_cache_x->get($name)->clone;
             $sub->is_archival(0);
             push(@holding_pen, $sub);
         }
@@ -820,7 +820,7 @@ sub _close_GenomicFeaturesWindow {
             if (@{$new_exons}) {
                 my $new = $sub->clone;
                 my $temp_name;
-                for (my $i=0; !defined $temp_name || $self->_subsequence_cache->get($temp_name); $i++) {
+                for (my $i=0; !defined $temp_name || $self->_subsequence_cache_x->get($temp_name); $i++) {
                     $temp_name = $sub->name;
                     $temp_name .= "_$i" if $i; # invalid-dup suffix when needed
                 }
@@ -840,7 +840,7 @@ sub _close_GenomicFeaturesWindow {
                 }
                 my $paste_locus = $self->_paste_locus($sub->Locus);
                 $new->Locus($paste_locus);
-                $self->_add_SubSeq($new);
+                $self->_add_SubSeq_x($new);
                 push(@new_subseq, $new);
                 $self->logger->info("Internal paste result:\n", $new->ace_string);
             } else {
@@ -1194,8 +1194,8 @@ sub _do_search {
 
     my @matching_sub_names;
     my @ace_fail_names;
-    foreach my $name ($self->_subsequence_cache->names) {
-        my $sub = $self->_subsequence_cache->get($name) or next;
+    foreach my $name ($self->_subsequence_cache_x->names) {
+        my $sub = $self->_subsequence_cache_x->get($name) or next;
         try {
             push @matching_sub_names, $name
                 if $sub->ace_string =~ /$regex/;
@@ -1352,7 +1352,7 @@ sub _edit_subsequences {
         next if $self->_raise_transcript_window($sub_name);
 
         # Get a copy of the subseq
-        if (my $sub = $self->_subsequence_cache->get($sub_name)) {
+        if (my $sub = $self->_subsequence_cache_x->get($sub_name)) {
             my $edit = $sub->clone;
             $edit->otter_id($sub->otter_id);
             $edit->translation_otter_id($sub->translation_otter_id);
@@ -1418,7 +1418,7 @@ sub _edit_new_subsequence {
     my $seq_name = "$loc_name-001";
 
     # Check we don't already have a sequence of this name
-    if ($self->_subsequence_cache->get($seq_name)) {
+    if ($self->_subsequence_cache_x->get($seq_name)) {
         # Should be impossible, I hope!
         $self->message("Tried to make new SubSequence name but already have SubSeq named '$seq_name'");
         return;
@@ -1489,7 +1489,7 @@ sub _make_variant_subsequence {
         return;
     }
     my $name = $sub_names[0];
-    my $sub = $self->_subsequence_cache->get($name);
+    my $sub = $self->_subsequence_cache_x->get($name);
     my $assembly = $self->Assembly;
 
     # Work out a name for the new variant
@@ -1510,7 +1510,7 @@ sub _make_variant_subsequence {
         $var_name = sprintf "%s-%03d", $root, $max + 1;
 
         # Check we don't already have the variant we are trying to create
-        if ($self->_subsequence_cache->get($var_name)) {
+        if ($self->_subsequence_cache_x->get($var_name)) {
             $self->message("Tried to create variant '$var_name', but it already exists! (Should be impossible)");
             return;
         }
@@ -1546,7 +1546,7 @@ sub _add_SubSeq_and_paste_evidence {
 
     $self->Assembly->add_SubSeq($sub);
 
-    $self->_add_SubSeq($sub);
+    $self->_add_SubSeq_x($sub);
     $self->draw_subseq_list;
     $self->_highlight_by_name($sub->name);
 
@@ -1564,7 +1564,7 @@ sub _add_external_SubSeqs {
     my $asm = $self->Assembly;
     my $dna = $asm->Sequence;
     foreach my $sub (@ext_subs) {
-        if (my $ext = $self->_subsequence_cache->get($sub->name)) {
+        if (my $ext = $self->_subsequence_cache_x->get($sub->name)) {
             if ($ext->GeneMethod->name eq $sub->GeneMethod->name) {
                 # Looks zmap has been restarted, which has
                 # triggered a reload of this data.
@@ -1578,7 +1578,7 @@ sub _add_external_SubSeqs {
         }
         $sub->clone_Sequence($dna);
         $asm->add_SubSeq($sub);
-        $self->_add_SubSeq($sub);
+        $self->_add_SubSeq_x($sub);
     }
 
     return;
@@ -1683,7 +1683,7 @@ sub _delete_subsequences {
     my @sub_names = $self->list_selected_subseq_names;
     my( @to_die );
     foreach my $sub_name (@sub_names) {
-        my $sub = $self->_subsequence_cache->get($sub_name);
+        my $sub = $self->_subsequence_cache_x->get($sub_name);
         if ($sub->GeneMethod->mutable) {
             push(@to_die, $sub);
         }
@@ -1748,7 +1748,7 @@ sub _delete_subsequences {
 
     # Remove from our objects
     foreach my $sub (@to_die) {
-        $self->_delete_SubSeq($sub);
+        $self->_delete_SubSeq_x($sub);
     }
     $self->draw_subseq_list;
 
@@ -1918,7 +1918,9 @@ sub _get_all_Subseq_clusters {
 
 sub Assembly {
     my ($self) = @_;
-    return $self->_Assembly_acedb;
+    return $self->_Assembly_acedb  if $self->_master_db_is_acedb;
+    return $self->_Assembly_sqlite if $self->_master_db_is_sqlite;
+    return $self->_confess_bad_master_db;
 }
 
 sub _Assembly_acedb {
@@ -1961,7 +1963,7 @@ sub _set_SubSeqs_from_assembly {
     my ($self) = @_;
 
     foreach my $sub ($self->Assembly->get_all_SubSeqs) {
-        $self->_add_SubSeq($sub);
+        $self->_add_SubSeq_x($sub);
 
         # Ignore loci from non-editable SubSeqs
         next unless $sub->is_mutable;
@@ -2133,10 +2135,10 @@ sub replace_SubSeq {
         $self->Assembly->replace_SubSeq($new, $old_name);
 
         if ($new_name ne $old_name) {
-            $self->_subsequence_cache->delete($old_name);
+            $self->_subsequence_cache_x->delete($old_name);
             $self->_rename_transcript_window($old_name, $new_name);
         }
-        $self->_subsequence_cache->set($new);
+        $self->_subsequence_cache_x->set($new);
 
         my $locus = $new->Locus;
         if (my $prev_name = $locus->drop_previous_name) {
@@ -2165,13 +2167,33 @@ sub replace_SubSeq {
 
 sub _subsequence_cache {
     my ($self) = @_;
-    $self->{'_subsequence_cache'} //= Bio::Otter::Utils::CacheByName->new;
-    return $self->{'_subsequence_cache'};
+    return $self->_subsequence_cache_acedb  if $self->_master_db_is_acedb;
+    return $self->_subsequence_cache_sqlite if $self->_master_db_is_sqlite;
+    return $self->_confess_bad_master_db;
+}
+
+sub _subsequence_cache_x {
+    my ($self) = @_;
+    $self->logger->warn(longmess('_subsequence_cache_x() call: needs review!'));
+    return $self->_subsequence_cache;
+}
+
+sub _subsequence_cache_acedb {
+    my ($self) = @_;
+    $self->{'_subsequence_cache_acedb'} //= Bio::Otter::Utils::CacheByName->new;
+    return $self->{'_subsequence_cache_acedb'};
+}
+
+sub _subsequence_cache_sqlite {
+    my ($self) = @_;
+    $self->{'_subsequence_cache_sqlite'} //= Bio::Otter::Utils::CacheByName->new;
+    return $self->{'_subsequence_cache_sqlite'};
 }
 
 sub _empty_SubSeq_cache {
     my ($self) = @_;
-    $self->{'_subsequence_cache'} = undef;
+    $self->{'_subsequence_cache_acedb'}  = undef;
+    $self->{'_subsequence_cache_sqlite'} = undef;
     return;
 }
 
@@ -2184,6 +2206,12 @@ sub _add_SubSeq {
                                           });
 }
 
+sub _add_SubSeq_x {
+    my ($self, $sub) = @_;
+    $self->logger->warn(longmess('_add_SubSeq_x() call: needs review!'));
+    return $self->_add_SubSeq($sub);
+}
+
 sub _delete_SubSeq {
     my ($self, $sub) = @_;
 
@@ -2193,7 +2221,13 @@ sub _delete_SubSeq {
     return $self->_subsequence_cache->delete($name);
 }
 
-# For external callers only - internal should use $self->_subsequence_cache->get() for now
+sub _delete_SubSeq_x {
+    my ($self, $sub) = @_;
+    $self->logger->warn(longmess('_delete_SubSeq_x() call: needs review!'));
+    return $self->_delete_SubSeq($sub);
+}
+
+# For external callers only - internal should use $self->_subsequence_cache*->get() for now
 sub get_SubSeq {
     my ($self, $name) = @_;
 
@@ -2228,7 +2262,7 @@ sub _update_SubSeq_locus_level_errors {
     $self->Assembly->set_SubSeq_locus_level_errors;
     foreach my $sub_name ($self->_list_all_transcript_window_names) {
         my $transcript_window = $self->_get_transcript_window($sub_name) or next;
-        my $sub = $self->_subsequence_cache->get($sub_name) or next;
+        my $sub = $self->_subsequence_cache_x->get($sub_name) or next;
         $transcript_window->SubSeq->locus_level_errors($sub->locus_level_errors);
     }
 
@@ -2406,7 +2440,7 @@ sub list_selected_subseq_names {
 
 sub _list_selected_subseq_objs {
     my ($self) = @_;
-    return map { $self->_subsequence_cache->get($_) } $self->list_selected_subseq_names;
+    return map { $self->_subsequence_cache_x->get($_) } $self->list_selected_subseq_names;
 }
 
 sub _list_was_selected_subseq_names {
@@ -2833,7 +2867,7 @@ sub zircon_zmap_view_feature_details_xml {
 
 sub _feature_details_xml {
     my ($self, $name, $feature_hash) = @_;
-    my $subseq = $self->_subsequence_cache->get($name);
+    my $subseq = $self->_subsequence_cache_x->get($name);
     return $subseq->zmap_info_xml if $subseq;
     return if $feature_hash->{'subfeature'};
     my @feature_details_xml = (
@@ -2874,8 +2908,8 @@ sub _feature_evidence_xml {
         $feat_name =~ /\A[[:alnum:]]{2}:/;
 
     my $subseq_list = [];
-    foreach my $name ($self->_subsequence_cache->names) {
-        if (my $subseq = $self->_subsequence_cache->get($name)) {
+    foreach my $name ($self->_subsequence_cache_x->names) {
+        if (my $subseq = $self->_subsequence_cache_x->get($name)) {
             push(@$subseq_list, $subseq);
         }
     }
