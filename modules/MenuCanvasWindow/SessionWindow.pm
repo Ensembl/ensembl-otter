@@ -7,7 +7,7 @@ use warnings;
 no if $] >= 5.018, warnings => "experimental::smartmatch";
 use feature 'switch';
 
-use Carp;
+use Carp qw(longmess);
 use Scalar::Util 'weaken';
 
 use Try::Tiny;
@@ -234,17 +234,37 @@ sub get_default_mutable_GeneMethod {
 
 sub _locus_cache {
     my ($self) = @_;
-    $self->{'_locus_cache'} //= Bio::Otter::Utils::CacheByName->new;
-    return $self->{'_locus_cache'};
+    return $self->_locus_cache_acedb  if $self->_master_db_is_acedb;
+    return $self->_locus_cache_sqlite if $self->_master_db_is_sqlite;
+    return $self->_confess_bad_master_db;
+}
+
+sub _locus_cache_x {
+    my ($self) = @_;
+    $self->logger->warn(longmess('_locus_cache_x() call: needs review!'));
+    return $self->_locus_cache;
+}
+
+sub _locus_cache_acedb {
+    my ($self) = @_;
+    $self->{'_locus_cache_acedb'} //= Bio::Otter::Utils::CacheByName->new;
+    return $self->{'_locus_cache_acedb'};
+}
+
+sub _locus_cache_sqlite {
+    my ($self) = @_;
+    $self->{'_locus_cache_sqlite'} //= Bio::Otter::Utils::CacheByName->new;
+    return $self->{'_locus_cache_sqlite'};
 }
 
 sub _empty_Locus_cache {
     my ($self) = @_;
-    $self->{'_locus_cache'} = undef;
+    $self->{'_locus_cache_acedb'}  = undef;
+    $self->{'_locus_cache_sqlite'} = undef;
     return;
 }
 
-# For external callers only - internal should use $self->_locus_cache->get() for now
+# For external callers only - internal should use $self->_locus_cache*->get() for now
 sub get_Locus_by_name {
     my ($self, $name) = @_;
     return $self->_locus_cache->get($name);
@@ -261,7 +281,7 @@ sub update_Locus {
 
     my $locus_name = $new_locus->name;
 
-    $self->_locus_cache->set($new_locus);
+    $self->_locus_cache_x->set($new_locus);
 
     foreach my $sub_name ($self->_subsequence_cache->names) {
         my $sub = $self->_subsequence_cache->get($sub_name) or next;
@@ -292,19 +312,19 @@ sub do_rename_locus {
             push @delete_xml, $sub->zmap_delete_xml_string($offset);
         }
 
-        if ($self->_locus_cache->get($new_name)) {
+        if ($self->_locus_cache_x->get($new_name)) {
             $self->message("Cannot rename to '$new_name'; Locus already exists");
             return 0;
         }
 
-        my $locus = $self->_locus_cache->delete($old_name);
+        my $locus = $self->_locus_cache_x->delete($old_name);
         if (!$locus) {
             $self->message("Cannot find locus called '$old_name'");
             return 0;
         }
 
         $locus->name($new_name);
-        $self->_locus_cache->set($locus);
+        $self->_locus_cache_x->set($locus);
         $done{'int'} = 1;
 
         my $ace = qq{\n-R Locus "$old_name" "$new_name"\n};
@@ -871,7 +891,7 @@ sub _paste_locus {
     $dup_locus->set_annotation_in_progress;
     # return either the locus we already have with the same name, or
     # put $dup_locus in the cache and use that
-    return $self->_locus_cache->get_or_this($dup_locus);
+    return $self->_locus_cache_x->get_or_this($dup_locus);
 }
 
 
@@ -1392,7 +1412,7 @@ sub _edit_new_subsequence {
 
     my $prefix = $self->_default_locus_prefix;
     my $loc_name = $prefix ? "$prefix:$region_name.$max" : "$region_name.$max";
-    my $locus = $self->_locus_cache->get_or_new($loc_name, $locus_constructor);
+    my $locus = $self->_locus_cache_x->get_or_new($loc_name, $locus_constructor);
     $locus->gene_type_prefix($prefix);
 
     my $seq_name = "$loc_name-001";
@@ -1946,7 +1966,7 @@ sub _set_SubSeqs_from_assembly {
         # Ignore loci from non-editable SubSeqs
         next unless $sub->is_mutable;
         if (my $s_loc = $sub->Locus) {
-            my $locus = $self->_locus_cache->get_or_this($s_loc);
+            my $locus = $self->_locus_cache_x->get_or_this($s_loc);
             $sub->Locus($locus);
         }
     }
@@ -2121,9 +2141,9 @@ sub replace_SubSeq {
         my $locus = $new->Locus;
         if (my $prev_name = $locus->drop_previous_name) {
             $self->logger->info("Unsetting otter_id for locus '$prev_name'");
-            $self->_locus_cache->get($prev_name)->drop_otter_id;
+            $self->_locus_cache_x->get($prev_name)->drop_otter_id;
         }
-        $self->_locus_cache->set($locus);
+        $self->_locus_cache_x->set($locus);
     }
 
     if ($done_zmap) {
