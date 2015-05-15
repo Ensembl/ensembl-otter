@@ -21,32 +21,6 @@ use parent qw( Bio::Otter::Log::WithContextMixin );
 
 Readonly my $BATCH_SIZE => 500;
 
-{
-    ### Should add this to otter_config
-    ### or parse it from the ZMap styles
-    my %evidence_type = (
-        vertebrate_mRNA  => 'cDNA',
-        vertebrate_ncRNA => 'ncRNA',
-        BLASTX           => 'Protein',
-        SwissProt        => 'Protein',
-        TrEMBL           => 'Protein',
-        OTF_ncRNA        => 'ncRNA',
-        OTF_EST          => 'EST',
-        OTF_mRNA         => 'cDNA',
-        OTF_Protein      => 'Protein',
-        SwissProt_old    => 'Protein', # tmp RT#370164 RT#359109
-        TrEMBL_old       => 'Protein',
-    );
-
-    # Some GFFs have other fields (feat_type=protein_match,
-    # DB_Name=TrEMBL, Class=Protein) which should be indicative.
-    sub __source2type {
-        my ($source) = @_;
-        return 'EST' if substr($source, 0, 4) eq 'EST_';
-        return $evidence_type{$source};
-    }
-}
-
 sub new {
     my ($pkg, %args) = @_;
 
@@ -112,15 +86,9 @@ sub _store_hit_data_from_gff {
         my ($seq_name, $source, $feat_type, $start, $end, $score, $strand, $frame, $attrib)
             = parse_gff_line($_);
         next unless $attrib->{'Name'};
-        my $evi_type = __source2type($source);
-        if (!$evi_type) {
-            $fail{$source} ||= "Cannot convert source=$source to an evidence type:$.:$_";
-            next;
-        }
         $batch{$attrib->{'Name'}} = {
             acc_sv          => $attrib->{'Name'},
             taxon_id        => $attrib->{'taxon_id'},
-            evi_type        => $evi_type,
             description     => $attrib->{'description'},
             source          => $attrib->{'db_name'},
             sequence_length => $attrib->{'length'},
