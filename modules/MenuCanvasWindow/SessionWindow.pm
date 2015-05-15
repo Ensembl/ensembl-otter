@@ -1947,8 +1947,8 @@ sub _Assembly_acedb {
 
         $self->{'_assembly_acedb'} = $assembly;
 
-        $self->_set_SubSeqs_from_assembly;
-        $self->_set_known_GeneMethods;
+        $self->_set_SubSeqs_from_assembly_acedb;
+        $self->_set_known_GeneMethods if $self->_master_db_is_acedb;
 
         my $after  = time();
         $self->logger->info(
@@ -1959,16 +1959,16 @@ sub _Assembly_acedb {
     return $self->{'_assembly_acedb'};
 }
 
-sub _set_SubSeqs_from_assembly {
+sub _set_SubSeqs_from_assembly_acedb {
     my ($self) = @_;
 
-    foreach my $sub ($self->Assembly->get_all_SubSeqs) {
-        $self->_add_SubSeq_x($sub);
+    foreach my $sub ($self->_Assembly_acedb->get_all_SubSeqs) {
+        $self->_add_SubSeq_acedb($sub);
 
         # Ignore loci from non-editable SubSeqs
         next unless $sub->is_mutable;
         if (my $s_loc = $sub->Locus) {
-            my $locus = $self->_locus_cache_x->get_or_this($s_loc);
+            my $locus = $self->_locus_cache_acedb->get_or_this($s_loc);
             $sub->Locus($locus);
         }
     }
@@ -2012,14 +2012,30 @@ sub _Assembly_sqlite {
 
         $self->{'_assembly_sqlite'} = $assembly;
 
-        # Do here once this takes over from AceDB version:
-        # $self->_set_SubSeqs_from_assembly;
-        # $self->_set_known_GeneMethods;
+        $self->_set_SubSeqs_from_assembly_sqlite;
+        $self->_set_known_GeneMethods if $self->_master_db_is_sqlite;
 
         my $after  = time();
         $self->logger->info(sprintf("SQLite fetch for '%s' took %d second(s)\n", $slice_name, $after - $before));
     }
     return $self->{'_assembly_sqlite'};
+}
+
+sub _set_SubSeqs_from_assembly_sqlite {
+    my ($self) = @_;
+
+    foreach my $sub ($self->_Assembly_sqlite->get_all_SubSeqs) {
+        $self->_add_SubSeq_sqlite($sub);
+
+        # Ignore loci from non-editable SubSeqs
+        next unless $sub->is_mutable;
+        if (my $s_loc = $sub->Locus) {
+            my $locus = $self->_locus_cache_sqlite->get_or_this($s_loc);
+            $sub->Locus($locus);
+        }
+    }
+
+    return;
 }
 
 
@@ -2199,11 +2215,26 @@ sub _empty_SubSeq_cache {
 
 sub _add_SubSeq {
     my ($self, $sub) = @_;
-    return $self->_subsequence_cache->set($sub,
-                                          sub {
-                                              my $name = $sub->name;
-                                              $self->logger->logconfess("already have SubSeq '$name'");
-                                          });
+    return $self->_do_add_SubSeq($sub, $self->_subsequence_cache);
+}
+
+sub _add_SubSeq_acedb {
+    my ($self, $sub) = @_;
+    return $self->_do_add_SubSeq($sub, $self->_subsequence_cache_acedb);
+}
+
+sub _add_SubSeq_sqlite {
+    my ($self, $sub) = @_;
+    return $self->_do_add_SubSeq($sub, $self->_subsequence_cache_sqlite);
+}
+
+sub _do_add_SubSeq {
+    my ($self, $sub, $cache) = @_;
+    return $cache->set($sub,
+                       sub {
+                           my $name = $sub->name;
+                           $self->logger->logconfess("already have SubSeq '$name'");
+                       });
 }
 
 sub _add_SubSeq_x {
