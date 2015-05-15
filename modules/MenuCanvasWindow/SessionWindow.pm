@@ -1557,6 +1557,7 @@ sub _add_SubSeq_and_paste_evidence {
     return;
 }
 
+# These only need go in the master db
 sub _add_external_SubSeqs {
     my ($self, @ext_subs) = @_;
 
@@ -1564,7 +1565,7 @@ sub _add_external_SubSeqs {
     my $asm = $self->Assembly;
     my $dna = $asm->Sequence;
     foreach my $sub (@ext_subs) {
-        if (my $ext = $self->_subsequence_cache_x->get($sub->name)) {
+        if (my $ext = $self->_subsequence_cache->get($sub->name)) {
             if ($ext->GeneMethod->name eq $sub->GeneMethod->name) {
                 # Looks zmap has been restarted, which has
                 # triggered a reload of this data.
@@ -1578,7 +1579,7 @@ sub _add_external_SubSeqs {
         }
         $sub->clone_Sequence($dna);
         $asm->add_SubSeq($sub);
-        $self->_add_SubSeq_x($sub);
+        $self->_add_SubSeq($sub);
     }
 
     return;
