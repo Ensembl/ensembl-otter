@@ -307,7 +307,9 @@ sub generate_blixem_data_type_config {
     my $dt_config = $config->{'source-data-types'} = {};
     foreach my $filter (@{$self->filters}) {
         if (my $blx_dt = $filter->blixem_data_type) {
-            $dt_config->{$filter->name} = $blx_dt;
+            foreach my $fs (@{$filter->featuresets}) {
+                $dt_config->{$fs} = $blx_dt;
+            }
         }
     }
 
