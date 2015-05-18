@@ -249,7 +249,11 @@ sub _features_gff {
     foreach my $key ($self->_gff_keys) {
         $gff_args{$key} = $self->param($key);
     }
-    $gff_args{'accession_info'} = $accesion_info;
+    if ($accesion_info) {
+        $gff_args{'accession_info'} = $accesion_info;
+        $gff_args{'zmap_style_root'} = $self->param('zmap_style_root');
+    }
+    
     my $gff_version = $self->param('gff_version');
     $gff_args{'gff_format'} = Bio::Vega::Utils::GFF::gff_format($gff_version);
 
