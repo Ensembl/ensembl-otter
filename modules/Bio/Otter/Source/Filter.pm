@@ -62,6 +62,7 @@ my @server_params = (
     # Alignment
     qw(
     sequence_db
+    zmap_style_root
     ),
 
     # file_get
@@ -270,6 +271,12 @@ sub sequence_db {
     my ($self, $sequence_db) = @_;
     $self->{_sequence_db} = $sequence_db if $sequence_db;
     return $self->{_sequence_db};
+}
+
+sub zmap_style_root {
+    my ($self, $zmap_style_root) = @_;
+    $self->{_zmap_style_root} = $zmap_style_root if $zmap_style_root;
+    return $self->{_zmap_style_root};
 }
 
 sub file_path {

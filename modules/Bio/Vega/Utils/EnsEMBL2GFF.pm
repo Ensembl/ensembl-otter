@@ -149,10 +149,21 @@ my $_new_feature_id_sub = sub {
 
         $gff->{'score'} = $self->score;
         my $name = $self->hseqname;
+        if (my $inf = $args{'accession_info'}{$name}) {
+            # Names which are accessions missing .SV will magically get .SV added
+            $name = $inf->{'acc_sv'};
+            if (my $style_root = $args{'zmap_style_root'}) {
+                $gff->{'source'} = $style_root . $inf->{'source'};
+            }
+        }
         $gff->{'attributes'}{'Name'} = $name;
         my $target = [ $name, $self->hstart, $self->hend, $self->hstrand ];
         $gff->{'attributes'}{'Target'}    = $target;
         $gff->{'attributes'}{'percentID'} = $self->percent_id;
+
+        if (my $root = $args{'zmap_style_root'}) {
+            my $gff->{'source'} = $root . $gff->{'sorurce'};
+        }
 
         return $gff;
     }
