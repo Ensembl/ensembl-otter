@@ -837,7 +837,7 @@ sub parse_hgnc {
           $record =~ s/^\s+|\s+$//g; #whitespace
           if (my ($prefix) = $record =~ /^([A-Z]{2})_/) {
             if (my $type = $refseq_dbs{$prefix}) {
-              push @{$xrefs->{$gene_name}->{$type}}, $record .'||'. $record;
+              push @{$xrefs->{$gene_name}->{$type}[0]}, $record .'||'. $record;
             }
             elsif (! $report_once{$prefix}) {
               $report_once{$prefix}++;

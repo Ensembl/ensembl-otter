@@ -69,7 +69,7 @@ use Bio::Otter::Lace::PipelineDB;
         else {
             $get_db->execute($name);
             if (my ($db) = $get_db->fetchrow) {
-                if ($db eq 'Swissprot') {
+                if ($db eq 'SwissProt') {
                     $prefix = 'Sw';
                 }
                 elsif ($db eq 'TrEMBL') {

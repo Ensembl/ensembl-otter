@@ -77,7 +77,7 @@ sub name {
 
 my %db2prefix = (
 	EMBL        => 'Em:',
-	Swissprot   => 'Sw:',
+	SwissProt   => 'Sw:',
 	TrEMBL      => 'Tr:',
 );
 
@@ -89,7 +89,7 @@ sub prefixed_name {
 
 my %db2unit = (
     EMBL        => 1,
-    Swissprot   => 3,
+    SwissProt   => 3,
     TrEMBL      => 3,
 );
 
