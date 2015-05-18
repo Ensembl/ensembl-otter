@@ -140,12 +140,6 @@ sub populate {
         my ($self, $entry) = @_;
 
         my $sth = $save_acc_info_sth{$self} ||= $DB{$self}->dbh->prepare($save_acc_info_sql);
-        if (!defined $entry->{evi_type}) {
-            my $acc = $entry->{acc_sv};
-            # we used to confess, but that overstuffs the error dbox
-            cluck "Cannot save '$acc' without evi_type";
-            die "Cannot use '$acc' because it has no evi_type\n";
-        }
 
         return $sth->execute(
             @$entry{qw(acc_sv taxon_id evi_type description source currency sequence_length sequence)}
