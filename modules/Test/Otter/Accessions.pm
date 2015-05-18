@@ -78,16 +78,16 @@ AL577183.3      AL577183.3      emblrelease     EST             EMBL            
 AL577183        AL577183.3      emblrelease     EST             EMBL            current
 
 # SwissProt
-Q6ZTW0.2        Q6ZTW0.2        uniprot         Protein         Swissprot       current         d613b255d2ff717b4848f2451400c529d12cd358
-Q13477-2.2      Q13477-2.2      uniprot_archive Protein         Swissprot       current
-Q14031.3        Q14031.3        uniprot         Protein         Swissprot       current
-P51124.2        P51124.2        uniprot         Protein         Swissprot       current
-Q8IN94.1        Q8IN94.1        uniprot         Protein         Swissprot       current
-P35613.2        P35613.2        uniprot         Protein         Swissprot       current
-A6NC57-2.3      A6NC57-2.3      uniprot_archive Protein         Swissprot       archived
-Q5JPF3-2        Q5JPF3-2.3      uniprot_archive Protein         Swissprot       current
-Q5JPF3-2.3      Q5JPF3-2.3      uniprot_archive Protein         Swissprot       current
-Q5JPF3-2.2      Q5JPF3-2.2      uniprot_archive Protein         Swissprot       archived
+Q6ZTW0.2        Q6ZTW0.2        uniprot         Protein         SwissProt       current         d613b255d2ff717b4848f2451400c529d12cd358
+Q13477-2.2      Q13477-2.2      uniprot_archive Protein         SwissProt       current
+Q14031.3        Q14031.3        uniprot         Protein         SwissProt       current
+P51124.2        P51124.2        uniprot         Protein         SwissProt       current
+Q8IN94.1        Q8IN94.1        uniprot         Protein         SwissProt       current
+P35613.2        P35613.2        uniprot         Protein         SwissProt       current
+A6NC57-2.3      A6NC57-2.3      uniprot_archive Protein         SwissProt       archived
+Q5JPF3-2        Q5JPF3-2.3      uniprot_archive Protein         SwissProt       current
+Q5JPF3-2.3      Q5JPF3-2.3      uniprot_archive Protein         SwissProt       current
+Q5JPF3-2.2      Q5JPF3-2.2      uniprot_archive Protein         SwissProt       archived
 
 # TrEMBL
 B0PJS9.1        B0PJS9.1        uniprot_archive Protein         TrEMBL          archived

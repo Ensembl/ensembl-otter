@@ -39,9 +39,9 @@ Readonly my @DEFAULT_DB_CATEGORIES => qw(
 );
 
 Readonly my %CLASS_TO_SOURCE => (
-    STD => 'Swissprot',
+    STD => 'SwissProt',
     PRE => 'TrEMBL',
-    ISO => 'Swissprot',  # we don't think TrEMBL can have isoforms
+    ISO => 'SwissProt',  # we don't think TrEMBL can have isoforms
     );
 
 Readonly my %DEFAULT_OPTIONS => (

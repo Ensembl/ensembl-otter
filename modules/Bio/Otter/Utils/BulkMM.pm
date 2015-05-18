@@ -43,9 +43,9 @@ Readonly my %DB_NAME_TO_SOURCE => (
     );
 
 Readonly my %CLASS_TO_SOURCE => (
-    STD => 'Swissprot',
+    STD => 'SwissProt',
     PRE => 'TrEMBL',
-    ISO => 'Swissprot',  # we don't think TrEMBL can have isoforms
+    ISO => 'SwissProt',  # we don't think TrEMBL can have isoforms
     );
 
 Readonly my %DEFAULT_OPTIONS => (
@@ -293,6 +293,7 @@ sub get_accession_info {
     return $self->_get_accessions_managed(
         acc_list      => $accs,
         db_categories => $self->db_categories,
+        sv_search     => 1,
         );
 }
 
@@ -428,39 +429,32 @@ sub _classify_result {
     my ($self, $db_name, $row) = @_;
 
     my ($name, $type, $class) = @$row{qw(name molecule_type data_class)};
-
-  SWITCH: {
-
-      if ($class eq 'EST') {
-          $row->{evi_type} = 'EST';
-          $row->{source}   = $DB_NAME_TO_SOURCE{$db_name};
-          last SWITCH;
-      }
-      if ($type eq 'mRNA') {
-          # Here we return cDNA, which is more technically correct since
-          # both ESTs and cDNAs are mRNAs.
-          $row->{evi_type} = 'cDNA';
-          $row->{source}   = $DB_NAME_TO_SOURCE{$db_name};
-          last SWITCH;
-      }
-      if ($type eq 'protein') {
-          my $source = $CLASS_TO_SOURCE{$class};
-          die "Unexpected data class for uniprot entry: $class" unless $source;
-
-          $row->{evi_type} = 'Protein';
-          $row->{source}   = $source;
-          last SWITCH;
-      }
-      if ($type eq 'other RNA' or $type eq 'transcribed RNA') {
-          $row->{evi_type} = 'ncRNA';
-          $row->{source}   = $DB_NAME_TO_SOURCE{$db_name};
-          last SWITCH;
-      }
-
-      warn "Cannot classify '$name': type '$type', class '$class'\n";
-      return ();
-
-  } # SWITCH
+    if ($type eq 'protein') {
+        $row->{source} = $CLASS_TO_SOURCE{$class}
+            || die "Unexpected data class for uniprot entry: '$class'";
+        $row->{evi_type} = 'Protein';
+    }
+    else {
+        my $source = $row->{source} = $DB_NAME_TO_SOURCE{$db_name};
+        if ($source eq 'EMBL') {
+            # Only EMBL nucleotide entires get evi_type - enables use as supporting evidence
+            if ($class eq 'EST') {
+                $row->{evi_type} = 'EST';
+            }
+            elsif ($type eq 'mRNA') {
+                # Here we return cDNA, which is more technically correct since
+                # both ESTs and cDNAs are mRNAs.
+                $row->{evi_type} = 'cDNA';
+            }
+            elsif ($type eq 'other RNA' or $type eq 'transcribed RNA') {
+                $row->{evi_type} = 'ncRNA';
+            }
+        }
+    }
+    unless ($row->{source}) {
+        warn "Cannot classify '$name': molecule_type = '$type', data_class = '$class'\n";
+        return;
+    }
 
     return $row;
 }
