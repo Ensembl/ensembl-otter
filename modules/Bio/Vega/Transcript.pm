@@ -4,7 +4,7 @@ use strict;
 use warnings;
 use Bio::EnsEMBL::Utils::Argument qw ( rearrange );
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
-use Bio::Vega::Utils::Attributes;
+use Bio::Vega::Utils::AttributesMixin;
 use Bio::Vega::Evidence;
 use Bio::Vega::Translation;
 
@@ -217,7 +217,7 @@ sub vega_hashkey {
   my $exon_count = scalar @{$self->get_all_Exons}
       || throw("there are no exons for this transcript to generate correct vega_hashkey");
   my $description = $self->{'description'} ? $self->{'description'}: '' ;
-  my $attrib_string = $self->Bio::Vega::Utils::Attributes::all_Attributes_string;
+  my $attrib_string = $self->Bio::Vega::Utils::AttributesMixin::all_Attributes_string;
 
   my $evidence_count = scalar(@{$self->evidence_list});
 
