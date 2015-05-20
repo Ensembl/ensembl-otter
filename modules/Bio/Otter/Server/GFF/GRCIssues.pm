@@ -6,9 +6,9 @@ use warnings;
 
 use base qw( Bio::Otter::Server::GFF Bio::Otter::Server::GFF::Utils );
 
-use Bio::EnsEMBL::Attribute;
 use Bio::EnsEMBL::MiscFeature;
-use Bio::Vega::Utils::Detaint qw( detaint_url_fmt );
+use Bio::Vega::Utils::Attribute qw( make_EnsEMBL_Attribute );
+use Bio::Vega::Utils::Detaint   qw( detaint_url_fmt );
 
 sub Bio::EnsEMBL::Slice::get_all_GRC_issues {
     my ($slice, $server, $sth, $chr_name) = @_;
@@ -42,12 +42,12 @@ sub Bio::EnsEMBL::Slice::get_all_GRC_issues {
 
         my $name = $issue->{jira_id};
         my $note = sprintf '%s: %s (%s)', @{$issue}{ qw( category description status ) };
-        $fp->add_Attribute(_make_attrib('name', $name));
-        $fp->add_Attribute(_make_attrib('note', $note));
+        $fp->add_Attribute(make_EnsEMBL_Attribute('name', $name));
+        $fp->add_Attribute(make_EnsEMBL_Attribute('note', $note));
 
         if ($url_base) {
             my $url = sprintf("$url_base", $name);
-            $fp->add_Attribute(_make_attrib('url', $url));
+            $fp->add_Attribute(make_EnsEMBL_Attribute('url', $url));
         }
 
         push @feature_coll, $fp;
@@ -56,15 +56,6 @@ sub Bio::EnsEMBL::Slice::get_all_GRC_issues {
     warn "got $rows issue features\n";
 
     return \@feature_coll;
-}
-
-# Not a method!
-sub _make_attrib {
-    my ($code, $value) = @_;
-    return Bio::EnsEMBL::Attribute->new(
-        -CODE  => $code,
-        -VALUE => $value,
-        );
 }
 
 sub get_requested_features {

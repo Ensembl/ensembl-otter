@@ -11,7 +11,6 @@ use Hum::Ace::AceText;
 use Hum::Sort qw{ ace_sort };
 
 use Bio::EnsEMBL::SimpleFeature;
-use Bio::EnsEMBL::Attribute;
 use Bio::EnsEMBL::Analysis;
 
 use Bio::Vega::Gene;
@@ -19,6 +18,8 @@ use Bio::Vega::Transcript;
 use Bio::Vega::Translation;
 use Bio::Vega::Exon;
 use Bio::Vega::ContigInfo;
+use Bio::Vega::Utils::Attribute qw( add_EnsEMBL_Attributes );
+
 use Bio::Otter::Lace::CloneSequence;
 
 use Bio::Vega::Utils::GeneTranscriptBiotypeStatus 'method2biotype_status';
@@ -304,26 +305,26 @@ sub build_CloneSequence {
 
         my $ci = $cs->ContigInfo;
         if (my $desc = $ace->get_single_value('EMBL_dump_info.DE_line')) {
-            $self->create_Attribute($ci, 'description', $desc);
+            add_EnsEMBL_Attributes($ci, 'description', $desc);
         }
         foreach my $ann ($ace->get_values('Annotation_remark')) {
             if ($ann->[0] eq 'annotated') {
-                $self->create_Attribute($ci, 'annotated', 'T');
+                add_EnsEMBL_Attributes($ci, 'annotated', 'T');
             } else {
-                $self->create_Attribute($ci, 'hidden_remark', $ann->[0]);
+                add_EnsEMBL_Attributes($ci, 'hidden_remark', $ann->[0]);
             }
         }
         if (my $clone = $ace->get_single_value('Clone')) {
-            $self->create_Attribute($ci, 'intl_clone_name', $clone);
+            add_EnsEMBL_Attributes($ci, 'intl_clone_name', $clone);
         }
         if (my $acc = $ace->get_single_value('Accession')) {
-            $self->create_Attribute($ci, 'embl_acc', $acc);
+            add_EnsEMBL_Attributes($ci, 'embl_acc', $acc);
         }
         if (my $sv = $ace->get_single_value('Sequence_version')) {
-            $self->create_Attribute($ci, 'embl_version', $sv);
+            add_EnsEMBL_Attributes($ci, 'embl_version', $sv);
         }
         foreach my $kw ($ace->get_values('Keyword')) {
-            $self->create_Attribute($ci, 'keyword', $kw->[0]);
+            add_EnsEMBL_Attributes($ci, 'keyword', $kw->[0]);
         }
     }
 
@@ -350,7 +351,7 @@ sub build_Gene {
         -DESCRIPTION    => $desc,
         -SOURCE         => $source,
         );
-    $self->create_Attribute($gene, 'name', $name);
+    add_EnsEMBL_Attributes($gene, 'name', $name);
 
     $gene->truncated_flag(1) if $ace->count_tag('Truncated');
     $gene->status('KNOWN')   if $ace->count_tag('Known');
@@ -358,7 +359,7 @@ sub build_Gene {
     $gene->set_biotype_status_from_transcripts;
 
     foreach my $av ($ace->get_values('Alias')) {
-        $self->create_Attribute($gene, 'synonym', $av->[0]);
+        add_EnsEMBL_Attributes($gene, 'synonym', $av->[0]);
     }
     $self->add_remarks($ace, $gene);
 
@@ -411,7 +412,7 @@ sub build_Transcript {
         -BIOTYPE        => $biotype,
         -STATUS         => $status,
         );
-    $self->create_Attribute($tsct, 'name', $name);
+    add_EnsEMBL_Attributes($tsct, 'name', $name);
 
     $self->set_exon_phases_translation_cds_start_end($ace, $tsct);
 
@@ -467,10 +468,10 @@ sub add_remarks {
     my ($self, $ace, $obj) = @_;
 
     foreach my $value ($ace->get_values('Remark')) {
-        $self->create_Attribute($obj, 'remark', $value->[0]);
+        add_EnsEMBL_Attributes($obj, 'remark', $value->[0]);
     }
     foreach my $value ($ace->get_values('Annotation_remark')) {
-        $self->create_Attribute($obj, 'hidden_remark', $value->[0]);
+        add_EnsEMBL_Attributes($obj, 'hidden_remark', $value->[0]);
     }
 
     return;
@@ -508,9 +509,9 @@ sub set_exon_phases_translation_cds_start_end {
             $exon->phase(-1);
             $exon->end_phase(-1);
         }
-        $self->create_Attribute($tsct, 'mRNA_start_NF', 1)
+        add_EnsEMBL_Attributes($tsct, 'mRNA_start_NF', 1)
             if $ace->count_tag('Start_not_found');
-        $self->create_Attribute($tsct, 'mRNA_end_NF', 1)
+        add_EnsEMBL_Attributes($tsct, 'mRNA_end_NF', 1)
             if $ace->count_tag('End_not_found');
         return;
     }
@@ -536,11 +537,11 @@ sub set_exon_phases_translation_cds_start_end {
         } else {
             confess "Error in transcript '$name'; bad value for Start_not_found '$start_phase'\n";
         }
-        $self->create_Attribute($tsct, 'cds_start_NF', 1);
-        $self->create_Attribute($tsct, 'mRNA_start_NF', 1);
+        add_EnsEMBL_Attributes($tsct, 'cds_start_NF', 1);
+        add_EnsEMBL_Attributes($tsct, 'mRNA_start_NF', 1);
     }
     elsif ($ace->count_tag('Start_not_found')) {
-        $self->create_Attribute($tsct, 'mRNA_start_NF', 1);
+        add_EnsEMBL_Attributes($tsct, 'mRNA_start_NF', 1);
     }
     $start_phase = 0 unless defined $start_phase;
 
@@ -617,27 +618,12 @@ sub set_exon_phases_translation_cds_start_end {
         unless $found_cds;
 
     if ($ace->count_tag('End_not_found')) {
-        $self->create_Attribute($tsct, 'mRNA_end_NF', 1);
+        add_EnsEMBL_Attributes($tsct, 'mRNA_end_NF', 1);
         if ($exon_list->[-1]->end_phase != -1) {
             # End of last exon is coding
-            $self->create_Attribute($tsct, 'cds_end_NF', 1);
+            add_EnsEMBL_Attributes($tsct, 'cds_end_NF', 1);
         }
     }
-
-    return;
-}
-
-sub create_Attribute {
-    my ($self, $obj, $code, $value) = @_;
-
-    confess "No object passed" unless $obj;
-
-    $obj->add_Attributes(
-        Bio::EnsEMBL::Attribute->new(
-            -CODE   => $code,
-            -VALUE  => $value,
-        )
-    );
 
     return;
 }
