@@ -12,6 +12,7 @@ use Test::CriticModule;
 BEGIN {
     __PACKAGE__->mk_classdata('class');
     __PACKAGE__->mk_classdata('run_all');
+    __PACKAGE__->mk_classdata('use_imports');
 }
 
 {
@@ -78,7 +79,7 @@ sub startup : Test(startup => 1) {
     return 'abstract base class' if $test->is_abstract;
 
     my $class = $test->_set_class;
-    use_ok $class or die;
+    use_ok($class, @{$test->use_imports // []}) or die;
 
     return;
 }
