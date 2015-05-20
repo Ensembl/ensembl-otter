@@ -13,7 +13,7 @@ use Bio::Vega::Transcript;
 
 my $vua_module;
 BEGIN {
-    $vua_module = 'Bio::Vega::Utils::Attributes';
+    $vua_module = 'Bio::Vega::Utils::AttributesMixin';
     use_ok($vua_module);
 }
 critic_module_ok($vua_module);
@@ -27,17 +27,17 @@ my $bool_true  = Bio::EnsEMBL::Attribute->new(-code => 'cds_start_NF', -value =>
 
 my $ts1 = Bio::Vega::Transcript->new;
 $ts1->add_Attributes($non_bool_a, $bool_false, $non_bool_c);
-my $ts1_attrs = $ts1->Bio::Vega::Utils::Attributes::all_Attributes_string();
+my $ts1_attrs = $ts1->Bio::Vega::Utils::AttributesMixin::all_Attributes_string();
 is($ts1_attrs, "fruit=Apple-remark=$winterson", 'Transcript, false bool attr');
 
 my $ts2 = Bio::Vega::Transcript->new;
 $ts2->add_Attributes($non_bool_b, $non_bool_c, $bool_true);
-my $ts2_attrs = $ts2->Bio::Vega::Utils::Attributes::all_Attributes_string();
+my $ts2_attrs = $ts2->Bio::Vega::Utils::AttributesMixin::all_Attributes_string();
 is($ts2_attrs, "cds_start_NF=1-fruit=Banana-remark=$winterson", 'Transcript, true bool attr');
 
 my $g = Bio::Vega::Gene->new;
 $g->add_Attributes($non_bool_a, $non_bool_c);
-my $g_attrs = $g->Bio::Vega::Utils::Attributes::all_Attributes_string();
+my $g_attrs = $g->Bio::Vega::Utils::AttributesMixin::all_Attributes_string();
 is($g_attrs, "fruit=Apple-remark=$winterson", 'Gene');
 
 done_testing;

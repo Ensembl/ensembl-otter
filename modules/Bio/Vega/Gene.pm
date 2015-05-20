@@ -4,7 +4,7 @@ use strict;
 use warnings;
 use Bio::EnsEMBL::Utils::Argument qw ( rearrange );
 use Bio::EnsEMBL::Utils::Exception qw ( throw warning );
-use Bio::Vega::Utils::Attributes;
+use Bio::Vega::Utils::AttributesMixin;
 use base 'Bio::EnsEMBL::Gene';
 
 
@@ -100,7 +100,7 @@ sub vega_hashkey {
         || throw("there are no transcripts for this gene to generate correct vega_hashkey");
 
     my $description = $self->description || '';
-    my $attrib_string = $self->Bio::Vega::Utils::Attributes::all_Attributes_string;
+    my $attrib_string = $self->Bio::Vega::Utils::AttributesMixin::all_Attributes_string;
 
     return join '-'
         , $seq_region_name, $start, $end, $strand

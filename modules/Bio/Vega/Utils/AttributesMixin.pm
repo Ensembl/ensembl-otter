@@ -1,11 +1,11 @@
-package Bio::Vega::Utils::Attributes;
+package Bio::Vega::Utils::AttributesMixin;
 
 use strict;
 use warnings;
 
 =head1 NAME
 
-Bio::Vega::Utils::Attributes
+Bio::Vega::Utils::AttributesMixin
 
 =head1 DESCRIPTION
 
