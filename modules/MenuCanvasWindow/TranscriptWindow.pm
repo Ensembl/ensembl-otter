@@ -19,11 +19,11 @@ use Tk::Utils::Dotter;
 use Hum::Ace::Locus;
 use Hum::Ace::Exon;
 
-use Bio::EnsEMBL::Attribute;
 use Bio::EnsEMBL::Analysis;
 use Bio::Vega::Author;
 use Bio::Vega::Exon;
 use Bio::Vega::Transcript;
+use Bio::Vega::Utils::Attribute qw( add_EnsEMBL_Attributes );
 
 use Bio::Otter::Utils::DotterLauncher;
 use CanvasWindow::EvidencePaster;
@@ -2769,7 +2769,7 @@ sub ensEMBL_Transcript_from_tk {
 
     my $ts = Bio::Vega::Transcript->new;
     $ts->strand($strand);
-    $self->_add_EnsEMBL_Attribute($ts, 'name', $self->_get_subseq_name);
+    add_EnsEMBL_Attributes($ts, 'name' => $self->_get_subseq_name);
 
     foreach my $pp ($self->_all_position_pair_text) {
         my $exon = Bio::Vega::Exon->new;
@@ -2783,21 +2783,6 @@ sub ensEMBL_Transcript_from_tk {
     }
 
     return $ts;
-}
-
-# FIXME: duplication with Bio::Vega::AceConverter->create_Attribute()
-#
-sub _add_EnsEMBL_Attribute {
-    my ($self, $e_obj, $code, $value) = @_;
-
-    $e_obj->add_Attributes(
-        Bio::EnsEMBL::Attribute->new(
-            -CODE   => $code,
-            -VALUE  => $value,
-        )
-    );
-
-    return;
 }
 
 sub store_Transcript {

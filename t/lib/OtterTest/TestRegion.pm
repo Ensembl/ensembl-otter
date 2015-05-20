@@ -18,6 +18,7 @@ use Readonly;
 use Bio::Otter::Server::Support::Local;
 use Bio::Vega::Gene;
 use Bio::Vega::Transform::XMLToRegion;
+use Bio::Vega::Utils::Attribute qw( make_EnsEMBL_Attribute );
 
 
 # FIXME: duplication with Test::OtterLaceOnTheFly
@@ -94,9 +95,9 @@ sub extra_gene {
     $gene->gene_author($author);
 
     my @gene_attributes;
-    push @gene_attributes, $bvt_otter->make_Attribute('name',    'ANACODE-TEST-GENE-2');
-    push @gene_attributes, $bvt_otter->make_Attribute('synonym', 'TEST-GENE-2-SYN-1');
-    push @gene_attributes, $bvt_otter->make_Attribute('synonym', 'TEST-GENE-2-SYN-2');
+    push @gene_attributes, make_EnsEMBL_Attribute('name',    'ANACODE-TEST-GENE-2');
+    push @gene_attributes, make_EnsEMBL_Attribute('synonym', 'TEST-GENE-2-SYN-1');
+    push @gene_attributes, make_EnsEMBL_Attribute('synonym', 'TEST-GENE-2-SYN-2');
     $gene->add_Attributes(@gene_attributes);
 
     my $transcript = Bio::Vega::Transcript->new(
@@ -109,8 +110,8 @@ sub extra_gene {
     $transcript->transcript_author($author);
 
     my @transcript_attributes;
-    push @transcript_attributes, $bvt_otter->make_Attribute('name',   'ANACODE-TEST-TRANSCRIPT-2');
-    push @transcript_attributes, $bvt_otter->make_Attribute('remark', 'TEST COPY 2 of novel protein (FLJ31934)');
+    push @transcript_attributes, make_EnsEMBL_Attribute('name',   'ANACODE-TEST-TRANSCRIPT-2');
+    push @transcript_attributes, make_EnsEMBL_Attribute('remark', 'TEST COPY 2 of novel protein (FLJ31934)');
     $transcript->add_Attributes(@transcript_attributes);
 
     my @exon_specs = (

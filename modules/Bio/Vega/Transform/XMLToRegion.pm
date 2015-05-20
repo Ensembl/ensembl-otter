@@ -17,11 +17,11 @@ use Bio::Vega::Translation;
 use Bio::EnsEMBL::SimpleFeature;
 use Bio::EnsEMBL::Analysis;
 use Bio::EnsEMBL::Slice;
-use Bio::EnsEMBL::Attribute;
 use Bio::EnsEMBL::DBEntry;
 use Bio::Vega::Author;
 use Bio::Vega::ContigInfo;
 use Bio::Vega::Evidence;
+use Bio::Vega::Utils::Attribute                   'make_EnsEMBL_Attribute';
 use Bio::Vega::Utils::GeneTranscriptBiotypeStatus 'method2biotype_status';
 use Bio::Otter::Lace::CloneSequence;
 
@@ -221,9 +221,9 @@ sub _build_clone_sequence {
     my $intl_clone_name = $data->{'clone_name'} || "$accession.$sv";
 
     my $cln_attrib_list = [
-        $self->make_Attribute('embl_acc', $accession),
-        $self->make_Attribute('embl_version', $sv),
-        $self->make_Attribute('intl_clone_name', $intl_clone_name),
+        make_EnsEMBL_Attribute('embl_acc', $accession),
+        make_EnsEMBL_Attribute('embl_version', $sv),
+        make_EnsEMBL_Attribute('intl_clone_name', $intl_clone_name),
         ];
 
     # make clone-info attributes from remark and keyword
@@ -231,23 +231,23 @@ sub _build_clone_sequence {
     foreach my $rem (@$remarks){
         my $cln_attrib;
         if ($rem =~ /EMBL_dump_info.DE_line-\s+(.+)/) {
-            $cln_attrib = $self->make_Attribute('description', $1);
+            $cln_attrib = make_EnsEMBL_Attribute('description', $1);
         } elsif ($rem =~ /Annotation_remark-\s+(.+)/) {
             $rem = $1;
             if ($rem =~ /annotated/){
-                $cln_attrib = $self->make_Attribute('annotated', 'T');
+                $cln_attrib = make_EnsEMBL_Attribute('annotated', 'T');
             } else {
-                $cln_attrib = $self->make_Attribute('hidden_remark', $rem);
+                $cln_attrib = make_EnsEMBL_Attribute('hidden_remark', $rem);
             }
         } else {
-            $cln_attrib = $self->make_Attribute('remark',  $rem);
+            $cln_attrib = make_EnsEMBL_Attribute('remark',  $rem);
         }
         push @$cln_attrib_list, $cln_attrib;
     }
 
     my $keywords = $data->{'keyword'};
     foreach my $keyword (@$keywords) {
-        my $cln_attrib = $self->make_Attribute('keyword', $keyword);
+        my $cln_attrib = make_EnsEMBL_Attribute('keyword', $keyword);
         push @$cln_attrib_list, $cln_attrib;
     }
 
@@ -494,19 +494,19 @@ sub _build_transcript_attributes
 
     my @transcript_attributes;
     if (my $mRNA_start_not_found = $data->{'mRNA_start_not_found'}) {
-        push @transcript_attributes, $self->make_Attribute('mRNA_start_NF', $mRNA_start_not_found);
+        push @transcript_attributes, make_EnsEMBL_Attribute('mRNA_start_NF', $mRNA_start_not_found);
     }
     if (my $mRNA_end_not_found = $data->{'mRNA_end_not_found'}) {
-        push @transcript_attributes, $self->make_Attribute('mRNA_end_NF', $mRNA_end_not_found);
+        push @transcript_attributes, make_EnsEMBL_Attribute('mRNA_end_NF', $mRNA_end_not_found);
     }
     if (my $cds_start_not_found = $data->{'cds_start_not_found'}) {
         if ($start_Exon_Pos != 1) {
             die "Transcript '$transcript_name' has CDS start not found set but has 5' UTR";
         }
-        push @transcript_attributes, $self->make_Attribute('cds_start_NF', $cds_start_not_found);
+        push @transcript_attributes, make_EnsEMBL_Attribute('cds_start_NF', $cds_start_not_found);
     }
     if (my $cds_end_not_found = $data->{'cds_end_not_found'}) {
-        push @transcript_attributes, $self->make_Attribute('cds_end_NF', $cds_end_not_found);
+        push @transcript_attributes, make_EnsEMBL_Attribute('cds_end_NF', $cds_end_not_found);
     }
 
     if(my $remarks=$data->{'remark'}) {
@@ -514,9 +514,9 @@ sub _build_transcript_attributes
             my $attrib;
             if($rem=~/Annotation_remark-\s+(.+)/) {
                 $rem=$1;
-                $attrib=$self->make_Attribute('hidden_remark', $rem);
+                $attrib=make_EnsEMBL_Attribute('hidden_remark', $rem);
             } else {
-                $attrib=$self->make_Attribute('remark', $rem);
+                $attrib=make_EnsEMBL_Attribute('remark', $rem);
             }
             push @transcript_attributes,$attrib;
         }
@@ -528,7 +528,7 @@ sub _build_transcript_attributes
         } else {
             $seen_transcript_name{$self}{$transcript_name} = 1;
         }
-        my $attrib=$self->make_Attribute('name', $transcript_name);
+        my $attrib=make_EnsEMBL_Attribute('name', $transcript_name);
         push @transcript_attributes,$attrib;
     }
 
@@ -641,13 +641,13 @@ sub _build_gene_attributes
         } else {
             $seen_gene_name{$self}{$gene_name} = 1;
         }
-        my $name_attrib=$self->make_Attribute('name', $gene_name);
+        my $name_attrib=make_EnsEMBL_Attribute('name', $gene_name);
         push @gene_attributes,$name_attrib;
     }
     my $gene_synonym=$data->{'synonym'};
     if (defined $gene_synonym){
         foreach my $a (@$gene_synonym) {
-            my $syn_attrib=$self->make_Attribute('synonym', $a);
+            my $syn_attrib=make_EnsEMBL_Attribute('synonym', $a);
             push @gene_attributes,$syn_attrib;
         }
     }
@@ -657,9 +657,9 @@ sub _build_gene_attributes
             my $attrib;
             if($rem=~/Annotation_remark-\s+(.+)/) {
                 $rem=$1;
-                $attrib=$self->make_Attribute('hidden_remark', $rem);
+                $attrib=make_EnsEMBL_Attribute('hidden_remark', $rem);
             } else {
-                $attrib=$self->make_Attribute('remark', $rem);
+                $attrib=make_EnsEMBL_Attribute('remark', $rem);
             }
             push @gene_attributes,$attrib;
         }
@@ -673,15 +673,6 @@ sub _do_nothing {
 
 
 ##make Otter objects methods
-
-sub make_Attribute {
-    my ($self, $code, $value) = @_;
-
-    return Bio::EnsEMBL::Attribute->new(
-        -CODE   => $code,
-        -VALUE  => $value,
-        );
-}
 
 sub _make_Author {
     my ($self, $name, $email) = @_;
