@@ -15,13 +15,8 @@ use Hum::Ace::Locus;
 use Hum::Ace::SubSeq;
 use Hum::Ace::SeqFeature::Simple;
 
+use Bio::Vega::Utils::ExonPhase                   'exon_phase_EnsEMBL_to_Ace';
 use Bio::Vega::Utils::GeneTranscriptBiotypeStatus 'biotype_status2method';
-
-my %ens2ace_phase = (
-    0   => 1,
-    2   => 2,
-    1   => 3,
-    );
 
 
 sub new {
@@ -189,7 +184,7 @@ sub fill_transcript_AceText {
         my $first_exon_phase = $tsl->start_Exon->phase;
         # Used to only issue a warning and set Start_not_found with no value
         # if the first exon phase is not 0, 1 or 2
-        my $ace_phase = $ens2ace_phase{$first_exon_phase}
+        my $ace_phase = exon_phase_EnsEMBL_to_Ace($first_exon_phase)
             or confess "No Ace phase for Ensembl exon phase '$first_exon_phase'";
         $ace->add_tag('Start_not_found', $ace_phase);
     }
@@ -702,7 +697,7 @@ sub _add_genes {
 
                 my $first_exon_phase = $translation->start_Exon->phase;
 
-                my $ace_phase = $ens2ace_phase{$first_exon_phase}
+                my $ace_phase = exon_phase_EnsEMBL_to_Ace($first_exon_phase)
                 or confess "No Ace phase for Ensembl exon phase '$first_exon_phase'";
 
                 $subseq->start_not_found($ace_phase);

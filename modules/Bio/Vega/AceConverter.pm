@@ -22,13 +22,8 @@ use Bio::Vega::Utils::Attribute qw( add_EnsEMBL_Attributes );
 
 use Bio::Otter::Lace::CloneSequence;
 
+use Bio::Vega::Utils::ExonPhase                   'exon_phase_Ace_to_EnsEMBL';
 use Bio::Vega::Utils::GeneTranscriptBiotypeStatus 'method2biotype_status';
-
-my %ace2ens_phase = (
-    1   => 0,
-    2   => 2,
-    3   => 1,
-    );
 
 my (
     %feature_types,
@@ -531,7 +526,7 @@ sub set_exon_phases_translation_cds_start_end {
         if ($cds_start != 1) {
             confess "Error in transcript '$name'; Start_not_found $start_phase set, but there is 5' UTR\n";
         }
-        my $ens_phase = $ace2ens_phase{$start_phase};
+        my $ens_phase = exon_phase_Ace_to_EnsEMBL($start_phase);
         if (defined $ens_phase) {
             $start_phase = $ens_phase;
         } else {
