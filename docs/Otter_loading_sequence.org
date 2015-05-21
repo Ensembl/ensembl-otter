@@ -112,3 +112,23 @@
    + calls self->_resync_with_db() to rebuild internal state from AceDB
      + calls self->Assembly()
 
+
+* Notes
+
+** Locus handling
+
+[4:25pm] mg13: Hmm, I think I’m going to have to familiarise myself with Locus handling in the TranscriptWindow.
+[4:25pm] jgrg: It isn't straigtforward.
+[4:25pm] jgrg: Have to make sure that we don't have transcripts with references to old locus objects since edits.
+[4:26pm] jgrg: Edits to locus fields have to update all the transcript edit windows.
+[4:26pm] mg13: The EnsEMBL ownership of transcripts by genes is the other way around compared with Hum::Ace
+[4:28pm] mg13: I only need to worry about that when a TranscriptWindow does a save, though.
+
+** Why not make the Locus & SubSeq caches a feature of the assembly?
+   Because they only get added to the assembly when saved in the TranscriptWindow?
+   But it might make more sense to have a cache class which we can use.
+
+** update_Locus
+   Updating the slave Locus is a bit tricky. We need to know what changed.
+
+# EOF
