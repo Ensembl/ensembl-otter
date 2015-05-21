@@ -121,11 +121,9 @@ sub get_assembly_dna {
 sub get_region {
     my $self = shift;
 
-    my $odba  = $self->server->otter_dba;
     my $slice = $self->slice;
 
     my $region = Bio::Vega::Region->new_from_otter_db(
-        otter_dba     => $odba,
         slice         => $slice,
         server_action => $self,
         );
@@ -466,7 +464,6 @@ sub _write_region_exclusive { # runs under $slb->exclusive_work
     # Pass on to the xml generator the set of changed genes, and
     # all simple features
     my $current_region =  Bio::Vega::Region->new(
-            otter_dba     => $odba,
             slice         => $db_slice,
             server_action => $self,
             );

@@ -37,8 +37,9 @@ sub new_from_otter_db {
 
     my $self = $class->new(%options);
 
-    confess "Cannot fetch data without slice"     unless $self->slice;
-    confess "Cannot fetch data without otter_dba" unless $self->otter_dba;
+    confess "Cannot fetch data without slice" unless $self->slice;
+    confess "Cannot fetch data: slice does not have DB adaptor"
+        unless ($self->slice->adaptor and $self->slice->adaptor->db);
 
     $self->fetch_CloneSequences;
     $self->fetch_species;
@@ -80,11 +81,9 @@ sub new_dissociated_copy {
     return $copy;
 }
 
-sub otter_dba {
-    my ($self, @args) = @_;
-    ($self->{'otter_dba'}) = @args if @args;
-    my $otter_dba = $self->{'otter_dba'};
-    return $otter_dba;
+sub _slice_dba {
+    my ($self) = @_;
+    return $self->slice->adaptor->db;
 }
 
 sub slice {
@@ -195,7 +194,7 @@ sub fetch_CloneSeq {
     $cs->contig_strand( $contig_slice->strand               );
     $cs->length(        $contig_slice->seq_region_length    );
 
-    if (my $ci = $self->otter_dba->get_ContigInfoAdaptor->fetch_by_contigSlice($contig_slice)) {
+    if (my $ci = $self->_slice_dba->get_ContigInfoAdaptor->fetch_by_contigSlice($contig_slice)) {
         $cs->ContigInfo($ci);
     } else {
         $cs->ContigInfo(Bio::Vega::ContigInfo->new(-slice => $contig_slice));
@@ -206,7 +205,7 @@ sub fetch_CloneSeq {
 
 sub fetch_species {
     my ($self) = @_;
-    return $self->species($self->otter_dba->species);
+    return $self->species($self->_slice_dba->species);
 }
 
 sub fetch_SimpleFeatures {

@@ -116,10 +116,7 @@ sub _store_extract_compare {
     my $seq_region = $sa->fetch_by_region($original_slice->coord_system->name, $original_slice->seq_region_name);
     my $slice = $seq_region->sub_Slice($original_slice->start, $original_slice->end);
 
-    my $region = Bio::Vega::Region->new_from_otter_db(
-        otter_dba => $test->test_db->vega_dba,
-        slice     => $slice,
-        );
+    my $region = Bio::Vega::Region->new_from_otter_db( slice => $slice );
 
     # This is a bit yucky!
   GENE: foreach my $g ($region->genes) {

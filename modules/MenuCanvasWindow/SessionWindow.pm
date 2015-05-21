@@ -1967,12 +1967,8 @@ sub _Assembly_sqlite {
 
         try {
             my $ensembl_slice = $self->AceDatabase->DB->session_slice;
-            my $vega_dba      = $self->AceDatabase->DB->vega_dba;
 
-            my $region = Bio::Vega::Region->new_from_otter_db(
-                otter_dba => $vega_dba,
-                slice     => $ensembl_slice,
-                );
+            my $region = Bio::Vega::Region->new_from_otter_db( slice => $ensembl_slice );
 
             my $ace_maker = Bio::Vega::Region::Ace->new;
             $assembly = $ace_maker->make_assembly(
