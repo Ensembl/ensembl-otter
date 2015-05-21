@@ -9,7 +9,6 @@ use Test::Bio::Vega::Gene                 no_run_test => 1;
 sub build_attributes {
     my $test = shift;
     return {
-        otter_dba      => sub { return bless {}, 'Bio::Vega::DBSQL::DBAdaptor' },
         slice          => sub { return bless {}, 'Bio::EnsEMBL::Slice' },
         species        => 'human_test',
     };
