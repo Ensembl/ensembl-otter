@@ -1708,21 +1708,33 @@ sub _edit_new_subsequence {
     my @subseq = $self->_list_selected_subseq_objs;
     my $clip      = $self->get_clipboard_text || '';
 
-    my ($new);
+    my ($new_acedb);
     if (@subseq) {
-        $new = Hum::Ace::SubSeq->new_from_subseq_list(@subseq);
+        $new_acedb = Hum::Ace::SubSeq->new_from_subseq_list(@subseq);
     }
     else {
         # $self->logger->warn("CLIPBOARD: $clip");
-        $new = Hum::Ace::SubSeq->new_from_clipboard_text($clip);
-        unless ($new) {
+        $new_acedb = Hum::Ace::SubSeq->new_from_clipboard_text($clip);
+        unless ($new_acedb) {
             $self->message("Need a highlighted transcript or a coordinate on the clipboard to make SubSeq");
             return;
         }
-        $new->clone_Sequence($self->Assembly->Sequence);
+        $new_acedb->clone_Sequence($self->Assembly->Sequence);
     }
 
-    my ($region_name, $max) = $self->_region_name_and_next_locus_number($new);
+    my ($region_name, $max) = $self->_region_name_and_next_locus_number($new_acedb);
+
+    my $prefix = $self->_default_locus_prefix;
+    my $loc_name = $prefix ? "$prefix:$region_name.$max" : "$region_name.$max";
+
+    my $seq_name = "$loc_name-001";
+
+    # Check we don't already have a sequence of this name
+    if ($self->_subsequence_cache->get($seq_name)) {
+        # Should be impossible, I hope!
+        $self->message("Tried to make new SubSequence name but already have SubSeq named '$seq_name'");
+        return;
+    }
 
     my $locus_constructor = sub {
         my ($name) = @_;
@@ -1731,30 +1743,31 @@ sub _edit_new_subsequence {
         return $locus;
     };
 
-    my $prefix = $self->_default_locus_prefix;
-    my $loc_name = $prefix ? "$prefix:$region_name.$max" : "$region_name.$max";
-    my $locus = $self->_locus_cache_x->get_or_new($loc_name, $locus_constructor);
-    $locus->gene_type_prefix($prefix);
+    my $locus_acedb = $self->_locus_cache_acedb->get_or_new($loc_name, $locus_constructor);
+    $locus_acedb->gene_type_prefix($prefix);
 
-    my $seq_name = "$loc_name-001";
+    my $locus_sqlite = $self->_locus_cache_sqlite->get_or_new($loc_name, $locus_constructor);
+    $locus_sqlite->gene_type_prefix($prefix);
 
-    # Check we don't already have a sequence of this name
-    if ($self->_subsequence_cache_x->get($seq_name)) {
-        # Should be impossible, I hope!
-        $self->message("Tried to make new SubSequence name but already have SubSeq named '$seq_name'");
-        return;
-    }
-
-    $new->name($seq_name);
-    $new->Locus($locus);
+    $new_acedb->name($seq_name);
+    $new_acedb->Locus($locus_acedb);
     my $gm = $self->get_default_mutable_GeneMethod or $self->logger->logconfess("No default mutable GeneMethod");
-    $new->GeneMethod($gm);
+    $new_acedb->GeneMethod($gm);
     # Need to initialise translation region for coding transcripts
     if ($gm->coding) {
-        $new->translation_region($new->translation_region);
+        $new_acedb->translation_region($new_acedb->translation_region);
     }
 
-    $self->_add_SubSeq_and_paste_evidence($new, $clip);
+    my $new_sqlite = $new_acedb->clone;
+    $new_sqlite->Locus($locus_sqlite);
+
+    $self->_Assembly_acedb->add_SubSeq($new_acedb);
+    $self->_add_SubSeq_acedb($new_acedb);
+
+    $self->_Assembly_sqlite->add_SubSeq($new_sqlite);
+    $self->_add_SubSeq_sqlite($new_sqlite);
+
+    $self->_add_SubSeq_window_and_paste_evidence($self->_master_db_is_acedb ? $new_acedb : $new_sqlite, $clip);
 
     return;
 }
@@ -1810,8 +1823,7 @@ sub _make_variant_subsequence {
         return;
     }
     my $name = $sub_names[0];
-    my $sub = $self->_subsequence_cache_x->get($name);
-    my $assembly = $self->Assembly_x;
+    my $assembly = $self->Assembly;
 
     # Work out a name for the new variant
     my $var_name = $name;
@@ -1831,7 +1843,7 @@ sub _make_variant_subsequence {
         $var_name = sprintf "%s-%03d", $root, $max + 1;
 
         # Check we don't already have the variant we are trying to create
-        if ($self->_subsequence_cache_x->get($var_name)) {
+        if ($self->_subsequence_cache->get($var_name)) {
             $self->message("Tried to create variant '$var_name', but it already exists! (Should be impossible)");
             return;
         }
@@ -1844,30 +1856,47 @@ sub _make_variant_subsequence {
         return;
     }
 
-    # Make the variant
-    my $var = $sub->clone;
-    $var->name($var_name);
-    $var->empty_evidence_hash;
-    $var->empty_remarks;
-    $var->empty_annotation_remarks;
-    my $locus = $var->Locus;
-
+    my $clip_sub;
     if (text_is_zmap_clip($clip)) {
-        my $clip_sub = Hum::Ace::SubSeq->new_from_clipboard_text($clip);
-        $var->replace_all_Exons($clip_sub->get_all_Exons);
+        $clip_sub = Hum::Ace::SubSeq->new_from_clipboard_text($clip);
     }
 
-    $self->_add_SubSeq_and_paste_evidence($var, $clip);
+    # Make the variants
+    my $var_acedb  = $self->_make_variant($self->_subsequence_cache_acedb ->get($name), $var_name, $clip_sub);
+    $self->_Assembly_acedb->add_SubSeq($var_acedb);
+    $self->_add_SubSeq_acedb($var_acedb);
+
+    my $var_sqlite = $self->_make_variant($self->_subsequence_cache_sqlite->get($name), $var_name, $clip_sub);
+    $self->_Assembly_sqlite->add_SubSeq($var_sqlite);
+    $self->_add_SubSeq_sqlite($var_sqlite);
+
+    $self->_add_SubSeq_window_and_paste_evidence($self->_master_db_is_acedb ? $var_acedb : $var_sqlite, $clip);
 
     return;
 }
 
-sub _add_SubSeq_and_paste_evidence {
+sub _make_variant {
+    my ($self, $base_subseq, $var_name, $clip_subseq) = @_;
+
+    my $var = $base_subseq->clone;
+    $var->name($var_name);
+    $var->empty_evidence_hash;
+    $var->empty_remarks;
+    $var->empty_annotation_remarks;
+
+    if ($clip_subseq) {
+        $var->replace_all_Exons($clip_subseq->get_all_Exons);
+    }
+
+    return $var;
+}
+
+sub _add_SubSeq_window_and_paste_evidence {
     my ($self, $sub, $clip) = @_;
 
-    $self->Assembly_x->add_SubSeq($sub);
+#    $self->Assembly_x->add_SubSeq($sub);
+#    $self->_add_SubSeq_x($sub);
 
-    $self->_add_SubSeq_x($sub);
     $self->draw_subseq_list;
     $self->_highlight_by_name($sub->name);
 
@@ -2593,6 +2622,21 @@ sub _replace_SubSeq_sqlite {
     my $new_locus = $new_subseq->Locus;
     my $old_locus = $old_subseq->Locus;
 
+    my $old_locus_acedb;
+    unless ($self->_master_db_is_sqlite) {
+        # We may not have a connected old Locus, but there might be one cached.
+        my $old_locus_sqlite = $self->_locus_cache_sqlite->get($old_locus->name);
+        if ($old_locus_sqlite) {
+            if ($old_locus == $old_locus_sqlite) {
+                $self->logger->debug('Cached version of old locus is same object');
+            } else {
+                $self->logger->debug('Found cached version of old locus, so using it');
+            }
+            $old_locus_acedb = $old_locus;
+            $old_locus = $old_locus_sqlite;
+        }
+    }
+
     my $new_locus_name = $new_locus->name;
     my $old_locus_name = $old_locus->name || $new_locus_name;
     my $locus_tag  = "Locus $new_locus_name for SubSeq $new_subseq_name";
@@ -2601,13 +2645,29 @@ sub _replace_SubSeq_sqlite {
 
     my $vega_dba = $self->vega_dba;
     my $from_HumAce = Bio::Vega::Transform::FromHumAce->new(
-        slice       => $self->AceDatabase->DB->session_slice,
-        author      => $self->AceDatabase->Client->author,
-        log_context => $self->log_context,
+        session_slice => $self->AceDatabase->DB->session_slice,
+        whole_slice   => $self->AceDatabase->DB->whole_slice,
+        author        => $self->AceDatabase->Client->author,
+        log_context   => $self->log_context,
         );
 
     try {
         $vega_dba->begin_work;
+
+        if ($old_locus->ensembl_dbID) {
+            my $locus_diffs = $self->_compare_loci($old_locus, $new_locus);
+            if ($locus_diffs) {
+                $self->logger->debug("$locus_tag: diffs to original saved Locus.");
+                $self->_log_diffs($locus_diffs, $locus_tag);
+                $from_HumAce->update_Gene($new_locus, $old_locus, $locus_diffs);
+            } else {
+                $self->logger->debug("$locus_tag: no diffs so stick with the old one.");
+                $new_subseq->Locus($old_locus);
+            }
+        } else {
+            $self->logger->debug("$locus_tag: original Locus not saved, must save this one.");
+            $from_HumAce->store_Gene($new_locus, $new_subseq);
+        }
 
         if ($old_subseq->ensembl_dbID) {
             my $diffs = $self->_compare_subseqs($old_subseq, $new_subseq);
@@ -2623,46 +2683,18 @@ sub _replace_SubSeq_sqlite {
             $from_HumAce->store_Transcript($new_subseq);
         }
 
-        if ($old_locus->ensembl_dbID) {
-            my $locus_diffs = $self->_compare_loci($old_locus, $new_locus);
-            if ($locus_diffs) {
-                $self->logger->debug("$locus_tag: diffs to original saved Locus.");
-                $self->_log_diffs($locus_diffs, $locus_tag);
-                $from_HumAce->update_Gene($new_locus, $old_locus, $locus_diffs);
-            } else {
-                $self->logger->debug("$locus_tag: no diffs so stick with the old one.");
-                $new_subseq->Locus($old_locus);
-            }
-        } else {
-            $self->logger->debug("$locus_tag: original Locus not saved, must save this one.");
-            $from_HumAce->store_Gene($new_locus);
-        }
-
         $vega_dba->commit;
+        $done_sqlite = 1;
+
+        if ($self->_master_db_is_sqlite) {
+            $done_zmap = $self->_replace_in_zmap($new_subseq, $old_subseq, $old_subseq->is_archival);
+        }
     }
     catch {
         $err = $_;
         $self->logger->error("_replace_SubSeq_sqlite: $err");
         $vega_dba->rollback;
     };
-
-    return (undef, undef, "not yet implemented");
-
-    # FIXME: shouldn't be using is_archival ??
-    my $rename_needed = $old_subseq->is_archival && $new_subseq_name ne $old_subseq_name;
-    my $ace =
-        $rename_needed
-      ? $new_subseq->ace_string($old_subseq_name)
-      : $new_subseq->ace_string;
-
-    try {
-        $self->_save_ace($ace);
-        $done_sqlite = 1;
-        if ($self->_master_db_is_sqlite) {
-            $done_zmap = $self->_replace_in_zmap($new_subseq, $old_subseq, $old_subseq->is_archival);
-        }
-    }
-    catch { $err = $_; };
 
     if ($done_sqlite) {
 
@@ -2987,7 +3019,7 @@ sub list_selected_subseq_names {
 
 sub _list_selected_subseq_objs {
     my ($self) = @_;
-    return map { $self->_subsequence_cache_x->get($_) } $self->list_selected_subseq_names;
+    return map { $self->_subsequence_cache->get($_) } $self->list_selected_subseq_names;
 }
 
 sub _list_was_selected_subseq_names {

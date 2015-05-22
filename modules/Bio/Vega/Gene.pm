@@ -205,7 +205,7 @@ sub prune_Exons {
   my ($self) = @_;
 
   my( %stable_key, %unique_exons );
-  foreach my $tran (@{$self->get_all_Transcripts}) {
+  foreach my $tran (@{$self->get_all_Transcripts // []}) {
       my (@transcript_exons);
       foreach my $exon (@{$tran->get_all_Exons}) {
           my $exon_key = $exon->vega_hashkey;
