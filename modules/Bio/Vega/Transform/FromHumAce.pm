@@ -29,42 +29,33 @@ sub store_Transcript {
 
     my $transcript = $self->_transcript_from_SubSeq($subseq);
 
-    $transcript->slice($self->slice) unless $transcript->slice;
-    foreach my $exon (@{$transcript->get_all_Exons}) {
-        $exon->slice($self->slice) unless $exon->slice;
-    }
+    my $gene_dbID = $subseq->Locus->ensembl_dbID;
+    $gene_dbID or $self->logger->logconfess("SubSeq ",  $self->_debug_hum_ace($subseq),
+                                            ": Locus ", $self->_debug_hum_ace($subseq->Locus),
+                                            " has no dbID");
 
     my $ts_adaptor = $self->_slice_dba->get_TranscriptAdaptor;
-    $ts_adaptor->store($transcript);
+    $ts_adaptor->store($transcript, $gene_dbID);
 
     $subseq->ensembl_dbID($transcript->dbID);
 
     $self->logger->debug("Stored transcript for '", $subseq->name, "', dbID: ", $transcript->dbID);
-    return;
+    return $transcript;
 }
 
 sub update_Transcript {
     my ($self, $new_subseq, $old_subseq, $diffs) = @_;
 
     my $ts_adaptor = $self->_slice_dba->get_TranscriptAdaptor;
-    my $transcript = $ts_adaptor->fetch_by_dbID($old_subseq->ensembl_dbID);
 
-    $self->logger->logconfess("Cannot find transcript for ", $self->_debug_hum_ace($old_subseq)) unless $transcript;
+    my $old_ts = $ts_adaptor->fetch_by_dbID($old_subseq->ensembl_dbID);
+    $self->logger->logconfess("Cannot find transcript for ", $self->_debug_hum_ace($old_subseq)) unless $old_ts;
 
-    ## Easiest will be to delete and recreate, a la AceDB
+    my $new_ts = $self->store_Transcript($new_subseq);
+    $ts_adaptor->remove($old_ts);
 
-    # $transcript->name      ($new_subseq->name)     if $diffs->{name};
-    # $transcript->stable_id ($new_subseq->otter_id) if $diffs->{otter_id};
-
-    # if ($diffs->{list_remarks}) {
-    #     $self->_delete_attributes($transcript, 'remark');
-    #     $self->_add_attributes(   $transcript, 'remark', $new_subseq->list_remarks);
-    # }
-    # if ($diffs->{list_annotation_remarks}) {
-    #     $self->_delete_attributes($transcript, 'hidden_remark');
-    #     $self->_add_attributes(   $transcript, 'hidden_remark', $new_subseq->list_annotation_remarks);
-    # }
-
+    $self->logger->debug(sprintf("Updated transcript for '%s', dbID: %d => %d",
+                                 $old_subseq->name, $old_subseq->ensembl_dbID, $new_ts->dbID));
     return;
 }
 
@@ -93,18 +84,29 @@ sub _transcript_from_SubSeq {
     $transcript->analysis         ($self->_otter_analysis);
     $transcript->transcript_author($self->_author_object );
 
-    $self->logger->debug("Created transcript for '", $subseq->name, "'");
+    $transcript->slice($self->whole_slice) unless $transcript->slice;
+    foreach my $exon (@{$transcript->get_all_Exons}) {
+        $exon->slice($self->whole_slice) unless $exon->slice;
+    }
+
+    $self->logger->debug(
+        sprintf(
+            "Created transcript for '%s', [%d-%d:%d]",
+            $subseq->name, $transcript->seq_region_start, $transcript->seq_region_end, $transcript->seq_region_strand
+        ));
     return $transcript;
 }
 
 sub _make_exons {
     my ($self, $subseq) = @_;
 
+    my $offset = $self->session_slice->start - 1;
+
     my @transcript_exons;
     foreach my $se ($subseq->get_all_Exons) {
         my $te = Bio::Vega::Exon->new(
-            -start     => $se->start,
-            -end       => $se->end,
+            -start     => $se->start + $offset,
+            -end       => $se->end   + $offset,
             -strand    => $subseq->strand,
             -stable_id => $se->otter_id,
             );
@@ -283,27 +285,111 @@ sub _otter_analysis {
 }
 
 sub store_Gene {
-    my ($self, $locus) = @_;
+    my ($self, $locus, $subseq) = @_;
+
+    # Make a throw-away transcript from the subseq - should cache?
+    my $ts = $self->_transcript_from_SubSeq($subseq);
+
+    my $gene = $self->_gene_from_Locus($locus, [ $ts ]);
+
+    # Throw it away
+    my $transcripts = $gene->get_all_Transcripts;
+    @$transcripts = ();
+
+    $gene->slice($self->whole_slice) unless $gene->slice;
+
+    my $gene_adaptor = $self->_slice_dba->get_GeneAdaptor;
+    $gene_adaptor->store_only($gene);
+
+    $locus->ensembl_dbID($gene->dbID);
+
+    $self->logger->debug("Stored gene for '", $locus->name, "', dbID: ", $gene->dbID);
     return;
 }
 
 sub update_Gene {
     my ($self, $new_locus, $old_locus, $diffs) = @_;
+
+    my $gene_adaptor = $self->_slice_dba->get_GeneAdaptor;
+    my $old_gene = $gene_adaptor->fetch_by_dbID($old_locus->ensembl_dbID);
+
+    $self->logger->logconfess("Cannot find gene for ", $self->_debug_hum_ace($old_locus)) unless $old_gene;
+
+    my $old_transcripts = $old_gene->get_all_Transcripts;
+    my $transcripts_copy = [ @$old_transcripts ];
+
+    my $new_gene = $self->_gene_from_Locus($new_locus, $old_transcripts); # transcripts for setting coords
+
+    # $old_transcripts is the arrayref associated with $old_gene and now @new_gene, so we empty it to prevent
+    # the gene adaptor from storing or removing the transcripts.
+    @$old_transcripts = ();
+
+    $new_gene->slice($self->whole_slice) unless $new_gene->slice;
+    $gene_adaptor->store_only($new_gene);
+    my $new_gene_dbID = $new_gene->dbID;
+
+    # Point existing transcripts at the new version
+    my $ts_adaptor = $self->_slice_dba->get_TranscriptAdaptor;
+    my $sth = $ts_adaptor->prepare("UPDATE transcript SET gene_id = ? WHERE transcript_id = ?");
+    foreach my $ts ( @$transcripts_copy ) {
+        $sth->execute($new_gene_dbID, $ts->dbID);
+    }
+    $sth->finish;
+
+    $gene_adaptor->remove($old_gene);
+
+    $new_locus->ensembl_dbID($new_gene_dbID);
+
+    $self->logger->debug(sprintf("Updated gene for '%s', dbID: %d => %d",
+                                 $old_locus->name, $old_locus->ensembl_dbID, $new_gene_dbID));
     return;
 }
 
-sub slice {
+sub _gene_from_Locus {
+    my ($self, $locus, $transcripts) = @_;
+
+    my $gene = Bio::Vega::Gene->new(
+        -transcripts => $transcripts,
+        -stable_id   => $locus->otter_id,
+        -description => $locus->description,
+        -source      => $locus->gene_type_prefix,
+        );
+    add_EnsEMBL_Attributes($gene, 'name' => $locus->name);
+
+    $gene->truncated_flag(1) if $locus->is_truncated;
+    $gene->status('KNOWN')   if $locus->known;
+
+    $self->_add_remarks($gene, $locus);
+
+    $gene->analysis   ($self->_otter_analysis);
+    $gene->gene_author($self->_author_object );
+
+    $self->logger->debug(
+        sprintf("Created gene for '%s', [%d-%d:%d]",
+                $locus->name, $gene->seq_region_start, $gene->seq_region_end, $gene->seq_region_strand)
+        );
+    return $gene;
+}
+
+sub session_slice {
     my ($self, @args) = @_;
-    ($self->{'slice'}) = @args if @args;
-    my $slice = $self->{'slice'};
-    return $slice;
+    ($self->{'session_slice'}) = @args if @args;
+    my $session_slice = $self->{'session_slice'};
+    return $session_slice;
+}
+
+sub whole_slice {
+    my ($self, @args) = @_;
+    ($self->{'whole_slice'}) = @args if @args;
+    my $whole_slice = $self->{'whole_slice'};
+    return $whole_slice;
 }
 
 sub _slice_dba {
     my ($self) = @_;
     my $_slice_dba = $self->{'_slice_dba'};
     unless ($_slice_dba) {
-        $_slice_dba = $self->{'_slice_dba'} = $self->slice->adaptor->db;
+        $_slice_dba = $self->{'_slice_dba'} = $self->whole_slice->adaptor->db;
     }
     return $_slice_dba;
 }
@@ -325,7 +411,7 @@ sub _author_object {
 }
 
 sub _debug_hum_ace {
-    my ($ha_obj) = @_;
+    my ($self, $ha_obj) = @_;
     return sprintf("'%s' [%s]",
                    $ha_obj->name         // '<unnamed>',
                    $ha_obj->ensembl_dbID // '-'          );
