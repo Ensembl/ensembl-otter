@@ -4,12 +4,19 @@ package Bio::Vega::Transform::FromHumAce;
 use strict;
 use warnings;
 
-use Carp;                       # FIXME - logger instead
+use Bio::EnsEMBL::Analysis;
 
+use Bio::Vega::Author;
+use Bio::Vega::Evidence;
+use Bio::Vega::Exon;
 use Bio::Vega::Transcript;
+use Bio::Vega::Translation;
+
 use Bio::Vega::Utils::Attribute                   qw( add_EnsEMBL_Attributes );
 use Bio::Vega::Utils::ExonPhase                   qw( exon_phase_Ace_to_EnsEMBL );
 use Bio::Vega::Utils::GeneTranscriptBiotypeStatus qw( method2biotype_status );
+
+use parent qw{ Bio::Otter::Log::WithContextMixin };
 
 sub new {
     my ($class, %args) = @_;
@@ -19,12 +26,45 @@ sub new {
 
 sub store_Transcript {
     my ($self, $subseq) = @_;
+
     my $transcript = $self->_transcript_from_SubSeq($subseq);
+
+    $transcript->slice($self->slice) unless $transcript->slice;
+    foreach my $exon (@{$transcript->get_all_Exons}) {
+        $exon->slice($self->slice) unless $exon->slice;
+    }
+
+    my $ts_adaptor = $self->_slice_dba->get_TranscriptAdaptor;
+    $ts_adaptor->store($transcript);
+
+    $subseq->ensembl_dbID($transcript->dbID);
+
+    $self->logger->debug("Stored transcript for '", $subseq->name, "', dbID: ", $transcript->dbID);
     return;
 }
 
 sub update_Transcript {
     my ($self, $new_subseq, $old_subseq, $diffs) = @_;
+
+    my $ts_adaptor = $self->_slice_dba->get_TranscriptAdaptor;
+    my $transcript = $ts_adaptor->fetch_by_dbID($old_subseq->ensembl_dbID);
+
+    $self->logger->logconfess("Cannot find transcript for ", $self->_debug_hum_ace($old_subseq)) unless $transcript;
+
+    ## Easiest will be to delete and recreate, a la AceDB
+
+    # $transcript->name      ($new_subseq->name)     if $diffs->{name};
+    # $transcript->stable_id ($new_subseq->otter_id) if $diffs->{otter_id};
+
+    # if ($diffs->{list_remarks}) {
+    #     $self->_delete_attributes($transcript, 'remark');
+    #     $self->_add_attributes(   $transcript, 'remark', $new_subseq->list_remarks);
+    # }
+    # if ($diffs->{list_annotation_remarks}) {
+    #     $self->_delete_attributes($transcript, 'hidden_remark');
+    #     $self->_add_attributes(   $transcript, 'hidden_remark', $new_subseq->list_annotation_remarks);
+    # }
+
     return;
 }
 
@@ -50,8 +90,10 @@ sub _transcript_from_SubSeq {
     $self->_add_remarks                              ($transcript, $subseq);
     $self->_add_supporting_evidence                  ($transcript, $subseq->evidence_hash);
 
-    # Author?
+    $transcript->analysis         ($self->_otter_analysis);
+    $transcript->transcript_author($self->_author_object );
 
+    $self->logger->debug("Created transcript for '", $subseq->name, "'");
     return $transcript;
 }
 
@@ -97,19 +139,22 @@ sub _set_exon_phases_translation_cds_start_end {
     my $translation = Bio::Vega::Translation->new(
         -stable_id => $subseq->translation_otter_id,
         );
+    $transcript->translation($translation);
 
     my $start_phase = $subseq->start_not_found;
     my ($cds_start, $cds_end) = $subseq->cds_coords;
 
-    if (defined $start_phase) {
+    if ($start_phase) {
         if ($cds_start != 1) {
-            confess "Error in transcript '$name'; Start_not_found $start_phase set, but there is 5' UTR\n";
+            $self->logger->logconfess(
+                sprintf("Error in transcript '%s'; Start_not_found [%s] set, but there is 5' UTR)",
+                        $name, $start_phase));
         }
         my $ens_phase = exon_phase_Ace_to_EnsEMBL($start_phase);
         if (defined $ens_phase) {
             $start_phase = $ens_phase;
         } else {
-            confess "Error in transcript '$name'; bad value for Start_not_found '$start_phase'\n";
+            $self->logger->logconfess("Error in transcript '$name'; bad value for Start_not_found '$start_phase'");
         }
         add_EnsEMBL_Attributes($transcript, 'cds_start_NF', 1);
         add_EnsEMBL_Attributes($transcript, 'mRNA_start_NF', 1);
@@ -153,7 +198,7 @@ sub _set_exon_phases_translation_cds_start_end {
             $exon_cds_length = $exon_end - $cds_start + 1;
             $translation->start_Exon($exon);
             my $t_start = $cds_start - $exon_start + 1;
-            confess "Error in '$name' : translation start is '$t_start'" if $t_start < 1;
+            $self->logger->logconfess("Error in '$name' : translation start is '$t_start'") if $t_start < 1;
             $translation->start($t_start);
         }
         else {
@@ -171,7 +216,7 @@ sub _set_exon_phases_translation_cds_start_end {
             $in_cds = 0;
             $translation->end_Exon($exon);
             my $t_end = $cds_end - $exon_start + 1;
-            confess "Error in '$name' : translation end is '$t_end'" if $t_end < 1;
+            $self->logger->logconfess("Error in '$name' : translation end is '$t_end'") if $t_end < 1;
             $translation->end($t_end);
             if ($cds_end < $exon_end) {
                 $exon->end_phase(-1);
@@ -189,7 +234,7 @@ sub _set_exon_phases_translation_cds_start_end {
         $mrna_pos = $exon_end;
         $last_exon = $exon;
     }
-    confess("Failed to find CDS in '$name'") unless $found_cds;
+    $self->logger->logconfess("Failed to find CDS in '$name'") unless $found_cds;
 
     if ($subseq->end_not_found) {
         add_EnsEMBL_Attributes($transcript, 'mRNA_end_NF', 1);
@@ -228,6 +273,15 @@ sub _add_supporting_evidence {
     return;
 }
 
+sub _otter_analysis {
+    my ($self) = @_;
+    my $_otter_analysis = $self->{'_otter_analysis'};
+    unless ($_otter_analysis) {
+        $_otter_analysis = $self->{'_otter_analysis'} = Bio::EnsEMBL::Analysis->new( -LOGIC_NAME => 'Otter' );
+    }
+    return $_otter_analysis;
+}
+
 sub store_Gene {
     my ($self, $locus) = @_;
     return;
@@ -238,11 +292,48 @@ sub update_Gene {
     return;
 }
 
-sub vega_dba {
+sub slice {
     my ($self, @args) = @_;
-    ($self->{'vega_dba'}) = @args if @args;
-    my $vega_dba = $self->{'vega_dba'};
-    return $vega_dba;
+    ($self->{'slice'}) = @args if @args;
+    my $slice = $self->{'slice'};
+    return $slice;
+}
+
+sub _slice_dba {
+    my ($self) = @_;
+    my $_slice_dba = $self->{'_slice_dba'};
+    unless ($_slice_dba) {
+        $_slice_dba = $self->{'_slice_dba'} = $self->slice->adaptor->db;
+    }
+    return $_slice_dba;
+}
+
+sub author {
+    my ($self, @args) = @_;
+    ($self->{'author'}) = @args if @args;
+    my $author = $self->{'author'};
+    return $author;
+}
+
+sub _author_object {
+    my ($self) = @_;
+    my $_author_object = $self->{'_author_object'};
+    unless ($_author_object) {
+        $_author_object = $self->{'_author_object'} = Bio::Vega::Author->new( -NAME => $self->author );
+    }
+    return $_author_object;
+}
+
+sub _debug_hum_ace {
+    my ($ha_obj) = @_;
+    return sprintf("'%s' [%s]",
+                   $ha_obj->name         // '<unnamed>',
+                   $ha_obj->ensembl_dbID // '-'          );
+}
+
+sub default_log_context {
+    my ($self) = @_;
+    return '-FromHumAce-context-not-set-';
 }
 
 1;

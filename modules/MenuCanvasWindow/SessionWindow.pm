@@ -2600,7 +2600,11 @@ sub _replace_SubSeq_sqlite {
     my ($done_sqlite, $done_zmap, $err);
 
     my $vega_dba = $self->vega_dba;
-    my $from_HumAce = Bio::Vega::Transform::FromHumAce->new( vega_dba => $vega_dba );
+    my $from_HumAce = Bio::Vega::Transform::FromHumAce->new(
+        slice       => $self->AceDatabase->DB->session_slice,
+        author      => $self->AceDatabase->Client->author,
+        log_context => $self->log_context,
+        );
 
     try {
         $vega_dba->begin_work;
