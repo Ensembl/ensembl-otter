@@ -2574,28 +2574,28 @@ sub _replace_SubSeq_acedb {
 }
 
 sub _replace_SubSeq_sqlite {
-    my ($self, $new, $old) = @_;
+    my ($self, $new_subseq, $old_subseq) = @_;
 
-    my $new_name = $new->name;
-    my $old_name = $old->name || $new_name;
+    my $new_subseq_name = $new_subseq->name;
+    my $old_subseq_name = $old_subseq->name || $new_subseq_name;
 
-    my $old_acedb;  # FIXME: required?
+    my $old_subseq_acedb;  # FIXME: required?
     unless ($self->_master_db_is_sqlite) {
         # We are passed the old SubSeq from the master AceDB
-        my $old_sqlite = $self->_subsequence_cache_sqlite->get($old_name);
-        if ($old_sqlite) {
+        my $old_subseq_sqlite = $self->_subsequence_cache_sqlite->get($old_subseq_name);
+        if ($old_subseq_sqlite) {
             $self->logger->debug('Found sqlite version of old subseq');
-            $old_acedb = $old;
-            $old = $old_sqlite;
+            $old_subseq_acedb = $old_subseq;
+            $old_subseq = $old_subseq_sqlite;
         }
     }
 
-    my $new_locus = $new->Locus;
-    my $old_locus = $old->Locus;
+    my $new_locus = $new_subseq->Locus;
+    my $old_locus = $old_subseq->Locus;
 
     my $new_locus_name = $new_locus->name;
     my $old_locus_name = $old_locus->name || $new_locus_name;
-    my $locus_tag  = "Locus $new_locus_name for SubSeq $new_name";
+    my $locus_tag  = "Locus $new_locus_name for SubSeq $new_subseq_name";
 
     my ($done_sqlite, $done_zmap, $err);
 
@@ -2609,18 +2609,18 @@ sub _replace_SubSeq_sqlite {
     try {
         $vega_dba->begin_work;
 
-        if ($old->ensembl_dbID) {
-            my $diffs = $self->_compare_subseqs($old, $new);
+        if ($old_subseq->ensembl_dbID) {
+            my $diffs = $self->_compare_subseqs($old_subseq, $new_subseq);
             if ($diffs) {
-                $self->logger->debug("$new_name: diffs to original saved SubSeq.");
-                $self->_log_diffs($diffs, "SubSeq $new_name");
-                $from_HumAce->update_Transcript($new, $old, $diffs);
+                $self->logger->debug("$new_subseq_name: diffs to original saved SubSeq.");
+                $self->_log_diffs($diffs, "SubSeq $new_subseq_name");
+                $from_HumAce->update_Transcript($new_subseq, $old_subseq, $diffs);
             } else {
-                $self->logger->debug("$new_name: no diffs so nothing else to do.");
+                $self->logger->debug("$new_subseq_name: no diffs so nothing else to do.");
             }
         } else {
-            $self->logger->debug("$new_name: original SubSeq not saved, must save this one.");
-            $from_HumAce->store_Transcript($new);
+            $self->logger->debug("$new_subseq_name: original SubSeq not saved, must save this one.");
+            $from_HumAce->store_Transcript($new_subseq);
         }
 
         if ($old_locus->ensembl_dbID) {
@@ -2631,7 +2631,7 @@ sub _replace_SubSeq_sqlite {
                 $from_HumAce->update_Gene($new_locus, $old_locus, $locus_diffs);
             } else {
                 $self->logger->debug("$locus_tag: no diffs so stick with the old one.");
-                $new->Locus($old_locus);
+                $new_subseq->Locus($old_locus);
             }
         } else {
             $self->logger->debug("$locus_tag: original Locus not saved, must save this one.");
@@ -2649,17 +2649,17 @@ sub _replace_SubSeq_sqlite {
     return (undef, undef, "not yet implemented");
 
     # FIXME: shouldn't be using is_archival ??
-    my $rename_needed = $old->is_archival && $new_name ne $old_name;
+    my $rename_needed = $old_subseq->is_archival && $new_subseq_name ne $old_subseq_name;
     my $ace =
         $rename_needed
-      ? $new->ace_string($old_name)
-      : $new->ace_string;
+      ? $new_subseq->ace_string($old_subseq_name)
+      : $new_subseq->ace_string;
 
     try {
         $self->_save_ace($ace);
         $done_sqlite = 1;
         if ($self->_master_db_is_sqlite) {
-            $done_zmap = $self->_replace_in_zmap($new, $old, $old->is_archival);
+            $done_zmap = $self->_replace_in_zmap($new_subseq, $old_subseq, $old_subseq->is_archival);
         }
     }
     catch { $err = $_; };
@@ -2667,14 +2667,14 @@ sub _replace_SubSeq_sqlite {
     if ($done_sqlite) {
 
         # update internal state
-        $self->_Assembly_sqlite->replace_SubSeq($new, $old_name);
+        $self->_Assembly_sqlite->replace_SubSeq($new_subseq, $old_subseq_name);
 
-        if ($new_name ne $old_name) {
-            $self->_subsequence_cache_sqlite->delete($old_name);
+        if ($new_subseq_name ne $old_subseq_name) {
+            $self->_subsequence_cache_sqlite->delete($old_subseq_name);
         }
-        $self->_subsequence_cache_sqlite->set($new);
+        $self->_subsequence_cache_sqlite->set($new_subseq);
 
-        my $locus = $new->Locus;
+        my $locus = $new_subseq->Locus;
         if (my $prev_name = $locus->drop_previous_name) {
             $self->logger->info("Unsetting otter_id for locus '$prev_name'");
             $self->_locus_cache_sqlite->get($prev_name)->drop_otter_id;
