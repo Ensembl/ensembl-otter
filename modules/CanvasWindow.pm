@@ -75,7 +75,14 @@ sub new {
 # for compatibility with code written for EditWindow
 sub top {
     my ($self) = @_;
-    return $self->top_window;
+
+    my $canvas = $self->canvas;
+    if (Tk::Exists($canvas)) {
+        return $canvas->toplevel;
+    }
+    else {
+        return;
+    }
 }
 
 sub top_window {

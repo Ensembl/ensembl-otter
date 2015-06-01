@@ -931,7 +931,7 @@ sub _search_pfam {
 
 sub _new_window {
     my ($self, $name) = @_;
-    return EditWindow::PfamWindow->in_Toplevel
+    return EditWindow::PfamWindow->init_or_reuse_Toplevel
       (-title => "Pfam $name",
        { from => $self->top_window });
 }

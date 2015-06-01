@@ -703,7 +703,7 @@ sub load_filters {
         # we need to set up and show a SessionWindow
         my $zmap = $self->zmap_select;
 
-        my $SessionWindow = MenuCanvasWindow::SessionWindow->in_Toplevel
+        my $SessionWindow = MenuCanvasWindow::SessionWindow->init_or_reuse_Toplevel
           (# no Tk opts, because SessionWindow sets its own -title
            { init => { existing_zmap_select => $zmap,
                        AceDatabase => $self->AceDatabase,

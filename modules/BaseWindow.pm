@@ -14,7 +14,7 @@ use Bio::Otter::Lace::Client;
 
 # Create a Toplevel, call our ->new for it, initialise;
 # or if $$reuse_ref, return the existing one.
-sub in_Toplevel {
+sub init_or_reuse_Toplevel {
     my ($pkg, @arg) = @_;
     croak "Method needs ->(%tk_args, { %local_args })" unless @arg % 2;
     my $eo_opt_hash = pop @arg;
