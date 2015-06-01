@@ -113,7 +113,7 @@ sub SpeciesListWindow {
     return $self->{'_SpeciesListWindow'};
 }
 
-sub initialise { # alias provided for BaseWindow->in_Toplevel(... { init => ... })
+sub initialise { # alias provided for BaseWindow->init_or_reuse_Toplevel(... { init => ... })
     my ($self) = @_;
     return $self->draw;
 }

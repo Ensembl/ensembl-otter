@@ -729,7 +729,7 @@ sub _GenomicFeaturesWindow {
 sub _launch_GenomicFeaturesWindow {
     my ($self) = @_;
     try {
-        my $gfs = MenuCanvasWindow::GenomicFeaturesWindow->in_Toplevel
+        my $gfs = MenuCanvasWindow::GenomicFeaturesWindow->init_or_reuse_Toplevel
           (# -title is set during initialise
            { reuse_ref => \$self->{'_GenomicFeaturesWindow'},
              raise => 1,
@@ -2407,7 +2407,7 @@ sub rename_locus {
         $ren_window->top->destroy;
     }
 
-    my $lr = EditWindow::LocusName->in_Toplevel
+    my $lr = EditWindow::LocusName->init_or_reuse_Toplevel
       (-title => 'Rename Locus',
        {
         reuse_ref => \$self->{'_locus_rename_window'},
@@ -2423,7 +2423,7 @@ sub rename_locus {
 sub _run_dotter {
     my ($self) = @_;
 
-    my $dw = EditWindow::Dotter->in_Toplevel
+    my $dw = EditWindow::Dotter->init_or_reuse_Toplevel
       (-title => 'Run Dotter',
        { reuse_ref => \$self->{'_dotter_window'},
          transient => 1,
@@ -2438,7 +2438,7 @@ sub _run_dotter {
 sub run_exonerate {
     my ($self, %options) = @_;
 
-    my $ew = EditWindow::Exonerate->in_Toplevel
+    my $ew = EditWindow::Exonerate->init_or_reuse_Toplevel
       (-title => 'On The Fly (OTF) Alignment',
        { reuse_ref => \$self->{'_exonerate_window'},
          transient => 1,

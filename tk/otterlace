@@ -63,7 +63,7 @@ sub run_gui {
     my $SpeciesListWindow = MenuCanvasWindow::SpeciesListWindow->new($main_window);
     $SpeciesListWindow->Client($client);
 
-    my $getpass = EditWindow::Password->in_Toplevel
+    my $getpass = EditWindow::Password->init_or_reuse_Toplevel
       (-title => 'Enter Password',
        { from => $main_window,
          init => { client => $client }

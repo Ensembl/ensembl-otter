@@ -777,7 +777,7 @@ sub open_SequenceSet {
     # with the CW:SequenceSetChooser or CW:SN windows.  RT#425244
     my $mw = $self->top_window->Widget(".");
 
-    my $cc = MenuCanvasWindow::ColumnChooser->in_Toplevel
+    my $cc = MenuCanvasWindow::ColumnChooser->init_or_reuse_Toplevel
       (-title  => 'Select column data to load',
        { init => { init_flag => 1,
                    AceDatabase => $adb,

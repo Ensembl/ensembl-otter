@@ -224,7 +224,7 @@ sub show_about {
 sub show_preferences {
     my ($self, %opt) = @_;
 
-    EditWindow::Preferences->in_Toplevel
+    EditWindow::Preferences->init_or_reuse_Toplevel
         (-title => 'Preferences',
          { reuse_ref => \$self->{_prefs_win},
            from => $self->top_window,
@@ -309,7 +309,7 @@ sub open_dataset_by_name {
     my $canvas = $self->canvas;
     my $busy = Tk::ScopedBusy->new($canvas);
 
-    my $ssc = CanvasWindow::SequenceSetChooser->in_Toplevel
+    my $ssc = CanvasWindow::SequenceSetChooser->init_or_reuse_Toplevel
       (-title => "Assembly List $name",
        { from => $canvas,
          reuse_ref => \$self->{'_sequence_set_chooser'}{$name},
@@ -425,7 +425,7 @@ sub recover_some_sessions {
                     # Bring up GUI
                     my $adb = $client->recover_session($session_dir);
 
-                    my $cc = MenuCanvasWindow::ColumnChooser->in_Toplevel
+                    my $cc = MenuCanvasWindow::ColumnChooser->init_or_reuse_Toplevel
                       (-title  => 'Select Column Data to Load',
                        { init => { AceDatabase => $adb,
                                    SpeciesListWindow => $self },
