@@ -12,7 +12,7 @@ current.
 
 =head1 EXAMPLE
 
-  ./rollback_gene.pl -dataset mouse -author ml6 -once -stable OTTMUSG00000016621,OTTMUSG00000001145
+  ./rollback_gene.pl -dataset mouse -once -stable OTTMUSG00000016621,OTTMUSG00000001145
 
 =head1 OPTIONS
 
