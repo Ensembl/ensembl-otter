@@ -21,6 +21,7 @@ my(
     %file,
     %vega_dba,
     %session_slice,
+    %whole_slice,
     %ColumnAdaptor,
     %OTFRequestAdaptor,
     %log_context,
@@ -34,6 +35,7 @@ sub DESTROY {
     delete($file{$self});
     delete($vega_dba{$self});
     delete($session_slice{$self});
+    delete($whole_slice{$self});
     delete($ColumnAdaptor{$self});
     delete($OTFRequestAdaptor{$self});
     delete($log_context{$self});
@@ -140,20 +142,36 @@ sub session_slice {
 
     # Slice should have been created by Bio::Vega::Region::Store->store()
 
-    my $slice_adaptor = $self->vega_dba->get_SliceAdaptor;
-    my $db_seq_region = $slice_adaptor->fetch_by_region(
-        $ensembl_slice->coord_system->name,
-        $ensembl_slice->seq_region_name,
-        );
-
-    if ($db_seq_region) {
-        $self->logger->debug('slice already in sqlite');
-    } else {
-        $self->logger->logconfess('slice not found in SQLite');
-    }
+    my $db_seq_region = $self->_fetch_seq_region_for_slice($ensembl_slice);
+    $whole_slice{$self} = $db_seq_region;
 
     $session_slice = $db_seq_region->sub_Slice($ensembl_slice->start, $ensembl_slice->end);
     return $session_slice{$self} = $session_slice;
+}
+
+sub whole_slice {
+    my ($self) = @_;
+
+    my $whole_slice = $whole_slice{$self};
+    unless ($whole_slice) {
+        $self->logger->logconfess("cannot call whole_slice() before setting session_slice()");
+    }
+
+    return $whole_slice;
+}
+
+sub _fetch_seq_region_for_slice {
+    my ($self, $slice) = @_;
+
+    my $slice_adaptor = $self->vega_dba->get_SliceAdaptor;
+    my $db_seq_region = $slice_adaptor->fetch_by_region($slice->coord_system->name, $slice->seq_region_name);
+
+    unless ($db_seq_region) {
+        $self->logger->logconfess(sprintf("slice not found in SQLite for '%s' [%s]",
+                                          $slice->seq_region_name, $slice->coord_system->name));
+    }
+
+    return $db_seq_region;
 }
 
 sub get_tag_value {
