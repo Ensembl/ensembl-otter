@@ -643,23 +643,31 @@ sub do_rename_locus {
     return try {
         my @delete_xml;
         my $offset = $self->AceDatabase->offset;
-        foreach my $sub ($self->_fetch_SubSeqs_by_locus_name($old_name)) {
-            push @delete_xml, $sub->zmap_delete_xml_string($offset);
+        foreach my $subseq ($self->_fetch_SubSeqs_by_locus_name($old_name)) {
+            push @delete_xml, $subseq->zmap_delete_xml_string($offset);
         }
 
-        if ($self->_locus_cache_x->get($new_name)) {
+        if ($self->_locus_cache->get($new_name)) {
             $self->message("Cannot rename to '$new_name'; Locus already exists");
             return 0;
         }
 
-        my $locus = $self->_locus_cache_x->delete($old_name);
-        if (!$locus) {
+        my $locus_acedb = $self->_locus_cache_acedb->delete($old_name);
+        unless ($locus_acedb) {
             $self->message("Cannot find locus called '$old_name'");
             return 0;
         }
+        $locus_acedb->name($new_name);
+        $self->_locus_cache_acedb->set($locus_acedb);
 
-        $locus->name($new_name);
-        $self->_locus_cache_x->set($locus);
+        my $old_locus_sqlite = $self->_locus_cache_sqlite->delete($old_name);
+        unless ($old_locus_sqlite) {
+            die "Cannot find locus called '$old_name' in sqlite cache";
+        }
+        my $new_locus_sqlite = $old_locus_sqlite->new_from_Locus;
+        $new_locus_sqlite->name($new_name);
+        $self->_locus_cache_sqlite->set($new_locus_sqlite);
+
         $done{'int'} = 1;
 
         my $ace = qq{\n-R Locus "$old_name" "$new_name"\n};
@@ -667,21 +675,36 @@ sub do_rename_locus {
         # Need to deal with gene type prefix, in case the rename
         # involves a prefix being added, removed or changed.
         if (my ($pre) = $new_name =~ /^([^:]+):/) {
-            $locus->gene_type_prefix($pre);
+            $locus_acedb->gene_type_prefix($pre);
+            $new_locus_sqlite->gene_type_prefix($pre);
             $ace .= qq{\nLocus "$new_name"\nType_prefix "$pre"\n};
         } else {
-            $locus->gene_type_prefix('');
+            $locus_acedb->gene_type_prefix('');
+            $new_locus_sqlite->gene_type_prefix('');
             $ace .= qq{\nLocus "$new_name"\n-D Type_prefix\n};
         }
 
         # Now we need to update ZMap with the new locus names
         my @create_xml;
-        foreach my $sub ($self->_fetch_SubSeqs_by_locus_name($new_name)) {
-            push @create_xml, $sub->zmap_create_xml_string($offset);
+        foreach my $subseq ($self->_fetch_SubSeqs_by_locus_name($new_name)) {
+            push @create_xml, $subseq->zmap_create_xml_string($offset);
         }
 
         $self->_save_ace($ace);
         $done{'ace'} = 1;
+
+        my $vega_dba = $self->vega_dba;
+        try {
+            $vega_dba->begin_work;
+            $self->_from_HumAce->update_Gene($new_locus_sqlite, $old_locus_sqlite);
+            $vega_dba->commit;
+            $done{'sqlite'} = 1;
+        }
+        catch {
+            my $err = $_;
+            $vega_dba->rollback;
+            die "Saving to SQLite: $err";
+        };
 
         my $zmap = $self->zmap;
         foreach my $del (@delete_xml) {
@@ -700,9 +723,12 @@ sub do_rename_locus {
         my $err = $_;
         my $msg;
         $err ||= 'unknown error';
-        if ($done{'ace'}) {
+        if ($done{'sqlite'}) {
             # haven't told ZMap, reload it from Ace
             $msg = "Renamed OK but sync failed, please restart ZMap";
+        } elsif ($done{'ace'}) {
+            # bailed out on sqlite
+            $msg = "Renamed in Ace but failed in SQLite";
         } elsif ($done{'int'}) {
             # haven't told Ace, so Otterlace state is wrong
             $msg = "Rename failed, please restart Otterlace";
@@ -718,8 +744,8 @@ sub _fetch_SubSeqs_by_locus_name {
    my ($self, $locus_name) = @_;
 
    my @list;
-   foreach my $name ($self->_subsequence_cache_x->names) {
-       my $sub = $self->_subsequence_cache_x->get($name) or next;
+   foreach my $name ($self->_subsequence_cache->names) {
+       my $sub = $self->_subsequence_cache->get($name) or next;
        my $locus = $sub->Locus or next;
        if ($locus->name eq $locus_name) {
            push(@list, $sub);
