@@ -1555,8 +1555,8 @@ sub _do_search {
 
     my @matching_sub_names;
     my @ace_fail_names;
-    foreach my $name ($self->_subsequence_cache_x->names) {
-        my $sub = $self->_subsequence_cache_x->get($name) or next;
+    foreach my $name ($self->_subsequence_cache->names) {
+        my $sub = $self->_subsequence_cache->get($name) or next;
         try {
             push @matching_sub_names, $name
                 if $sub->ace_string =~ /$regex/;
