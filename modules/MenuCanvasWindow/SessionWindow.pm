@@ -156,7 +156,22 @@ sub initialise {
     $self->RequestQueuer(Bio::Otter::RequestQueuer->new($self));
     my $proc = $self->_process_hits_proc; # launches process_hits_proc, ready for action
 
+    my $from_HumAce = Bio::Vega::Transform::FromHumAce->new(
+        session_slice => $self->AceDatabase->DB->session_slice,
+        whole_slice   => $self->AceDatabase->DB->whole_slice,
+        author        => $self->AceDatabase->Client->author,
+        log_context   => $self->log_context,
+        );
+    $self->_from_HumAce($from_HumAce);
+
     return;
+}
+
+sub _from_HumAce {
+    my ($self, @args) = @_;
+    ($self->{'_from_HumAce'}) = @args if @args;
+    my $_from_HumAce = $self->{'_from_HumAce'};
+    return $_from_HumAce;
 }
 
 sub session_colour {
@@ -2644,12 +2659,7 @@ sub _replace_SubSeq_sqlite {
     my ($done_sqlite, $done_zmap, $err);
 
     my $vega_dba = $self->vega_dba;
-    my $from_HumAce = Bio::Vega::Transform::FromHumAce->new(
-        session_slice => $self->AceDatabase->DB->session_slice,
-        whole_slice   => $self->AceDatabase->DB->whole_slice,
-        author        => $self->AceDatabase->Client->author,
-        log_context   => $self->log_context,
-        );
+    my $from_HumAce = $self->_from_HumAce;
 
     try {
         $vega_dba->begin_work;
