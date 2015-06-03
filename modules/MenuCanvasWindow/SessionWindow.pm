@@ -2073,19 +2073,25 @@ sub _delete_subsequences {
     # Make a list of editable SubSeqs from those selected,
     # which we are therefore allowed to delete.
     my @sub_names = $self->list_selected_subseq_names;
-    my( @to_die );
+    my( @to_die_acedb, @to_die_sqlite );
     foreach my $sub_name (@sub_names) {
-        my $sub = $self->_subsequence_cache_x->get($sub_name);
-        if ($sub->GeneMethod->mutable) {
-            push(@to_die, $sub);
+        my $sub_acedb = $self->_subsequence_cache_acedb->get($sub_name);
+        if ($sub_acedb->GeneMethod->mutable) {
+            push(@to_die_acedb, $sub_acedb);
+
+            my $sub_sqlite = $self->_subsequence_cache_sqlite->get($sub_name);
+            unless ($sub_sqlite) {
+                $self->logger->logconfess("Cannot find sqlite subseq for '$sub_name'");
+            }
+            push(@to_die_sqlite, $sub_sqlite);
         }
     }
-    return unless @to_die;
+    return unless @to_die_acedb;
 
     # Check that none of the sequences to be deleted are being edited
     my $in_edit = 0;
-    foreach my $sub (@to_die) {
-        $in_edit += $self->_raise_transcript_window($sub->name);
+    foreach my $sub_acedb (@to_die_acedb) {
+        $in_edit += $self->_raise_transcript_window($sub_acedb->name);
     }
     if ($in_edit) {
         $self->message("Must close edit windows before calling delete");
@@ -2094,14 +2100,14 @@ sub _delete_subsequences {
 
     # Check that the user really wants to delete them
     my( $question );
-    if (@to_die > 1) {
+    if (@to_die_acedb > 1) {
         $question = join('',
             "Really delete these transcripts?\n\n",
-            map { "  $_\n" } map { $_->name } @to_die
+            map { "  $_\n" } map { $_->name } @to_die_acedb
             );
     } else {
         $question = "Really delete this transcript?\n\n  "
-            . $to_die[0]->name ."\n";
+            . $to_die_acedb[0]->name ."\n";
     }
     my $dialog = $self->top_window()->Dialog(
         -title          => $Bio::Otter::Lace::Client::PFX.'Delete Transcripts?',
@@ -2118,15 +2124,15 @@ sub _delete_subsequences {
     my $offset = $self->AceDatabase->offset;
     my $ace = '';
     my @xml;
-    foreach my $sub (@to_die) {
+    foreach my $sub_acedb (@to_die_acedb) {
         # Only attempt to delete sequences which have been saved
-        if ($sub->is_archival) {
-            my $sub_name   = $sub->name;
-            my $clone_name = $sub->clone_Sequence->name;
+        if ($sub_acedb->is_archival) {
+            my $sub_name   = $sub_acedb->name;
+            my $clone_name = $sub_acedb->clone_Sequence->name;
             $ace .= qq{\n\-D Sequence "$sub_name"\n}
                 . qq{\nSequence "$clone_name"\n}
                 . qq{-D Subsequence "$sub_name"\n};
-            push @xml, $sub->zmap_delete_xml_string($offset);
+            push @xml, $sub_acedb->zmap_delete_xml_string($offset);
         }
     }
 
@@ -2138,10 +2144,34 @@ sub _delete_subsequences {
     }
     or return;
 
-    # Remove from our objects
-    foreach my $sub (@to_die) {
-        $self->_delete_SubSeq_x($sub);
+    # delete from sqlite
+    my $vega_dba = $self->vega_dba;
+    my $from_HumAce = $self->_from_HumAce;
+    try {
+        $vega_dba->begin_work;
+
+        foreach my $sub_sqlite (@to_die_sqlite) {
+            if ($sub_sqlite->ensembl_dbID) {
+                $from_HumAce->remove_Transcript($sub_sqlite);
+            }
+        }
+
+        $vega_dba->commit;
+        return 1;
     }
+    catch {
+        $self->exception_message($_, 'Aborted delete, failed to save to SQLite');
+        return 0;
+    } or return;
+
+    # Remove from our objects
+    foreach my $sub_acedb (@to_die_acedb) {
+        $self->_delete_SubSeq_acedb($sub_acedb);
+    }
+    foreach my $sub_sqlite (@to_die_sqlite) {
+        $self->_delete_SubSeq_sqlite($sub_sqlite);
+    }
+
     $self->draw_subseq_list;
 
     # delete from ZMap
@@ -2826,19 +2856,22 @@ sub _add_SubSeq_x {
     return $self->_add_SubSeq($sub);
 }
 
-sub _delete_SubSeq {
+sub _delete_SubSeq_acedb {
     my ($self, $sub) = @_;
 
     my $name = $sub->name;
-    $self->Assembly->delete_SubSeq($name);
+    $self->_Assembly_acedb->delete_SubSeq($name);
 
-    return $self->_subsequence_cache->delete($name);
+    return $self->_subsequence_cache_acedb->delete($name);
 }
 
-sub _delete_SubSeq_x {
+sub _delete_SubSeq_sqlite {
     my ($self, $sub) = @_;
-    $self->logger->warn(longmess('_delete_SubSeq_x() call: needs review!'));
-    return $self->_delete_SubSeq($sub);
+
+    my $name = $sub->name;
+    $self->_Assembly_sqlite->delete_SubSeq($name);
+
+    return $self->_subsequence_cache_sqlite->delete($name);
 }
 
 # For external callers only - internal should use $self->_subsequence_cache*->get() for now
