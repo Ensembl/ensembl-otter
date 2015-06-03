@@ -236,10 +236,7 @@ if (! $support->param('filter_prefix')) {
     $support->param('filter_prefix','OLD_MIT,HMIT,Em,ERI,GT,GH,API,DG,CCDS,MGC,MPI,SK,WU,PATCH');
   }
   elsif ($support->param('loutredbname') =~ /mouse/) {
-    $support->param('filter_prefix','INT');
-    if ($support->param('live_update')){
-      $support->param('filter_prefix','INT,KO');
-    }
+    $support->param('filter_prefix','INT,KO');
   } elsif ($support->param('loutredbname') =~ /zebrafish/) {
     $support->param('filter_prefix','wu');
   }
