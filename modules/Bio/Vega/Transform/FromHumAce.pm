@@ -44,7 +44,7 @@ sub store_Transcript {
 }
 
 sub update_Transcript {
-    my ($self, $new_subseq, $old_subseq, $diffs) = @_;
+    my ($self, $new_subseq, $old_subseq) = @_;
 
     my $ts_adaptor = $self->_slice_dba->get_TranscriptAdaptor;
 
@@ -56,6 +56,18 @@ sub update_Transcript {
 
     $self->logger->debug(sprintf("Updated transcript for '%s', dbID: %d => %d",
                                  $old_subseq->name, $old_subseq->ensembl_dbID, $new_ts->dbID));
+    return;
+}
+
+sub remove_Transcript {
+    my ($self, $subseq) = @_;
+
+    my $ts_adaptor = $self->_slice_dba->get_TranscriptAdaptor;
+
+    my $transcript = $ts_adaptor->fetch_by_dbID($subseq->ensembl_dbID);
+    $self->logger->logconfess("Cannot find transcript for ", $self->_debug_hum_ace($subseq)) unless $transcript;
+
+    $ts_adaptor->remove($transcript);
     return;
 }
 
@@ -308,7 +320,7 @@ sub store_Gene {
 }
 
 sub update_Gene {
-    my ($self, $new_locus, $old_locus, $diffs) = @_;
+    my ($self, $new_locus, $old_locus) = @_;
 
     my $gene_adaptor = $self->_slice_dba->get_GeneAdaptor;
     my $old_gene = $gene_adaptor->fetch_by_dbID($old_locus->ensembl_dbID);
