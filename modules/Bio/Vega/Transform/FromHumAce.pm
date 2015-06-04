@@ -115,7 +115,7 @@ sub _make_exons {
     my $offset = $self->session_slice->start - 1;
 
     my @transcript_exons;
-    foreach my $se ($subseq->get_all_Exons) {
+    foreach my $se ($subseq->get_all_Exons_in_transcript_order) {
         my $te = Bio::Vega::Exon->new(
             -start     => $se->start + $offset,
             -end       => $se->end   + $offset,
