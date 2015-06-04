@@ -28,7 +28,7 @@ sub new {
         '_ssname'   => $ssname,
 
         '_csname'   => $csname,
-        '_csver'    => $csver  || '',
+        '_csver'    => $csver,
         '_seqname'  => $seqname,
         '_start'    => $start,
         '_end'      => $end,
@@ -63,69 +63,77 @@ sub clone_near { # new from old, different coords
     return bless $new, ref($old);
 }
 
+
 sub Client {
-    my ($self, $dummy) = @_;
-
-    die "You shouldn't need to change Client" if defined($dummy);
-
-    return $self->{_Client};
+    my ($self, $Client) = @_;
+    
+    if ($Client) {
+        $self->{'_Client'} = $Client;
+    }
+    return $self->{'_Client'};
 }
 
 sub dsname {
-    my ($self, $dummy) = @_;
-
-    die "You shouldn't need to change dsname" if defined($dummy);
-
-    return $self->{_dsname};
+    my ($self, $dsname) = @_;
+    
+    if ($dsname) {
+        $self->{'_dsname'} = $dsname;
+    }
+    return $self->{'_dsname'};
 }
 
 sub ssname {
-    my ($self, $dummy) = @_;
-
-    die "You shouldn't need to change ssname" if defined($dummy);
-
-    return $self->{_ssname};
+    my ($self, $ssname) = @_;
+    
+    if ($ssname) {
+        $self->{'_ssname'} = $ssname;
+    }
+    return $self->{'_ssname'};
 }
 
-
 sub csname {
-    my ($self, $dummy) = @_;
-
-    die "You shouldn't need to change csname" if defined($dummy);
-
-    return $self->{_csname};
+    my ($self, $csname) = @_;
+    
+    if ($csname) {
+        $self->{'_csname'} = $csname;
+    }
+    return $self->{'_csname'} || 'chromosome';
 }
 
 sub csver {
-    my ($self, $dummy) = @_;
-
-    die "You shouldn't need to change csver" if defined($dummy);
-
-    return $self->{_csver};
+    my ($self, $csver) = @_;
+    
+    if ($csver) {
+        $self->{'_csver'} = $csver;
+    }
+    return $self->{'_csver'} || 'Otter';
 }
 
 sub seqname {
-    my ($self, $dummy) = @_;
-
-    die "You shouldn't need to change seqname" if defined($dummy);
-
-    return $self->{_seqname};
+    my ($self, $seqname) = @_;
+    
+    if ($seqname) {
+        $self->{'_seqname'} = $seqname;
+    }
+    return $self->{'_seqname'};
 }
 
 sub start {
-    my ($self, $dummy) = @_;
-
-    die "You shouldn't need to change start" if defined($dummy);
-
-    return $self->{_start};
+    my ($self, $start) = @_;
+    
+    if (defined $start) {
+        $self->{'_start'} = $start;
+    }
+    return $self->{'_start'};
 }
 
 sub end {
-    my ($self, $dummy) = @_;
-
-    die "You shouldn't need to change end" if defined($dummy);
-
-    return $self->{_end};
+    my ($self, $end) = @_;
+    
+    if (defined $end) {
+        $self->{'_end'} = $end;
+    }
+    return $self->{'_end'};
 }
 
 sub length {
