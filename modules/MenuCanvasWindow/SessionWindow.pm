@@ -266,12 +266,6 @@ sub _locus_cache {
     return $self->_confess_bad_master_db;
 }
 
-sub _locus_cache_x {
-    my ($self) = @_;
-    $self->logger->warn(longmess('_locus_cache_x() call: needs review!'));
-    return $self->_locus_cache;
-}
-
 sub _locus_cache_acedb {
     my ($self) = @_;
     $self->{'_locus_cache_acedb'} //= Bio::Otter::Utils::CacheByName->new;
@@ -1152,7 +1146,7 @@ sub _close_GenomicFeaturesWindow {
             return;
         }
         foreach my $name (@select) {
-            my $sub = $self->_subsequence_cache_x->get($name)->clone;
+            my $sub = $self->_subsequence_cache->get($name)->clone;
             $sub->is_archival(0);
             push(@holding_pen, $sub);
         }
@@ -1168,7 +1162,7 @@ sub _close_GenomicFeaturesWindow {
             return;
         }
 
-        my $assembly = $self->Assembly_x;
+        my $assembly = $self->Assembly;
 
         # The ExonLocator finds exons in a genomic sequence
         my $finder = Hum::Analysis::Factory::ExonLocator->new;
@@ -1181,7 +1175,7 @@ sub _close_GenomicFeaturesWindow {
             if (@{$new_exons}) {
                 my $new = $sub->clone;
                 my $temp_name;
-                for (my $i=0; !defined $temp_name || $self->_subsequence_cache_x->get($temp_name); $i++) {
+                for (my $i=0; !defined $temp_name || $self->_subsequence_cache->get($temp_name); $i++) {
                     $temp_name = $sub->name;
                     $temp_name .= "_$i" if $i; # invalid-dup suffix when needed
                 }
@@ -1201,13 +1195,29 @@ sub _close_GenomicFeaturesWindow {
                 }
                 my $paste_locus = $self->_paste_locus($sub->Locus);
                 $new->Locus($paste_locus);
-                $self->_add_SubSeq_x($new);
+                $self->_add_SubSeq($new);
                 push(@new_subseq, $new);
                 $self->logger->info("Internal paste result:\n", $new->ace_string);
             } else {
                 $self->message("Got zero exons from realigning '$name'");
             }
         }
+
+        # Now add subseqs to the slave DB
+        foreach my $new (@new_subseq) {
+
+            my $slave = $new->clone;
+            $slave->Locus($new->Locus->new_from_Locus);
+
+            if ($self->_master_db_is_acedb) {
+                $self->_Assembly_sqlite->add_SubSeq($slave);
+                $self->_add_SubSeq_sqlite($slave);
+            } else {
+                $self->_Assembly_acedb->add_SubSeq($slave);
+                $self->_add_SubSeq_acedb($slave);
+            }
+        }
+
         $self->draw_subseq_list;
         $self->_highlight_by_name(map { $_->name } @new_subseq);
         $self->message(@msg) if @msg;
@@ -1252,7 +1262,7 @@ sub _paste_locus {
     $dup_locus->set_annotation_in_progress;
     # return either the locus we already have with the same name, or
     # put $dup_locus in the cache and use that
-    return $self->_locus_cache_x->get_or_this($dup_locus);
+    return $self->_locus_cache->get_or_this($dup_locus);
 }
 
 
