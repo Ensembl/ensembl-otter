@@ -302,13 +302,13 @@ sub update_Locus {
 
     if ($self->_master_db_is_acedb) {
 
-        $self->_update_Locus_acedb($new_locus);
         $self->_update_slave_Locus_sqlite($new_locus);
+        $self->_update_Locus_acedb($new_locus);
 
     } elsif ($self->master_db_is_sqlite) {
 
-        $self->_update_Locus_sqlite($new_locus);
         $self->_update_slave_Locus_acedb($new_locus);
+        $self->_update_Locus_sqlite($new_locus);
 
     } else {
         $self->_confess_bad_master_db;
