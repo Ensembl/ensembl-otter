@@ -283,7 +283,7 @@ sub _add_supporting_evidence {
             push @evidence_list, $evidence;
         }
     }
-    $transcript->evidence_list(@evidence_list);
+    $transcript->evidence_list(\@evidence_list);
     return;
 }
 
