@@ -1672,7 +1672,9 @@ sub _resync_with_db {
     $self->_empty_Locus_cache;
 
     # Refetch transcripts
-    $self->Assembly_x;
+    $self->_Assembly_acedb;
+    $self->_Assembly_sqlite;
+
     my @visible_columns = $self->AceDatabase->ColumnCollection->list_Columns_with_status('Visible');
     $self->_process_and_update_columns(@visible_columns);
     $self->update_status_bar;
