@@ -321,6 +321,7 @@ sub _update_Locus_acedb {
 
     my $locus_name = $new_locus->name;
 
+    $self->logger->debug('_update_Locus_acedb: caching new_locus ', $self->_debug_locus($new_locus));
     $self->_locus_cache_acedb->set($new_locus);
 
     foreach my $sub_name ($self->_subsequence_cache_acedb->names) {
@@ -329,6 +330,7 @@ sub _update_Locus_acedb {
 
         if ($old_locus->name eq $locus_name) {
             # Replace locus in subseq with new copy
+            $self->logger->debug('_update_Locus_acedb: replacing locus for ', $self->_debug_subseq($sub));
             $sub->Locus($new_locus);
 
             # Is there a transcript window open?
@@ -347,6 +349,7 @@ sub _update_Locus_sqlite {
 
     my $locus_name = $new_locus->name;
 
+    $self->logger->debug('_update_Locus_sqlite: caching new_locus ', $self->_debug_locus($new_locus));
     $self->_locus_cache_sqlite->set($new_locus);
 
     foreach my $sub_name ($self->_subsequence_cache_sqlite->names) {
@@ -355,6 +358,7 @@ sub _update_Locus_sqlite {
 
         if ($old_locus->name eq $locus_name) {
             # Replace locus in subseq with new copy
+            $self->logger->debug('_update_Locus_sqlite: replacing locus for ', $self->_debug_subseq($sub));
             $sub->Locus($new_locus);
 
             # Is there a transcript window open?
@@ -371,9 +375,14 @@ sub _update_Locus_sqlite {
 sub _update_slave_Locus_sqlite {
     my ($self, $new_locus_acedb) = @_;
 
+    $self->logger->debug('_update_slave_Locus_sqlite for new_locus_acedb: ', $self->_debug_locus($new_locus_acedb));
+
     my $new_name = $new_locus_acedb->name;
     my $current_locus_acedb  = $self->_locus_cache_acedb->get( $new_name);
     my $current_locus_sqlite = $self->_locus_cache_sqlite->get($new_name);
+
+    $self->logger->debug(' : current_locus_acedb:  ', $self->_debug_locus($current_locus_acedb));
+    $self->logger->debug(' : current_locus_sqlite: ', $self->_debug_locus($current_locus_sqlite));
 
     my $new_locus_sqlite;
     if ($current_locus_acedb) {
@@ -384,12 +393,13 @@ sub _update_slave_Locus_sqlite {
         $self->logger->debug("Have acedb locus for '$new_name', so should check for changes");
 
         my $diffs = $self->_compare_loci($current_locus_acedb, $new_locus_acedb);
-        unless ($diffs) {
-            $self->logger->debug("No differences in new locus, so discarding it.");
-            return;
+        if ($diffs) {
+            $self->_log_diffs($diffs, "Locus $new_name");
+            $self->logger->logconfess("Don't know what to do with new locus '$new_name'");
+        } else {
+            $self->logger->debug("No differences in new locus");
+            $new_locus_sqlite = $current_locus_sqlite;
         }
-        $self->_log_diffs($diffs, "Locus $new_name");
-        $self->logger->logconfess("Don't know what to do with new locus '$new_name'");
 
     } else {
         if ($current_locus_sqlite) {
@@ -2230,8 +2240,15 @@ sub _debug_subseq {
     return sprintf('%s, locus %s', $self->_debug_hum_ace($subseq), $self->_debug_hum_ace($subseq->Locus));
 }
 
+sub _debug_locus {
+    my ($self, $locus) = @_;
+    return $self->_debug_hum_ace($locus);
+}
+
 sub _debug_hum_ace {
     my ($self, $object) = @_;
+    $object or return '<<undef>>';
+
     my $ref    = $object + 0;
     my $name   = $object->name // '<undef>';
     my $ens_id = $object->ensembl_dbID // '<undef>';
@@ -2584,8 +2601,11 @@ sub delete_featuresets {
 sub replace_SubSeq {
     my ($self, $new, $old) = @_;
 
+    my $new_sqlite = $new->clone;
+    $new_sqlite->Locus($new->Locus->new_from_Locus);
+
     my ($done_acedb,  $done_zmap_acedb,  $err_acedb)  = $self->_replace_SubSeq_acedb($new, $old);
-    my ($done_sqlite, $done_zmap_sqlite, $err_sqlite) = $self->_replace_SubSeq_sqlite($new, $old);
+    my ($done_sqlite, $done_zmap_sqlite, $err_sqlite) = $self->_replace_SubSeq_sqlite($new_sqlite, $old);
 
     # This convolvement can go in due course:
     if (   ($self->_master_db_is_acedb  and $done_acedb)
@@ -2645,6 +2665,9 @@ sub replace_SubSeq {
 sub _replace_SubSeq_acedb {
     my ($self, $new, $old) = @_;
 
+    $self->logger->debug(sprintf("_replace_SubSeq_acedb:\n new: %s\n old: %s",
+                                 $self->_debug_subseq($new), $self->_debug_subseq($old)));
+
     my $new_name = $new->name;
     my $old_name = $old->name || $new_name;
 
@@ -2688,6 +2711,9 @@ sub _replace_SubSeq_acedb {
 sub _replace_SubSeq_sqlite {
     my ($self, $new_subseq, $old_subseq) = @_;
 
+    $self->logger->debug(sprintf("_replace_SubSeq_sqlite:\n new: %s\n old: %s",
+                                 $self->_debug_subseq($new_subseq), $self->_debug_subseq($old_subseq)));
+
     my $new_subseq_name = $new_subseq->name;
     my $old_subseq_name = $old_subseq->name || $new_subseq_name;
 
@@ -2696,7 +2722,7 @@ sub _replace_SubSeq_sqlite {
         # We are passed the old SubSeq from the master AceDB
         my $old_subseq_sqlite = $self->_subsequence_cache_sqlite->get($old_subseq_name);
         if ($old_subseq_sqlite) {
-            $self->logger->debug('Found sqlite version of old subseq');
+            $self->logger->debug('Found sqlite version of old subseq: ', $self->_debug_subseq($old_subseq_sqlite));
             $old_subseq_acedb = $old_subseq;
             $old_subseq = $old_subseq_sqlite;
         }
@@ -2710,6 +2736,7 @@ sub _replace_SubSeq_sqlite {
         # We may not have a connected old Locus, but there might be one cached.
         my $old_locus_sqlite = $self->_locus_cache_sqlite->get($old_locus->name);
         if ($old_locus_sqlite) {
+            $self->logger->debug("Found sqlite version of old subseq's locus: ", $self->_debug_locus($old_locus_sqlite));
             if ($old_locus == $old_locus_sqlite) {
                 $self->logger->debug('Cached version of old locus is same object');
             } else {
