@@ -26,7 +26,7 @@ sub init_or_reuse_Toplevel {
     $tk_opt{Name} = $pkg->_toplevel_name;
 
     # Options for this code
-    my $parent     = delete $eo_opt_hash->{from};   # from which new Toplevel is made
+    my $parent     = delete $eo_opt_hash->{from};   # Tk widget from which new Toplevel is made
     my $reuse_ref  = delete $eo_opt_hash->{reuse_ref};
     my $raise      = delete $eo_opt_hash->{raise};  # should we raise?
     my $init       = delete $eo_opt_hash->{init};   # link and call initialise?

@@ -679,7 +679,7 @@ sub load_filters {
         # now initialise the database
         try { $self->AceDatabase->init_AceDatabase; return 1; }
         catch {
-            $self->SequenceNotes->exception_message($_, "Error initialising database");
+            $self->SpeciesListWindow->exception_message($_, "Error initialising database");
             $self->AceDatabase->error_flag(0);
             undef $busy; # i.e. Unbusy
             $self->zmap_select_destroy;
@@ -707,7 +707,6 @@ sub load_filters {
           (# no Tk opts, because SessionWindow sets its own -title
            { init => { existing_zmap_select => $zmap,
                        AceDatabase => $self->AceDatabase,
-                       SequenceNotes => $self->SequenceNotes,
                        ColumnChooser => $self },
              from => $self->top_window });
 
@@ -780,12 +779,6 @@ sub AceDatabase {
     return $self->{'_AceDatabase'} ;
 }
 
-sub SequenceNotes {
-    my ($self, $sn) = @_;
-    $self->{'_SequenceNotes'} = $sn if $sn;
-    return $self->{'_SequenceNotes'} ;
-}
-
 sub SpeciesListWindow {
     my ($self, $SpeciesListWindow) = @_;
     $self->{'_SpeciesListWindow'} = $SpeciesListWindow if $SpeciesListWindow;
@@ -795,13 +788,19 @@ sub SpeciesListWindow {
 sub DESTROY {
     my ($self) = @_;
 
+    warn "Destroying ColumnChooser\n";
+
     $self->zmap_select_destroy;
 
-    warn "Destroying ColumnChooser\n";
-    if (my $sn = $self->SequenceNotes) {
-        $self->AceDatabase->post_exit_callback(sub{
-            $sn->refresh_lock_columns;
-        });
+    if (my $slw = $self->SpeciesListWindow) {
+        my $slice = $self->AceDatabase->slice;
+        my $dataset_name     = $slice->dsname;
+        my $sequenceset_name = $slice->ssname;
+        $self->AceDatabase->post_exit_callback(
+            sub {
+                $slw->refresh_lock_display_for_dataset_sequence_set($dataset_name, $sequenceset_name);
+            }
+        );
     }
 
     return;

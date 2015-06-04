@@ -234,7 +234,7 @@ sub select_sequence_set {
     return;
 }
 
-sub add_SequenceNotes{
+sub add_SequenceNotes {
     my ($self, $sn) = @_;
     if ($sn){
         $self->{'_sequence_notes'}->{"$sn"} = $sn;
@@ -242,7 +242,7 @@ sub add_SequenceNotes{
     return $self->{'_sequence_notes'}->{"$sn"};
 }
 
-sub find_cached_SequenceNotes_by_name{
+sub find_cached_SequenceNotes_by_name {
     my ($self, $ss_name) = @_;
 
     my $seqNotes = $self->{'_sequence_notes'} || {};
@@ -257,7 +257,7 @@ sub find_cached_SequenceNotes_by_name{
     return 0;
 }
 
-sub clean_SequenceNotes{
+sub clean_SequenceNotes {
     my ($self) = @_;
     my $seqNotes = $self->{'_sequence_notes'} || {};
 

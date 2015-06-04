@@ -57,13 +57,12 @@ sub SequenceSetChooser {
 
 
 sub get_CloneSequence_list {
-    my ($self, $force_update) = @_;
+    my ($self) = @_;
 
     #if $force_update is set to 1, then it should re-query the db rather than us the old list
     my $ss = $self->SequenceSet;
     my $cs_list = $ss->CloneSequence_list;
-    if ($force_update || !$cs_list ) {
-
+    unless ($cs_list) {
         my $ds = $self->SequenceSetChooser->DataSet;
         $cs_list = $ds->fetch_all_CloneSequences_for_SequenceSet($ss);
         $ds->fetch_notes_locks_status_for_SequenceSet($ss);
@@ -71,10 +70,22 @@ sub get_CloneSequence_list {
     return $cs_list;
 }
 
+sub refresh_CloneSequence_list_if_cached {
+    my ($self) = @_;
+
+    if (my $cs_list = $self->SequenceSet->CloneSequence_list) {
+        my $ds = $self->SequenceSetChooser->DataSet;
+        my $ss = $self->SequenceSet;
+        my $cl = $ds->Client;
+        # We update notes and locks, which are quick, skip analysis status:
+        $cl->fetch_all_SequenceNotes_for_DataSet_SequenceSet($ds, $ss);
+        $cl->lock_refresh_for_DataSet_SequenceSet($ds, $ss);
+    }
+}
+
 ## now takes the column number to be refreshed (image or text) and refreshes it
-## $i is the row index to start from - allows this method to be used by Searched SequenceNotes
 sub refresh_column {
-    my ($self, $col_no, $list_pos) = @_;
+    my ($self, $col_no) = @_;
 
     my $canvas = $self->canvas();
     my $col_tag = "col=$col_no";
@@ -82,7 +93,6 @@ sub refresh_column {
     my $ss = $self->SequenceSet();
 
     $self->_refresh_SequenceSet($col_no);
-    #my $cs_list = $self->get_CloneSequence_list;
     my $cs_list = $self->get_rows_list;
     my $data_method  = $self->column_methods->[$col_no]->[1];
 
@@ -118,24 +128,26 @@ sub refresh_lock_columns {
 # this should be used by the refresh column method
 # some of the columns have had different queries written to speed up the refresh ,
 # this method activates the appropriate one
-sub _refresh_SequenceSet{
+sub _refresh_SequenceSet {
     my ($self, $column_number) = @_;
     $column_number ||= 0;
     my $cl = $self->Client();
     my $ds = $self->SequenceSetChooser->DataSet();
     my $ss = $self->SequenceSet();
-    if ($column_number == 3){
+    if ($column_number == 3) {
         # this is the ana_status column
         $cl->status_refresh_for_DataSet_SequenceSet($ds, $ss);
-    } elsif($column_number == 7){
+    }
+    elsif ($column_number == 7) {
         # padlock column
         $cl->lock_refresh_for_DataSet_SequenceSet($ds, $ss);
-    } elsif($column_number == 8){
+    }
+    elsif ($column_number == 8) {
         # here we do nothing, but rely heavily on the order (that 8 gets called after 7)
-
-    }else{
+    }
+    else {
         # no column number - just update the whole thing
-        $self->get_CloneSequence_list(1)
+        $ds->fetch_notes_locks_status_for_SequenceSet($ss);
     }
 
     return;
@@ -333,6 +345,8 @@ sub set_read_only {
 sub initialise {
     my ($self) = @_;
 
+    $self->refresh_CloneSequence_list_if_cached;
+
     # Use a slightly smaller font so that more info fits on the screen
     $self->font_size(12);
 
@@ -410,7 +424,7 @@ sub initialise {
         $self->hunt_for_selection;
     };
 
-    if( @{$self->get_CloneSequence_list()} > $self->max_per_page() ){
+    if( @{$self->get_CloneSequence_list} > $self->max_per_page() ){
         $self->_allow_paging(1);
         my $open_range = sub{
             my $busy = Tk::ScopedBusy->new($top);
@@ -690,7 +704,7 @@ sub run_lace {
     return $self->open_SequenceSet($name) ;
 }
 
-sub run_lace_on_slice{
+sub run_lace_on_slice {
     my ($self, $start, $end) = @_;
 
     ### doing the same as set_selected_from_canvas
@@ -731,22 +745,23 @@ sub run_lace_on_slice{
 sub open_SequenceSet {
     my ($self, $name) = @_;
 
-    my $cl = $self->Client;
-    my $ss = $self->SequenceSet;
-
         # using Lace::Slice instead of Lace::SequenceSet is encouraged wherever possible
-    my ($dsname, $ssname, $chr_name, $chr_start, $chr_end) = $ss->selected_CloneSequences_parameters;
-    my $slice = Bio::Otter::Lace::Slice->new($cl, $dsname, $ssname,
+    my ($dsname, $ssname, $chr_name, $chr_start, $chr_end) = $self->SequenceSet->selected_CloneSequences_parameters;
+    my $slice = Bio::Otter::Lace::Slice->new($self->Client, $dsname, $ssname,
         'chromosome', 'Otter', $chr_name, $chr_start, $chr_end);
+    return $self->open_Slice($slice, $name);
+}
 
+sub open_Slice {
+    my ($self, $slice, $name) = @_;
 
     my $adb_write_access = ${$self->write_access_var_ref()};
     my $adb = $self->Client->new_AceDatabase;
     $adb->error_flag(1);
     $adb->make_database_directory;
-    $adb->DB->species($dsname);
+    $adb->DB->species($slice->dsname);
     $adb->slice($slice);
-    $adb->name($name);
+    $adb->name($name || $slice->name);
     $adb->write_access($adb_write_access);
     $adb->load_dataset_info;
 
@@ -756,7 +771,8 @@ sub open_SequenceSet {
         catch {
             $adb->error_flag(0);
             $adb->write_access(0);  # Stops AceDatabase DESTROY from trying to unlock clones
-            if (/Locking slice failed during locking.*do_lock failed <lost the race/s) { # a message concatenated in the lock_region action, from the SliceLockBroker
+            if (/Locking slice failed during locking.*do_lock failed <lost the race/s) {
+                # a message concatenated in the lock_region action, from the SliceLockBroker
                 $self->message("The region you are trying to open is locked\n");
             } else {
                 $self->exception_message($_, 'Error initialising database');
@@ -770,21 +786,8 @@ sub open_SequenceSet {
     }
 
     warn "Making ColumnChooser";
-
-    my $specieslist = $self->SequenceSetChooser->SpeciesListWindow;
-
-    # hang it off $mw else it and the SessionWindow will be destroyed
-    # with the CW:SequenceSetChooser or CW:SN windows.  RT#425244
-    my $mw = $self->top_window->Widget(".");
-
-    my $cc = MenuCanvasWindow::ColumnChooser->init_or_reuse_Toplevel
-      (-title  => 'Select column data to load',
-       { init => { init_flag => 1,
-                   AceDatabase => $adb,
-                   SequenceNotes => $self,
-                   SpeciesListWindow => $specieslist },
-         from => $mw });
-
+    my $cc = $self->SequenceSetChooser->SpeciesListWindow->make_ColumnChoser($adb);
+    $cc->init_flag(1);
     return $cc;
 }
 
@@ -807,7 +810,7 @@ sub selected_clones_string {
 
 ## this returns the rows to be displayed - havent used get_CloneSequence_list
 ## directly, as this allows for easier inheritence of the module
-sub get_rows_list{
+sub get_rows_list {
     my ($self) = @_;
     my $cs_list = $self->get_CloneSequence_list;
     my $max_cs_list = scalar(@$cs_list);
@@ -889,7 +892,7 @@ sub _user_last_clone_seq{
 } # scoping curlies
 
 
-sub draw_paging_buttons{
+sub draw_paging_buttons {
     my ($self) = @_;
 
     my $cur_min = $self->_user_first_clone_seq();
@@ -1033,7 +1036,7 @@ sub draw_range {
         return $self->draw_all();
     }
 
-    my $no_of_cs = scalar(@{ $self->get_CloneSequence_list() });
+    my $no_of_cs = scalar(@{ $self->get_CloneSequence_list });
     my $max_pp   = $self->max_per_page;
     $self->_user_first_clone_seq(1);
     $self->_user_last_clone_seq($max_pp);
@@ -1463,7 +1466,7 @@ sub DESTROY {
 }
 
 
-sub popup_missing_analysis{
+sub popup_missing_analysis {
     my ($self) = @_;
     my $index = $self->get_current_CloneSequence_index ;
     unless (defined $index ){
@@ -1491,7 +1494,7 @@ sub popup_missing_analysis{
 }
 
 
-sub popup_ana_seq_history{
+sub popup_ana_seq_history {
     my ($self) = @_;
     my $index = $self->get_current_CloneSequence_index ;
     unless (defined $index ){
@@ -1524,7 +1527,7 @@ sub popup_ana_seq_history{
     return;
 }
 
-sub add_Status{
+sub add_Status {
     my ($self, $status) = @_;
     #add a new element to the hash
     if ($status){
@@ -1532,7 +1535,7 @@ sub add_Status{
     }
     return $self->{'_Status_win'};
 }
-sub add_History{
+sub add_History {
     my ($self, $history) = @_;
     #add a new element to the hash
     if ($history){
@@ -1542,7 +1545,7 @@ sub add_History{
 }
 
 # so we dont bring up copies of the same window
-sub check_for_History{
+sub check_for_History {
     my ($self, $index) = @_;
     return 0 unless defined($index); # 0 is valid index
 
@@ -1555,7 +1558,7 @@ sub check_for_History{
     return 1;
 }
 # so we dont bring up copies of the same window
-sub check_for_Status{
+sub check_for_Status {
     my ($self, $index) = @_;
     return 0 unless defined($index); # 0 is valid index
 
@@ -1568,7 +1571,7 @@ sub check_for_Status{
     return 1;
 }
 
-sub empty_canvas_message{
+sub empty_canvas_message {
     return "No Clone Sequences found";
 }
 
@@ -1672,7 +1675,7 @@ END_OF_PIXMAP
 }
 
 # brings up a window for searching for loci / clones
-sub slice_window{
+sub slice_window {
     my ($self) = @_;
 
     my $slice_window = $self->{'_slice_window'};
@@ -1702,7 +1705,7 @@ sub slice_window{
     return;
 }
 
-sub set_note_ref{
+sub set_note_ref {
     my ($self, $search) = @_;
     $self->{'_set_note'} = $search if $search;
     return $self->{'_set_note'};
