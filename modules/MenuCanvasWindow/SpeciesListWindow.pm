@@ -309,18 +309,28 @@ sub open_dataset_by_name {
     my $canvas = $self->canvas;
     my $busy = Tk::ScopedBusy->new($canvas);
 
-    my $ssc = CanvasWindow::SequenceSetChooser->init_or_reuse_Toplevel
-      (-title => "Assembly List $name",
-       { from => $canvas,
-         reuse_ref => \$self->{'_sequence_set_chooser'}{$name},
-         raise => 1,
-         init => { name => $name,
-                   Client => $client,
-                   DataSet => $ds,
-                   SpeciesListWindow => $self },
-       });
+    my $ssc = CanvasWindow::SequenceSetChooser->init_or_reuse_Toplevel(
+        -title => "Assembly List $name",
+        {
+            from      => $canvas,
+            reuse_ref => \$self->{'_sequence_set_chooser'}{$name},
+            raise     => 1,
+            init      => {
+                name              => $name,
+                Client            => $client,
+                DataSet           => $ds,
+                SpeciesListWindow => $self
+            },
+        }
+    );
 
     return $ssc;
+}
+
+sub cached_SequenceSetChoser_by_name {
+    my ($self, $name) = @_;
+
+    return $self->{'_sequence_set_chooser'}{$name};
 }
 
 sub draw {
@@ -413,8 +423,6 @@ sub recover_some_sessions {
 
         if ($answer=~/recover/i && @selected_recs) {
             try {
-                my $canvas = $self->canvas;
-
                 foreach my $rec (@selected_recs) {
                     my ($session_dir, $date, $title) = @$rec;
 
@@ -425,14 +433,9 @@ sub recover_some_sessions {
                     # Bring up GUI
                     my $adb = $client->recover_session($session_dir);
 
-                    my $cc = MenuCanvasWindow::ColumnChooser->init_or_reuse_Toplevel
-                      (-title  => 'Select Column Data to Load',
-                       { init => { AceDatabase => $adb,
-                                   SpeciesListWindow => $self },
-                         from => $canvas });
+                    my $cc = $self->make_ColumnChoser($adb);
 
                     $cc->load_filters(is_recover => 1);
-                    $cc->top_window->withdraw;
                 }
             }
             catch {
@@ -464,6 +467,32 @@ sub zircon_delete {
     return;
 }
 
+sub make_ColumnChoser {
+    my ($self, $adb) = @_;
+
+    return MenuCanvasWindow::ColumnChooser->init_or_reuse_Toplevel(
+        -title => 'Select Column Data to Load',
+        {
+            init => {
+                AceDatabase       => $adb,
+                SpeciesListWindow => $self
+            },
+            from => $self->canvas
+        },
+    );
+}
+
+sub refresh_lock_display_for_dataset_sequence_set {
+    my ($self, $dataset_name, $sequenceset_name) = @_;
+
+    printf STDERR "Updating lock display for %s > %s\n", $dataset_name, $sequenceset_name;
+    my $locks_refreshed = 0;
+    if (my $ssc = $self->cached_SequenceSetChoser_by_name($dataset_name)) {
+        if (my $sn = $ssc->find_cached_SequenceNotes_by_name($sequenceset_name)) {
+            $sn->refresh_lock_columns;
+        }
+    }
+}
 
 1;
 
