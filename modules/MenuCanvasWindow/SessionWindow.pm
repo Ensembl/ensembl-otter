@@ -2811,12 +2811,6 @@ sub _subsequence_cache {
     return $self->_confess_bad_master_db;
 }
 
-sub _subsequence_cache_x {
-    my ($self) = @_;
-    $self->logger->warn(longmess('_subsequence_cache_x() call: needs review!'));
-    return $self->_subsequence_cache;
-}
-
 sub _subsequence_cache_acedb {
     my ($self) = @_;
     $self->{'_subsequence_cache_acedb'} //= Bio::Otter::Utils::CacheByName->new;
@@ -2858,12 +2852,6 @@ sub _do_add_SubSeq {
                            my $name = $sub->name;
                            $self->logger->logconfess("already have SubSeq '$name'");
                        });
-}
-
-sub _add_SubSeq_x {
-    my ($self, $sub) = @_;
-    $self->logger->warn(longmess('_add_SubSeq_x() call: needs review!'));
-    return $self->_add_SubSeq($sub);
 }
 
 sub _delete_SubSeq_acedb {
@@ -3525,7 +3513,7 @@ sub zircon_zmap_view_feature_details_xml {
 
 sub _feature_details_xml {
     my ($self, $name, $feature_hash) = @_;
-    my $subseq = $self->_subsequence_cache_x->get($name);
+    my $subseq = $self->_subsequence_cache->get($name);
     return $subseq->zmap_info_xml if $subseq;
     return if $feature_hash->{'subfeature'};
     my @feature_details_xml = (
@@ -3566,8 +3554,8 @@ sub _feature_evidence_xml {
         $feat_name =~ /\A[[:alnum:]]{2}:/;
 
     my $subseq_list = [];
-    foreach my $name ($self->_subsequence_cache_x->names) {
-        if (my $subseq = $self->_subsequence_cache_x->get($name)) {
+    foreach my $name ($self->_subsequence_cache->names) {
+        if (my $subseq = $self->_subsequence_cache->get($name)) {
             push(@$subseq_list, $subseq);
         }
     }
