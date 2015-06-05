@@ -451,7 +451,7 @@ sub _build_Transcript {
             #   $start_Exon->end_phase(($start_Exon->length-$start_Exon_Pos+1)%3);
             # }
 
-            if ($end_Exon->length >= $end_Exon_Pos) {
+            if ($end_Exon->length > $end_Exon_Pos) {
                 $end_Exon->end_phase(-1);
             }
             $transcript->translation($translation);
