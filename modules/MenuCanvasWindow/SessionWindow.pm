@@ -2517,10 +2517,16 @@ sub _exonerate_done_callback {
 
 sub get_mark_in_slice_coords {
     my ($self) = @_;
-    my @mark = $self->zmap->get_mark;
+
     my $offset = $self->AceDatabase->offset;
-    $_ -= $offset for @mark;
-    return @mark;
+    if (my $mark = $self->zmap->get_mark) {
+        $mark->{'start'} -= $offset;
+        $mark->{'end'}   -= $offset;
+        return $mark;
+    }
+    else {
+        return;
+    }
 }
 
 sub _set_window_title {
