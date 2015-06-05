@@ -14,6 +14,8 @@ use Try::Tiny;
 use File::Path (); # for make_path;
 use Readonly;
 
+use Text::Diff;
+
 require Tk::Dialog;
 require Tk::Balloon;
 
@@ -786,6 +788,21 @@ sub _populate_menus {
     $top->bind('<Control-s>', $save_command);
     $top->bind('<Control-S>', $save_command);
 
+    # Compare acedb & sqlite via XML
+    my $compare_command = sub {
+        unless ($self->_close_all_edit_windows) {
+            $self->message('Not comparing because some editing windows are still open');
+            return;
+        }
+        $self->_compare_acedb_sqlite;
+    };
+    $file->add(
+        'command',
+        -label          => 'Compare AceDB & SQLite',
+        -command        => $compare_command,
+        -underline      => 0,
+        );
+
     # Resync with database
     my $resync_command = sub { $self->_resync_with_db };
     $file->add('command',
@@ -1415,6 +1432,27 @@ sub _save_data {
     }
     catch { $self->exception_message($_, 'Error saving to otter'); return 0; }
     finally { $top->Unbusy; };
+}
+
+sub _compare_acedb_sqlite {
+    my ($self) = @_;
+
+    my $adb = $self->AceDatabase;
+
+    my $xml_acedb  = $adb->generate_XML_from_acedb;
+    my $xml_sqlite = $adb->generate_XML_from_sqlite;
+
+    if ($xml_acedb eq $xml_sqlite) {
+        $self->message('XML from SQLite and AceDB is identical');
+    } else {
+        my $diffs = diff(\$xml_acedb, \$xml_sqlite, { FILENAME_A => 'AceDB', FILENAME_B => 'SQLite',
+                                                      STYLE => 'Unified', CONTEXT => 5 });
+        $self->exception_message($diffs, 'XML from SQLite and AceDB differs');
+        $adb->write_file('AceDB.xml',  $xml_acedb);
+        $adb->write_file('SQLite.xml', $xml_sqlite);
+    }
+
+    return;
 }
 
 sub _edit_double_clicked {
