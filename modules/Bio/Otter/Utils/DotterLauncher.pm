@@ -127,11 +127,6 @@ sub fork_dotter {
         # Write the subject with pfetch
         my ($subject_seq) = Hum::Pfetch::get_Sequences($subject_name);
         die "Can't fetch '$subject_name'\n" unless $subject_seq;
-        if ($self->revcomp_subject) {
-            ## no critic (Anacode::ProhibitRebless)
-            bless($subject_seq, 'Hum::Sequence::DNA');  # hack!
-            $subject_seq = $subject_seq->reverse_complement;
-        }
         my $subject_out = Hum::FastaFileIO->new("> $subject_file");
         $subject_out->write_sequences($subject_seq);
         $subject_out = undef;
@@ -153,11 +148,12 @@ sub fork_dotter {
     # Run dotter. Offset ensures that annotators see the global coordinates of the whole assembly in dotter.
     my %options;
     my $offset = $start - 1;
-    $options{'-q'} = $offset;
+    $options{'--horizontal-offset'} = $offset;
     $options{'--horizontal-type'} = $self->query_type   if defined $self->query_type;
     $options{'--vertical-type'}   = $self->subject_type if defined $self->subject_type;
     $options{'--session_colour'} = quotemeta($colour)   if defined $colour;
-    my $dotter_opts = join(' ', %options);
+    my $dotter_opts = join(' ', map { "$_=$options{$_}" } keys %options);
+    $dotter_opts .= " --reverse-horizontal -N" if $self->revcomp_subject;
 
     my $dotter_command =
         "dotter $dotter_opts $query_file $subject_file ; rm $query_file $subject_file ; echo 'Dotter finished'";

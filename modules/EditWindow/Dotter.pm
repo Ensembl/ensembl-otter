@@ -172,6 +172,9 @@ sub update_from_SessionWindow {
     $self->set_entry('genomic', $SessionWindow->slice_name);
     $self->genomic->configure(-state => 'disabled');
     $self->update_from_clipboard;
+    if (my $mark = $self->SessionWindow->get_mark_in_slice_coords) {
+        ${$self->revcomp_ref} = $mark->{'strand'} == -1 ? 1 : 0;
+    }
     my $top = $self->top;
     $top->deiconify;
     $top->raise;
@@ -266,13 +269,14 @@ sub launch_dotter {
     }
 
     my $length = $genomic->sequence_length;
-    my ($start, $end) =
-        ($self->{'_use_mark'})
-        ? $self->SessionWindow->get_mark_in_slice_coords
-        : (1, $length);
-    (defined $start && $start >= 1)       or $start = 1;
-    (defined $end   && $end   <= $length) or $end   = $length;
-    ($start, $end) = ($end, $start) if $start > $end;
+    my $start = 1;
+    my $end   = $length;
+    if ($self->{'_use_mark'}) {
+        if (my $mark = $self->SessionWindow->get_mark_in_slice_coords) {
+            $start = $mark->{'start'};
+            $end   = $mark->{'end'};
+        }
+    }
 
     my $dotter = $self->dotter;
     $dotter->query_Sequence($genomic);

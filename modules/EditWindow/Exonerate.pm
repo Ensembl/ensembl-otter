@@ -514,11 +514,10 @@ sub launch_exonerate {
     # get marked region (if requested)
     if ($self->{_region_target} eq $REGION_TARGET_MARKED) {
         $self->progress('Getting marked region');
-        my ($mark_start, $mark_end) = $SessionWindow->get_mark_in_slice_coords;
-        if ($mark_start && $mark_end) {
-            $self->logger->warn("Setting exonerate genomic start & end to marked region: $mark_start - $mark_end");
-            $otf->target_start($mark_start);
-            $otf->target_end(  $mark_end);
+        if (my $mark = $SessionWindow->get_mark_in_slice_coords) {
+            $self->logger->warn("Setting exonerate genomic start & end to marked region: $mark->{start} - $mark->{end}");
+            $otf->target_start($mark->{'start'});
+            $otf->target_end(  $mark->{'end'});
         }
     }
 
