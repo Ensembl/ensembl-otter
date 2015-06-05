@@ -875,6 +875,16 @@ sub generate_XML_from_acedb {
     return $formatter->generate_OtterXML;
 }
 
+sub generate_XML_from_sqlite {
+    my ($self) = @_;
+
+    $self->DB->vega_dba->clear_caches;
+    my $region = Bio::Vega::Region->new_from_otter_db( slice => $self->DB->session_slice );
+    my $formatter = Bio::Vega::Transform::RegionToXML->new;
+    $formatter->region($region);
+    return $formatter->generate_OtterXML;
+}
+
 sub unlock_otter_slice {
     my ($self) = @_;
 
