@@ -604,6 +604,7 @@ sub _build_Locus {              ## no critic (Subroutines::ProhibitUnusedPrivate
     my $truncated=$data->{'truncated'};
     if (defined $truncated) {
         $gene->truncated_flag($truncated);
+        $gene->add_truncated_attribute if $truncated;
     }
 
     #convert coordinates from chromosomal coordinates to slice coordinates
