@@ -998,10 +998,10 @@ sub transfer_gene {
     @transcripts = @{$lgene->get_all_Transcripts};
     foreach my $transcript (@transcripts){
       if ($transcript->start <  $lgene->start){
-        $lgene->start=$transcript->start;
+        $lgene->start($transcript->start);
       }
       if ($transcript->end >  $lgene->end){
-        $lgene->end=$transcript->end;
+        $lgene->end($transcript->end);
       }
     }
   }
@@ -1341,6 +1341,7 @@ gene_name_update              i
 align_session                 i
 align_stage                   i
 tmp_align                     i
+tmp_align_region              i
 tmp_mask                      i
 tmp_assembly                  i
 test_contig_info              i
@@ -1350,6 +1351,7 @@ intron_supporting_evidence    i
 transcript_intron_supporting_evidence i
 genome_statistics             i
 slice_lock                    i
+contig_lock_RT439403          i
 ENDOFTEXT
   return $txt;
 }
