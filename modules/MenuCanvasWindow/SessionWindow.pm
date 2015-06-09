@@ -468,6 +468,7 @@ sub _compare_subseqs {
                 _compare_translation_region
                 _compare_exons
                 _compare_evidence
+                _compare_locus_dbID
                 } ],
         },
         );
@@ -538,6 +539,13 @@ sub _compare_evidence {
         $diffs->{'evidence'} = [$o_evi, $n_evi, $o, $n];
     }
     return;
+}
+
+sub _compare_locus_dbID {
+    my ($self, $diffs, $old, $new) = @_;
+    return $self->_compare_strings($diffs, 'Locus->ensembl_dbID',
+                                   $old->Locus->ensembl_dbID,
+                                   $new->Locus->ensembl_dbID);
 }
 
 sub _evi_string {
@@ -2812,6 +2820,27 @@ sub _replace_SubSeq_sqlite {
     my $old_locus_name = $old_locus->name || $new_locus_name;
     my $locus_tag  = "Locus $new_locus_name for SubSeq $new_subseq_name";
 
+    my $prev_locus;
+    if ($old_locus_name ne $new_locus_name) {
+        $self->logger->debug("Changing sqlite locus, '$old_locus_name' => '$new_locus_name'");
+
+        if (my $prev_locus_name = $new_locus->drop_previous_name) {
+
+            $prev_locus = $self->_locus_cache_sqlite->get($prev_locus_name);
+            unless ($prev_locus) {
+                $self->logger->logconfess("Cannot find cached sqlite locus for previous locus '$prev_locus_name'");
+            }
+
+            $self->logger->info("Unsetting otter_id for sqlite locus: ", $self->_debug_locus($prev_locus));
+            $prev_locus->drop_otter_id;
+        }
+
+        $old_locus = $self->_locus_cache_sqlite->get($new_locus_name);
+        if ($old_locus) {
+            $self->logger->debug("Found sqlite version of new subseq's locus: ", $self->_debug_locus($old_locus));
+        }
+    }
+
     my ($done_sqlite, $done_zmap, $err);
 
     my $vega_dba = $self->vega_dba;
@@ -2820,7 +2849,11 @@ sub _replace_SubSeq_sqlite {
     try {
         $vega_dba->begin_work;
 
-        if ($old_locus->ensembl_dbID) {
+        if ($prev_locus) {
+            $from_HumAce->update_Gene($prev_locus, $prev_locus);
+        }
+
+        if ($old_locus and $old_locus->ensembl_dbID) {
             my $locus_diffs = $self->_compare_loci($old_locus, $new_locus);
             if ($locus_diffs) {
                 $self->logger->debug("$locus_tag: diffs to original saved Locus.");
