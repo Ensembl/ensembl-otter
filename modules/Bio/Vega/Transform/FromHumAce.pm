@@ -371,6 +371,8 @@ sub _gene_from_Locus {
     $gene->truncated_flag(1) if $locus->is_truncated;
     $gene->status('KNOWN')   if $locus->known;
 
+    $gene->set_biotype_status_from_transcripts;
+
     $self->_add_remarks($gene, $locus);
 
     $gene->analysis   ($self->_otter_analysis);
