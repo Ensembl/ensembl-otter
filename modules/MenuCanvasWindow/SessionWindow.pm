@@ -628,18 +628,41 @@ sub _log_diffs {
     return;
 }
 
-# FIXME - move to Locus->new_from_otter_Locus ??
+# FIXME - move to Locus->new_from_otter_Locus, if still here once we're done ??
 sub _copy_locus {
     my ($self, $locus) = @_;
     my $copy = $locus->new_from_Locus($locus);
     foreach my $method (qw{
         otter_id
         known
+        previous_name
         })
     {
         $copy->$method($locus->$method);
     }
+    $copy->set_annotation_remarks($locus->list_annotation_remarks);
     return $copy;
+}
+
+# FIXME - move to SubSeq->new_from_otter_SubSeq, if still here once we're done ??
+sub _copy_subseq {
+    my ($self, $subseq, $new_locus) = @_;
+
+    my $new_subseq = $subseq->clone;
+    foreach my $method (qw{
+        otter_id
+        translation_otter_id
+        })
+    {
+        $new_subseq->$method($subseq->$method);
+    }
+
+    unless ($new_locus) {
+        $new_locus = $self->_copy_locus($subseq->Locus);
+    }
+    $new_subseq->Locus($new_locus);
+
+    return $new_subseq;
 }
 
 sub do_rename_locus {
@@ -670,7 +693,7 @@ sub do_rename_locus {
         unless ($old_locus_sqlite) {
             die "Cannot find locus called '$old_name' in sqlite cache";
         }
-        my $new_locus_sqlite = $old_locus_sqlite->new_from_Locus;
+        my $new_locus_sqlite = $self->_copy_locus($old_locus_sqlite);
         $new_locus_sqlite->name($new_name);
         $self->_locus_cache_sqlite->set($new_locus_sqlite);
 
@@ -1233,8 +1256,7 @@ sub _close_GenomicFeaturesWindow {
         # Now add subseqs to the slave DB
         foreach my $new (@new_subseq) {
 
-            my $slave = $new->clone;
-            $slave->Locus($new->Locus->new_from_Locus);
+            my $slave = $self->_copy_subseq($new);
 
             if ($self->_master_db_is_acedb) {
                 $self->_Assembly_sqlite->add_SubSeq($slave);
@@ -1859,8 +1881,7 @@ sub _edit_new_subsequence {
         $new_acedb->translation_region($new_acedb->translation_region);
     }
 
-    my $new_sqlite = $new_acedb->clone;
-    $new_sqlite->Locus($locus_sqlite);
+    my $new_sqlite = $self->_copy_subseq($new_acedb, $locus_sqlite);
 
     $self->_Assembly_acedb->add_SubSeq($new_acedb);
     $self->_add_SubSeq_acedb($new_acedb);
@@ -2213,6 +2234,9 @@ sub _delete_subsequences {
         foreach my $sub_sqlite (@to_die_sqlite) {
             if ($sub_sqlite->ensembl_dbID) {
                 $from_HumAce->remove_Transcript($sub_sqlite);
+                $self->logger->debug('Deleting transcript for: ', $self->_debug_subseq($sub_sqlite));
+            } else {
+                $self->logger->warn('Do not have transcript to delete for: ', $self->_debug_subseq($sub_sqlite));
             }
         }
 
@@ -2639,8 +2663,7 @@ sub delete_featuresets {
 sub replace_SubSeq {
     my ($self, $new, $old) = @_;
 
-    my $new_sqlite = $new->clone;
-    $new_sqlite->Locus($new->Locus->new_from_Locus);
+    my $new_sqlite = $self->_copy_subseq($new);
 
     my ($done_acedb,  $done_zmap_acedb,  $err_acedb)  = $self->_replace_SubSeq_acedb($new, $old);
     my ($done_sqlite, $done_zmap_sqlite, $err_sqlite) = $self->_replace_SubSeq_sqlite($new_sqlite, $old);
