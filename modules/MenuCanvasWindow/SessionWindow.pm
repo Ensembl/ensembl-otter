@@ -1474,13 +1474,25 @@ sub _compare_acedb_sqlite {
 
     if ($xml_acedb eq $xml_sqlite) {
         $self->message('XML from SQLite and AceDB is identical');
-    } else {
-        my $diffs = diff(\$xml_acedb, \$xml_sqlite, { FILENAME_A => 'AceDB', FILENAME_B => 'SQLite',
-                                                      STYLE => 'Unified', CONTEXT => 5 });
-        $self->exception_message($diffs, 'XML from SQLite and AceDB differs');
-        $adb->write_file('AceDB.xml',  $xml_acedb);
-        $adb->write_file('SQLite.xml', $xml_sqlite);
+        return;
     }
+
+    $adb->write_file('AceDB.xml',  $xml_acedb);
+    $adb->write_file('SQLite.xml', $xml_sqlite);
+
+    my $diffs = diff(\$xml_acedb, \$xml_sqlite, { FILENAME_A => 'AceDB', FILENAME_B => 'SQLite',
+                                                  STYLE => 'Unified', CONTEXT => 5 });
+    my $copy = $diffs;
+    $copy =~ s{^[+-]{3} .+$}{}mg;      # delete the inital filename lines
+    $copy =~ s{^[+]\s+<author.+$}{}mg; # delete the addition of author and author_email
+    $adb->write_file('acedb_sqlite.diff', $copy);
+
+    unless ($copy =~ /^[-+]/mg) {
+        $self->message('XML from SQLite and AceDB is identical (barring author details)');
+        return;
+    }
+
+    $self->exception_message($diffs, 'XML from SQLite and AceDB differs');
 
     return;
 }
