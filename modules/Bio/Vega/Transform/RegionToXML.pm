@@ -27,11 +27,27 @@ sub DESTROY {
 # Use this to sort SimpleFeatures, Genes and Transcripts
 # Not actually necessary, but useful when test XML parsing and generation.
 my $by_start_end_strand = sub {
-    return $a->start      <=> $b->start
-        || $a->end        <=> $b->end
-        || $a->strand     <=> $b->strand
-        || $a->display_id cmp $b->display_id;
+    my $result =
+            $a->start            <=>  $b->start
+        ||  $a->end              <=>  $b->end
+        ||  $a->strand           <=>  $b->strand
+        || ($a->stable_id // '') cmp ($b->stable_id // '');
+    return $result if $result;
+
+    if ($a->can('get_all_Attributes')) {
+        return _feature_name($a) cmp _feature_name($b);
+    } else {
+        return $a->display_id cmp $b->display_id;
+    }
 };
+
+# NOT A METHOD
+sub _feature_name {
+    my ($feature) = @_;
+    my $name_att = $feature->get_all_Attributes('name');
+    my $name = $name_att->[0] ? $name_att->[0]->value : '';
+    return $name;
+}
 
 # get/set methods exposed on object interface
 
@@ -166,8 +182,7 @@ sub generate_Locus {
     my $gene_description = $gene->description || '';
     $g->attribvals($self->prettyprint('description', $gene_description));
 
-    my $gene_name_att = $gene->get_all_Attributes('name');
-    my $gene_name = $gene_name_att->[0] ? $gene_name_att->[0]->value : '';
+    my $gene_name = _feature_name($gene);
     $g->attribvals($self->prettyprint('name', $gene_name));
 
     my ($type) = biotype_status2method($gene->biotype, $gene->status);
@@ -247,11 +262,7 @@ sub generate_Transcript {
   my ($class) = biotype_status2method($tran->biotype, $tran->status);
   $t->attribvals($self->prettyprint('transcript_class', $class));
 
-  my $tran_name_att = $tran->get_all_Attributes('name') ;
-  my $tran_name='';
-  if ($tran_name_att->[0]){
-      $tran_name=$tran_name_att->[0]->value;
-  }
+  my $tran_name = _feature_name($tran);
   $t->attribvals($self->prettyprint('name',$tran_name));
 
   my $es=$self->generate_EvidenceSet($tran);
