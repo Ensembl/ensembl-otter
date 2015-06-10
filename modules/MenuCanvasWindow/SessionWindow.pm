@@ -1457,6 +1457,7 @@ sub _save_data {
         $adb->unsaved_changes(0);
         $self->_flag_db_edits(0);    # or the _save_ace() will set unsaved_changes back to "1"
         $self->_save_ace($ace_data);
+        $self->_save_region_updates_sqlite($region);
         $self->_flag_db_edits(1);
         $self->_resync_with_db;
 
@@ -1465,6 +1466,33 @@ sub _save_data {
     }
     catch { $self->exception_message($_, 'Error saving to otter'); return 0; }
     finally { $top->Unbusy; };
+}
+
+sub _save_region_updates_sqlite {
+    my ($self, $new_region) = @_;
+
+    my $ace_maker = Bio::Vega::Region::Ace->new;
+    my $new_assembly = $ace_maker->make_assembly(
+        $new_region,
+        {
+            name             => $self->slice_name,
+            MethodCollection => $self->AceDatabase->MethodCollection, # FIXME: Where will this come from?
+        }
+        );
+
+    foreach my $new_subseq ($new_assembly->get_all_SubSeqs) {
+        next unless $new_subseq->is_mutable;
+
+        my $name = $new_subseq->name;
+        my $old_subseq = $self->_subsequence_cache_sqlite->get($name);
+        $old_subseq or die "Cannot find existing subseq for $name";
+
+        $self->_replace_SubSeq_sqlite($new_subseq, $old_subseq);
+    }
+
+    # Nothing new should come back for sequence features
+
+    return;
 }
 
 sub _compare_acedb_sqlite {
