@@ -385,6 +385,66 @@ sub _gene_from_Locus {
     return $gene;
 }
 
+sub store_SimpleFeature {
+    my ($self, $ha_feature) = @_;
+
+    my $sf = $self->_simpleFeature_from_HumAce($ha_feature);
+
+    my $sfa = $self->_slice_dba->get_SimpleFeatureAdaptor;
+    $sfa->store($sf);
+
+    $self->logger->debug(
+        sprintf("Stored simple feature '%s', [%d-%d:%d]",
+                $sf->display_label, $sf->seq_region_start, $sf->seq_region_end, $sf->seq_region_strand)
+        );
+
+    return;
+}
+
+sub remove_SimpleFeatures {
+    my ($self, $type) = @_;
+
+    my $simple_features = $self->whole_slice->get_all_SimpleFeatures($type);
+    my $sfa = $self->_slice_dba->get_SimpleFeatureAdaptor;
+
+    foreach my $sf (@$simple_features) {
+        $sfa->remove($sf);
+    }
+
+    return;
+}
+
+# FIXME: duplication with XMLToRegion
+#
+sub _simpleFeature_from_HumAce {
+    my ($self, $ha_feature) = @_;
+
+    my $offset = $self->session_slice->start - 1;
+
+    my $analysis = $self->_get_Analysis($ha_feature->Method->name);
+    my $simple_feature = Bio::EnsEMBL::SimpleFeature->new(
+        -start         => $ha_feature->seq_start + $offset,
+        -end           => $ha_feature->seq_end   + $offset,
+        -strand        => $ha_feature->seq_strand,
+        -score         => $ha_feature->score,
+        -display_label => $ha_feature->text,
+        -analysis      => $analysis,
+        -slice         => $self->whole_slice,
+        );
+
+    return $simple_feature;
+}
+
+{
+    my %logic_analysis;
+
+    sub _get_Analysis {
+        my ($self, $name) = @_;
+        my $analysis = $logic_analysis{$name} ||= Bio::EnsEMBL::Analysis->new(-logic_name => $name);
+        return $analysis;
+    }
+}
+
 sub session_slice {
     my ($self, @args) = @_;
     ($self->{'session_slice'}) = @args if @args;
