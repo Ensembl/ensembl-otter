@@ -2604,14 +2604,18 @@ sub save_Assembly { ## no critic (Subroutines::RequireFinalReturn)
     my ($self, $new) = @_;
 
     my ($delete_xml, $create_xml) = Bio::Otter::ZMap::XML::update_SimpleFeatures_xml(
-        $self->Assembly_x, $new, $self->AceDatabase->offset);
+        $self->Assembly, $new, $self->AceDatabase->offset);
     my $ace = $new->ace_string;
 
-    my $done_ace = 0;
-    my $err = undef;
+    my ($done_ace, $done_sqlite, $err);
     my $done_zmap = try {
+
         $self->_save_ace($ace);
         $done_ace = 1;
+
+        $self->_save_simplefeatures_sqlite($new);
+        $done_sqlite = 1;
+
         if ($delete_xml) {
             $self->zmap->send_command_and_xml('delete_feature', $delete_xml);
         }
@@ -2622,11 +2626,17 @@ sub save_Assembly { ## no critic (Subroutines::RequireFinalReturn)
     }
     catch {
         $err = $_;
+        return;
     };
 
     # Set internal state only if we saved to Ace OK
     if ($done_ace) {
-        $self->Assembly_x->set_SimpleFeature_list($new->get_all_SimpleFeatures);
+        $self->_Assembly_acedb->set_SimpleFeature_list($new->get_all_SimpleFeatures);
+    }
+
+    if ($done_sqlite) {
+        # I think it's ok not to duplicate these
+        $self->_Assembly_sqlite->set_SimpleFeature_list($new->get_all_SimpleFeatures);
     }
 
     if ($done_zmap) {
@@ -2634,8 +2644,10 @@ sub save_Assembly { ## no critic (Subroutines::RequireFinalReturn)
         return;
     } else {
         my $msg;
-        if ($done_ace) {
+        if ($done_sqlite) {
             $msg = "Saved OK, but please restart ZMap";
+        } elsif ($done_ace) {
+            $msg = "Aborted save, failed to save to SQLite";
         } else {
             $msg = "Aborted save, failed to save to Ace";
         }
@@ -2649,6 +2661,37 @@ sub save_Assembly { ## no critic (Subroutines::RequireFinalReturn)
         # Exception box goes to Bio::Otter::Error / Tk::Error
         $self->logger->logdie($msg);
     }
+}
+
+sub _save_simplefeatures_sqlite {
+    my ($self, $new_assembly) = @_;
+
+    my $vega_dba = $self->vega_dba;
+    my $from_HumAce = $self->_from_HumAce;
+
+    try {
+        $vega_dba->begin_work;
+
+        foreach my $method ($new_assembly->MethodCollection->get_all_mutable_non_transcript_Methods) {
+            $from_HumAce->remove_SimpleFeatures($method->name);
+        }
+
+        my @features = $new_assembly->get_all_SimpleFeatures;
+        $self->logger->debug("Going to save ", scalar(@features), " features");
+        foreach my $sf (@features) {
+            $from_HumAce->store_SimpleFeature($sf);
+        }
+
+        $vega_dba->commit;
+    }
+    catch {
+        my $err = $_;
+        $vega_dba->rollback;
+
+        die "_save_simplefeatures_sqlite: $err";
+    };
+
+    return;
 }
 
 sub _empty_Assembly_cache {
