@@ -831,8 +831,11 @@ sub _populate_menus {
         'command',
         -label          => 'Compare AceDB & SQLite',
         -command        => $compare_command,
+        -accelerator    => 'Ctrl+B',
         -underline      => 0,
         );
+    $top->bind('<Control-b>', $compare_command);
+    $top->bind('<Control-B>', $compare_command);
 
     # Resync with database
     my $resync_command = sub { $self->_resync_with_db };
