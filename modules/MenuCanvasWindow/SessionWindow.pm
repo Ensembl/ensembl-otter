@@ -1339,7 +1339,7 @@ sub _exit_save_data {
 
     $self->_close_all_edit_windows or return;
 
-    if (my @loci = $self->Assembly_x->get_all_annotation_in_progress_Loci) {
+    if (my @loci = $self->Assembly->get_all_annotation_in_progress_Loci) {
 
         # Format the text for the dialog
         my $loci_str = join('', map {sprintf "\t%s\n", $_->name} @loci);
@@ -1366,7 +1366,7 @@ sub _exit_save_data {
             foreach my $locus (@loci) {
                 $locus->unset_annotation_in_progress;
                 $ace .= $locus->ace_string;
-                $self->update_Locus($locus);
+                $self->update_Locus($locus); # this will also update SQLite version
             }
 
             try { $self->_save_ace($ace); return 1; }
@@ -2473,12 +2473,6 @@ sub Assembly {
     return $self->_Assembly_acedb  if $self->_master_db_is_acedb;
     return $self->_Assembly_sqlite if $self->_master_db_is_sqlite;
     return $self->_confess_bad_master_db;
-}
-
-sub Assembly_x {
-    my ($self) = @_;
-    $self->logger->warn(longmess('Assembly_x() call: needs review!'));
-    return $self->Assembly;
 }
 
 sub _Assembly_acedb {
