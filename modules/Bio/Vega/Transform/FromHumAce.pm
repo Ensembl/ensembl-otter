@@ -375,6 +375,9 @@ sub _gene_from_Locus {
 
     $self->_add_remarks($gene, $locus);
 
+    my @synonyms = map { ('synonym' => $_) } $locus->list_aliases;
+    add_EnsEMBL_Attributes($gene, @synonyms);
+
     $gene->analysis   ($self->_otter_analysis);
     $gene->gene_author($self->_author_object );
 
