@@ -20,6 +20,7 @@ my(
     %dbh,
     %file,
     %vega_dba,
+    %reconnect_dba,
     %session_slice,
     %whole_slice,
     %ColumnAdaptor,
@@ -34,6 +35,7 @@ sub DESTROY {
     delete($dbh{$self});
     delete($file{$self});
     delete($vega_dba{$self});
+    delete($reconnect_dba{$self});
     delete($session_slice{$self});
     delete($whole_slice{$self});
     delete($ColumnAdaptor{$self});
@@ -110,12 +112,40 @@ sub file {
 
 sub vega_dba {
     my ($self) = @_;
+
+    my $old_dba;
+    if ($self->reconnect_dba) {
+        $old_dba = delete $vega_dba{$self};
+        $self->reconnect_dba(undef);
+    }
+
     return $vega_dba{$self} if $vega_dba{$self};
 
     $self->_is_loaded('dataset_info') or
         $self->logger->logconfess("Cannot create Vega adaptor until dataset info is loaded");
 
-    return $vega_dba{$self} = $self->_dba;
+    $vega_dba{$self} = $self->_dba;
+
+    # We need to replace the dba for our slices, if they've previously been set.
+    #
+    my $ws = $whole_slice{$self};
+    if ($old_dba and $ws and $ws->adaptor and $ws->adaptor->db and $ws->adaptor->db == $old_dba) {
+        $self->logger->debug("Replacing whole_slice dba");
+        $ws->adaptor->db($vega_dba{$self});
+        # Should be same adaptor
+        unless ($session_slice{$self}->adaptor->db == $ws->adaptor->db) {
+            $self->logger->error("session_slice dba differs from whole_slice dba!");
+        }
+    }
+
+    return $vega_dba{$self};
+}
+
+sub reconnect_dba {
+    my ($self, @args) = @_;
+    ($reconnect_dba{$self}) = @args if @args;
+    my $reconnect_dba = $reconnect_dba{$self};
+    return $reconnect_dba;
 }
 
 sub _dba {
@@ -124,10 +154,15 @@ sub _dba {
     # This pulls in EnsEMBL, so we only do it if required, to reduce the footprint of filter_get &co.
     require Bio::Vega::DBSQL::DBAdaptor;
 
+    # We need a unique species per session to avoid confusing the EnsEMBL API
+    my $db_species = sprintf('%s:::%s', $self->species, $self->log_context);
+    $self->logger->debug("Connecting for '$db_species'");
+
     return Bio::Vega::DBSQL::DBAdaptor->new(
         -driver  => 'SQLite',
         -dbname  => $self->file,
-        -species => $self->species,
+        -species => $db_species,
+        -reconnect_when_connection_lost => 1, # to cope with Registry->clear disconnecting everything
         );
 }
 
@@ -343,6 +378,11 @@ sub load_dataset_info {
     $dbh->commit;
 
     Bio::EnsEMBL::Registry->clear; # else mappings won't be loaded in our vega_dba() :-(
+
+    # let other vega_dba's know that they need to reconnect
+    foreach my $session (keys %vega_dba) {
+        $reconnect_dba{$session} = 1;
+    }
 
     $self->_is_loaded('dataset_info', 1);
 

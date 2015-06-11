@@ -205,7 +205,10 @@ sub fetch_CloneSeq {
 
 sub fetch_species {
     my ($self) = @_;
-    return $self->species($self->_slice_dba->species);
+    my $db_species = $self->_slice_dba->species;
+    # Drop the session spec - see Bio::Otter::Lace::DB->vega_dba()
+    $db_species =~ s/:::.*$//;
+    return $self->species($db_species);
 }
 
 sub fetch_SimpleFeatures {
