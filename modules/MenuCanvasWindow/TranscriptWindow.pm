@@ -2789,7 +2789,7 @@ sub store_Transcript {
     my ($self, $transcript) = @_;
 
     my $db_slice   = $self->SessionWindow->AceDatabase->DB->session_slice;
-    my $vega_dba   = $db_slice->adaptor->db;
+    my $vega_dba   = $db_slice->adaptor->db; # FIXME: probably fragile in face of multiple species
     my $ts_adaptor = $vega_dba->get_TranscriptAdaptor;
 
     if ($transcript->is_stored($vega_dba)) {
