@@ -5,15 +5,33 @@ package Bio::Otter::Utils::CacheByName;
 use strict;
 use warnings;
 
+my %_name_attribute;            # inside-out since we use the blessed hashref as the cache
+
+sub DESTROY {
+    my ($self) = @_;
+    delete $_name_attribute{$self};
+    return;
+}
+
 sub new {
-    my ($class) = @_;
-    return bless {}, $class;
+    my ($class, $name_attribute) = @_;
+    my $self = bless {}, $class;
+    $self->_name_attribute($name_attribute // 'name');
+    return $self;
+}
+
+sub _name_attribute {
+    my ($self, @args) = @_;
+    ($_name_attribute{$self}) = @args if @args;
+    my $_name_attribute = $_name_attribute{$self};
+    return $_name_attribute;
 }
 
 sub set {
     my ($self, $obj, $not_unique_sub) = @_;
 
-    my $name = $obj->name;
+    my $na = $self->_name_attribute;
+    my $name = $obj->$na;
     if ($not_unique_sub and $self->{$name}) {
         my $replace = $not_unique_sub->($obj, $name);
         return unless $replace;
@@ -39,7 +57,8 @@ sub get_or_new {
 
 sub get_or_this {
     my ($self, $obj) = @_;
-    if (my $existing = $self->get($obj->name)) {
+    my $na = $self->_name_attribute;
+    if (my $existing = $self->get($obj->$na)) {
         return $existing;
     } else {
         return $self->set($obj);
@@ -53,7 +72,8 @@ sub delete {
 
 sub delete_object {
     my ($self, $obj) = @_;
-    return $self->delete($obj->name);
+    my $na = $self->_name_attribute;
+    return $self->delete($obj->$na);
 }
 
 sub names {

@@ -216,6 +216,34 @@ sub empty : Tests {
     return;
 }
 
+sub alt_name_accessor : Tests {
+    my $test = shift;
+
+    my $cbn = Bio::Otter::Utils::CacheByName->new('alt_name');
+    _cmp_contents($cbn, [], 'starts empty');
+
+    foreach my $key ( qw( A B C ) ) {
+        my $obj = CacheByName::TestObjectAltName->new($key, "=${key}=");
+        $cbn->set($obj);
+    }
+    _cmp_contents($cbn, [qw( A B C )], 'set three');
+
+    my $a = $cbn->get('A');
+    $cbn->delete_object($a);
+    _cmp_contents($cbn, [qw( B C )], 'delete one');
+
+    my $existing = $cbn->get('C');
+    my $try = $cbn->get_or_this($existing);
+    is($try, $existing, 'get_or_this returns existing');
+
+    my $zed = CacheByName::TestObjectAltName->new('Z', "=Z=");
+    my $got = $cbn->get_or_this($zed);
+    is ($got, $zed, 'get_or_this adds this if not found');
+    _cmp_contents($cbn, [qw( B C Z )], 'cache okay');
+
+    return;
+}
+
 sub _cmp_test_object {
     my ($got, $want, $what) = @_;
     subtest $what => sub {
@@ -264,6 +292,19 @@ sub value {
     ($self->{'value'}) = @args if @args;
     my $value = $self->{'value'};
     return $value;
+}
+
+package CacheByName::TestObjectAltName;
+
+use base 'CacheByName::TestObject';
+
+sub name {
+    die "Shouldn't be calling name() on me";
+}
+
+sub alt_name {
+    my ($self, @args) = @_;
+    return $self->SUPER::name(@args);
 }
 
 1;
