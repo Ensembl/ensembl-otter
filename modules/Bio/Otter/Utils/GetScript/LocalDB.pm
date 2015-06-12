@@ -103,7 +103,7 @@ sub augment_feature_info {
 }
 
 sub send_feature_gff {
-    my ($self, $features, $process_gff) = @_;
+    my ($self, $features, $process_gff, $gff_trailer_ref) = @_;
 
     # # Example of passing extra gff args:
     # #
@@ -121,6 +121,7 @@ sub send_feature_gff {
     $self->time_diff_for(
         'sending data', sub {
             print STDOUT $gff;
+            print STDOUT $$gff_trailer_ref if $gff_trailer_ref;
         } );
 
     # zmap waits for STDOUT to be closed as an indication that all
