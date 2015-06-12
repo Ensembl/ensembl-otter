@@ -28,7 +28,11 @@ sub do_it {
 
 package main;
 
-Bio::Otter::GetScript::TilePathGet->new->run;
+use Log::Log4perl::Level;
+
+Bio::Otter::GetScript::TilePathGet
+    ->new(log4perl => $DEBUG)
+    ->run;
 
 exit;
 

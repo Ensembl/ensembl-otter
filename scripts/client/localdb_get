@@ -25,7 +25,11 @@ sub do_it {
 
 package main;
 
-Bio::Otter::GetScript::LocalDBGet->new->run;
+use Log::Log4perl::Level;
+
+Bio::Otter::GetScript::LocalDBGet
+    ->new(log4perl => $DEBUG)
+    ->run;
 
 exit;
 
