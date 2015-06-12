@@ -331,6 +331,20 @@ sub new_AceDatabase {
     return $adb;
 }
 
+sub new_AceDatabase_from_Slice {
+    my ($self, $slice) = @_;
+
+    my $adb = $self->new_AceDatabase;
+    $adb->error_flag(1);
+    $adb->make_database_directory;
+    $adb->DB->species($slice->dsname);
+    $adb->slice($slice);
+    $adb->name($slice->name);
+    $adb->load_dataset_info;
+
+    return $adb;
+}
+
 sub client_hostname {
     my ($self, $client_hostname) = @_;
 
@@ -1608,7 +1622,6 @@ sub recover_session {
     # in the lace database is saved in the region XML
     # dot file.
     $adb->recover_slice_from_region_xml;
-    $adb->DataSet->load_client_config;
     $adb->reload_filter_state;
 
     return $adb;

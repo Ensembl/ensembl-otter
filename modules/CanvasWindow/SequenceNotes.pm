@@ -756,14 +756,9 @@ sub open_Slice {
     my ($self, $slice, $name) = @_;
 
     my $adb_write_access = ${$self->write_access_var_ref()};
-    my $adb = $self->Client->new_AceDatabase;
-    $adb->error_flag(1);
-    $adb->make_database_directory;
-    $adb->DB->species($slice->dsname);
-    $adb->slice($slice);
-    $adb->name($name || $slice->name);
+    my $adb = $self->Client->new_AceDatabase_from_Slice($slice);
+    $adb->name($name);
     $adb->write_access($adb_write_access);
-    $adb->load_dataset_info;
 
     if ($adb_write_access) {
         # only lock the region if we have write access.
@@ -785,7 +780,6 @@ sub open_Slice {
           or return;
     }
 
-    warn "Making ColumnChooser";
     my $cc = $self->SequenceSetChooser->SpeciesListWindow->make_ColumnChoser($adb);
     $cc->init_flag(1);
     return $cc;

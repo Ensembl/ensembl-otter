@@ -33,8 +33,9 @@ sub Client {
 
 sub load_client_config {
     my ($self) = @_;
-    $self->_bam_load;
-    $self->_filter_load;
+
+    $self->_bam_load    unless $self->{_bam_by_name};
+    $self->_filter_load unless $self->{_filter_by_name};
     return;
 }
 
