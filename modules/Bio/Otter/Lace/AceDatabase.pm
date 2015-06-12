@@ -1133,11 +1133,17 @@ sub select_column_by_name {
 sub ColumnCollection {
     my ($self) = @_;
 
-    return $self->{'_ColumnCollection'} ||=
-        Bio::Otter::Lace::Chooser::Collection->new_from_Filter_list(
-            @{ $self->DataSet->filters },
-            (map { $self->_bam_filter_list($_) } @{ $self->DataSet->bam_list }),
-        );
+    my $cc = $self->{'_ColumnCollection'};
+    unless ($cc) {
+        my $ds = $self->DataSet;
+        $ds->load_client_config;
+        $cc = $self->{'_ColumnCollection'} =
+            Bio::Otter::Lace::Chooser::Collection->new_from_Filter_list(
+                @{ $ds->filters },
+                (map { $self->_bam_filter_list($_) } @{ $ds->bam_list }),
+            );
+    }
+    return $cc;
 }
 
 my @coverage_param_list = (

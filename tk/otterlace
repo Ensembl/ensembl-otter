@@ -25,8 +25,11 @@ sub run_gui {
     setpgrp();
 
     my ($do_recover, @open);
-    Bio::Otter::Lace::Defaults::do_getopt('recover!' => \$do_recover,
-                                          'open|o=s' => \@open);
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'recover!' => \$do_recover,
+        'open|o=s' => \@open,
+        );
+
     if (@ARGV) {
         my $name = $ENV{OTTERLACE_RAN_AS};
         if (defined $name) {
@@ -91,12 +94,13 @@ sub run_gui {
         $main_window->iconify;
         $main_window->afterIdle([ $SpeciesListWindow, 'recover_some_sessions', 'no_wait']);
     }
-    foreach my $open (@open) {
+    foreach my $task (@open) {
         require Bio::Otter::Utils::AutoOpen; # load iff needed
-        my $opener = Bio::Otter::Utils::AutoOpen->new($SpeciesListWindow, $open);
+        my $opener = Bio::Otter::Utils::AutoOpen->new($SpeciesListWindow);
+        $opener->parse_path($task);
         # Failure will kill the app, we assume the caller is reading
         # the terminal.  Else job done, just wait.
-        $opener->hide_after(1);
+        # $opener->hide_after(1);
     }
 
     Tk::MainLoop();
