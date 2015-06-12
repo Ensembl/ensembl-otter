@@ -5,6 +5,7 @@ package Bio::Otter::Utils::GetScript;
 use strict;
 use warnings;
 
+use Carp;
 use IO::Handle;
 use Scalar::Util qw(weaken);
 use Time::HiRes qw( time gettimeofday );
@@ -40,7 +41,10 @@ sub do_requires {
 
 # Override in child if necessary.
 #
-sub log_context  { return shift->require_arg('gff_source'); }
+sub log_context {
+    my ($self) = @_;
+    return $self->arg('gff_source') || ref($self); 
+}
 
 # NB GetScript is a singleton...
 
@@ -90,7 +94,7 @@ sub run {
         my $appender = Log::Log4perl::Appender->new('Bio::Otter::Utils::GetScript::Log4perlAppender');
         $appender->layout(Log::Log4perl::Layout::NoopLayout->new());
 
-        my $log = Bio::Otter::Log::Log4perl->get_logger(''); # must specify '' for root logger
+        my $log = Log::Log4perl->get_logger(''); # must specify '' for root logger
         $log->add_appender($appender);
         $log->level($getscript_log4perl_level);
         $log->debug('Log4perl ready');
@@ -148,7 +152,7 @@ sub read_delete_args {
 
 sub require_arg {
     my ($self, $key) = @_;
-    die "No argument '$key'" unless exists $getscript_args{$key};
+    confess "No argument '$key'" unless exists $getscript_args{$key};
     return $getscript_args{$key};
 }
 
@@ -244,7 +248,10 @@ sub local_db {
 
     return $getscript_local_db if $getscript_local_db;
 
-    return $getscript_local_db = Bio::Otter::Lace::DB->new(home => $getscript_session_dir);
+    return $getscript_local_db = Bio::Otter::Lace::DB->new(
+        home    => $getscript_session_dir,
+        species => $self->arg('dataset'),
+        );
 }
 
 sub update_local_db {
