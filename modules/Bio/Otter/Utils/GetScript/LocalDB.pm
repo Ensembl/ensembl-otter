@@ -111,6 +111,10 @@ sub send_feature_gff {
     #     use_cigar_exonerate => 1, # TEMP for testing
     #                             });
 
+    $self->_sfg->extra_gff_args({
+        transcript_analyses => $self->arg('transcript_analyses'),
+                                });
+
     my $gff;
     $self->time_diff_for('write GFF', sub { return $gff = $self->_sfg->gff_for_features($features) } );
 

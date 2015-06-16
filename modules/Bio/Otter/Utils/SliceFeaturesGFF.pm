@@ -68,6 +68,11 @@ sub gff_for_features {
         %{$self->extra_gff_args},
         );
 
+    if ($self->extra_gff_args->{transcript_analyses}) {
+        # Let gff_source be set from the analysis gff_source field
+        delete $gff_args{gff_source};
+    }
+
     my $gff = Bio::Vega::Utils::GFF::gff_header($self->gff_version);
     foreach my $f (feature_sort @$features) {
         $gff .= $f->to_gff(%gff_args);
