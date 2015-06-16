@@ -95,7 +95,7 @@ sub _transcript_from_SubSeq {
     $self->_add_remarks                              ($transcript, $subseq);
     $self->_add_supporting_evidence                  ($transcript, $subseq->evidence_hash);
 
-    $transcript->analysis         ($self->_otter_analysis);
+    $transcript->analysis         ($self->_get_Analysis($subseq->GeneMethod->name));
     $transcript->transcript_author($self->_author_object );
 
     $transcript->slice($self->whole_slice) unless $transcript->slice;
@@ -289,15 +289,6 @@ sub _add_supporting_evidence {
     return;
 }
 
-sub _otter_analysis {
-    my ($self) = @_;
-    my $_otter_analysis = $self->{'_otter_analysis'};
-    unless ($_otter_analysis) {
-        $_otter_analysis = $self->{'_otter_analysis'} = $self->_get_Analysis('Otter');
-    }
-    return $_otter_analysis;
-}
-
 sub store_Gene {
     my ($self, $locus, $subseq) = @_;
 
@@ -380,7 +371,7 @@ sub _gene_from_Locus {
     my @synonyms = map { ('synonym' => $_) } $locus->list_aliases;
     add_EnsEMBL_Attributes($gene, @synonyms);
 
-    $gene->analysis   ($self->_otter_analysis);
+    $gene->analysis   ($self->_get_Analysis('Otter'));
     $gene->gene_author($self->_author_object );
 
     $self->logger->debug(
@@ -440,12 +431,13 @@ sub _simpleFeature_from_HumAce {
     return $simple_feature;
 }
 
+# FIXME: dup with XMLToRegion
 sub _get_Analysis {
     my ($self, $name) = @_;
 
     my $analysis_constructor = sub {
         my ($name) = @_;
-        return Bio::EnsEMBL::Analysis->new(-logic_name => $name);
+        return Bio::EnsEMBL::Analysis->new(-logic_name => $name, -gff_source => $name);
     };
     return $self->_analysis_cache->get_or_new($name, $analysis_constructor);
 }
