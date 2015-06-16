@@ -29,6 +29,7 @@ use base 'Bio::Vega::XML::Parser';
 
 my (
     %region,
+    %analysis_from_transcript_class,
 
     # Temporaries, used during parsing
     %exon_list,
@@ -49,6 +50,7 @@ sub DESTROY {
     my ($self) = @_;
 
     delete $region{$self};
+    delete $analysis_from_transcript_class{$self};
     delete $exon_list{$self};
     delete $evidence_list{$self};
     delete $transcript_list{$self};
@@ -400,7 +402,13 @@ sub _build_Transcript {         ## no critic (Subroutines::ProhibitUnusedPrivate
     my $exons = delete $exon_list{$self};
     my $chr_slice = $self->_chr_slice;
 
-    my $ana = $self->_get_Analysis($data->{'analysis'} || 'Otter');
+    my $logic_name;
+    if ($self->analysis_from_transcript_class) {
+        $logic_name = $data->{'transcript_class'};
+    } else {
+        $logic_name = $data->{'analysis'};
+    }
+    my $ana = $self->_get_Analysis($logic_name || 'Otter');
 
     my $transcript = Bio::Vega::Transcript->new(
         -stable_id => $data->{'stable_id'},
@@ -696,6 +704,16 @@ sub coord_system_factory {
     ($coord_system_factory{$self}) = @args if @args;
     my $coord_system_factory = $coord_system_factory{$self};
     return $coord_system_factory;
+}
+
+## accessor
+
+
+sub analysis_from_transcript_class {
+    my ($self, @args) = @_;
+    ($analysis_from_transcript_class{$self}) = @args if @args;
+    my $analysis_from_transcript_class = $analysis_from_transcript_class{$self};
+    return $analysis_from_transcript_class;
 }
 
 1;

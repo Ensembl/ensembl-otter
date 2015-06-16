@@ -1449,6 +1449,7 @@ sub _save_data {
         die "save_otter_xml returned no XML" unless $xml;
 
         my $parser = Bio::Vega::Transform::XMLToRegion->new;
+        $parser->analysis_from_transcript_class(1);
         $parser->coord_system_factory(Bio::Vega::CoordSystemFactory->new);
         my $region = $parser->parse($xml);
 

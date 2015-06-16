@@ -250,6 +250,7 @@ sub init_AceDatabase {
     $self->write_file('01_before.xml', $xml_string);
 
     my $parser = Bio::Vega::Transform::XMLToRegion->new;
+    $parser->analysis_from_transcript_class(1);
 
     my $cs_factory = Bio::Vega::CoordSystemFactory->new( dba => $self->DB->vega_dba );
     $parser->coord_system_factory($cs_factory);
@@ -358,6 +359,7 @@ sub recover_slice_from_region_xml {
     }
 
     my $parser = Bio::Vega::Transform::XMLToRegion->new;
+    $parser->analysis_from_transcript_class(1);
     $parser->coord_system_factory(Bio::Vega::CoordSystemFactory->new); # Should we get this from somewhere else?
     my $region = $parser->parse($xml);
 
