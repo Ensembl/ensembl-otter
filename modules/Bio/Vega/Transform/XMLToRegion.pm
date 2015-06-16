@@ -291,10 +291,15 @@ sub _build_clone_sequence {
     return;
 }
 
+# FIXME: dup with FromHumAce
 sub _get_Analysis {
     my ($self, $name) = @_;
 
-    my $ana = $logic_ana{$self}{$name} ||= Bio::EnsEMBL::Analysis->new(-logic_name => $name);
+    my $ana =   $logic_ana{$self}{$name}
+            ||= Bio::EnsEMBL::Analysis->new(
+        -logic_name => $name,
+        -gff_source => $name,
+                );
     return $ana;
 }
 
