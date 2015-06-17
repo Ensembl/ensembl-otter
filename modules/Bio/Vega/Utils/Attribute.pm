@@ -5,7 +5,14 @@ use warnings;
 
 our @EXPORT_OK;
 use parent qw( Exporter );
-BEGIN { @EXPORT_OK = qw( add_EnsEMBL_Attributes make_EnsEMBL_Attribute ); }
+BEGIN {
+    @EXPORT_OK = qw(
+        add_EnsEMBL_Attributes
+        make_EnsEMBL_Attribute
+        get_first_Attribute_value
+        get_name_Attribute_value
+    );
+}
 
 use Bio::EnsEMBL::Attribute;
 use Bio::EnsEMBL::Utils::Exception qw( throw );
@@ -63,6 +70,28 @@ sub make_EnsEMBL_Attribute {
             -CODE   => $code,
             -VALUE  => $value,
         );
+}
+
+=item get_first_Attribute_value($feature, $code)
+
+Return the value of the feature's first Attribute with the given C<$code>, or C<undef> if no such Attribute exists.
+=cut
+
+sub get_first_Attribute_value {
+    my ($feature, $code) = @_;
+    my $attrs = $feature->get_all_Attributes($code);
+    my $value = $attrs->[0] ? $attrs->[0]->value : undef;
+    return $value;
+}
+
+=item get_name_Attribute_value($feature)
+
+Return the value of the feature's first 'name' Attribute, or C<undef> if no such Attribute exists.
+=cut
+
+sub get_name_Attribute_value {
+    my ($feature) = @_;
+    return get_first_Attribute_value($feature, 'name');
 }
 
 1;
