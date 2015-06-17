@@ -3,6 +3,8 @@ package Bio::Vega::Utils::Attribute;
 use strict;
 use warnings;
 
+use Carp;
+
 our @EXPORT_OK;
 use parent qw( Exporter );
 BEGIN {
@@ -72,26 +74,38 @@ sub make_EnsEMBL_Attribute {
         );
 }
 
-=item get_first_Attribute_value($feature, $code)
+=item get_first_Attribute_value($feature, $code, [confess_if_multiple => 1])
 
 Return the value of the feature's first Attribute with the given C<$code>, or C<undef> if no such Attribute exists.
+
+When C<confess_if_multiple> is set, C<get_first_Attribute_value> will die with stack trace if there are more
+than one Attributes with the given C<$code>.
 =cut
 
 sub get_first_Attribute_value {
-    my ($feature, $code) = @_;
+    my ($feature, $code, %options) = @_;
+
     my $attrs = $feature->get_all_Attributes($code);
+
+    if ($options{confess_if_multiple} and @$attrs > 1) {
+        confess sprintf("Got %d '%s' Attributes on %s", scalar(@$attrs), $code, ref($feature));
+    }
+
     my $value = $attrs->[0] ? $attrs->[0]->value : undef;
     return $value;
 }
 
-=item get_name_Attribute_value($feature)
+=item get_name_Attribute_value($feature, [confess_if_multiple => 1])
 
 Return the value of the feature's first 'name' Attribute, or C<undef> if no such Attribute exists.
+
+When C<confess_if_multiple> is set, C<get_name_Attribute_value> will die with stack trace if there are more
+than one 'name' Attributes.
 =cut
 
 sub get_name_Attribute_value {
-    my ($feature) = @_;
-    return get_first_Attribute_value($feature, 'name');
+    my ($feature, @options) = @_;
+    return get_first_Attribute_value($feature, 'name', @options);
 }
 
 1;
