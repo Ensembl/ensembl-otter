@@ -8,7 +8,11 @@ use Bio::EnsEMBL::Transcript;
 # This is a bit clunky, we could do with a non-OO parent class to handle critic and use_ok
 # more cleanly.
 
-BEGIN { OtterTest::Class->use_imports( [ qw( add_EnsEMBL_Attributes make_EnsEMBL_Attribute ) ] ) };
+BEGIN {
+    OtterTest::Class->use_imports(
+        [ qw( add_EnsEMBL_Attributes make_EnsEMBL_Attribute get_first_Attribute_value get_name_Attribute_value ) ]
+        );
+};
 
 # because not OO, we need to also import here into this test class
 BEGIN { use Bio::Vega::Utils::Attribute @{OtterTest::Class->use_imports()} }
@@ -77,6 +81,42 @@ sub t2_add_EnsEMBL_Attributes : Tests {
                   [ 'key_3'  => 'value_3'      ],
               ),
               '... and attributes as expected');
+
+    return;
+}
+
+sub t3_get_first_Attribute_value : Tests {
+    my $test = shift;
+
+    my $t = Bio::EnsEMBL::Transcript->new;
+    my $get = get_first_Attribute_value($t, 'my_key');
+    is($get, undef, 'get attribute, none');
+
+    add_EnsEMBL_Attributes($t, 'my_key' => 'my_value');
+    $get = get_first_Attribute_value($t, 'my_key');
+    is($get, 'my_value', 'get attribute, only one');
+
+    add_EnsEMBL_Attributes($t, 'my_key' => 'my_second_value');
+    $get = get_first_Attribute_value($t, 'my_key');
+    is($get, 'my_value', 'get attribute, first of two');
+
+    return;
+}
+
+sub t4_get_name_Attribute_value : Tests {
+    my $test = shift;
+
+    my $t = Bio::EnsEMBL::Transcript->new;
+    my $get = get_name_Attribute_value($t);
+    is($get, undef, 'get attribute, none');
+
+    add_EnsEMBL_Attributes($t, 'name' => 'Frederico');
+    $get = get_name_Attribute_value($t);
+    is($get, 'Frederico', 'get attribute, only one');
+
+    add_EnsEMBL_Attributes($t, 'name' => 'Johannes');
+    $get = get_name_Attribute_value($t, 'my_key');
+    is($get, 'Frederico', 'get attribute, first of two');
 
     return;
 }
