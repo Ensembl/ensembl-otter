@@ -50,7 +50,7 @@ sub t2_add_EnsEMBL_Attributes : Tests {
         );
     pass('add two more attributes');
 
-    my $attrs = $t->get_all_Attributes;
+    $attrs = $t->get_all_Attributes;
     is(@$attrs, 3, '... now has 3 attributes');
 
     my @results = map { [ $_->code => $_->value ] } @$attrs;
@@ -100,6 +100,9 @@ sub t3_get_first_Attribute_value : Tests {
     $get = get_first_Attribute_value($t, 'my_key');
     is($get, 'my_value', 'get attribute, first of two');
 
+    throws_ok { get_first_Attribute_value($t, 'my_key', confess_if_multiple => 1) }
+              qr/Got 2 'my_key' Attributes/, 'confess if multiple';
+
     return;
 }
 
@@ -115,8 +118,11 @@ sub t4_get_name_Attribute_value : Tests {
     is($get, 'Frederico', 'get attribute, only one');
 
     add_EnsEMBL_Attributes($t, 'name' => 'Johannes');
-    $get = get_name_Attribute_value($t, 'my_key');
+    $get = get_name_Attribute_value($t);
     is($get, 'Frederico', 'get attribute, first of two');
+
+    throws_ok { get_name_Attribute_value($t, confess_if_multiple => 1) }
+              qr/Got 2 'name' Attributes/, 'confess if multiple';
 
     return;
 }
