@@ -8,8 +8,8 @@ use Carp;
 use Bio::EnsEMBL::SimpleFeature;
 use Bio::EnsEMBL::Slice;
 use Bio::Otter::Lace::CloneSequence;
-use Bio::Otter::Utils::Attribute qw( get_single_attrib_value );
 use Bio::Vega::ContigInfo;
+use Bio::Vega::Utils::Attribute qw( get_first_Attribute_value );
 
 =head1 NAME
 
@@ -173,12 +173,12 @@ sub fetch_CloneSeq {
     my $contig_slice = $contig_seg->to_Slice();
 
     my $cs = Bio::Otter::Lace::CloneSequence->new;
-    $cs->chromosome(get_single_attrib_value($self->slice, 'chr'));
+    $cs->chromosome(get_first_Attribute_value($self->slice, 'chr', confess_if_multiple => 1));
     $cs->contig_name($contig_slice->seq_region_name);
 
     my $clone_slice = $contig_slice->project('clone')->[0]->to_Slice;
-    $cs->accession(     get_single_attrib_value($clone_slice, 'embl_acc')           );
-    $cs->sv(            get_single_attrib_value($clone_slice, 'embl_version')       );
+    $cs->accession(     get_first_Attribute_value($clone_slice, 'embl_acc'    , confess_if_multiple => 1) );
+    $cs->sv(            get_first_Attribute_value($clone_slice, 'embl_version', confess_if_multiple => 1) );
 
     if (my ($cna) = @{$clone_slice->get_all_Attributes('intl_clone_name')}) {
         $cs->clone_name($cna->value);

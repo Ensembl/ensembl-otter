@@ -8,7 +8,7 @@ use NEXT;
 
 use Bio::EnsEMBL::Utils::Exception qw (throw);
 use Bio::Vega::Utils::GeneTranscriptBiotypeStatus 'biotype_status2method';
-use Bio::Otter::Utils::Attribute qw( get_single_attrib_value );
+use Bio::Vega::Utils::Attribute qw( get_first_Attribute_value );
 
 use base 'Bio::Vega::XML::Writer_V1';
 
@@ -322,7 +322,7 @@ sub generate_Transcript {
 
         for (my $i = 0; $i < @attrib_tag; $i += 2) {
             my ($attrib, $tag) = @attrib_tag[$i, $i + 1];
-            if (my $val = get_single_attrib_value($tran, $attrib)) {
+            if (my $val = get_first_Attribute_value($tran, $attrib, confess_if_multiple => 1)) {
                 $t->attribvals($self->prettyprint($tag, $val));
             }
         }
