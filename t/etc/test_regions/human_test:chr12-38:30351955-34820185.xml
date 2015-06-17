@@ -2619,7 +2619,7 @@
              <end>30669282</end>
              <strand>-1</strand>
              <phase>0</phase>
-             <end_phase>-1</end_phase>
+             <end_phase>0</end_phase>
            </exon>
          </exon_set>
        </transcript>
@@ -2655,7 +2655,7 @@
              <end>30680638</end>
              <strand>-1</strand>
              <phase>2</phase>
-             <end_phase>-1</end_phase>
+             <end_phase>2</end_phase>
            </exon>
          </exon_set>
        </transcript>
@@ -2702,12 +2702,12 @@
              <end_phase>2</end_phase>
            </exon>
            <exon>
-             <stable_id>OTTHUME00002067269</stable_id>
+             <stable_id>OTTHUME00002066945</stable_id>
              <start>30680482</start>
              <end>30680638</end>
              <strand>-1</strand>
              <phase>2</phase>
-             <end_phase>-1</end_phase>
+             <end_phase>0</end_phase>
            </exon>
          </exon_set>
        </transcript>
@@ -2799,12 +2799,12 @@
              <end_phase>1</end_phase>
            </exon>
            <exon>
-             <stable_id>OTTHUME00002066950</stable_id>
+             <stable_id>OTTHUME00002066954</stable_id>
              <start>30684301</start>
              <end>30684457</end>
              <strand>-1</strand>
              <phase>1</phase>
-             <end_phase>-1</end_phase>
+             <end_phase>2</end_phase>
            </exon>
          </exon_set>
        </transcript>
@@ -2849,7 +2849,7 @@
              <end>30684457</end>
              <strand>-1</strand>
              <phase>-1</phase>
-             <end_phase>-1</end_phase>
+             <end_phase>0</end_phase>
            </exon>
          </exon_set>
        </transcript>
@@ -2893,7 +2893,7 @@
              <end>30684457</end>
              <strand>-1</strand>
              <phase>1</phase>
-             <end_phase>-1</end_phase>
+             <end_phase>0</end_phase>
            </exon>
          </exon_set>
        </transcript>
@@ -4255,7 +4255,7 @@
              <end>30716676</end>
              <strand>-1</strand>
              <phase>0</phase>
-             <end_phase>-1</end_phase>
+             <end_phase>0</end_phase>
            </exon>
          </exon_set>
        </transcript>
@@ -4449,7 +4449,7 @@
              <end>30733711</end>
              <strand>-1</strand>
              <phase>2</phase>
-             <end_phase>-1</end_phase>
+             <end_phase>0</end_phase>
            </exon>
          </exon_set>
        </transcript>
@@ -4509,7 +4509,7 @@
              <end>30733711</end>
              <strand>-1</strand>
              <phase>2</phase>
-             <end_phase>-1</end_phase>
+             <end_phase>1</end_phase>
            </exon>
          </exon_set>
        </transcript>
@@ -4620,7 +4620,7 @@
              <end>30735206</end>
              <strand>-1</strand>
              <phase>0</phase>
-             <end_phase>-1</end_phase>
+             <end_phase>0</end_phase>
            </exon>
          </exon_set>
        </transcript>
@@ -4680,7 +4680,7 @@
              <end>30735206</end>
              <strand>-1</strand>
              <phase>0</phase>
-             <end_phase>-1</end_phase>
+             <end_phase>2</end_phase>
            </exon>
          </exon_set>
        </transcript>
@@ -4740,7 +4740,7 @@
              <end>30735206</end>
              <strand>-1</strand>
              <phase>0</phase>
-             <end_phase>-1</end_phase>
+             <end_phase>1</end_phase>
            </exon>
          </exon_set>
        </transcript>
@@ -6488,7 +6488,7 @@
              <end>31089999</end>
              <strand>1</strand>
              <phase>1</phase>
-             <end_phase>-1</end_phase>
+             <end_phase>1</end_phase>
            </exon>
          </exon_set>
        </transcript>
@@ -7323,7 +7323,7 @@
              <end>31089111</end>
              <strand>1</strand>
              <phase>0</phase>
-             <end_phase>-1</end_phase>
+             <end_phase>2</end_phase>
            </exon>
          </exon_set>
        </transcript>
@@ -8192,7 +8192,7 @@
              <end>31084656</end>
              <strand>1</strand>
              <phase>0</phase>
-             <end_phase>-1</end_phase>
+             <end_phase>2</end_phase>
            </exon>
          </exon_set>
        </transcript>
@@ -10155,7 +10155,7 @@
              <end>31287784</end>
              <strand>-1</strand>
              <phase>1</phase>
-             <end_phase>-1</end_phase>
+             <end_phase>1</end_phase>
            </exon>
          </exon_set>
        </transcript>
@@ -10216,7 +10216,7 @@
              <end>31287784</end>
              <strand>-1</strand>
              <phase>1</phase>
-             <end_phase>-1</end_phase>
+             <end_phase>2</end_phase>
            </exon>
          </exon_set>
        </transcript>
@@ -11734,7 +11734,7 @@
              <end>31662169</end>
              <strand>1</strand>
              <phase>-1</phase>
-             <end_phase>-1</end_phase>
+             <end_phase>1</end_phase>
            </exon>
          </exon_set>
        </transcript>
@@ -12283,12 +12283,12 @@
              <end_phase>0</end_phase>
            </exon>
            <exon>
-             <stable_id>OTTHUME00002067464</stable_id>
+             <stable_id>OTTHUME00002067457</stable_id>
              <start>31689007</start>
              <end>31689118</end>
              <strand>-1</strand>
              <phase>0</phase>
-             <end_phase>-1</end_phase>
+             <end_phase>1</end_phase>
            </exon>
          </exon_set>
        </transcript>
@@ -12339,12 +12339,12 @@
              <end_phase>0</end_phase>
            </exon>
            <exon>
-             <stable_id>OTTHUME00002068125</stable_id>
+             <stable_id>OTTHUME00002067463</stable_id>
              <start>31701863</start>
              <end>31702007</end>
              <strand>-1</strand>
              <phase>0</phase>
-             <end_phase>-1</end_phase>
+             <end_phase>1</end_phase>
            </exon>
          </exon_set>
        </transcript>
@@ -12396,7 +12396,7 @@
              <end>31701991</end>
              <strand>-1</strand>
              <phase>1</phase>
-             <end_phase>-1</end_phase>
+             <end_phase>2</end_phase>
            </exon>
          </exon_set>
        </transcript>
@@ -12472,7 +12472,7 @@
              <end>31702007</end>
              <strand>-1</strand>
              <phase>1</phase>
-             <end_phase>-1</end_phase>
+             <end_phase>1</end_phase>
            </exon>
          </exon_set>
        </transcript>
@@ -13203,7 +13203,7 @@
              <end>31981060</end>
              <strand>1</strand>
              <phase>-1</phase>
-             <end_phase>-1</end_phase>
+             <end_phase>2</end_phase>
            </exon>
          </exon_set>
        </transcript>
@@ -13591,7 +13591,7 @@
              <end>31982979</end>
              <strand>1</strand>
              <phase>-1</phase>
-             <end_phase>-1</end_phase>
+             <end_phase>1</end_phase>
            </exon>
          </exon_set>
        </transcript>
@@ -14740,7 +14740,7 @@
              <end>32640533</end>
              <strand>1</strand>
              <phase>0</phase>
-             <end_phase>-1</end_phase>
+             <end_phase>0</end_phase>
            </exon>
          </exon_set>
        </transcript>
@@ -16117,7 +16117,7 @@
              <end>32576448</end>
              <strand>1</strand>
              <phase>-1</phase>
-             <end_phase>-1</end_phase>
+             <end_phase>2</end_phase>
            </exon>
          </exon_set>
        </transcript>
@@ -17688,7 +17688,7 @@
              <end>32713319</end>
              <strand>1</strand>
              <phase>0</phase>
-             <end_phase>-1</end_phase>
+             <end_phase>0</end_phase>
            </exon>
          </exon_set>
        </transcript>
@@ -17748,7 +17748,7 @@
              <end>32713330</end>
              <strand>1</strand>
              <phase>0</phase>
-             <end_phase>-1</end_phase>
+             <end_phase>2</end_phase>
            </exon>
          </exon_set>
        </transcript>
@@ -18552,12 +18552,12 @@
              <end_phase>2</end_phase>
            </exon>
            <exon>
-             <stable_id>OTTHUME00002072513</stable_id>
+             <stable_id>OTTHUME00002072537</stable_id>
              <start>32720664</start>
              <end>32720795</end>
              <strand>1</strand>
              <phase>2</phase>
-             <end_phase>-1</end_phase>
+             <end_phase>2</end_phase>
            </exon>
          </exon_set>
        </transcript>
