@@ -323,7 +323,7 @@ sub open_sequenceset_by_name {
         my $re = qr{^chr$N-\d+$};
         my $ds = $ssc->DataSet;
         my $ss_list  = $ds->get_all_visible_SequenceSets;
-        my @match = sort { ace_sort($b, $a) } grep { $_->name =~ $re } @$ss_list;
+        my @match = sort { ace_sort($b->name, $a->name) } grep { $_->name =~ $re } @$ss_list;
         my ($take) = $match[0];
         die sprintf('Wanted %s => %s but found no match', $seq_region, $re)
           unless $take;
