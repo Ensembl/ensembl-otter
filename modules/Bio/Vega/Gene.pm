@@ -2,8 +2,9 @@ package Bio::Vega::Gene;
 
 use strict;
 use warnings;
-use Bio::EnsEMBL::Utils::Argument qw ( rearrange );
+use Bio::EnsEMBL::Utils::Argument  qw ( rearrange );
 use Bio::EnsEMBL::Utils::Exception qw ( throw warning );
+use Bio::Vega::Utils::Attribute    qw ( get_name_Attribute_value );
 use Bio::Vega::Utils::AttributesMixin;
 use base 'Bio::EnsEMBL::Gene';
 
@@ -300,7 +301,7 @@ sub set_biotype_status_from_transcripts {
         if (@pseudo > 1) {
             throw(
                 sprintf "More than one pseudogene type in gene %s (%s)",
-                    $self->get_all_Attributes('name')->[0]->value,
+                    get_name_Attribute_value($self),
                     join(', ', @pseudo)
                 );
         }

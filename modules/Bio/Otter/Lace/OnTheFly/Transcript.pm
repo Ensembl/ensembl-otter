@@ -6,6 +6,7 @@ use Moose;
 use Bio::Otter::Lace::OnTheFly::TargetSeq;
 use Bio::Otter::Lace::OnTheFly::Builder::Transcript;
 use Bio::Otter::Lace::OnTheFly::Runner::Transcript;
+use Bio::Vega::Utils::Attribute qw( get_name_Attribute_value );
 
 with 'Bio::Otter::Lace::OnTheFly';
 with 'MooseX::Log::Log4perl';
@@ -16,10 +17,10 @@ sub build_target_seq {
     my $self = shift;
 
     my $vts = $self->vega_transcript;
-    my @names = @{$vts->get_all_Attributes('name')};
+    my $name = get_name_Attribute_value($vts);
 
     my $hum_seq = Hum::Sequence->new;
-    $hum_seq->name($names[0]->value);
+    $hum_seq->name($name);
     $hum_seq->sequence_string($vts->spliced_seq);
     $self->log->debug('target_seq: ', $hum_seq->sequence_string);
 

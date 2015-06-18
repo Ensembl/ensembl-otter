@@ -8,7 +8,8 @@ use Bio::Vega::Gene;
 use Bio::Vega::Transcript;
 use Bio::EnsEMBL::Attribute;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
-use Bio::Vega::Utils::Comparator qw(compare);
+use Bio::Vega::Utils::Comparator qw( compare );
+use Bio::Vega::Utils::Attribute  qw( get_name_Attribute_value );
 use Bio::Vega::AnnotationBroker;
 use Bio::Otter::MappingFetcher;
 
@@ -373,15 +374,9 @@ sub fetch_all_by_Slice {
         my $tsct_list = $gene->get_all_Transcripts;
         for (my $i = 0; $i < @$tsct_list;) {
             my $transcript = $tsct_list->[$i];
-            my ($t_name);
-            eval {
-                my $t_name_att = $transcript->get_all_Attributes('name');
-                if ($t_name_att->[0]) {
-                    $t_name = $t_name_att->[0]->value;
-                }
-                1;
-            } or die sprintf("Error getting name of %s %s (%d):\n$@",
-                             ref($transcript), $transcript->stable_id, $transcript->dbID);
+            my $t_name = get_name_Attribute_value($transcript);
+            $t_name or die sprintf("Error getting name of %s %s (%d):\n$@",
+                                   ref($transcript), $transcript->stable_id, $transcript->dbID);
             my $exons_truncated = $transcript->truncate_to_Slice($slice);
             my $ex_list         = $transcript->get_all_Exons;
             my $message;
