@@ -9,6 +9,7 @@ use base 'Exporter';
 our @EXPORT_OK = qw{ history };
 
 use Bio::EnsEMBL::Utils::Exception qw(throw);
+use Bio::Vega::Utils::Attribute    qw(get_name_Attribute_value);
 
 sub history{
   my ($genes, $short) = @_;
@@ -35,17 +36,11 @@ sub history{
       my $s_v=$gene->stable_id.".".$gene->version;
       push @$stable_version,$s_v;
       push @$slice_name,$gene->slice->name;
-      my $gene_name_att = $gene->get_all_Attributes('name') ;
       my $attribs     = $gene->get_all_Attributes;
       my $attrib_count = @$attribs ;
       push @$attribute_count,$attrib_count;
-      if ($gene_name_att ){
-          my $gn;
-          if($gene_name_att->[0]){
-              $gn=$gene_name_att->[0]->value;
-          }
-          push @$gene_name,$gn;
-      }
+      my $gn = get_name_Attribute_value($gene);
+      push @$gene_name,$gn if $gn;
       push @$gene_start,$gene->start;
       push @$gene_end,$gene->end;
       push @$gene_strand,$gene->strand;

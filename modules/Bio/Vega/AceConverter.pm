@@ -18,7 +18,7 @@ use Bio::Vega::Transcript;
 use Bio::Vega::Translation;
 use Bio::Vega::Exon;
 use Bio::Vega::ContigInfo;
-use Bio::Vega::Utils::Attribute qw( add_EnsEMBL_Attributes );
+use Bio::Vega::Utils::Attribute qw( add_EnsEMBL_Attributes get_name_Attribute_value );
 
 use Bio::Otter::Lace::CloneSequence;
 
@@ -494,7 +494,7 @@ sub set_exon_phases_translation_cds_start_end {
     my ($self, $ace, $tsct) = @_;
 
     # Fetch the name for use in error messages
-    my $name = $tsct->get_all_Attributes('name')->[0]->value;
+    my $name = get_name_Attribute_value($tsct);
 
     my ($cds) = $ace->get_values('CDS');
 

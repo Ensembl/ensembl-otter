@@ -12,6 +12,7 @@ use warnings;
 use Try::Tiny;
 
 use Bio::Otter::Utils::StableId;
+use Bio::Vega::Utils::Attribute qw( get_first_Attribute_value );
 
 use base 'Bio::Otter::ServerAction';
 
@@ -178,7 +179,7 @@ sub register_local_slice {
         : $self->find_containing_chromosomes($feature_slice);
 
     foreach my $chr_slice (@$found_chromosome_slices) {
-        my ($hidden) = ((map {$_->value} @{$chr_slice->get_all_Attributes('hidden')}), 1);
+        my $hidden = get_first_Attribute_value($chr_slice, 'hidden');
         next if $hidden;
         my $chr_name = $chr_slice->seq_region_name;
         my $key = join ',', @component_names;

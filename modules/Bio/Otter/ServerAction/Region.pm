@@ -12,6 +12,7 @@ use Bio::Vega::ContigInfo;
 use Bio::Vega::SliceLockBroker;
 use Bio::Vega::Region;
 use Bio::Vega::Tiler;
+use Bio::Vega::Utils::Attribute qw( get_name_Attribute_value );
 
 use base 'Bio::Otter::ServerAction';
 
@@ -221,8 +222,8 @@ sub _DE_gene {  ## no critic (Subroutines::ProhibitExcessComplexity)
 
     my ($self, $gene, $slice_length, $inc_novel, $inc_part_novel) = @_;
 
-    my ($name_attrib) = @{ $gene->get_all_Attributes('name') };
-    my $gene_name = $name_attrib ? $name_attrib->value : $gene->stable_id;
+    my $gene_name = get_name_Attribute_value($gene);
+    $gene_name //= $gene->stable_id;
 
     my $desc = $gene->description;
     return unless $desc;
@@ -593,7 +594,7 @@ sub _strip_incomplete_genes {
     for (my $i = 0 ; $i < @$gene_list ;) {
         my $gene = $gene_list->[$i];
         if ($gene->truncated_flag) {
-            my $gene_name = $gene->get_all_Attributes('name')->[0]->value;
+            my $gene_name = get_name_Attribute_value($gene);
             warn "Splicing out incomplete gene '$gene_name'\n";
             splice(@$gene_list, $i, 1);
             next;

@@ -180,8 +180,8 @@ sub fetch_CloneSeq {
     $cs->accession(     get_first_Attribute_value($clone_slice, 'embl_acc'    , confess_if_multiple => 1) );
     $cs->sv(            get_first_Attribute_value($clone_slice, 'embl_version', confess_if_multiple => 1) );
 
-    if (my ($cna) = @{$clone_slice->get_all_Attributes('intl_clone_name')}) {
-        $cs->clone_name($cna->value);
+    if (my $cn = get_first_Attribute_value($clone_slice,'intl_clone_name')) {
+        $cs->clone_name($cn);
     } else {
         $cs->clone_name($cs->accession_dot_sv);
     }

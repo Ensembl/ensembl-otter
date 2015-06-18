@@ -8,7 +8,7 @@ use NEXT;
 
 use Bio::EnsEMBL::Utils::Exception qw (throw);
 use Bio::Vega::Utils::GeneTranscriptBiotypeStatus 'biotype_status2method';
-use Bio::Vega::Utils::Attribute qw( get_first_Attribute_value );
+use Bio::Vega::Utils::Attribute qw( get_first_Attribute_value get_name_Attribute_value );
 
 use base 'Bio::Vega::XML::Writer_V1';
 
@@ -44,9 +44,8 @@ my $by_start_end_strand = sub {
 # NOT A METHOD
 sub _feature_name {
     my ($feature) = @_;
-    my $name_att = $feature->get_all_Attributes('name');
-    my $name = $name_att->[0] ? $name_att->[0]->value : '';
-    return $name;
+    my $name = get_name_Attribute_value($feature);
+    return $name // '';
 }
 
 # get/set methods exposed on object interface
