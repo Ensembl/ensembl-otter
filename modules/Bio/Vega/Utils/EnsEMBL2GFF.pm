@@ -226,6 +226,7 @@ my $_new_feature_id_sub = sub {
     package Bio::EnsEMBL::Gene;
 
     use Text::sprintfn;
+    use Bio::Vega::Utils::Attribute qw( get_name_Attribute_value );
 
     sub to_gff {
         my ($self, %args) = @_;
@@ -289,19 +290,20 @@ my $_new_feature_id_sub = sub {
             }
         }
 
-        unless ($extra_attrs->{'locus'}) {
-            if (my $xr = $self->display_xref) {
-                $extra_attrs->{'synthetic_gene_name'} = $xr->display_id;
-                my $name = sprintf "%s.%d", $xr->display_id, $gene_numeric_id;
-                $extra_attrs->{'locus'} = $name;
+        if (my $xr = $self->display_xref) {
+            $extra_attrs->{'synthetic_gene_name'} = $xr->display_id;
+            my $name = sprintf "%s.%d", $xr->display_id, $gene_numeric_id;
+            $extra_attrs->{'locus'} = $name;
+        }
+        elsif (my $stable = $self->stable_id) {
+            if ($stable =~ /^OTT/) {
+                $extra_attrs->{'locus'} = get_name_Attribute_value($self);
             }
-            elsif (my $stable = $self->stable_id) {
-                $extra_attrs->{'locus'} = $stable;
-            }
-            else {
-                my $disp = $self->display_id;
-                $extra_attrs->{'locus'} = $disp;
-            }
+            $extra_attrs->{'locus'} //= $stable; # default
+        }
+        else {
+            my $disp = $self->display_id;
+            $extra_attrs->{'locus'} = $disp;
         }
 
         return $extra_attrs;
@@ -330,6 +332,8 @@ my $_new_feature_id_sub = sub {
 
     package Bio::EnsEMBL::Transcript;
 
+    use Bio::Vega::Utils::Attribute qw( get_name_Attribute_value );
+
     my $tsct_count = 0;
     sub _gff_hash {
         my ($self, %args) = @_;
@@ -350,7 +354,10 @@ my $_new_feature_id_sub = sub {
             $name = $xr->display_id;
         }
         elsif (my $stable = $self->stable_id) {
-            $name = $stable;
+            if ($stable =~ /^OTT/) {
+                $name = get_name_Attribute_value($self);
+            }
+            $name //= $stable; # default
         }
         elsif (my $ana = $self->analysis) {
             $name = sprintf "%s.%d", $ana->logic_name, $tsct_numeric_id;
