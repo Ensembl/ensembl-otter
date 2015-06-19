@@ -131,4 +131,111 @@
 ** update_Locus
    Updating the slave Locus is a bit tricky. We need to know what changed.
 
+** truncated handling
+   Gene method: truncated_flag()
+   When writing Ace, gene's transcripts get method with the suffix '_trunc' added.
+   Locus method: is_truncated()
+   B:V:Region:Ace also sets SubSeq's method to the _trunc version if appropriate.
+   SO: need to set analysis->gff_source appropriately.
+
+** ZMap columns
+   All appear in the slice stanza of ZMap config, e.g. [chr12-38_7087281-7264845]
+*** DNA
+    Also appears in a separate DNA stanza which is loaded first as it's first it the sources list
+    ZMap default
+*** Gap
+    Can go
+*** Transcripts
+    See otter_config and otter_styles.ini on my deskpro for a start.
+    Will need to auto-generate these.
+    Need to handle _trunc.
+**** Coding Transcripts
+     Method
+     Child method: Coding
+     Child method: Coding_trunc
+**** Known CDS Transcripts
+     Method
+     Child method: Known_CDS
+     Child method: Known_CDS_trunc
+**** Novel CDS Transcripts
+     Method
+     Child method: Novel_CDS
+     Child method: Novel_CDS_trunc
+**** Putative and NMD
+     Method
+     Child method: Putative_CDS
+     Child method: Putative_CDS_trunc
+     Child method: Nonsense_mediated_decay
+     Child method: Nonsense_mediated_decay_trunc
+     Child method: Non_stop_decay
+     Child method: Non_stop_decay_trunc
+**** Curated Transcripts
+     Method
+     Child method: Transcript
+     Child method: Transcript_trunc
+     Child method: Retained_intron
+     Child method: Retained_intron_trunc
+     Child method: Disrupted_domain
+     Child method: Disrupted_domain_trunc
+     Child method: IG_gene
+     Child method: IG_gene_trunc
+     Child method: TR_gene
+     Child method: TR_gene_trunc
+     Child method: Putative
+     Child method: Putative_trunc
+     Child method: Non_coding
+     Child method: Non_coding_trunc
+     Child method: lincRNA
+     Child method: lincRNA_trunc
+     ...etc.
+*** curated_features
+    Method
+    Child method: polyA_signal
+    Child method: polyA_site
+    Child method: polyA-seq_site
+    Child method: polyA-seq_signal
+    Child method: TATA_box
+    Child method: RSS
+    Child method: EUCOMM
+*** ext_curated
+    Method
+*** Glean_parent
+    Method
+    Child method: Glean
+    Child method: Glean_trunc
+*** NCBI_parent
+    Method
+    Child method: NCBI
+    Child method: NCBI_trunc
+*** 3 Frame Translation
+    ZMap default
+    Method
+*** Show Translation
+    ZMap default
+    Method
+*** GeneFinderFeatures
+    ZMap built-in
+    Method
+*** 3 Frame
+    ZMap default
+    Method
+*** ATG
+    Method
+*** hexExon
+    Method
+*** hexIntron
+    Method
+*** GF_coding_seg
+    Method
+*** GF_ATG
+    Method
+*** hexExon_span
+    Method
+*** RNA
+    Method
+*** SPLICED_cDNA
+    Method
+*** GF_splice
+    Method
+
 # EOF
