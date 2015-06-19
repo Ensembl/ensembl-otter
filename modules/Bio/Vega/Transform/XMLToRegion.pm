@@ -632,6 +632,12 @@ sub _build_Locus {              ## no critic (Subroutines::ProhibitUnusedPrivate
     foreach my $transcript (@$transcripts){
         $transcript->start($transcript->start - $slice_offset);
         $transcript->end(  $transcript->end   - $slice_offset);
+        if ($truncated) {
+            # update analysis to _trunc version
+            my $logic_name = $transcript->analysis->logic_name;
+            $logic_name .= '_trunc';
+            $transcript->analysis($self->_get_Analysis($logic_name));
+        }
     }
 
     $gene->start($gene->start - $slice_offset);
