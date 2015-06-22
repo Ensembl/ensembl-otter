@@ -4,18 +4,14 @@ package Bio::Vega::ServerAnalysis::SolexaIntronFilter;
 
 use strict;
 use warnings;
+use base qw{ Bio::Vega::ServerAnalysis };
 
 my $MAX_PER_INTRON = 10;
-
-sub new {
-    my ($class) = @_;
-    return bless {}, $class;
-}
 
 sub run {
     my ($self, $features) = @_;
 
-    my @filtered;
+    my $filtered = [];
 
     my %feats_by_introns;
 
@@ -41,14 +37,14 @@ sub run {
         my @feats = @{ $feats_by_introns{$intron} };
         if (@feats > $MAX_PER_INTRON) {
             my @sorted = sort { $b->score <=> $a->score } @feats;
-            push @filtered, @sorted[0 .. ($MAX_PER_INTRON-1)];
+            push @$filtered, @sorted[0 .. ($MAX_PER_INTRON-1)];
         }
         else {
-            push @filtered, @feats;
+            push @$filtered, @feats;
         }
     }
 
-    return @filtered;
+    return $filtered;
 }
 
 1;
