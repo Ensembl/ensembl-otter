@@ -4,15 +4,11 @@ package Bio::Vega::ServerAnalysis::SolexaDepthBins;
 
 use strict;
 use warnings;
+use base qw{ Bio::Vega::ServerAnalysis };
 
 use Bio::EnsEMBL::SimpleFeature;
 
 my $BIN_SIZE = 10;
-
-sub new {
-    my ($class) = @_;
-    return bless {}, $class;
-}
 
 sub depth_feature {
     my ($slice, $strand, $bin, $score) = @_;
@@ -45,7 +41,7 @@ sub depth_features {
 sub run {
     my ($self, $features) = @_;
 
-    my @depth_features = ( );
+    my $depth_features = [];
 
     if (@{$features}) {
 
@@ -79,12 +75,12 @@ sub run {
             [ +1, $depth_forward ],
             [ -1, $depth_reverse ],
             );
-        @depth_features =
+        @$depth_features =
             map { depth_features($slice, @{$_}) } @strand_depth_hash_list;
 
     }
 
-    return @depth_features;
+    return $depth_features;
 }
 
 1;

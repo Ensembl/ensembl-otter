@@ -20,50 +20,6 @@ my @gff_keys = qw(
     url_string
     );
 
-my $call_args = {
-
-    # EnsEMBL
-    SimpleFeature => [
-        ['analysis' => undef],
-        ],
-    RepeatFeature => [
-        ['analysis' => undef],
-        ['repeat_type' => undef],
-        ['dbtype' => undef],
-    ],
-    MarkerFeature => [
-        ['analysis' => undef],
-        ['priority' => undef],
-        ['map_weight' => undef],
-    ],
-    DitagFeature => [
-        ['ditypes', undef, qr/,/],
-        ['analysis' => undef],
-    ],
-
-    # Vega
-    DnaDnaAlignFeature => [
-        ['analysis' => undef],
-        ['score' => undef],
-        ['dbtype' => undef],
-    ],
-    DnaPepAlignFeature => [
-        ['analysis' => undef],
-        ['score' => undef],
-        ['dbtype' => undef],
-    ],
-    PredictionTranscript => [
-        ['analysis' => undef],
-        ['load_exons' => 1],
-    ],
-
-    # dummy
-    ExonSupportingFeature => [
-        ['analysis' => undef],
-    ],
-
-};
-
 my $SUBCLASS = {
     features         => '',          # no subclass
 
@@ -154,9 +110,10 @@ sub get_requested_features {
     my $filter_module = $self->param('filter_module');
 
     my $map = $self->make_map;
-    my @feature_list = ();
+    my $feature_list = [];
 
     my $metakey = $self->param('metakey');
+    ### Shouldn't loop where fetching method can take a list of analysis names.
     foreach my $analysis_name (@analysis_names) {
         foreach my $feature_kind (@feature_kinds) {
             my $getter_method = "get_all_${feature_kind}s";
@@ -165,38 +122,35 @@ sub get_requested_features {
                 ? [ undef, undef, undef, "${metakey}_variation" ]
                 : $self->_param_list($analysis_name, $feature_kind);
             my $features = $self->fetch_mapped_features_ensembl($getter_method, $param_list, $map, $metakey);
-            push @feature_list, @$features;
+            push @$feature_list, @$features;
         }
     }
 
     if ($filter_module) {
 
         # detaint the module string
-
         my ($module_name) = $filter_module =~ /^((\w+::)*\w+)$/;
 
         # for the moment be very conservative in what we allow
-
         if ($module_name =~ /^Bio::Vega::ServerAnalysis::\w+$/) {
 
             require_module($module_name);
 
             my $filter = $module_name->new;
+            $filter->Web($self);
 
-            warn scalar(@feature_list)." features before filtering...\n";
-
-            @feature_list = $filter->run(\@feature_list);
-
-            warn scalar(@feature_list)." features after filtering...\n";
+            warn scalar(@$feature_list) . " features before filtering...\n";
+            $feature_list = $filter->run($feature_list);
+            warn scalar(@$feature_list) . " features after filtering...\n";
         }
         else {
-            die "Invalid filter module: $filter_module";
+            die "Invalid filter module: '$filter_module'";
         }
     }
 
     # workaround: some of our pipelines put features on the wrong strand
     if ( $self->param('swap_strands') ) {
-        for my $f (@feature_list) {
+        for my $f (@$feature_list) {
             if ($f->can('hstrand') && $f->hstrand == -1) {
                 $f->hstrand($f->hstrand * -1);
                 $f->strand($f->strand * -1);
@@ -205,33 +159,95 @@ sub get_requested_features {
         }
     }
 
-    return \@feature_list;
+    return $feature_list;
 }
 
-sub _param_list {
-    my ($self, $analysis_name, $feature_kind) = @_;
+{
 
-    my $param_descs = $call_args->{$feature_kind};
-    my @param_list = ( );
+    my $call_args = {
 
-    foreach my $param_desc (@$param_descs) {
-        my ($param_name, $param_def_value, $param_separator) = @$param_desc;
+        # EnsEMBL
+        SimpleFeature => [
+            ['analysis' => undef],
+            ],
+        RepeatFeature => [
+            ['analysis' => undef],
+            ['repeat_type' => undef],
+            ['dbtype' => undef],
+        ],
+        MarkerFeature => [
+            ['analysis' => undef],
+            ['priority' => undef],
+            ['map_weight' => undef],
+        ],
+        DitagFeature => [
+            ['ditypes', undef, qr/,/],
+            ['analysis' => undef],
+        ],
 
-        my $param_value = (scalar(@$param_desc)==1)
-            ? $self->require_argument($param_name)
-            : defined($self->param($param_name))
-            ? $self->param($param_name)
-            : $param_def_value;
-        if($param_value && $param_separator) {
-            $param_value = [split(/$param_separator/,$param_value)];
+        # Vega
+        DnaDnaAlignFeature => [
+            ['analysis' => undef],
+            ['score' => undef],
+            ['dbtype' => undef],
+        ],
+        DnaPepAlignFeature => [
+            ['analysis' => undef],
+            ['score' => undef],
+            ['dbtype' => undef],
+        ],
+        PredictionTranscript => [
+            ['analysis' => undef],
+            ['load_exons' => 1],
+        ],
+
+        # dummy
+        ExonSupportingFeature => [
+            ['analysis' => undef],
+        ],
+
+    };
+
+    # Create list of arguments to EnsEMBL API fetching methods.
+    # Need the right number of arguments in the right order.
+    # Arguments are frequently undef.
+    sub _param_list {
+        my ($self, $analysis_name, $feature_kind) = @_;
+
+        my @param_desc_list = @{ $call_args->{$feature_kind} };
+        my $param_list = [];
+
+        foreach my $desc (@param_desc_list) {
+            my ($name, $value, $separator) = @$desc;
+
+            # We used to do:
+            #   $value = $self->require_argument($name) if @$desc == 1;
+            # ie: A mandatory parameter in the otter config, but
+            # there were no examples in the argument descriptions above.
+
+            if ($name eq 'analysis') {
+                # We don't call $self->param('analysis') becasue this can
+                # be a comma separated list of analysis names
+                $value = $analysis_name;
+            }
+            # Need defined test because value in otter config stanza may be 0
+            elsif (defined(my $v = $self->param($name))) {
+                if ($separator) {
+                    # Parameter is a list
+                    $value = [ split /$separator/, $v ];
+                }
+                else {
+                    $value = $v;
+                }
+            }
+
+            push @$param_list, $value;
         }
-        $param_value = $analysis_name
-            if $param_value && $param_value =~ /$analysis_name/;
-        push @param_list, $param_value;
-    }
 
-    return \ @param_list;
+        return $param_list;
+    }
 }
+
 
 sub gff_header {
 
