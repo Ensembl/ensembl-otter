@@ -63,6 +63,7 @@ my @server_params = (
     qw(
     sequence_db
     zmap_style_root
+    max_e_value
     ),
 
     # file_get
@@ -277,6 +278,15 @@ sub zmap_style_root {
     my ($self, $zmap_style_root) = @_;
     $self->{_zmap_style_root} = $zmap_style_root if $zmap_style_root;
     return $self->{_zmap_style_root};
+}
+
+sub max_e_value {
+    my($self, $flag) = @_;
+    
+    if (defined $flag) {
+        $self->{'_max_e_value'} = $flag;
+    }
+    return $self->{'_max_e_value'};
 }
 
 sub file_path {
