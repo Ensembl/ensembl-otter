@@ -5,6 +5,7 @@ package Bio::Vega::ServerAnalysis::EValueCutoff;
 
 use strict;
 use warnings;
+use base qw{ Bio::Vega::ServerAnalysis };
 
 sub run {
     my ($self, $features) = @_;
