@@ -41,26 +41,21 @@ use Bio::Otter::Server::Config;
         al1
         cas
         clb
-        cs10
         dm4
-        dml
         erb
         gdr
-        gkl
         gm5
         ib2
         jel
         jla1
         jm12
         jr4
-        lw2
         mh19
         mms
         mpk
         mt4
         sb7
         th2
-        vb1
     };
 
     my $usage = sub { exec('perldoc', $0) };
