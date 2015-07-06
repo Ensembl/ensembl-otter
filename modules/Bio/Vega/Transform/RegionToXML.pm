@@ -290,6 +290,7 @@ sub generate_Transcript {
               warn sprintf("%s %s: correcting bad end_phase, was -1, now %d\n",
                            $tran->stable_id, $end_Exon->stable_id, $actual_end_phase);
               $end_Exon->end_phase($actual_end_phase);
+              $end_Exon->stable_id(undef);
           }
       }
 
