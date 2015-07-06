@@ -7,6 +7,12 @@
 ENSEMBL_OTTER_DEV="$( cd -P $( dirname "${BASH_SOURCE[0]}" )/..; pwd )"
 export ENSEMBL_OTTER_DEV
 
+if [ -z "$ANACODE_TEAM_TOOLS" ]
+then
+    echo "ANACODE_TEAM_TOOLS not set"
+    exit 1
+fi
+
 source "${ANACODE_TEAM_TOOLS}/otterlace/release/scripts/_otterlace.sh" || exit 1
 
 version="dev-from-checkout" # required to be set, but not used?
