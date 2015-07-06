@@ -36,7 +36,7 @@ sub fasta_header_column_order { return @FASTA_HEADER_COLUMN_ORDER; }
         '~' => '~t',
         );
 
-    my %unesc = map { $esc{$_} => $_ } keys %esc;
+    my %unesc = reverse %esc;
 
     sub escape_fasta_description {
         my ($description) = @_;
