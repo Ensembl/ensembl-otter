@@ -20,10 +20,10 @@ sub deserialise_region {
     # The main purpose of this subclass is to ensure that appropriate dissociation from the
     # database occurs before write_region gets its hands on the 'new' region.
 
-    my $dba = $region->otter_dba;
+    my $dba = $region->slice->adaptor->db;
 
     my $new_region = $region->new_dissociated_copy;
-    $new_region->otter_dba($dba);
+    $new_region->slice->adaptor($dba->get_SliceAdaptor);
 
     # Removing dbIDs renders EnsEMBL's caches invalid, so clear them if we can.
     $dba->clear_caches if $dba;
