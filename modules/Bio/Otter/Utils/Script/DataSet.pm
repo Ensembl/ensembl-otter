@@ -79,7 +79,7 @@ sub _build_local_server {
 }
 
 sub _iterate_something {
-    my ($self, $obj_method, $sth, $obj_class) = @_;
+    my ($self, $obj_method, $sth, $obj_class, $desc) = @_;
 
     $sth->execute;
 
@@ -99,14 +99,15 @@ sub _iterate_something {
             say "$stable_id: $msg";
         }
     }
-    say "Modified ", $self->modified_count, " of $count transcripts" if $self->verbose;
+    $desc //= 'objects';
+    say "Modified ", $self->modified_count, " of $count $desc" if $self->verbose;
     return;
 }
 
 sub iterate_transcripts {
     my ($self, $ts_method) = @_;
     ## no critic(Subroutines::ProtectPrivateSubs)
-    return $self->_iterate_something($ts_method, $self->_transcript_sth, $self->script->_option('transcript_class'));
+    return $self->_iterate_something($ts_method, $self->_transcript_sth, $self->script->_option('transcript_class'), 'transcripts');
 }
 
 sub transcript_sql {
@@ -176,7 +177,7 @@ sub _build_transcript_adaptor {
 sub iterate_genes {
     my ($self, $ts_method) = @_;
     ## no critic(Subroutines::ProtectPrivateSubs)
-    return $self->_iterate_something($ts_method, $self->_gene_sth, $self->script->_option('gene_class'));
+    return $self->_iterate_something($ts_method, $self->_gene_sth, $self->script->_option('gene_class'), 'genes');
 }
 
 sub gene_sql {
