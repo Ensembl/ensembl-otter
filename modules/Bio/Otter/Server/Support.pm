@@ -9,6 +9,7 @@ Bio::Otter::Server::Support - common parent for MappingFetcher/B:O:Server::Suppo
 
 =cut
 
+use Carp;
 use Try::Tiny;
 
 use Bio::Otter::Server::Config;
@@ -131,7 +132,7 @@ sub require_argument {
 
     my $value = $self->param($argname);
 
-    die "No '$argname' argument defined"
+    confess "No '$argname' argument defined"
         unless defined $value;
 
     return $value;
