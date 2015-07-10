@@ -6,6 +6,8 @@ use warnings;
 
 use Bio::EnsEMBL::Analysis;
 
+use Bio::Otter::Utils::CacheByName;
+
 use Bio::Vega::Author;
 use Bio::Vega::Evidence;
 use Bio::Vega::Exon;
@@ -291,7 +293,7 @@ sub _otter_analysis {
     my ($self) = @_;
     my $_otter_analysis = $self->{'_otter_analysis'};
     unless ($_otter_analysis) {
-        $_otter_analysis = $self->{'_otter_analysis'} = Bio::EnsEMBL::Analysis->new( -LOGIC_NAME => 'Otter' );
+        $_otter_analysis = $self->{'_otter_analysis'} = $self->_get_Analysis('Otter');
     }
     return $_otter_analysis;
 }
@@ -438,14 +440,20 @@ sub _simpleFeature_from_HumAce {
     return $simple_feature;
 }
 
-{
-    my %logic_analysis;
+sub _get_Analysis {
+    my ($self, $name) = @_;
 
-    sub _get_Analysis {
-        my ($self, $name) = @_;
-        my $analysis = $logic_analysis{$name} ||= Bio::EnsEMBL::Analysis->new(-logic_name => $name);
-        return $analysis;
-    }
+    my $analysis_constructor = sub {
+        my ($name) = @_;
+        return Bio::EnsEMBL::Analysis->new(-logic_name => $name);
+    };
+    return $self->_analysis_cache->get_or_new($name, $analysis_constructor);
+}
+
+sub _analysis_cache {
+    my ($self) = @_;
+    $self->{'_analysis_cache'} //= Bio::Otter::Utils::CacheByName->new('logic_name');
+    return $self->{'_analysis_cache'};
 }
 
 sub session_slice {
