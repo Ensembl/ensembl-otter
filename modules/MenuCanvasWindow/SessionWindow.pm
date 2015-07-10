@@ -101,7 +101,7 @@ sub AceDatabase {
 
 sub vega_dba {
     my ($self, @args) = @_;
-    ($self->{'_vega_dba'}) = @args if @args;
+    ($self->{'_vega_dba'}) = @args if @args; # not used?
     my $vega_dba = $self->{'_vega_dba'};
     unless ($vega_dba) {
         $self->logger->warn('Setting vega_dba implicitly from AceDatabase->DB');
@@ -158,21 +158,22 @@ sub initialise {
     $self->RequestQueuer(Bio::Otter::RequestQueuer->new($self));
     my $proc = $self->_process_hits_proc; # launches process_hits_proc, ready for action
 
-    my $from_HumAce = Bio::Vega::Transform::FromHumAce->new(
-        session_slice => $self->AceDatabase->DB->session_slice,
-        whole_slice   => $self->AceDatabase->DB->whole_slice,
-        author        => $self->AceDatabase->Client->author,
-        log_context   => $self->log_context,
-        );
-    $self->_from_HumAce($from_HumAce);
-
     return;
 }
 
 sub _from_HumAce {
     my ($self, @args) = @_;
-    ($self->{'_from_HumAce'}) = @args if @args;
+
     my $_from_HumAce = $self->{'_from_HumAce'};
+    return $_from_HumAce if $_from_HumAce;
+
+     $_from_HumAce = $self->{'_from_HumAce'} = Bio::Vega::Transform::FromHumAce->new(
+         session_slice => $self->AceDatabase->DB->session_slice,
+         whole_slice   => $self->AceDatabase->DB->whole_slice,
+         author        => $self->AceDatabase->Client->author,
+         vega_dba      => $self->vega_dba,
+         log_context   => $self->log_context,
+         );
     return $_from_HumAce;
 }
 

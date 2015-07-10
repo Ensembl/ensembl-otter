@@ -34,7 +34,7 @@ sub store_Transcript {
                                             ": Locus ", $self->_debug_hum_ace($subseq->Locus),
                                             " has no dbID");
 
-    my $ts_adaptor = $self->_slice_dba->get_TranscriptAdaptor;
+    my $ts_adaptor = $self->vega_dba->get_TranscriptAdaptor;
     $ts_adaptor->store($transcript, $gene_dbID);
 
     $subseq->ensembl_dbID($transcript->dbID);
@@ -46,7 +46,7 @@ sub store_Transcript {
 sub update_Transcript {
     my ($self, $new_subseq, $old_subseq) = @_;
 
-    my $ts_adaptor = $self->_slice_dba->get_TranscriptAdaptor;
+    my $ts_adaptor = $self->vega_dba->get_TranscriptAdaptor;
 
     my $old_ts = $ts_adaptor->fetch_by_dbID($old_subseq->ensembl_dbID);
     $self->logger->logconfess("Cannot find transcript for ", $self->_debug_hum_ace($old_subseq)) unless $old_ts;
@@ -62,7 +62,7 @@ sub update_Transcript {
 sub remove_Transcript {
     my ($self, $subseq) = @_;
 
-    my $ts_adaptor = $self->_slice_dba->get_TranscriptAdaptor;
+    my $ts_adaptor = $self->vega_dba->get_TranscriptAdaptor;
 
     my $transcript = $ts_adaptor->fetch_by_dbID($subseq->ensembl_dbID);
     $self->logger->logconfess("Cannot find transcript for ", $self->_debug_hum_ace($subseq)) unless $transcript;
@@ -310,7 +310,7 @@ sub store_Gene {
 
     $gene->slice($self->whole_slice) unless $gene->slice;
 
-    my $gene_adaptor = $self->_slice_dba->get_GeneAdaptor;
+    my $gene_adaptor = $self->vega_dba->get_GeneAdaptor;
     $gene_adaptor->store_only($gene);
 
     $locus->ensembl_dbID($gene->dbID);
@@ -322,7 +322,7 @@ sub store_Gene {
 sub update_Gene {
     my ($self, $new_locus, $old_locus) = @_;
 
-    my $gene_adaptor = $self->_slice_dba->get_GeneAdaptor;
+    my $gene_adaptor = $self->vega_dba->get_GeneAdaptor;
     my $old_gene = $gene_adaptor->fetch_by_dbID($old_locus->ensembl_dbID);
 
     $self->logger->logconfess("Cannot find gene for ", $self->_debug_hum_ace($old_locus)) unless $old_gene;
@@ -341,7 +341,7 @@ sub update_Gene {
     my $new_gene_dbID = $new_gene->dbID;
 
     # Point existing transcripts at the new version
-    my $ts_adaptor = $self->_slice_dba->get_TranscriptAdaptor;
+    my $ts_adaptor = $self->vega_dba->get_TranscriptAdaptor;
     my $sth = $ts_adaptor->prepare("UPDATE transcript SET gene_id = ? WHERE transcript_id = ?");
     foreach my $ts ( @$transcripts_copy ) {
         $sth->execute($new_gene_dbID, $ts->dbID);
@@ -393,7 +393,7 @@ sub store_SimpleFeature {
 
     my $sf = $self->_simpleFeature_from_HumAce($ha_feature);
 
-    my $sfa = $self->_slice_dba->get_SimpleFeatureAdaptor;
+    my $sfa = $self->vega_dba->get_SimpleFeatureAdaptor;
     $sfa->store($sf);
 
     $self->logger->debug(
@@ -408,7 +408,7 @@ sub remove_SimpleFeatures {
     my ($self, $type) = @_;
 
     my $simple_features = $self->whole_slice->get_all_SimpleFeatures($type);
-    my $sfa = $self->_slice_dba->get_SimpleFeatureAdaptor;
+    my $sfa = $self->vega_dba->get_SimpleFeatureAdaptor;
 
     foreach my $sf (@$simple_features) {
         $sfa->remove($sf);
@@ -462,13 +462,11 @@ sub whole_slice {
     return $whole_slice;
 }
 
-sub _slice_dba {
-    my ($self) = @_;
-    my $_slice_dba = $self->{'_slice_dba'};
-    unless ($_slice_dba) {
-        $_slice_dba = $self->{'_slice_dba'} = $self->whole_slice->adaptor->db;
-    }
-    return $_slice_dba;
+sub vega_dba {
+    my ($self, @args) = @_;
+    ($self->{'vega_dba'}) = @args if @args;
+    my $vega_dba = $self->{'vega_dba'};
+    return $vega_dba;
 }
 
 sub author {
