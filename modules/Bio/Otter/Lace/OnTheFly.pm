@@ -129,6 +129,8 @@ sub prep_and_store_request_for_each_type {
     my $ace_db = $session_window->AceDatabase;
     my $sql_db = $ace_db->DB;
 
+    my $vega_dba = $sql_db->vega_dba; # trigger reconnect if necessary
+
     # Clear columns if requested
     $self->pre_launch_setup(slice => $sql_db->session_slice);
 
