@@ -33,30 +33,27 @@ sub fetch_new_translation_stable_id {
     return $self->_fetch_new_by_type('translation', 'P');
 }
 
-
 sub _fetch_new_by_type {
+    my ($self, $type, $type_prefix) = @_;
 
-  my ($self, $type, $type_prefix) = @_;
+    my $id     = $type . "_id";
+    my $poolid = $type . "_pool_id";
+    my $table  = $type . "_stable_id_pool";
 
-  my $id     = $type . "_id";
-  my $poolid = $type . "_pool_id";
-  my $table  = $type . "_stable_id_pool";
+    my $sql = "insert into $table () values()";
+    my $sth = $self->prepare($sql);
+    $sth->execute;
+    my $num = $self->last_insert_id($poolid, undef, $table) or throw("Failed to get autoincremented '$poolid'");
 
-  my $sql = "insert into $table () values()";
-  my $sth = $self->prepare($sql);
-  $sth->execute;
-  my $num = $self->last_insert_id($poolid, undef, $table) or throw("Failed to get autoincremented '$poolid'");
+    my $meta_container = $self->db->get_MetaContainer;
+    my $prefix =
+        ($meta_container->get_primary_prefix || 'OTT')
+      . ($meta_container->get_species_prefix || '')
+      . $type_prefix;
 
-  my $meta_container = $self->db->get_MetaContainer();
-  my $prefix = $meta_container->get_primary_prefix() || "OTT";
-  my $stableid = $prefix;
-  my $species_prefix = $meta_container->get_species_prefix();
-  if (defined($species_prefix)) {
-    $stableid .= $species_prefix;
-  }
-  $stableid .= ($type_prefix . sprintf('%011d', $num));
-
-  return $stableid;
+    # Stable IDs are always 18 characters long
+    my $rem = 18 - length($prefix);
+    return $type_prefix . sprintf "\%0${rem}d", $num;
 }
 
 1;
