@@ -56,7 +56,15 @@ sub features_from_slice {
     my $feature_kind = $self->feature_kind;
     my $getter_method = "get_all_${feature_kind}s";
 
-    return $self->slice->$getter_method($self->logic_name);
+    my @logic_names = $self->logic_name ? split(/,/, $self->logic_name) : ( undef );
+    my @features;
+
+    foreach my $logic_name ( @logic_names ) {
+        my $feats = $self->slice->$getter_method($logic_name);
+        push @features, @$feats;
+    }
+
+    return \@features;
 }
 
 sub gff_for_features {
