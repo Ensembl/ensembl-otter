@@ -622,30 +622,18 @@ sub ace_config {
     # extract DNA source into a separate initial stanza for pre-loading
     #
     my $dna         = [ grep { $_ eq 'DNA' } @method_names ];
-    my $featuresets = [ grep { $_ ne 'DNA' } @method_names ];
 
-    my @sources = $slice_name;
+    my @sources;
     my $dna_slice_name;
     if (@$dna) {
         $dna_slice_name = sprintf '%s-DNA', $slice_name;
         unshift @sources, $dna_slice_name;
-
-        # RT400142: we also put 'DNA' back in as the first item in the main stanza
-        unshift @$featuresets, @$dna;
     }
 
     my $config = {
-
         'ZMap' => {
             sources => \@sources,
         },
-
-        $slice_name => $self->_ace_slice_config(
-            url         => $url,
-            featuresets => $featuresets,
-            version     => $acedb_version,
-        ),
-
     };
 
     if ($dna_slice_name) {
