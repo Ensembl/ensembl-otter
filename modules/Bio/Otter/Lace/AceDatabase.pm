@@ -27,6 +27,7 @@ use Bio::Otter::Lace::Chooser::Collection;
 use Bio::Otter::Lace::DB;
 use Bio::Otter::Lace::Slice; # a new kind of Slice that knows how to get pipeline data
 use Bio::Otter::Lace::ProcessGFF;
+use Bio::Otter::Source::Filter;
 use Bio::Otter::Utils::Config::Ini qw( config_ini_format );
 
 use Hum::Ace::Assembly;
@@ -1173,6 +1174,7 @@ sub ColumnCollection {
     unless ($cc) {
         my $ds = $self->DataSet;
         $ds->load_client_config;
+        $self->_add_transcript_filters($ds);
         $cc = $self->{'_ColumnCollection'} =
             Bio::Otter::Lace::Chooser::Collection->new_from_Filter_list(
                 @{ $ds->filters },
@@ -1180,6 +1182,41 @@ sub ColumnCollection {
             );
     }
     return $cc;
+}
+
+sub _add_transcript_filters {
+    my ($self, $dataset) = @_;
+
+    foreach my $top_level ( $self->MethodCollection->get_all_top_level_Methods ) {
+
+        my @methods = $top_level->get_all_child_Methods;
+        next unless @methods;
+        next unless $methods[0]->is_transcript;
+        my @method_names =
+            grep { $_ !~ /:$/ } # strip pure prefices
+            map  { $_->name   }
+            @methods;
+
+        my $filter_name = lc $top_level->name;
+        $filter_name =~ s/\s+/_/g;
+        my $child_list = join(',', @method_names);
+
+        my $filter = Bio::Otter::Source::Filter->from_config({
+            name                => $filter_name,
+            internal            => 'always_on',
+            script_name         => 'localdb_get',
+            resource_bin        => 'local',
+            analysis            => 'Otter',
+            feature_kind        => 'Gene',
+            zmap_column         => $top_level->name,
+            description         => $top_level->remark,
+            transcript_analyses => $child_list,
+            featuresets         => "${filter_name},${child_list}",
+                                                             });
+        $dataset->add_filter($filter);
+    }
+
+    return;
 }
 
 my @coverage_param_list = (
