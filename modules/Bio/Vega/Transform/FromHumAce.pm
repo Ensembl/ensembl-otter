@@ -95,7 +95,11 @@ sub _transcript_from_SubSeq {
     $self->_add_remarks                              ($transcript, $subseq);
     $self->_add_supporting_evidence                  ($transcript, $subseq->evidence_hash);
 
-    $transcript->analysis         ($self->_get_Analysis($subseq->GeneMethod->name));
+    my $logic_name = $subseq->GeneMethod->name;
+    if (my $prefix = $subseq->Locus->gene_type_prefix) {
+        $logic_name = sprintf('%s:%s', $prefix, $logic_name);
+    }
+    $transcript->analysis         ($self->_get_Analysis($logic_name));
     $transcript->transcript_author($self->_author_object );
 
     $transcript->slice($self->whole_slice) unless $transcript->slice;
