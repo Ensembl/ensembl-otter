@@ -5,7 +5,7 @@
 use strict;
 use warnings;
 use Term::ReadKey qw{ ReadMode ReadLine };
-use File::Basename qw{ basename };
+use File::Basename qw{ dirname };
 
 {
     my @code_db = qw{
@@ -31,7 +31,7 @@ use File::Basename qw{ basename };
     # kj2_mouse_CAROLI_EiJ_20150519
     # kj2_mouse_Pahari_EiJ_20150520
 
-    my $this_dir = basename($0);
+    my $this_dir = dirname($0);
 
     my $ottroot_passwd = password_prompt('ottroot');
 
@@ -99,9 +99,6 @@ use File::Basename qw{ basename };
         system_do(qq{$this_dir/save_satellite_db -dataset mus_$CODE -key pipeline_db_head    -satdbname $pipe_db_name -sathost mcs18 -satport 3322 -satuser ottro});
         system_do(qq{$this_dir/save_satellite_db -dataset mus_$CODE -key pipeline_db_rw_head -satdbname $pipe_db_name -sathost mcs17 -satport 3322 -satuser ottadmin -satpass lutralutra});
 
-        last;
-
-        # system_do("$source --execute='SELECT * FROM coord_system'");
     }
 }
 
