@@ -10,22 +10,21 @@ use File::Basename qw{ dirname };
 {
     my @code_db = qw{
         SPR     kj2_mouse_SPRET_EiJ_20150415
-        PWK     kj2_mouse_PWK_PhJ_20150416      
-        CAS     kj2_mouse_CAST_EiJ_20150414        
-        WSB     kj2_mouse_WSB_EiJ_20150619         
-        NZO     kj2_mouse_NZO_HlLtJ_20150506       
-        C57     kj2_mouse_C57BL_6NJ_20150504       
-        NOD     kj2_mouse_NOD_ShiLtJ_20150505      
-        FVB     kj2_mouse_FVB_NJ_20150619          
-        DBA     kj2_mouse_DBA_J_20150617           
-        CBA     kj2_mouse_CBA_J_20150617           
-        C3H     kj2_mouse_C3H_HeJ_20150520         
-        AKR     kj2_mouse_AKR_J_20150611           
-        BAL     kj2_mouse_BALB_cJ_20150611         
-        AJ      kj2_mouse_A_J_20150611             
-        APJ     kj2_mouse_LP_J_20150619            
-        129     kj2_mouse_129S1_SvImJ_20150515     
-
+        PWK     kj2_mouse_PWK_PhJ_20150416
+        CAS     kj2_mouse_CAST_EiJ_20150414
+        WSB     kj2_mouse_WSB_EiJ_20150619
+        NZO     kj2_mouse_NZO_HlLtJ_20150506
+        C57     kj2_mouse_C57BL_6NJ_20150504
+        NOD     kj2_mouse_NOD_ShiLtJ_20150505
+        FVB     kj2_mouse_FVB_NJ_20150619
+        DBA     kj2_mouse_DBA_J_20150617
+        CBA     kj2_mouse_CBA_J_20150617
+        C3H     kj2_mouse_C3H_HeJ_20150520
+        AKR     kj2_mouse_AKR_J_20150611
+        BAL     kj2_mouse_BALB_cJ_20150611
+        AJ      kj2_mouse_A_J_20150611
+        APJ     kj2_mouse_LP_J_20150619
+        129     kj2_mouse_129S1_SvImJ_20150515
     };
 
     # kj2_mouse_CAROLI_EiJ_20150519
@@ -40,7 +39,7 @@ use File::Basename qw{ dirname };
         my $loutre_db_name = "loutre_mus_" . lc $CODE;
         my   $pipe_db_name =   "pipe_mus_" . lc $CODE;
 
-        print STDERR "Building 'MUS$CODE' from '$grit_db_name'\n";
+        print STDERR "\nBuilding 'MUS$CODE' from '$grit_db_name'\n";
 
         my $grit_param   = "--host=gritdb    --port=3419 --user=gritro $grit_db_name";
         my $loutre_param = "--host=otterlive --port=3324 --user=ottroot --password='$ottroot_passwd'";
@@ -68,7 +67,7 @@ use File::Basename qw{ dirname };
         system_do(qq{$loutre --execute='UPDATE coord_system SET version = NULL WHERE version = "CURRENT"'});
 
         # Populate meta table with appropriate entries
-        my $species_info_db = $CODE eq 'SPR' ? 'loutre_mus_spretus' : 'loture_mouse';
+        my $species_info_db = $CODE eq 'SPR' ? 'loutre_mus_spretus' : 'loutre_mouse';
         my $meta_keys_to_copy = join(', ', map { qq{"$_"} } qw{
             patch
             schema_type
@@ -79,6 +78,7 @@ use File::Basename qw{ dirname };
             species.taxonomy_id
         });
         system_do(qq{mysqldump --no-create-info --host=otterlive --port=3324 --user=ottro --where='meta_key IN($meta_keys_to_copy)' $species_info_db meta | $loutre});
+        system_do(qq{mysqldump --no-create-info --host=otterlive --port=3324 --user=ottro --where='meta_key IN($meta_keys_to_copy)' $species_info_db meta | $pipe});
         system_do(qq{$loutre --execute='INSERT meta (meta_key, meta_value) VALUES } .
             join(', ', map { "($_)" }
                 q{"assembly.mapping", "chromosome:Otter#contig"}
@@ -107,7 +107,6 @@ use File::Basename qw{ dirname };
         # Link pipeline db to loutre:
         system_do(qq{$this_dir/save_satellite_db -dataset mus_$CODE -key pipeline_db_head    -satdbname $pipe_db_name -sathost mcs18 -satport 3322 -satuser ottro});
         system_do(qq{$this_dir/save_satellite_db -dataset mus_$CODE -key pipeline_db_rw_head -satdbname $pipe_db_name -sathost mcs17 -satport 3322 -satuser ottadmin -satpass wibble});
-
     }
 }
 
