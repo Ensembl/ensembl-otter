@@ -57,8 +57,8 @@ use File::Basename qw{ dirname };
         $pipe   .= " --database=$pipe_db_name";
 
         # Populate with schema from human loutre and pipe databases.
-        system_do("mysqldump --no-data --host=otterlive --port=3324 --user=ottro loutre_human | $loutre");
-        system_do("mysqldump --no-data --host=mcs17     --port=3322 --user=ottro   pipe_human | $pipe");
+        system_do("mysqldump --no-data --host=otterlive --port=3324 --user=ottro loutre_mouse | $loutre");
+        system_do("mysqldump --no-data --host=mcs17     --port=3322 --user=ottro   pipe_mouse | $pipe");
 
         # Copy data (with --no-create-info because we don't want MyISAM databases from GRIT dbs).
         system_do("mysqldump --no-create-info $grit_param coord_system seq_region assembly dna | $loutre");
@@ -69,7 +69,16 @@ use File::Basename qw{ dirname };
 
         # Populate meta table with appropriate entries
         my $species_info_db = $CODE eq 'SPR' ? 'loutre_mus_spretus' : 'loture_mouse';
-        system_do(qq{mysqldump --no-create-info --host=otterlive --port=3324 --user=ottro --where='meta_key IN("species.classification", "species.taxonomy_id")' $species_info_db meta | $loutre});
+        my $meta_keys_to_copy = join(', ', map { qq{"$_"} } qw{
+            patch
+            schema_type
+            schema_version
+            species.classification
+            species.common_name
+            species.scientific_name
+            species.taxonomy_id
+        });
+        system_do(qq{mysqldump --no-create-info --host=otterlive --port=3324 --user=ottro --where='meta_key IN($meta_keys_to_copy)' $species_info_db meta | $loutre});
         system_do(qq{$loutre --execute='INSERT meta (meta_key, meta_value) VALUES } .
             join(', ', map { "($_)" }
                 q{"assembly.mapping", "chromosome:Otter#contig"}
