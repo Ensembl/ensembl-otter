@@ -549,7 +549,8 @@ sub zmap_config_write {
 sub zmap_config {
     my ($self) = @_;
 
-    my $config = $self->_zmap_config;
+    my $config = $self->_zmap_dna_config;
+    _config_merge($config, $self->_zmap_config);
     _config_merge($config, $self->DataSet->zmap_config($self));
 
     return $config;
@@ -598,6 +599,28 @@ sub _zmap_config {
             %{ $self->DataSet->config_section('blixem') },
         },
 
+    };
+
+    return $config;
+}
+
+sub _zmap_dna_config {
+    my ($self) = @_;
+
+    my $dna_slice_name = sprintf '%s-DNA', $self->slice_name;
+    my $dna_source = $self->DataSet->filter_by_name('DNA');
+
+    my $config = {
+        'ZMap' => {
+            sources => [ $dna_slice_name ],
+        },
+        $dna_slice_name => {
+            sequence    => 'true',
+            group       => 'always',
+            featuresets => 'DNA',
+            stylesfile  => $self->stylesfile,
+            url         => $dna_source->url($self),
+        },
     };
 
     return $config;
