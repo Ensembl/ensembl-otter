@@ -549,8 +549,7 @@ sub zmap_config_write {
 sub zmap_config {
     my ($self) = @_;
 
-    my $config = $self->ace_config;
-    _config_merge($config, $self->_zmap_config);
+    my $config = $self->_zmap_config;
     _config_merge($config, $self->DataSet->zmap_config($self));
 
     return $config;
@@ -604,58 +603,6 @@ sub _zmap_config {
     return $config;
 }
 
-sub ace_config {
-    my ($self) = @_;
-
-    my $slice_name = $self->slice_name;
-    my $gff_version = 2;
-    my $acedb_version = $self->DataSet->acedb_version;
-
-    my $ace_server = $self->ace_server;
-    my $url = sprintf 'acedb://%s:%s@%s:%d?gff_version=%d'
-        , $ace_server->user, $ace_server->pass, $ace_server->host, $ace_server->port
-        , $gff_version;
-
-    my @methods = $self->MethodCollection->get_all_top_level_Methods;
-    my @method_names = map { $_->name } @methods;
-
-    # extract DNA source into a separate initial stanza for pre-loading
-    #
-    my $dna         = [ grep { $_ eq 'DNA' } @method_names ];
-
-    my @sources;
-    my $dna_slice_name;
-    if (@$dna) {
-        $dna_slice_name = sprintf '%s-DNA', $slice_name;
-        unshift @sources, $dna_slice_name;
-    }
-
-    my $config = {
-        'ZMap' => {
-            sources => \@sources,
-        },
-    };
-
-    if ($dna_slice_name) {
-        $config->{$dna_slice_name} = $self->_ace_slice_config(
-            url         => $url,
-            featuresets => $dna,
-            version     => $acedb_version,
-            );
-    }
-
-    return $config;
-}
-
-sub _ace_slice_config {
-    my ($self, @args) = @_;
-    return {
-        sequence    => 'true',
-        group       => 'always',
-        stylesfile  => $self->stylesfile,
-        @args,
-    }
-}
 
 my $sqlite_fetch_query = "
 SELECT  oai.accession_sv     AS  'Name'
