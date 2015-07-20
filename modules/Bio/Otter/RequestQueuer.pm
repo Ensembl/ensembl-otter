@@ -27,6 +27,7 @@ sub new {
         'send-queued-callback-timeout-ms' => '_cfg_send_queued_callback_timeout_ms',
         # try a simple global per-bin config before going further
         'requests-per-bin'                => '_cfg_requests_per_bin',
+        'default-priority'                => '_cfg_default_priority',
         );
     my $client = $session->AceDatabase->Client;
     my $logger = $self->_logger;
@@ -50,7 +51,28 @@ sub _queue_features {
     my ($self, @feature_list) = @_;
     push @{$self->_queue}, @feature_list;
     $self->_logger->debug('_queue_features: queued ', scalar(@feature_list));
+    $self->_sort_by_priority;
     return;
+}
+
+sub _sort_by_priority {
+    my ($self) = @_;
+    my @sorted = sort {
+        $self->_request_to_priority($a) <=> $self->_request_to_priority($b);
+    } @{$self->_queue};
+    $self->{_queue} = \@sorted;
+    return;
+}
+
+sub _request_to_priority {
+    my ($self, $request) = @_;
+
+    if (ref($request) and $request->can('priority')) {
+        my $priority = $request->priority;
+        return $priority if defined $priority;
+    }
+
+    return $self->_cfg_default_priority;
 }
 
 sub _send_queued_requests {
@@ -271,6 +293,13 @@ sub _cfg_requests_per_bin {
     ($self->{'_cfg_requests_per_bin'}) = @args if @args;
     my $_cfg_requests_per_bin = $self->{'_cfg_requests_per_bin'};
     return $_cfg_requests_per_bin;
+}
+
+sub _cfg_default_priority {
+    my ($self, @args) = @_;
+    ($self->{'_cfg_default_priority'}) = @args if @args;
+    my $_cfg_default_priority = $self->{'_cfg_default_priority'};
+    return $_cfg_default_priority;
 }
 
 sub _logger {

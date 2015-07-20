@@ -1139,6 +1139,7 @@ sub _add_transcript_filters {
         my $filter = Bio::Otter::Source::Filter->from_config({
             name                => $filter_name,
             internal            => 'always_on',
+            priority            => 1,
             script_name         => 'localdb_get',
             resource_bin        => 'local',
             analysis            => 'Otter',
