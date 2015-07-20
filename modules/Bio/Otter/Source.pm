@@ -114,6 +114,13 @@ sub internal {
     return $internal;
 }
 
+sub priority {
+    my ($self, @args) = @_;
+    ($self->{'priority'}) = @args if @args;
+    my $priority = $self->{'priority'};
+    return $priority;
+}
+
 # GFF methods
 
 sub gff_source {
