@@ -100,8 +100,8 @@ use File::Basename qw{ dirname };
         # Copy repeat data into pipeline database.
         system_do("mysqldump --host=gritdb --port=3419 --user=gritro --no-create-info $grit_db_name repeat_feature repeat_consensus | $pipe");
         system_do(qq{mysqldump --no-create-info --where='logic_name IN ("submit_contig", "repeatmask", "trf", "dust")' $grit_param analysis | $pipe});
-        system_do(qq{$loutre --execute='UPDATE analysis SET logic_name = "RepeatMasker" WHERE logic_name = "repeatmask"'});
-        system_do(qq{$loutre --execute='UPDATE analysis SET logic_name = "SubmitContig" WHERE logic_name = "submit_contig"'});
+        system_do(qq{$pipe --execute='UPDATE analysis SET logic_name = "RepeatMasker" WHERE logic_name = "repeatmask"'});
+        system_do(qq{$pipe --execute='UPDATE analysis SET logic_name = "SubmitContig" WHERE logic_name = "submit_contig"'});
         system_do(qq{mysqldump --host=gritdb --port=3419 --user=gritro --no-create-info $grit_db_name --where='table_name = "repeat_feature"' meta_coord | $pipe});
 
         # Link pipeline db to loutre:
