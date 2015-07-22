@@ -9,7 +9,7 @@ use Bio::EnsEMBL::SimpleFeature;
 
 use base 'Bio::Otter::Utils::GetScript::LocalDB';
 
-sub version { return 'dna_get 0.5'; };
+sub version { return 'dna_get 0.6'; };
 sub log_filename { return 'localdb_log.txt'; }
 
 sub do_it {
@@ -18,10 +18,12 @@ sub do_it {
     $self->do_requires;
 
     my $slice = $self->vega_slice;
+    my $start = $slice->start;
+    my $end   = $slice->end;
     my $label = sprintf("%s_%d-%d",
                         $slice->seq_region_name,
-                        $slice->start,
-                        $slice->end);
+                        $start,
+                        $end);
 
     my $feature = Bio::EnsEMBL::SimpleFeature->new(
             -start         => 1,
@@ -31,15 +33,20 @@ sub do_it {
             -display_label => $label,
         );
 
+    my $fasta = << "__EO_HEADER__";
+##sequence-region $label $start $end
+##FASTA
+>$label
+__EO_HEADER__
+
     # FIXME: dup with Bio::Otter::Server::GFF
     my $seq   = $feature->seq;
-    my $fasta = "##FASTA\n>$label\n";
     while ($seq =~ /(.{1,70})/g) {
         $fasta .= $1 . "\n";
     }
 
     $self->send_feature_gff(
-        [ $feature ],
+        [ ],                    # no features!
         0,                      # don't process_gff
         \$fasta,
         );
