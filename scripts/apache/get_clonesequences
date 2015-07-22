@@ -40,8 +40,6 @@ my $sql = <<'SQL'
           , assembly cl2ctg
           , seq_region chr
           , seq_region ctg
-          , seq_region_attrib embl_acc
-          , seq_region_attrib embl_version
           , seq_region_attrib chr_name)
       , seq_region cl
     LEFT JOIN seq_region_attrib intl_clone_name
@@ -50,6 +48,18 @@ my $sql = <<'SQL'
     (SELECT attrib_type_id
         FROM attrib_type
         WHERE code = 'intl_clone_name')
+    LEFT JOIN seq_region_attrib embl_acc
+      ON cl.seq_region_id = embl_acc.seq_region_id
+      AND embl_acc.attrib_type_id =
+    (SELECT attrib_type_id
+        FROM attrib_type
+        WHERE code = 'embl_acc')
+    LEFT JOIN seq_region_attrib embl_version
+      ON cl.seq_region_id = embl_version.seq_region_id
+      AND embl_version.attrib_type_id =
+    (SELECT attrib_type_id
+        FROM attrib_type
+        WHERE code = 'embl_version')
     WHERE chr.name = ?
       AND chr2ctg.asm_seq_region_id = chr.seq_region_id
       AND chr2ctg.cmp_seq_region_id = ctg.seq_region_id
@@ -68,22 +78,12 @@ my $sql = <<'SQL'
     (SELECT attrib_type_id
         FROM attrib_type
         WHERE code = 'chr')
-      AND cl.seq_region_id = embl_acc.seq_region_id
-      AND embl_acc.attrib_type_id =
-    (SELECT attrib_type_id
-        FROM attrib_type
-        WHERE code = 'embl_acc')
-      AND cl.seq_region_id = embl_version.seq_region_id
-      AND embl_version.attrib_type_id =
-    (SELECT attrib_type_id
-        FROM attrib_type
-        WHERE code = 'embl_version')
     ORDER BY chr2ctg.asm_start
 SQL
 ;
 
-# If a clone is missing from the results, check that it has embl_acc and embl_version attributes.
 # If the whole chromosome is missing, check that it has the chr attribute.
+# [ NO LONGER TRUE: If a clone is missing from the results, check that it has embl_acc and embl_version attributes. ]
 
 my $sth = $dbc->prepare($sql);
 $sth->execute($sequenceset);
