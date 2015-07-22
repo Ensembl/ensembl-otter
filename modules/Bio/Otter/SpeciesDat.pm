@@ -35,7 +35,9 @@ sub new {
 
 sub dataset {
     my ($self, $name) = @_;
-    return $self->{_dataset}{$name};
+    my $ds = $self->{_dataset}{$name}
+      or confess "No such dataset '$name'";
+    return $ds;
 }
 
 sub datasets {
