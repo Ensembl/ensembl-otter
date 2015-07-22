@@ -20,10 +20,7 @@ sub do_it {
     my $slice = $self->vega_slice;
     my $start = $slice->start;
     my $end   = $slice->end;
-    my $label = sprintf("%s_%d-%d",
-                        $slice->seq_region_name,
-                        $start,
-                        $end);
+    my $label = $slice->seq_region_name;
 
     my $feature = Bio::EnsEMBL::SimpleFeature->new(
             -start         => 1,
