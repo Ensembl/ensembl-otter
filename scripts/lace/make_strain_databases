@@ -59,6 +59,10 @@ use File::Basename qw{ dirname };
         system_do("mysqldump --no-data --host=otterlive --port=3324 --user=ottro loutre_mouse | $loutre");
         system_do("mysqldump --no-data --host=mcs17     --port=3322 --user=ottro   pipe_mouse | $pipe");
 
+        # Copy the tables we keep in sync with Ensembl core
+        system_do("mysqldump --no-create-info --host=otterlive --port=3324 --user=ottro loutre_mouse attrib_type external_db misc_set unmapped_reason | $loutre");
+        system_do("mysqldump --no-create-info --host=otterlive --port=3324 --user=ottro loutre_mouse attrib_type external_db misc_set unmapped_reason | $pipe");
+
         # Copy data (with --no-create-info because we don't want MyISAM databases from GRIT dbs).
         system_do("mysqldump --no-create-info $grit_param coord_system seq_region assembly dna | $loutre");
 
