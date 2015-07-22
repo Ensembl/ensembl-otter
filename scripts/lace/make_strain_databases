@@ -1,0 +1,147 @@
+#!/usr/bin/env perl
+
+### make_strain_database
+
+use strict;
+use warnings;
+use Term::ReadKey qw{ ReadMode ReadLine };
+use File::Basename qw{ dirname };
+
+{
+    my @code_db = qw{
+        SPR     kj2_mouse_SPRET_EiJ_20150415
+        PWK     kj2_mouse_PWK_PhJ_20150416
+        CAS     kj2_mouse_CAST_EiJ_20150414
+        WSB     kj2_mouse_WSB_EiJ_20150619
+        NZO     kj2_mouse_NZO_HlLtJ_20150506
+        C57     kj2_mouse_C57BL_6NJ_20150504
+        NOD     kj2_mouse_NOD_ShiLtJ_20150505
+        FVB     kj2_mouse_FVB_NJ_20150619
+        DBA     kj2_mouse_DBA_J_20150617
+        CBA     kj2_mouse_CBA_J_20150617
+        C3H     kj2_mouse_C3H_HeJ_20150520
+        AKR     kj2_mouse_AKR_J_20150611
+        BAL     kj2_mouse_BALB_cJ_20150611
+        AJ      kj2_mouse_A_J_20150611
+        APJ     kj2_mouse_LP_J_20150619
+        129     kj2_mouse_129S1_SvImJ_20150515
+    };
+
+    # kj2_mouse_CAROLI_EiJ_20150519
+    # kj2_mouse_Pahari_EiJ_20150520
+
+    my $this_dir = dirname($0);
+
+    my $ottroot_passwd = password_prompt('ottroot');
+
+    for (my $i = 0; $i < @code_db; $i += 2) {
+        my ($CODE, $grit_db_name) = @code_db[$i, $i+1];
+        my $loutre_db_name = "loutre_mus_" . lc $CODE;
+        my   $pipe_db_name =   "pipe_mus_" . lc $CODE;
+
+        print STDERR "\nBuilding 'MUS$CODE' from '$grit_db_name'\n";
+
+        my $grit_param   = "--host=gritdb    --port=3419 --user=gritro $grit_db_name";
+        my $loutre_param = "--host=otterlive --port=3324 --user=ottroot --password='$ottroot_passwd'";
+        my $pipe_param   = "--host=mcs17     --port=3322 --user=ottroot --password='$ottroot_passwd'";
+
+        my $source = "mysql $grit_param";
+        my $loutre = "mysql $loutre_param";
+        my $pipe   = "mysql $pipe_param";
+
+        # Create empty loutre and pipe databases.
+        system_do("$loutre --execute='CREATE DATABASE $loutre_db_name'");
+        system_do(  "$pipe --execute='CREATE DATABASE $pipe_db_name'");
+        $loutre .= " --database=$loutre_db_name";
+        $pipe   .= " --database=$pipe_db_name";
+
+        # Populate with schema from human loutre and pipe databases.
+        system_do("mysqldump --no-data --host=otterlive --port=3324 --user=ottro loutre_mouse | $loutre");
+        system_do("mysqldump --no-data --host=mcs17     --port=3322 --user=ottro   pipe_mouse | $pipe");
+
+        # Copy the tables we keep in sync with Ensembl core
+        system_do("mysqldump --no-create-info --host=otterlive --port=3324 --user=ottro loutre_mouse attrib_type external_db misc_set unmapped_reason | $loutre");
+        system_do("mysqldump --no-create-info --host=otterlive --port=3324 --user=ottro loutre_mouse attrib_type external_db misc_set unmapped_reason | $pipe");
+
+        # Copy data (with --no-create-info because we don't want MyISAM databases from GRIT dbs).
+        system_do("mysqldump --no-create-info $grit_param coord_system seq_region assembly dna | $loutre");
+
+        # Massage coord_system table to contain records expected by otter.
+        system_do(qq{$loutre --execute='UPDATE coord_system SET version = "Otter" WHERE name = "chromosome"'});
+        system_do(qq{$loutre --execute='UPDATE coord_system SET version = NULL WHERE version = "CURRENT"'});
+
+        # Populate meta table with appropriate entries
+        my $species_info_db = $CODE eq 'SPR' ? 'loutre_mus_spretus' : 'loutre_mouse';
+        my $meta_keys_to_copy = join(', ', map { qq{"$_"} } qw{
+            patch
+            schema_type
+            schema_version
+            species.classification
+            species.common_name
+            species.scientific_name
+            species.taxonomy_id
+        });
+        system_do(qq{mysqldump --no-create-info --host=otterlive --port=3324 --user=ottro --where='meta_key IN($meta_keys_to_copy)' $species_info_db meta | $loutre});
+        system_do(qq{mysqldump --no-create-info --host=otterlive --port=3324 --user=ottro --where='meta_key IN($meta_keys_to_copy)' $species_info_db meta | $pipe});
+        system_do(qq{$loutre --execute='INSERT meta (meta_key, meta_value) VALUES } .
+            join(', ', map { "($_)" }
+                q{"assembly.mapping", "chromosome:Otter#contig"}
+              , q{"assembly.mapping", "chromosome:Otter#contig#clone"}
+              , q{"assembly.mapping", "clone#contig"}
+              , q{"prefix.primary", "OTT"}
+              , qq{"prefix.species", "MUS$CODE"}
+            ) . q{'}
+        );
+
+        # Make chromosomes visible, writable and give them descriptions
+        foreach my $gut (qq{49, CONCAT("$CODE chromosome ", name)}, q{97, name}, q{128, 1}, q{129, 0}) {
+            system_do(qq{$loutre --execute='INSERT seq_region_attrib (seq_region_id, attrib_type_id, value) SELECT seq_region_id, $gut FROM seq_region WHERE coord_system_id = 4'});
+        }
+
+        # Copy data from loutre into pipe database.
+        system_do(qq{mysqldump $loutre_param $loutre_db_name coord_system meta seq_region seq_region_attrib assembly dna | $pipe});
+
+        # Copy repeat data into pipeline database.
+        system_do("mysqldump --host=gritdb --port=3419 --user=gritro --no-create-info $grit_db_name repeat_feature repeat_consensus | $pipe");
+        system_do(qq{mysqldump --no-create-info --where='logic_name IN ("submit_contig", "repeatmask", "trf", "dust")' $grit_param analysis | $pipe});
+        system_do(qq{$pipe --execute='UPDATE analysis SET logic_name = "RepeatMasker" WHERE logic_name = "repeatmask"'});
+        system_do(qq{$pipe --execute='UPDATE analysis SET logic_name = "SubmitContig" WHERE logic_name = "submit_contig"'});
+        system_do(qq{mysqldump --host=gritdb --port=3419 --user=gritro --no-create-info $grit_db_name --where='table_name = "repeat_feature"' meta_coord | $pipe});
+
+        # Link pipeline db to loutre:
+        system_do(qq{$this_dir/save_satellite_db -dataset mus_$CODE -key pipeline_db_head    -satdbname $pipe_db_name -sathost mcs18 -satport 3322 -satuser ottro});
+        system_do(qq{$this_dir/save_satellite_db -dataset mus_$CODE -key pipeline_db_rw_head -satdbname $pipe_db_name -sathost mcs17 -satport 3322 -satuser ottadmin -satpass lutralutra});
+    }
+}
+
+
+
+sub system_do {
+    my ($command) = @_;
+
+    my $echo_command = $command;
+    $echo_command =~ s/--password=\S+/--password=******/;
+    print STDERR "$echo_command\n";
+    system($command) == 0 or die "Error executing '$echo_command'; exit $?";
+}
+
+sub password_prompt {
+    my ($user) = @_;
+
+    print STDERR "Password for '$user': ";
+    ReadMode('noecho');
+    my $password = ReadLine(0);
+    print STDERR "\n";
+    chomp $password;
+    ReadMode('normal');
+    return $password;
+}
+
+__END__
+
+=head1 NAME - make_strain_database
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
