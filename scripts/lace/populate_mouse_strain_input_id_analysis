@@ -1,0 +1,97 @@
+#!/usr/bin/env perl
+
+### populate_mouse_strain_input_id_analysis
+
+use strict;
+use warnings;
+use Bio::Otter::Lace::Defaults;
+use Bio::Otter::Server::Config;
+
+{
+    my $usage = sub { exec('perldoc', $0) };
+    Bio::Otter::Lace::Defaults::do_getopt() or $usage->();
+    
+    my @code_db = qw{
+        SPR     kj2_mouse_SPRET_EiJ_20150415
+        PWK     kj2_mouse_PWK_PhJ_20150416
+        CAS     kj2_mouse_CAST_EiJ_20150414
+        WSB     kj2_mouse_WSB_EiJ_20150619
+        NZO     kj2_mouse_NZO_HlLtJ_20150506
+        C57     kj2_mouse_C57BL_6NJ_20150504
+        NOD     kj2_mouse_NOD_ShiLtJ_20150505
+        FVB     kj2_mouse_FVB_NJ_20150619
+        DBA     kj2_mouse_DBA_J_20150617
+        CBA     kj2_mouse_CBA_J_20150617
+        C3H     kj2_mouse_C3H_HeJ_20150520
+        AKR     kj2_mouse_AKR_J_20150611
+        BAL     kj2_mouse_BALB_cJ_20150611
+        AJ      kj2_mouse_A_J_20150611
+        APJ     kj2_mouse_LP_J_20150619
+        129     kj2_mouse_129S1_SvImJ_20150515
+    };
+
+    # kj2_mouse_CAROLI_EiJ_20150519
+    # kj2_mouse_Pahari_EiJ_20150520
+
+    for (my $i = 0; $i < @code_db; $i += 2) {
+        my ($CODE, $grit_db_name) = @code_db[$i, $i+1];
+        my $dataset_name = "mus_$CODE";
+        warn "\n$dataset_name\n";
+        my $ds = Bio::Otter::Server::Config->SpeciesDat->dataset($dataset_name);
+        # my $otter_dba = $ds->otter_dba;
+        my $pipe_dba = $ds->pipeline_dba('pipe', 'rw');
+        my $slice_aptr = $pipe_dba->get_SliceAdaptor;
+
+        # coord_system_id  species_id  name        version  rank  attrib
+        # ---------------  ----------  ----------  -------  ----  ------------------------------
+        # 1                1           clone                3     default_version
+        # 2                1           contig               4     default_version,sequence_level
+        # 3                1           fpc_contig           2     default_version
+        # 4                1           chromosome  Otter    1     default_version
+
+        my $list_analysis_id = $pipe_dba->dbc->prepare(q{
+            SELECT analysis_id FROM analysis WHERE logic_name IN ('SubmitContig', 'RepeatMasker', 'trf', 'dust') ORDER BY analysis_id
+        });
+        $list_analysis_id->execute;
+        my @analysis_id_list;
+        while (my ($id) = $list_analysis_id->fetchrow) {
+            push(@analysis_id_list, $id);
+        }
+
+        my $insert_input_id_analysis = $pipe_dba->dbc->prepare(q{
+            INSERT input_id_analysis (input_id, input_id_type, analysis_id, created) VALUES (?, 'CONTIG', ?, NOW())
+        });
+
+        my $list_input_id_analysis = $pipe_dba->dbc->prepare(q{
+            SELECT ctg.seq_region_id
+            FROM seq_region chr
+            JOIN assembly asm
+              ON chr.seq_region_id = asm.asm_seq_region_id
+              AND chr.coord_system_id = (SELECT coord_system_id FROM coord_system WHERE name = 'chromosome' AND version = 'Otter')
+            JOIN seq_region ctg
+              ON asm.cmp_seq_region_id = ctg.seq_region_id
+              AND ctg.coord_system_id = (SELECT coord_system_id FROM coord_system WHERE name = 'contig')
+            WHERE chr.name = '11'
+              OR chr.name LIKE '11_%'
+        });
+        $list_input_id_analysis->execute;
+        
+        while (my ($ctg_id) = $list_input_id_analysis->fetchrow) {
+            my $contig = $slice_aptr->fetch_by_seq_region_id($ctg_id);
+            foreach my $ana_id (@analysis_id_list) {
+                $insert_input_id_analysis->execute($contig->name, $ana_id);
+            }
+        }
+    }
+}
+
+
+
+__END__
+
+=head1 NAME - populate_mouse_strain_input_id_analysis
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
