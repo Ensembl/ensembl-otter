@@ -19,7 +19,8 @@ sub accession {
     if ($accession) {
         $self->{'_accession'} = $accession;
     }
-    return $self->{'_accession'};
+    return $self->{'_accession'} if $self->{'_accession'};
+    return $self->{'_contig_name'};
 }
 
 sub sv {
@@ -34,7 +35,11 @@ sub sv {
 sub accession_dot_sv { # due to extreme popularity
     my ($self) = @_;
 
-    return $self->accession().'.'.$self->sv();
+    if (my $sv = $self->sv()) {
+        return $self->accession().'.'.$sv;
+    } else {
+        return $self->accession();
+    }
 }
 
 sub clone_name {
