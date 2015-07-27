@@ -7,6 +7,7 @@ use Time::HiRes qw( gettimeofday tv_interval );
 use Hum::Sort qw{ ace_sort };
 use Bio::Otter::Log::Log4perl;
 
+use Bio::Otter::Lace::Slice;
 
 =head1 NAME
 
@@ -170,6 +171,8 @@ sub parse_path {
         $slice->ssname($asm_name);
         $slice->start($region->{'start'});
         $slice->end($region->{'end'});
+        $slice->csname('chromosome');
+        $slice->csver('Otter');
         push @$work, ['open_slice', $slice, $want_write];
     }
     else {
