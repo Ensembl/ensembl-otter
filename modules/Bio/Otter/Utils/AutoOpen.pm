@@ -321,7 +321,10 @@ sub open_sequenceset_by_name {
     my $ssc = $self->{ssc}
       or die "Cannot open_sequenceset_by_name without a CanvasWindow::SequenceSetChooser";
 
-    if (my ($N) = $seq_region =~ /^([A-Z0-9]+)$/) {
+    # First try as supplied, may not be a shortcut even if it looks like one
+    my $sn = $ssc->open_sequence_set_by_ssname_subset($seq_region, undef);
+
+    if (not $sn and (my ($N) = $seq_region =~ /^([A-Z0-9]+)$/)) {
         # want a shortcut to chr$N-$vv for largest $vv
         my $re = qr{^chr$N-\d+$};
         my $ds = $ssc->DataSet;
@@ -336,9 +339,9 @@ sub open_sequenceset_by_name {
                    join ', ', map { $_->name } @match))
             if @match > 1;
         $seq_region = $take->name;
+        $sn = $ssc->open_sequence_set_by_ssname_subset($seq_region, undef);
     }
 
-    my $sn = $ssc->open_sequence_set_by_ssname_subset($seq_region, undef);
     $self->{sn} = $sn; # a CanvasWindow::SequenceNotes
     $sn->set_write_ifposs;
     # $sn->top_window->iconify if $self->_more_work;
