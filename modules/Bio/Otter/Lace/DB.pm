@@ -11,7 +11,6 @@ use DBI;
 use Bio::Otter::Lace::DB::ColumnAdaptor;
 use Bio::Otter::Lace::DB::OTFRequestAdaptor;
 use Bio::Vega::CoordSystemFactory;
-use Bio::EnsEMBL::Registry;
 
 use parent qw( Bio::Otter::Log::WithContextMixin );
 
@@ -122,13 +121,17 @@ sub vega_dba {
 }
 
 sub _dba {
-    my ($self) = @_;
+    my ($self, $suffix) = @_;
 
     # This pulls in EnsEMBL, so we only do it if required, to reduce the footprint of filter_get &co.
     require Bio::Vega::DBSQL::DBAdaptor;
 
-    # We need a unique species per session to avoid confusing the EnsEMBL API
+    # We need a unique species per session to avoid confusing the EnsEMBL API.
+    #
+    # We also need a separate species name for our throw-away adaptor when storing coord_systems
+    # and mappings.
     my $db_species = sprintf('%s:::%s', $self->species, $self->log_context);
+    $db_species .= $suffix if $suffix;
     $self->logger->debug("Connecting for '$db_species'");
 
     return Bio::Vega::DBSQL::DBAdaptor->new(
@@ -300,7 +303,7 @@ sub load_dataset_info {
                                                     VALUES (?, ?, ?, ?) });
     my $at_list = $dataset->get_db_info_item('attrib_type');
 
-    my $_dba = $self->_dba;     # we throw this one away
+    my $_dba = $self->_dba('_coords');     # we throw this one away
 
     my $cs_factory = Bio::Vega::CoordSystemFactory->new(
         dba           => $_dba,
