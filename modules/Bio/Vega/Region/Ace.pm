@@ -358,7 +358,7 @@ sub make_ace_ctg {
                                        my ($decoder, $value) = @_;
                                        my $tag = $decoder->{'tag'};
                                        my @tags = ref $tag ? @$tag : ( $tag ); # allow multiple tags as arrayref
-                                       $ace->add_tag(@tags, $value);
+                                       $ace->add_tag(@tags, $value) if $value;
                                    });
 
     return $ace->ace_string;
@@ -611,6 +611,7 @@ sub _add_contigs {
                                            'hum',
                                            sub {
                                                my ($decoder, $value) = @_;
+                                               return unless $value;
                                                my $method = $decoder->{'method'};
                                                $clone->$method($value);
                                            });
