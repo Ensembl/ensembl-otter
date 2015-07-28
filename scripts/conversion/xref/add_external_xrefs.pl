@@ -832,12 +832,12 @@ sub parse_hgnc {
       }
 
       #set RefSeq records to the correct type of molecule
-      elsif ($db eq 'RefSeq') {
+      elsif ($db =~ 'RefSeq') {
 	foreach my $record (split ',', $accessions{$db}) {
           $record =~ s/^\s+|\s+$//g; #whitespace
           if (my ($prefix) = $record =~ /^([A-Z]{2})_/) {
             if (my $type = $refseq_dbs{$prefix}) {
-              push @{$xrefs->{$gene_name}->{$type}[0]}, $record .'||'. $record;
+              push @{$xrefs->{$gene_name}->{$type}}, $record .'||'. $record;
             }
             elsif (! $report_once{$prefix}) {
               $report_once{$prefix}++;
@@ -1000,7 +1000,6 @@ sub parse_rgd {
     #set records for each gene
     foreach my $db (keys %accessions) {
       next if ($db eq 'RGD_PID');
-
       #set record where display name and pid are different
       if ($db eq 'RGD') {
 	$xrefs->{$gene_name}->{$db}[0] = $gene_name .'||'. $accessions{'RGD_PID'};
@@ -1008,7 +1007,6 @@ sub parse_rgd {
       elsif ($db eq 'EntrezGene') {
 	$xrefs->{$gene_name}->{$db}[0] = $gene_name .'||'. $accessions{$db};
       }
-
       #set RefSeq records to the correct type of molecule
       elsif ($db =~ /RefSeq/) {
         my @records = split ';',$accessions{$db};
