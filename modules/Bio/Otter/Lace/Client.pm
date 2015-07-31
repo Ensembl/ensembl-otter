@@ -340,7 +340,7 @@ sub new_AceDatabase_from_Slice {
     $adb->make_database_directory;
     $adb->DB->species($slice->dsname);
     $adb->slice($slice);
-    $adb->name($slice->name);
+    $adb->name(join(' ', $slice->dsname, $slice->name));
     $adb->load_dataset_info;
 
     return $adb;
