@@ -380,8 +380,13 @@ sub _filter_add {
     # Uncomment for debugging:
     # warn sprintf "_filter_add: '%s', wanted=%s, found=%s\n", $name, $wanted ? 1 : 0, $filter ? 'yes' : 'no';
     return unless $filter;
+    my $remove;
+    if ($wanted and $wanted eq 'REMOVE') {
+        $remove = 1;
+        $wanted = 0;
+    }
     $filter->wanted($wanted);
-    push @{$self->{_filters}}, $filter;
+    push @{$self->{_filters}}, $filter unless $remove;
     return;
 }
 
