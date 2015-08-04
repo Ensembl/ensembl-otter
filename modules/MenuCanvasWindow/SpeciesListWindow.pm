@@ -56,6 +56,10 @@ sub new {
     $canvas->Tk::bind('<Control-O>',        $open_command);
     $canvas->Tk::bind('<Escape>', sub{ $self->deselect_all });
 
+    my $shortcut_command = sub { $self->show_shortcut_window; };
+    $top->Tk::bind('<Control-s>', $shortcut_command);
+    $top->Tk::bind('<Control-S>', $shortcut_command);
+
     my $recover_command = sub{ $self->recover_some_sessions('explicit'); };
     $top->Tk::bind('<Control-r>',    $recover_command);
     $top->Tk::bind('<Control-R>',    $recover_command);
@@ -78,6 +82,13 @@ sub new {
         -accelerator => 'Ctrl+O',
         -underline  => 1,
         -command    => $open_command);
+
+    $file_menu->add
+        ('command',
+         -label       => 'Open by shortcut',
+         -accelerator => 'Ctrl+S',
+         -underline   => 1,
+         -command     => $shortcut_command);
 
     $file_menu->add
        ('command',
@@ -253,6 +264,73 @@ sub show_log{
     return;
 }
 
+{
+    my $shortcut;
+
+    sub show_shortcut_window {
+        my ($self) = @_;
+
+        my $shortcut_window = $self->{'_shortcut_window'};
+        unless ($shortcut_window) {
+
+            $shortcut_window = $self->top_window->DialogBox(
+                -title          => 'Open by shortcut',
+                -buttons        => [ qw( Open Clear Cancel ) ],
+                -default_button => 'Open',
+                -cancel_button  => 'Cancel',
+                );
+
+            my $text = << "__EO_TEXT__";
+Format:\t<dataset>[/<seqset>[/<region>]]
+Examples:
+        mouse                                   # Dataset
+        mouse/chr12-38                          # SequenceSet
+        mouse/chr12-38/3_000_000:4_000_000      # Region, by coords
+        mouse/chr12-38/3_000_000+1_000_000      # Region, by start + length
+        mouse/chr12-38/#5..8                    # Region, by clone indices
+        mouse/chr12-38/CR974568.14-CT572999.10  # Region, by start-end names
+        mouse/chr12-38/view:...                 # Region, read-only
+__EO_TEXT__
+            my @lines = ( $text =~ /(\n)/g );
+            chomp $text;
+            $text =~ s/^\s+/\t/mg; # leading space to single tab
+            $text =~ s/\s+#/\t#/g; # pre-comment space to single tab
+
+            my $text_widget = $shortcut_window->add(
+                'ROText',
+                -selectborderwidth => 0,
+                -borderwidth => 0,
+                -font => $self->named_font('prop'),
+                -height => scalar @lines,
+                -tabs => [ qw( 2.5c 12c ) ],
+                )->pack(-side => 'top', -fill => 'both', -expand => 1);
+            $text_widget->Insert($text);
+
+            my $shortcut_le_widget = $shortcut_window->add(
+                'LabEntry',
+                -label        => 'Shortcut',
+                -labelPack    => [-side => 'left'],
+                -textvariable => \$shortcut,
+                -width        => 80,
+                )->pack;
+            $shortcut_window->configure( -focus => $shortcut_le_widget );
+
+            $self->{'_shortcut_window'} = $shortcut_window;
+        }
+
+        my $answer;
+        while (($answer = $shortcut_window->Show) eq 'Clear') {
+            $shortcut = '';
+        }
+        if ($answer eq 'Open') {
+            require Bio::Otter::Utils::AutoOpen; # load iff needed
+            my $opener = Bio::Otter::Utils::AutoOpen->new($self);
+            $opener->parse_path($shortcut);
+        }
+
+        return;
+    }
+}
 
 
 sub Client {
