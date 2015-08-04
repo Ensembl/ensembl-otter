@@ -257,19 +257,17 @@ sub init_AceDatabase {
     my $region = $parser->parse($xml_string);
     $self->write_otter_acefile($region);
 
-    my ($raw_dna, @tiles) = $self->Client->get_assembly_dna($self->slice);
-    my $dna_length = length($raw_dna);
-    my $region_length = $region->slice->end - $region->slice->start + 1;
-    if ($region_length < $dna_length) {
-        # Truncate $raw_dna by replacing end with empty string, and return what was removed:
-        my $remainder = substr($raw_dna, $region_length, $dna_length - $region_length, "");
-        $self->logger->info(sprintf('Truncated dna; region: %d, DNA: %d, now: %d',
-                                    $region_length, $dna_length, length($raw_dna)));
-        unless ($remainder =~ /^-+$/) { # should all be gap, else lengths would have been identical
-            $self->logger->error(sprintf('Truncated dna, but remainder is not gap:\n%s', $remainder));
-        }
-        $self->slice->end($self->slice->start + $region_length - 1);
+    my ($r_start, $r_end) = ($region->slice->start, $region->slice->end);
+    my ($s_start, $s_end) = ($self->slice->start,   $self->slice->end);
+
+    if ($r_start != $s_start or $r_end != $s_end) {
+        $self->logger->info(sprintf('Adjusting slice to match returned region:\nS: %s-%s -> R: %s-%s',
+                                    $s_start, $s_end, $r_start, $r_end));
+        $s_start = $self->slice->start($r_start);
+        $s_end = $self->slice->end($r_end);
     }
+
+    my ($raw_dna, @tiles) = $self->Client->get_assembly_dna($self->slice);
 
     $self->write_dna_data($raw_dna, @tiles);
 
