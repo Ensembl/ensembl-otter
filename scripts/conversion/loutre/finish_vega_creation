@@ -201,7 +201,6 @@ my %lns_to_stay = map {lc($_),1}
      pseudo_polyA
      RSS
      tRNAscan
-     EUCOMM
      polya-seq_signal
      polya-seq_site
    );
@@ -214,6 +213,7 @@ my %lns_to_go = map {lc($_),1}
      NovelLoci
      Yale_Pseudogene
      CRG_RACE_primer
+     EUCOMM
    );
 my $s = $vdbh->prepare(qq(
                 SELECT a.logic_name, a.analysis_id, count(*)
