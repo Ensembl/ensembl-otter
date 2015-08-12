@@ -951,7 +951,7 @@ sub parse_rgd {
   );
 
   # prime with prefixes we don't care about
-  my %report_once = ( YP => 1, NC => 1 );
+  my %report_once = ( YP => 1, NC => 1, NW => 1, AP => 1 );
 
   my %stats = (
     total      => 0,
