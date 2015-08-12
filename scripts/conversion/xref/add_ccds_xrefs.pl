@@ -273,6 +273,7 @@ sub parse_ccds {
   my $path = $support->param('evegaassembly');
   $support->log_stamped("Retrieving info from CCDS database\n");
   my $chr = $ccds_sa->fetch_by_name($chrname);
+  return unless $chr;
   $support->log_stamped("Ensembl $chrname\n",1);
   foreach my $ccds_gene ( @{$chr->get_all_Genes()} ){
     $ccds_gene = $ccds_gene->transform('chromosome', $path);
