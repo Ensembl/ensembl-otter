@@ -387,7 +387,7 @@ sub parse_hgnc {
     'Approved Symbol' => 'hgnc_symbol',
     'Approved Name'   => 'description',
     'Locus Type'      => 'type',
-    'VEGA IDs'        => 'vega_id',
+    'Vega ID'         => 'vega_id',
   );
 
   # read header (containing column titles) and check all wanted columns are there
