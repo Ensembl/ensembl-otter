@@ -286,12 +286,6 @@ my $vmsa = $vdba->get_MiscSetAdaptor;
 my $vmfa = $vdba->get_MiscFeatureAdaptor();
 my $vdbh = $vdba->dbc->db_handle;
 
-#sanity check - vega db should not have any genes
-my $existing = $vdbh->selectrow_array(qq(SELECT count(*) from gene));
-if ($existing) {
-  $support->log_error("Vega template should not have any genes, please check your config or run with -prune.\n");
-}
-
 my $current_genes = {};
 if ($support->param('live_update')) {
   my $current_vdba = $support->get_database('ensembl','current');
@@ -485,6 +479,13 @@ if ( @new_seq_region_attribs ) {
 my ($fsv,$non_fsv);
 
 ### PRE # # $fsv $non_fsv ###
+
+
+#sanity check - vega db should not have any genes
+my $existing = $vdbh->selectrow_array(qq(SELECT count(*) from gene));
+if ($existing) {
+  $support->log_error("Vega template should not have any genes, please check your config or run with -prune.\n");
+}
 
 ######################################################
 # delete any entries from previous runs if requested #
