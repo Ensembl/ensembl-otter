@@ -501,11 +501,11 @@ $sth = $dbh->{'evega'}->prepare(qq(SELECT meta_value FROM meta where meta_key = 
 $sth->execute;
 if (my ($assembly_default) = $sth->fetchrow_array) {
   if ($assembly_default ne $ensemblassembly) {
-    $support->log_warning("Please check why meta.assembly_default does not equal parameter for ensembl assembly\n");
+    $support->log_warning("Please check why meta.assembly.default does not equal parameter for ensembl assembly\n");
   }
 }
 else {
-  $c = $dbh->{'evega'}->do(qq(INSERT into meta values ('',1,'assembly_default','$ensemblassembly')));
+  $c = $dbh->{'evega'}->do(qq(INSERT into meta values ('',1,'assembly.default','$ensemblassembly')));
   $support->log("Inserted $c values for meta.assembly.default\n");
 }
 
