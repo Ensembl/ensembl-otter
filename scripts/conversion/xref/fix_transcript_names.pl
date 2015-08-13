@@ -208,8 +208,8 @@ foreach my $chrom_name (@top_slices) {
         || ($base_name =~ s/__\d{1,2}$//)
         || ($base_name =~ s/_\d$//)
 	|| ($base_name =~ s/\.\d+$//)) {
-	unless ( ($support->param('dbname') =~ /rerio/) && ($chrom_name eq 'AB')) {
-	  $support->log_warning("UNEXPECTED transcript name $t_name\n");
+	unless ( ($support->param('dbname') =~ /rerio|zebrafish/) && ($chrom_name eq 'AB')) {
+	  $support->log_warning("UNEXPECTED transcript name $t_name (".$support->param('dbname').",$chrom_name)\n");
 	}
       }
 			
