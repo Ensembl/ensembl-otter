@@ -135,6 +135,7 @@ my %lns_to_go = map {$_,1}
      Gap
      assembly_contigs
      tophat_introns
+     refseq_rat
    );
 
 #define which attrib_types are to be deleted
