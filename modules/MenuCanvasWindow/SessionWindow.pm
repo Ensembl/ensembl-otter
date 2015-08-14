@@ -2207,25 +2207,21 @@ sub _delete_subsequences {
     # Make a list of editable SubSeqs from those selected,
     # which we are therefore allowed to delete.
     my @sub_names = $self->list_selected_subseq_names;
-    my( @to_die_acedb, @to_die_sqlite );
-    foreach my $sub_name (@sub_names) {
-        my $sub_acedb = $self->_subsequence_cache_acedb->get($sub_name);
-        if ($sub_acedb->GeneMethod->mutable) {
-            push(@to_die_acedb, $sub_acedb);
 
-            my $sub_sqlite = $self->_subsequence_cache_sqlite->get($sub_name);
-            unless ($sub_sqlite) {
-                $self->logger->logconfess("Cannot find sqlite subseq for '$sub_name'");
-            }
-            push(@to_die_sqlite, $sub_sqlite);
+    my @to_die;
+
+    foreach my $sub_name (@sub_names) {
+        my $subseq = $self->_subsequence_cache->get($sub_name);
+        if ($subseq->GeneMethod->mutable) {
+            push(@to_die, $subseq);
         }
     }
-    return unless @to_die_acedb;
+    return unless @to_die;
 
     # Check that none of the sequences to be deleted are being edited
     my $in_edit = 0;
-    foreach my $sub_acedb (@to_die_acedb) {
-        $in_edit += $self->_raise_transcript_window($sub_acedb->name);
+    foreach my $subseq (@to_die) {
+        $in_edit += $self->_raise_transcript_window($subseq->name);
     }
     if ($in_edit) {
         $self->message("Must close edit windows before calling delete");
@@ -2234,14 +2230,14 @@ sub _delete_subsequences {
 
     # Check that the user really wants to delete them
     my( $question );
-    if (@to_die_acedb > 1) {
+    if (@to_die > 1) {
         $question = join('',
             "Really delete these transcripts?\n\n",
-            map { "  $_\n" } map { $_->name } @to_die_acedb
+            map { "  $_\n" } map { $_->name } @to_die
             );
     } else {
         $question = "Really delete this transcript?\n\n  "
-            . $to_die_acedb[0]->name ."\n";
+            . $to_die[0]->name ."\n";
     }
     my $dialog = $self->top_window()->Dialog(
         -title          => $Bio::Otter::Lace::Client::PFX.'Delete Transcripts?',
@@ -2253,6 +2249,32 @@ sub _delete_subsequences {
     my $ans = $dialog->Show;
 
     return if $ans eq 'No';
+
+    my ( @to_die_acedb, @to_die_sqlite );
+
+    if ($self->_master_db_is_acedb) {
+        @to_die_acedb = @to_die;
+    } else {
+        @to_die_sqlite = @to_die;
+    }
+
+    foreach my $subseq (@to_die) {
+        my $sub_name = $subseq->name;
+        if ($self->_master_db_is_acedb) {
+            my $sub_sqlite = $self->_subsequence_cache_sqlite->get($sub_name);
+            unless ($sub_sqlite) {
+                $self->logger->logconfess("Cannot find sqlite subseq for '$sub_name'");
+            }
+            push(@to_die_sqlite, $sub_sqlite);
+        }
+        else {                  # _master_db_is_sqlite
+            my $sub_acedb = $self->_subsequence_cache_acedb->get($sub_name);
+            unless ($sub_acedb) {
+                $self->logger->logconfess("Cannot find acedb subseq for '$sub_name'");
+            }
+            push(@to_die_acedb, $sub_acedb);
+        }
+    }
 
     # Make ace delete command for subsequences
     my $offset = $self->AceDatabase->offset;
@@ -2266,7 +2288,7 @@ sub _delete_subsequences {
             $ace .= qq{\n\-D Sequence "$sub_name"\n}
                 . qq{\nSequence "$clone_name"\n}
                 . qq{-D Subsequence "$sub_name"\n};
-            push @xml, $sub_acedb->zmap_delete_xml_string($offset);
+            push @xml, $sub_acedb->zmap_delete_xml_string($offset) if $self->_master_db_is_acedb;
         }
     }
 
@@ -2288,6 +2310,7 @@ sub _delete_subsequences {
             if ($sub_sqlite->ensembl_dbID) {
                 $from_HumAce->remove_Transcript($sub_sqlite);
                 $self->logger->debug('Deleting transcript for: ', $self->_debug_subseq($sub_sqlite));
+                push @xml, $sub_sqlite->zmap_delete_xml_string($offset) if $self->_master_db_is_sqlite;
             } else {
                 $self->logger->warn('Do not have transcript to delete for: ', $self->_debug_subseq($sub_sqlite));
             }
