@@ -257,6 +257,14 @@ sub init_AceDatabase {
     my $region = $parser->parse($xml_string);
     $self->write_otter_acefile($region);
 
+    # This fixup is needed when using a shortcut to open a region directly, since we don't
+    # have the necessary info until the region has been fetched from the server
+    #
+    unless ($self->slice->seqname) {
+        my $first_cs = ($region->sorted_clone_sequences())[0];
+        $self->slice->seqname($first_cs->chromosome);
+    }
+
     my ($r_start, $r_end) = ($region->slice->start, $region->slice->end);
     my ($s_start, $s_end) = ($self->slice->start,   $self->slice->end);
 
