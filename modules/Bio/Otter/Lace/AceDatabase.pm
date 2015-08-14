@@ -609,6 +609,7 @@ sub _zmap_dna_config {
 
     my $dna_slice_name = sprintf '%s-DNA', $self->slice_name;
     my $dna_source = $self->DataSet->filter_by_name('DNA');
+    $dna_source or $self->logger->logdie('No DNA stanza in config');
 
     my $config = {
         'ZMap' => {
