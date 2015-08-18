@@ -80,7 +80,21 @@ sub do_gene {
                    ($strand ==  1 and $tl_high == $ee->end)
                 or ($strand == -1 and $tl_low  == $ee->start))) {
 
-            my $actual_end_phase = ($ee->length + $ee->phase) % 3;
+            my $actual_end_phase;
+            if ($ee->dbID == $tl->start_Exon->dbID) {
+                # Coding region is in one exon
+                my $coding_length;
+                if ($strand == 1) {
+                    $coding_length = $ee->end - $tl_low + 1;
+                } else {
+                    $coding_length = $tl_high - $ee->start + 1;
+                }
+                $actual_end_phase = $coding_length % 3;
+            } else {
+                # Multi-exon coding region
+                $actual_end_phase = ($ee->length + $ee->phase) % 3;
+            }
+
             $status = sprintf("%s: correcting bad end_phase, was -1, now %d",
                               $ee->stable_id, $actual_end_phase);
 
