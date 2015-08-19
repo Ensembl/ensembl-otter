@@ -68,7 +68,7 @@ sub new {
 
     my $self = $pkg->SUPER::new($tk);
 
-    $self->_master_db('acedb');
+    $self->_master_db('sqlite');
 
     $self->zmap_select_initialize;
 
