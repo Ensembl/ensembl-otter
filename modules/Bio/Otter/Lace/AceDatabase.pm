@@ -1158,6 +1158,8 @@ sub _add_transcript_filters {
 
         my $filter_name = lc $top_level->name;
         $filter_name =~ s/\s+/_/g;
+        next if $dataset->filter_by_name($filter_name); # may already have been added for previous region
+
         my $child_list = join(',', @method_names);
 
         my $filter = Bio::Otter::Source::Filter->from_config({
