@@ -416,6 +416,47 @@ sub _update_slave_Locus_sqlite {
     return;
 }
 
+sub _update_slave_Locus_acedb {
+    my ($self, $new_locus_sqlite) = @_;
+
+    $self->logger->debug('_update_slave_Locus_acedb for new_locus_sqlite: ', $self->_debug_locus($new_locus_sqlite));
+
+    my $new_name = $new_locus_sqlite->name;
+    my $current_locus_sqlite  = $self->_locus_cache_sqlite->get( $new_name);
+    my $current_locus_acedb = $self->_locus_cache_acedb->get($new_name);
+
+    $self->logger->debug(' : current_locus_sqlite:  ', $self->_debug_locus($current_locus_sqlite));
+    $self->logger->debug(' : current_locus_acedb: ', $self->_debug_locus($current_locus_acedb));
+
+    my $new_locus_acedb;
+    if ($current_locus_sqlite) {
+        unless ($current_locus_acedb) {
+            $self->logger->logconfess("Have cached sqlite Locus but not cached AceDB Locus for '$new_name'");
+        }
+
+        $self->logger->debug("Have sqlite locus for '$new_name', so should check for changes");
+
+        my $diffs = $self->_compare_loci($current_locus_sqlite, $new_locus_sqlite);
+        if ($diffs) {
+            $self->_log_diffs($diffs, "Locus $new_name");
+            $self->logger->logconfess("Don't know what to do with new locus '$new_name'");
+        } else {
+            $self->logger->debug("No differences in new locus");
+            $new_locus_acedb = $current_locus_acedb;
+        }
+
+    } else {
+        if ($current_locus_acedb) {
+            $self->logger->logconfess("No cached sqlite Locus but have cached AceDB Locus for '$new_name'");
+        }
+        $self->logger->debug("No existing sqlite locus for '$new_name', so just making a copy of the new one for AceDB");
+        $new_locus_acedb = $self->_copy_locus($new_locus_sqlite);
+    }
+
+    $self->_update_Locus_acedb($new_locus_acedb);
+    return;
+}
+
 # FIXME - move to Locus->compare ??
 sub _compare_loci {
     my ($self, $old, $new) = @_;
