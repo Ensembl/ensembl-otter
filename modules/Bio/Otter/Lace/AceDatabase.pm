@@ -397,49 +397,21 @@ sub slice {
     return $self->{'_slice'};
 }
 
-
-sub master_db {
-    my ($self, @args) = @_;
-    ($self->{'master_db'}) = @args if @args;
-    my $master_db = $self->{'master_db'};
-    return $master_db;
-}
-
 sub slice_name {
     my ($self) = @_;
 
     my $slice_name;
     unless ($slice_name = $self->{'_slice_name'}) {
-        if ($self->master_db and $self->master_db eq 'sqlite') {
-            $slice_name = $self->_set_slice_name_sqlite;
-        } else {
-            $slice_name = $self->_set_slice_name_acedb;
-        }
-        $self->{'_slice_name'} = $slice_name;
+        $slice_name = $self->{'_slice_name'} = $self->_set_slice_name_sqlite;
     }
 
     return $slice_name;
-}
-
-sub _set_slice_name_acedb {
-    my ($self) = @_;
-    my @slice_list = $self->aceperl_db_handle->fetch(Assembly => '*');
-    my @slice_names = map { $_->name } @slice_list;
-    $self->logger->logdie("Error: more than 1 assembly in database: @slice_names") if @slice_names > 1;
-    return $slice_names[0];
 }
 
 sub _set_slice_name_sqlite {
     my ($self) = @_;
     my $slice = $self->DB->session_slice;
     my $name = sprintf('%s_%s-%s', $slice->seq_region_name, $slice->start, $slice->end);
-
-    # TMP
-    my $name_acedb = $self->_set_slice_name_acedb;
-    unless ($name eq $name_acedb) {
-        $self->logger->logdie(sprintf("Error: slice name via sqlite '%s' differs from acedb '%s'", $name, $name_acedb));
-    }
-
     return $name;
 }
 

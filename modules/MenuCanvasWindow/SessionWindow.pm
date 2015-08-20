@@ -68,8 +68,6 @@ sub new {
 
     my $self = $pkg->SUPER::new($tk);
 
-    $self->_master_db('sqlite');
-
     $self->zmap_select_initialize;
 
     $self->_populate_menus;
@@ -133,8 +131,6 @@ sub initialise {
     $self->_set_window_title;
     $self->_colour_init;
 
-    $self->AceDatabase->master_db($self->_master_db);
-
     unless ($self->AceDatabase->write_access) {
         $self->menu_bar()->Label(
             -text       => 'Read Only',
@@ -145,7 +141,6 @@ sub initialise {
                     );
     }
 
-    $self->_Assembly_acedb;
     $self->_Assembly_sqlite;
 
     # Drawing the sequence list can take a long time the first time it is
@@ -265,15 +260,7 @@ sub get_default_mutable_GeneMethod {
 
 sub _locus_cache {
     my ($self) = @_;
-    return $self->_locus_cache_acedb  if $self->_master_db_is_acedb;
-    return $self->_locus_cache_sqlite if $self->_master_db_is_sqlite;
-    return $self->_confess_bad_master_db;
-}
-
-sub _locus_cache_acedb {
-    my ($self) = @_;
-    $self->{'_locus_cache_acedb'} //= Bio::Otter::Utils::CacheByName->new;
-    return $self->{'_locus_cache_acedb'};
+    return $self->_locus_cache_sqlite;
 }
 
 sub _locus_cache_sqlite {
@@ -284,7 +271,6 @@ sub _locus_cache_sqlite {
 
 sub _empty_Locus_cache {
     my ($self) = @_;
-    $self->{'_locus_cache_acedb'}  = undef;
     $self->{'_locus_cache_sqlite'} = undef;
     return;
 }
@@ -304,47 +290,7 @@ sub list_Locus_names {
 sub update_Locus {
     my ($self, $new_locus) = @_;
 
-    if ($self->_master_db_is_acedb) {
-
-        $self->_update_slave_Locus_sqlite($new_locus);
-        $self->_update_Locus_acedb($new_locus);
-
-    } elsif ($self->_master_db_is_sqlite) {
-
-        $self->_update_slave_Locus_acedb($new_locus);
-        $self->_update_Locus_sqlite($new_locus);
-
-    } else {
-        $self->_confess_bad_master_db;
-    }
-    return;
-}
-
-sub _update_Locus_acedb {
-    my ($self, $new_locus) = @_;
-
-    my $locus_name = $new_locus->name;
-
-    $self->logger->debug('_update_Locus_acedb: caching new_locus ', $self->_debug_locus($new_locus));
-    $self->_locus_cache_acedb->set($new_locus);
-
-    foreach my $sub_name ($self->_subsequence_cache_acedb->names) {
-        my $sub = $self->_subsequence_cache_acedb->get($sub_name) or next;
-        my $old_locus = $sub->Locus or next;
-
-        if ($old_locus->name eq $locus_name) {
-            # Replace locus in subseq with new copy
-            $self->logger->debug('_update_Locus_acedb: replacing locus for ', $self->_debug_subseq($sub));
-            $sub->Locus($new_locus);
-
-            # Is there a transcript window open?
-            if (    $self->_master_db_is_acedb
-                and (my $transcript_window = $self->_get_transcript_window($sub_name)) ) {
-                $transcript_window->update_Locus($new_locus);
-            }
-        }
-    }
-
+    $self->_update_Locus_sqlite($new_locus);
     return;
 }
 
@@ -366,95 +312,12 @@ sub _update_Locus_sqlite {
             $sub->Locus($new_locus);
 
             # Is there a transcript window open?
-            if (    $self->_master_db_is_sqlite
-                and (my $transcript_window = $self->_get_transcript_window($sub_name)) ) {
+            if (my $transcript_window = $self->_get_transcript_window($sub_name)) {
                 $transcript_window->update_Locus($new_locus);
             }
         }
     }
 
-    return;
-}
-
-sub _update_slave_Locus_sqlite {
-    my ($self, $new_locus_acedb) = @_;
-
-    $self->logger->debug('_update_slave_Locus_sqlite for new_locus_acedb: ', $self->_debug_locus($new_locus_acedb));
-
-    my $new_name = $new_locus_acedb->name;
-    my $current_locus_acedb  = $self->_locus_cache_acedb->get( $new_name);
-    my $current_locus_sqlite = $self->_locus_cache_sqlite->get($new_name);
-
-    $self->logger->debug(' : current_locus_acedb:  ', $self->_debug_locus($current_locus_acedb));
-    $self->logger->debug(' : current_locus_sqlite: ', $self->_debug_locus($current_locus_sqlite));
-
-    my $new_locus_sqlite;
-    if ($current_locus_acedb) {
-        unless ($current_locus_sqlite) {
-            $self->logger->logconfess("Have cached AceDB Locus but not cached SQLite Locus for '$new_name'");
-        }
-
-        $self->logger->debug("Have acedb locus for '$new_name', so should check for changes");
-
-        my $diffs = $self->_compare_loci($current_locus_acedb, $new_locus_acedb);
-        if ($diffs) {
-            $self->_log_diffs($diffs, "Locus $new_name");
-            $self->logger->logconfess("Don't know what to do with new locus '$new_name'");
-        } else {
-            $self->logger->debug("No differences in new locus");
-            $new_locus_sqlite = $current_locus_sqlite;
-        }
-
-    } else {
-        if ($current_locus_sqlite) {
-            $self->logger->logconfess("No cached AceDB Locus but have cached SQLite Locus for '$new_name'");
-        }
-        $self->logger->debug("No existing AceDB locus for '$new_name', so just making a copy of the new one for SQLite");
-        $new_locus_sqlite = $self->_copy_locus($new_locus_acedb);
-    }
-
-    $self->_update_Locus_sqlite($new_locus_sqlite);
-    return;
-}
-
-sub _update_slave_Locus_acedb {
-    my ($self, $new_locus_sqlite) = @_;
-
-    $self->logger->debug('_update_slave_Locus_acedb for new_locus_sqlite: ', $self->_debug_locus($new_locus_sqlite));
-
-    my $new_name = $new_locus_sqlite->name;
-    my $current_locus_sqlite  = $self->_locus_cache_sqlite->get( $new_name);
-    my $current_locus_acedb = $self->_locus_cache_acedb->get($new_name);
-
-    $self->logger->debug(' : current_locus_sqlite:  ', $self->_debug_locus($current_locus_sqlite));
-    $self->logger->debug(' : current_locus_acedb: ', $self->_debug_locus($current_locus_acedb));
-
-    my $new_locus_acedb;
-    if ($current_locus_sqlite) {
-        unless ($current_locus_acedb) {
-            $self->logger->logconfess("Have cached sqlite Locus but not cached AceDB Locus for '$new_name'");
-        }
-
-        $self->logger->debug("Have sqlite locus for '$new_name', so should check for changes");
-
-        my $diffs = $self->_compare_loci($current_locus_sqlite, $new_locus_sqlite);
-        if ($diffs) {
-            $self->_log_diffs($diffs, "Locus $new_name");
-            $new_locus_acedb = $self->_copy_locus($new_locus_sqlite);
-        } else {
-            $self->logger->debug("No differences in new locus");
-            $new_locus_acedb = $current_locus_acedb;
-        }
-
-    } else {
-        if ($current_locus_acedb) {
-            $self->logger->logconfess("No cached sqlite Locus but have cached AceDB Locus for '$new_name'");
-        }
-        $self->logger->debug("No existing sqlite locus for '$new_name', so just making a copy of the new one for AceDB");
-        $new_locus_acedb = $self->_copy_locus($new_locus_sqlite);
-    }
-
-    $self->_update_Locus_acedb($new_locus_acedb);
     return;
 }
 
@@ -732,14 +595,6 @@ sub do_rename_locus {
             return 0;
         }
 
-        my $locus_acedb = $self->_locus_cache_acedb->delete($old_name);
-        unless ($locus_acedb) {
-            $self->message("Cannot find locus called '$old_name'");
-            return 0;
-        }
-        $locus_acedb->name($new_name);
-        $self->_locus_cache_acedb->set($locus_acedb);
-
         my $old_locus_sqlite = $self->_locus_cache_sqlite->delete($old_name);
         unless ($old_locus_sqlite) {
             die "Cannot find locus called '$old_name' in sqlite cache";
@@ -747,23 +602,17 @@ sub do_rename_locus {
         my $new_locus_sqlite = $self->_copy_locus($old_locus_sqlite);
         $new_locus_sqlite->name($new_name);
         $self->_locus_cache_sqlite->set($new_locus_sqlite);
-        foreach my $subseq ($self->_fetch_SubSeqs_by_locus_name_sqlite($old_name)) {
+        foreach my $subseq ($self->_fetch_SubSeqs_by_locus_name($old_name)) {
             $subseq->Locus($new_locus_sqlite);
         }
         $done{'int'} = 1;
 
-        my $ace = qq{\n-R Locus "$old_name" "$new_name"\n};
-
         # Need to deal with gene type prefix, in case the rename
         # involves a prefix being added, removed or changed.
         if (my ($pre) = $new_name =~ /^([^:]+):/) {
-            $locus_acedb->gene_type_prefix($pre);
             $new_locus_sqlite->gene_type_prefix($pre);
-            $ace .= qq{\nLocus "$new_name"\nType_prefix "$pre"\n};
         } else {
-            $locus_acedb->gene_type_prefix('');
             $new_locus_sqlite->gene_type_prefix('');
-            $ace .= qq{\nLocus "$new_name"\n-D Type_prefix\n};
         }
 
         # Now we need to update ZMap with the new locus names
@@ -771,9 +620,6 @@ sub do_rename_locus {
         foreach my $subseq ($self->_fetch_SubSeqs_by_locus_name($new_name)) {
             push @create_xml, $subseq->zmap_create_xml_string($offset);
         }
-
-        $self->_save_ace($ace);
-        $done{'ace'} = 1;
 
         my $vega_dba = $self->vega_dba;
         try {
@@ -837,20 +683,6 @@ sub _fetch_SubSeqs_by_locus_name {
    return @list;
 }
 
-sub _fetch_SubSeqs_by_locus_name_sqlite { # TEMP!
-   my ($self, $locus_name) = @_;
-
-   my @list;
-   foreach my $name ($self->_subsequence_cache_sqlite->names) {
-       my $sub = $self->_subsequence_cache_sqlite->get($name) or next;
-       my $locus = $sub->Locus or next;
-       if ($locus->name eq $locus_name) {
-           push(@list, $sub);
-       }
-   }
-   return @list;
-}
-
 
 #------------------------------------------------------------------------------------------
 
@@ -878,24 +710,6 @@ sub _populate_menus {
         );
     $top->bind('<Control-s>', $save_command);
     $top->bind('<Control-S>', $save_command);
-
-    # Compare acedb & sqlite via XML
-    my $compare_command = sub {
-        unless ($self->_close_all_edit_windows) {
-            $self->message('Not comparing because some editing windows are still open');
-            return;
-        }
-        $self->_compare_acedb_sqlite;
-    };
-    $file->add(
-        'command',
-        -label          => 'Compare AceDB & SQLite',
-        -command        => $compare_command,
-        -accelerator    => 'Ctrl+B',
-        -underline      => 0,
-        );
-    $top->bind('<Control-b>', $compare_command);
-    $top->bind('<Control-B>', $compare_command);
 
     # Resync with database
     my $resync_command = sub { $self->_resync_with_db };
@@ -1324,20 +1138,6 @@ sub _close_GenomicFeaturesWindow {
             }
         }
 
-        # Now add subseqs to the slave DB
-        foreach my $new (@new_subseq) {
-
-            my $slave = $self->_copy_subseq($new);
-
-            if ($self->_master_db_is_acedb) {
-                $self->_Assembly_sqlite->add_SubSeq($slave);
-                $self->_add_SubSeq_sqlite($slave);
-            } else {
-                $self->_Assembly_acedb->add_SubSeq($slave);
-                $self->_add_SubSeq_acedb($slave);
-            }
-        }
-
         $self->draw_subseq_list;
         $self->_highlight_by_name(map { $_->name } @new_subseq);
         $self->message(@msg) if @msg;
@@ -1426,29 +1226,14 @@ sub _exit_save_data {
         }
         elsif ($ans eq 'Yes') {
             foreach my $locus (@loci) {
-                my $cloned_locus = $self->_copy_locus($locus); # FIXME: REMOVE after acedb removal
-                $cloned_locus->ensembl_dbID($locus->ensembl_dbID);
-                $cloned_locus->unset_annotation_in_progress;
-                $self->update_Locus($cloned_locus); # this will also update the slave version (in theory)
+                $locus->unset_annotation_in_progress;
+                $self->update_Locus($locus);
             }
-
-            my $ace = '';
-            my @loci_sqlite;
-            foreach my $locus (@loci) {
-                my $locus_acedb = $self->_locus_cache_acedb->get($locus->name);
-                $ace .= $locus_acedb->ace_string;
-
-                push @loci_sqlite, $self->_locus_cache_sqlite->get($locus->name);
-            }
-
-            try { $self->_save_ace($ace); return 1; }
-            catch  { $self->logger->error("Aborting session exit (AceDB):\n$_"); return 0; }
-            or return;
 
             my $vega_dba = $self->vega_dba;
             try {
                 $vega_dba->begin_work;
-                foreach my $locus (@loci_sqlite) {
+                foreach my $locus (@loci) {
                     $self->_from_HumAce->update_Gene($locus, $locus);
                 }
                 $vega_dba->commit;
@@ -1524,9 +1309,8 @@ sub _save_data {
 
     $top->Busy;
 
-    $self->_compare_acedb_sqlite;
-
-    my $xml_out = ($self->_master_db_is_acedb ? $adb->generate_XML_from_acedb : $adb->generate_XML_from_sqlite);
+    my $xml_out = $adb->generate_XML_from_sqlite;
+    $adb->write_file('Out.xml', $xml_out);
 
     return try {
         my $xml = $adb->Client->save_otter_xml
@@ -1540,12 +1324,8 @@ sub _save_data {
         $parser->coord_system_factory(Bio::Vega::CoordSystemFactory->new);
         my $region = $parser->parse($xml);
 
-        my $ace_maker = Bio::Vega::Region::Ace->new;
-        my $ace_data = $ace_maker->make_ace_genes_transcripts($region);
-
         $adb->unsaved_changes(0);
-        $self->_flag_db_edits(0);    # or the _save_ace() will set unsaved_changes back to "1"
-        $self->_save_ace($ace_data);
+        $self->_flag_db_edits(0);    # or the save will set unsaved_changes back to "1"
         $self->_save_region_updates_sqlite($region);
         $self->_flag_db_edits(1);
         $self->_resync_with_db;
@@ -1580,39 +1360,6 @@ sub _save_region_updates_sqlite {
     }
 
     # Nothing new should come back for sequence features
-
-    return;
-}
-
-sub _compare_acedb_sqlite {
-    my ($self) = @_;
-
-    my $adb = $self->AceDatabase;
-
-    my $xml_acedb  = $adb->generate_XML_from_acedb;
-    my $xml_sqlite = $adb->generate_XML_from_sqlite;
-
-    $adb->write_file('AceDB.xml',  $xml_acedb);
-    $adb->write_file('SQLite.xml', $xml_sqlite);
-
-    if ($xml_acedb eq $xml_sqlite) {
-        $self->message('XML from SQLite and AceDB is identical');
-        return;
-    }
-
-    my $diffs = diff(\$xml_acedb, \$xml_sqlite, { FILENAME_A => 'AceDB', FILENAME_B => 'SQLite',
-                                                  STYLE => 'Unified', CONTEXT => 5 });
-    my $copy = $diffs;
-    $copy =~ s{^[+-]{3} .+$}{}mg;      # delete the inital filename lines
-    $copy =~ s{^[+-]\s+<author.+$}{}mg; # delete changes to author and author_email
-    $adb->write_file('acedb_sqlite.diff', $copy);
-
-    unless ($copy =~ /^[-+]/mg) {
-        $self->message('XML from SQLite and AceDB is identical (barring author details)');
-        return;
-    }
-
-    $self->exception_message($diffs, 'XML from SQLite and AceDB differs');
 
     return;
 }
@@ -1837,22 +1584,6 @@ sub _ace_path {
     return $self->AceDatabase->home;
 }
 
-sub _save_ace {
-    my ($self, @args) = @_;
-
-    my $adb = $self->AceDatabase;
-
-    my $val;
-    try { $val = $adb->ace_server->save_ace(@args); }
-    catch {
-        $self->exception_message($_, "Error saving to acedb");
-        $self->logger->logconfess("Error saving to acedb: $_");
-    };
-
-    $self->_mark_unsaved;
-    return $val;
-}
-
 sub _mark_unsaved {
     my ($self) = @_;
     if ($self->_flag_db_edits) {
@@ -1887,7 +1618,6 @@ sub _resync_with_db {
     $self->_empty_Locus_cache;
 
     # Refetch transcripts
-    $self->_Assembly_acedb;
     $self->_Assembly_sqlite;
 
     my @visible_columns = $self->AceDatabase->ColumnCollection->list_Columns_with_status('Visible');
@@ -1976,21 +1706,21 @@ sub _edit_new_subsequence {
     my @subseq = $self->_list_selected_subseq_objs;
     my $clip      = $self->get_clipboard_text || '';
 
-    my ($new_acedb);
+    my ($new_subseq);
     if (@subseq) {
-        $new_acedb = Hum::Ace::SubSeq->new_from_subseq_list(@subseq);
+        $new_subseq = Hum::Ace::SubSeq->new_from_subseq_list(@subseq);
     }
     else {
         # $self->logger->warn("CLIPBOARD: $clip");
-        $new_acedb = Hum::Ace::SubSeq->new_from_clipboard_text($clip);
-        unless ($new_acedb) {
+        $new_subseq = Hum::Ace::SubSeq->new_from_clipboard_text($clip);
+        unless ($new_subseq) {
             $self->message("Need a highlighted transcript or a coordinate on the clipboard to make SubSeq");
             return;
         }
-        $new_acedb->clone_Sequence($self->Assembly->Sequence);
+        $new_subseq->clone_Sequence($self->Assembly->Sequence);
     }
 
-    my ($region_name, $max) = $self->_region_name_and_next_locus_number($new_acedb);
+    my ($region_name, $max) = $self->_region_name_and_next_locus_number($new_subseq);
 
     my $prefix = $self->_default_locus_prefix;
     my $loc_name = $prefix ? "$prefix:$region_name.$max" : "$region_name.$max";
@@ -2011,30 +1741,22 @@ sub _edit_new_subsequence {
         return $locus;
     };
 
-    my $locus_acedb = $self->_locus_cache_acedb->get_or_new($loc_name, $locus_constructor);
-    $locus_acedb->gene_type_prefix($prefix);
-
     my $locus_sqlite = $self->_locus_cache_sqlite->get_or_new($loc_name, $locus_constructor);
     $locus_sqlite->gene_type_prefix($prefix);
 
-    $new_acedb->name($seq_name);
-    $new_acedb->Locus($locus_acedb);
+    $new_subseq->name($seq_name);
+    $new_subseq->Locus($locus_sqlite);
     my $gm = $self->get_default_mutable_GeneMethod or $self->logger->logconfess("No default mutable GeneMethod");
-    $new_acedb->GeneMethod($gm);
+    $new_subseq->GeneMethod($gm);
     # Need to initialise translation region for coding transcripts
     if ($gm->coding) {
-        $new_acedb->translation_region($new_acedb->translation_region);
+        $new_subseq->translation_region($new_subseq->translation_region);
     }
 
-    my $new_sqlite = $self->_copy_subseq($new_acedb, $locus_sqlite);
+    $self->_Assembly_sqlite->add_SubSeq($new_subseq);
+    $self->_add_SubSeq_sqlite($new_subseq);
 
-    $self->_Assembly_acedb->add_SubSeq($new_acedb);
-    $self->_add_SubSeq_acedb($new_acedb);
-
-    $self->_Assembly_sqlite->add_SubSeq($new_sqlite);
-    $self->_add_SubSeq_sqlite($new_sqlite);
-
-    $self->_add_SubSeq_window_and_paste_evidence($self->_master_db_is_acedb ? $new_acedb : $new_sqlite, $clip);
+    $self->_add_SubSeq_window_and_paste_evidence($new_subseq, $clip);
 
     return;
 }
@@ -2129,15 +1851,11 @@ sub _make_variant_subsequence {
     }
 
     # Make the variants
-    my $var_acedb  = $self->_make_variant($self->_subsequence_cache_acedb ->get($name), $var_name, $clip_sub);
-    $self->_Assembly_acedb->add_SubSeq($var_acedb);
-    $self->_add_SubSeq_acedb($var_acedb);
-
     my $var_sqlite = $self->_make_variant($self->_subsequence_cache_sqlite->get($name), $var_name, $clip_sub);
     $self->_Assembly_sqlite->add_SubSeq($var_sqlite);
     $self->_add_SubSeq_sqlite($var_sqlite);
 
-    $self->_add_SubSeq_window_and_paste_evidence($self->_master_db_is_acedb ? $var_acedb : $var_sqlite, $clip);
+    $self->_add_SubSeq_window_and_paste_evidence($var_sqlite, $clip);
 
     return;
 }
@@ -2342,55 +2060,8 @@ sub _delete_subsequences {
 
     return if $ans eq 'No';
 
-    my ( @to_die_acedb, @to_die_sqlite );
-
-    if ($self->_master_db_is_acedb) {
-        @to_die_acedb = @to_die;
-    } else {
-        @to_die_sqlite = @to_die;
-    }
-
-    foreach my $subseq (@to_die) {
-        my $sub_name = $subseq->name;
-        if ($self->_master_db_is_acedb) {
-            my $sub_sqlite = $self->_subsequence_cache_sqlite->get($sub_name);
-            unless ($sub_sqlite) {
-                $self->logger->logconfess("Cannot find sqlite subseq for '$sub_name'");
-            }
-            push(@to_die_sqlite, $sub_sqlite);
-        }
-        else {                  # _master_db_is_sqlite
-            my $sub_acedb = $self->_subsequence_cache_acedb->get($sub_name);
-            unless ($sub_acedb) {
-                $self->logger->logconfess("Cannot find acedb subseq for '$sub_name'");
-            }
-            push(@to_die_acedb, $sub_acedb);
-        }
-    }
-
-    # Make ace delete command for subsequences
     my $offset = $self->AceDatabase->offset;
-    my $ace = '';
     my @xml;
-    foreach my $sub_acedb (@to_die_acedb) {
-        # Only attempt to delete sequences which have been saved
-        if ($sub_acedb->is_archival) {
-            my $sub_name   = $sub_acedb->name;
-            my $clone_name = $sub_acedb->clone_Sequence->name;
-            $ace .= qq{\n\-D Sequence "$sub_name"\n}
-                . qq{\nSequence "$clone_name"\n}
-                . qq{-D Subsequence "$sub_name"\n};
-            push @xml, $sub_acedb->zmap_delete_xml_string($offset) if $self->_master_db_is_acedb;
-        }
-    }
-
-    # delete from acedb
-    try { $self->_save_ace($ace); return 1; }
-    catch {
-        $self->exception_message($_, 'Aborted delete, failed to save to Ace');
-        return 0;
-    }
-    or return;
 
     # delete from sqlite
     my $vega_dba = $self->vega_dba;
@@ -2398,11 +2069,12 @@ sub _delete_subsequences {
     try {
         $vega_dba->begin_work;
 
-        foreach my $sub_sqlite (@to_die_sqlite) {
+        foreach my $sub_sqlite (@to_die) {
             if ($sub_sqlite->ensembl_dbID) {
                 $from_HumAce->remove_Transcript($sub_sqlite);
                 $self->logger->debug('Deleting transcript for: ', $self->_debug_subseq($sub_sqlite));
-                push @xml, $sub_sqlite->zmap_delete_xml_string($offset) if $self->_master_db_is_sqlite;
+                # FIXME: check location of this cf. original version:
+                push @xml, $sub_sqlite->zmap_delete_xml_string($offset);
             } else {
                 $self->logger->warn('Do not have transcript to delete for: ', $self->_debug_subseq($sub_sqlite));
             }
@@ -2418,10 +2090,7 @@ sub _delete_subsequences {
     } or return;
 
     # Remove from our objects
-    foreach my $sub_acedb (@to_die_acedb) {
-        $self->_delete_SubSeq_acedb($sub_acedb);
-    }
-    foreach my $sub_sqlite (@to_die_sqlite) {
+    foreach my $sub_sqlite (@to_die) {
         $self->_delete_SubSeq_sqlite($sub_sqlite);
     }
 
@@ -2619,62 +2288,7 @@ sub _get_all_Subseq_clusters {
 
 sub Assembly {
     my ($self) = @_;
-    return $self->_Assembly_acedb  if $self->_master_db_is_acedb;
-    return $self->_Assembly_sqlite if $self->_master_db_is_sqlite;
-    return $self->_confess_bad_master_db;
-}
-
-sub _Assembly_acedb {
-    my ($self) = @_;
-
-    unless ($self->{'_assembly_acedb'}) {
-
-        my $canvas = $self->canvas;
-        my $slice_name = $self->slice_name;
-
-        my $before = time();
-        my $busy = Tk::ScopedBusy->new($canvas, -recurse => 0);
-
-        my( $assembly );
-        try {
-            $assembly = $self->AceDatabase->fetch_assembly;
-            return 1;
-        }
-        catch {
-            $self->exception_message($_, "Can't fetch Assembly '$slice_name'");
-            return 0;
-        }
-        or return;
-
-        $self->{'_assembly_acedb'} = $assembly;
-
-        $self->_set_SubSeqs_from_assembly_acedb;
-        $self->_set_known_GeneMethods if $self->_master_db_is_acedb;
-
-        my $after  = time();
-        $self->logger->info(
-            sprintf("Express fetch for '%s' took %d second(s)\n",
-                    $slice_name, $after - $before)
-            );
-    }
-    return $self->{'_assembly_acedb'};
-}
-
-sub _set_SubSeqs_from_assembly_acedb {
-    my ($self) = @_;
-
-    foreach my $sub ($self->_Assembly_acedb->get_all_SubSeqs) {
-        $self->_add_SubSeq_acedb($sub);
-
-        # Ignore loci from non-editable SubSeqs
-        next unless $sub->is_mutable;
-        if (my $s_loc = $sub->Locus) {
-            my $locus = $self->_locus_cache_acedb->get_or_this($s_loc);
-            $sub->Locus($locus);
-        }
-    }
-
-    return;
+    return $self->_Assembly_sqlite;
 }
 
 sub _Assembly_sqlite {
@@ -2714,7 +2328,7 @@ sub _Assembly_sqlite {
         $self->{'_assembly_sqlite'} = $assembly;
 
         $self->_set_SubSeqs_from_assembly_sqlite;
-        $self->_set_known_GeneMethods if $self->_master_db_is_sqlite;
+        $self->_set_known_GeneMethods;
 
         my $after  = time();
         $self->logger->info(sprintf("SQLite fetch for '%s' took %d second(s)\n", $slice_name, $after - $before));
@@ -2748,13 +2362,9 @@ sub save_Assembly { ## no critic (Subroutines::RequireFinalReturn)
 
     my ($delete_xml, $create_xml) = Bio::Otter::ZMap::XML::update_SimpleFeatures_xml(
         $self->Assembly, $new, $self->AceDatabase->offset);
-    my $ace = $new->ace_string;
 
-    my ($done_ace, $done_sqlite, $err);
+    my ($done_sqlite, $err);
     my $done_zmap = try {
-
-        $self->_save_ace($ace);
-        $done_ace = 1;
 
         $self->_save_simplefeatures_sqlite($new);
         $done_sqlite = 1;
@@ -2772,13 +2382,8 @@ sub save_Assembly { ## no critic (Subroutines::RequireFinalReturn)
         return;
     };
 
-    # Set internal state only if we saved to Ace OK
-    if ($done_ace) {
-        $self->_Assembly_acedb->set_SimpleFeature_list($new->get_all_SimpleFeatures);
-    }
-
+    # Set internal state only if we saved OK
     if ($done_sqlite) {
-        # I think it's ok not to duplicate these
         $self->_Assembly_sqlite->set_SimpleFeature_list($new->get_all_SimpleFeatures);
     }
 
@@ -2789,8 +2394,6 @@ sub save_Assembly { ## no critic (Subroutines::RequireFinalReturn)
         my $msg;
         if ($done_sqlite) {
             $msg = "Saved OK, but please restart ZMap";
-        } elsif ($done_ace) {
-            $msg = "Aborted save, failed to save to SQLite";
         } else {
             $msg = "Aborted save, failed to save to Ace";
         }
@@ -2841,7 +2444,6 @@ sub _save_simplefeatures_sqlite {
 sub _empty_Assembly_cache {
     my ($self) = @_;
 
-    $self->{'_assembly_acedb'} = undef;
     $self->{'_assembly_sqlite'} = undef;
 
     return;
@@ -2870,124 +2472,29 @@ sub delete_featuresets {
 sub replace_SubSeq {
     my ($self, $new, $old) = @_;
 
-    # This convolvement can go in due course:
-    my ($new_acedb, $old_acedb, $new_sqlite, $old_sqlite);
-    if ($self->_master_db_is_acedb) {
-        $new_acedb  = $new;
-        $old_acedb  = $old;
-        $new_sqlite = $self->_copy_subseq($new);
-        $old_sqlite = $self->_subsequence_cache_sqlite->get($old->name);
-        $old_sqlite or $self->logger->logcroak('Cannot find SQLite version of ', $self->_debug_subseq($old));
-    } else { # master is sqlite
-        $new_sqlite = $new;
-        $old_sqlite = $old;
-        $new_acedb  = $self->_copy_subseq($new);
-        $old_acedb  = $self->_subsequence_cache_acedb->get($old->name);
-        $old_acedb or $self->logger->logcroak('Cannot find AceDB version of ', $self->_debug_subseq($old));
-    }
+    my ($done_sqlite, $done_zmap, $err) = $self->_replace_SubSeq_sqlite($new, $old);
 
-    my ($done_acedb,  $done_zmap_acedb,  $err_acedb)  = $self->_replace_SubSeq_acedb($new_acedb, $old_acedb);
-    my ($done_sqlite, $done_zmap_sqlite, $err_sqlite) = $self->_replace_SubSeq_sqlite($new_sqlite, $old_sqlite);
-
-    # This convolvement can go in due course:
-    if (   ($self->_master_db_is_acedb  and $done_acedb)
-        or ($self->_master_db_is_sqlite and $done_sqlite) ) {
-
+    if ($done_sqlite) {
         my $new_name = $new->name;
         my $old_name = $old->name || $new_name;
         $self->_rename_transcript_window($old_name, $new_name);
     }
 
-    # As can this:
-    my ($done_zmap, $done_db, $err, $extra_err, $extra_msg);
-
-    if ($self->_master_db_is_acedb) {
-        $done_zmap = $done_zmap_acedb;
-        $done_db   = $done_acedb;
-        $err       = $err_acedb;
-
-        unless ($done_sqlite) {
-            $extra_err = $err_sqlite;
-            $extra_msg = "failed to save to slave SQLite";
-        }
-
-    } else { # sqlite
-        $done_zmap = $done_zmap_sqlite;
-        $done_db   = $done_sqlite;
-        $err       = $err_sqlite;
-
-        unless ($done_acedb) {
-            $extra_err = $err_acedb;
-            $extra_msg = "failed to save to slave AceDB";
-        }
-    }
-
-    my $master = $self->_master_db;
-
     if ($done_zmap) {
         # all OK
-        if ($extra_err) {
-            $self->exception_message($extra_err, "Saved to master $master OK, but $extra_msg");
-        }
         return 1;
     }
     else {
         my $msg;
-        if ($done_db) {
-            $msg = "Saved to master $master OK, but please restart ZMap";
+        if ($done_sqlite) {
+            $msg = "Saved to SQLite OK, but please restart ZMap";
         }
         else {
-            $msg = "Aborted save, failed to save to $master";
+            $msg = "Aborted save, failed to save to SQLite";
         }
         $self->exception_message($err, $msg);
-        return $done_db;
+        return $done_sqlite;
     }
-}
-
-sub _replace_SubSeq_acedb {
-    my ($self, $new, $old) = @_;
-
-    $self->logger->debug(sprintf("_replace_SubSeq_acedb:\n new: %s\n old: %s",
-                                 $self->_debug_subseq($new), $self->_debug_subseq($old)));
-
-    my $new_name = $new->name;
-    my $old_name = $old->name || $new_name;
-
-    my $rename_needed = $old->is_archival && $new_name ne $old_name;
-    my $ace =
-        $rename_needed
-      ? $new->ace_string($old_name)
-      : $new->ace_string;
-
-    my ($done_ace, $done_zmap, $err);
-    try {
-        $self->_save_ace($ace);
-        $done_ace = 1;
-        if ($self->_master_db_is_acedb) {
-            $done_zmap = $self->_replace_in_zmap($new, $old, $old->is_archival);
-        }
-    }
-    catch { $err = $_; };
-
-    if ($done_ace) {
-
-        # update internal state
-        $self->_Assembly_acedb->replace_SubSeq($new, $old_name);
-
-        if ($new_name ne $old_name) {
-            $self->_subsequence_cache_acedb->delete($old_name);
-        }
-        $self->_subsequence_cache_acedb->set($new);
-
-        my $locus = $new->Locus;
-        if (my $prev_name = $locus->drop_previous_name) {
-            $self->logger->info("Unsetting otter_id for locus '$prev_name'");
-            $self->_locus_cache_acedb->get($prev_name)->drop_otter_id;
-        }
-        $self->_locus_cache_acedb->set($locus);
-    }
-
-    return ($done_ace, $done_zmap, $err);
 }
 
 sub _replace_SubSeq_sqlite {
@@ -2999,36 +2506,8 @@ sub _replace_SubSeq_sqlite {
     my $new_subseq_name = $new_subseq->name;
     my $old_subseq_name = $old_subseq->name || $new_subseq_name;
 
-    # This is now superfluous as we are always passed the old sqlite subseq.
-    my $old_subseq_acedb;  # FIXME: required?
-    unless ($self->_master_db_is_sqlite) {
-        # We are passed the old SubSeq from the master AceDB
-        my $old_subseq_sqlite = $self->_subsequence_cache_sqlite->get($old_subseq_name);
-        if ($old_subseq_sqlite) {
-            $self->logger->debug('Found sqlite version of old subseq: ', $self->_debug_subseq($old_subseq_sqlite));
-            $old_subseq_acedb = $old_subseq;
-            $old_subseq = $old_subseq_sqlite;
-        }
-    }
-
     my $new_locus = $new_subseq->Locus;
     my $old_locus = $old_subseq->Locus;
-
-    my $old_locus_acedb;
-    unless ($self->_master_db_is_sqlite) {
-        # We may not have a connected old Locus, but there might be one cached.
-        my $old_locus_sqlite = $self->_locus_cache_sqlite->get($old_locus->name);
-        if ($old_locus_sqlite) {
-            $self->logger->debug("Found sqlite version of old subseq's locus: ", $self->_debug_locus($old_locus_sqlite));
-            if ($old_locus == $old_locus_sqlite) {
-                $self->logger->debug('Cached version of old locus is same object');
-            } else {
-                $self->logger->debug('Found cached version of old locus, so using it');
-            }
-            $old_locus_acedb = $old_locus;
-            $old_locus = $old_locus_sqlite;
-        }
-    }
 
     my $new_locus_name = $new_locus->name;
     my $old_locus_name = $old_locus->name || $new_locus_name;
@@ -3100,9 +2579,7 @@ sub _replace_SubSeq_sqlite {
         $self->_mark_unsaved;
         $done_sqlite = 1;
 
-        if ($self->_master_db_is_sqlite) {
-            $done_zmap = $self->_replace_in_zmap($new_subseq, $old_subseq, $old_subseq->is_archival);
-        }
+        $done_zmap = $self->_replace_in_zmap($new_subseq, $old_subseq, $old_subseq->is_archival);
     }
     catch {
         $err = $_;
@@ -3144,15 +2621,7 @@ sub _replace_in_zmap {
 
 sub _subsequence_cache {
     my ($self) = @_;
-    return $self->_subsequence_cache_acedb  if $self->_master_db_is_acedb;
-    return $self->_subsequence_cache_sqlite if $self->_master_db_is_sqlite;
-    return $self->_confess_bad_master_db;
-}
-
-sub _subsequence_cache_acedb {
-    my ($self) = @_;
-    $self->{'_subsequence_cache_acedb'} //= Bio::Otter::Utils::CacheByName->new;
-    return $self->{'_subsequence_cache_acedb'};
+    return $self->_subsequence_cache_sqlite;
 }
 
 sub _subsequence_cache_sqlite {
@@ -3163,7 +2632,6 @@ sub _subsequence_cache_sqlite {
 
 sub _empty_SubSeq_cache {
     my ($self) = @_;
-    $self->{'_subsequence_cache_acedb'}  = undef;
     $self->{'_subsequence_cache_sqlite'} = undef;
     return;
 }
@@ -3171,11 +2639,6 @@ sub _empty_SubSeq_cache {
 sub _add_SubSeq {
     my ($self, $sub) = @_;
     return $self->_do_add_SubSeq($sub, $self->_subsequence_cache);
-}
-
-sub _add_SubSeq_acedb {
-    my ($self, $sub) = @_;
-    return $self->_do_add_SubSeq($sub, $self->_subsequence_cache_acedb);
 }
 
 sub _add_SubSeq_sqlite {
@@ -3190,15 +2653,6 @@ sub _do_add_SubSeq {
                            my $name = $sub->name;
                            $self->logger->logconfess("already have SubSeq '$name'");
                        });
-}
-
-sub _delete_SubSeq_acedb {
-    my ($self, $sub) = @_;
-
-    my $name = $sub->name;
-    $self->_Assembly_acedb->delete_SubSeq($name);
-
-    return $self->_subsequence_cache_acedb->delete($name);
 }
 
 sub _delete_SubSeq_sqlite {
@@ -3996,30 +3450,6 @@ sub zmap {
 }
 
 ### END: ZMap control interface
-
-
-sub _master_db {
-    my ($self, @args) = @_;
-    ($self->{'_master_db'}) = @args if @args;
-    my $_master_db = $self->{'_master_db'};
-    return $_master_db;
-}
-
-sub _master_db_is_acedb {
-    my ($self) = @_;
-    return $self->_master_db eq 'acedb';
-}
-
-sub _master_db_is_sqlite {
-    my ($self) = @_;
-    return $self->_master_db eq 'sqlite';
-}
-
-sub _confess_bad_master_db {
-    my ($self) = @_;
-    my $mdb = $self->_master_db;
-    $self->logger->logconfess("Bad master_db '$mdb'");
-}
 
 
 sub DESTROY {
