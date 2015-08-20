@@ -778,6 +778,7 @@ sub do_rename_locus {
             $self->_from_HumAce->update_Gene($new_locus_sqlite, $old_locus_sqlite);
             $vega_dba->commit;
             $done{'sqlite'} = 1;
+            $self->_mark_unsaved;
         }
         catch {
             my $err = $_;
@@ -1407,15 +1408,37 @@ sub _exit_save_data {
             return;
         }
         elsif ($ans eq 'Yes') {
-            my $ace = '';
             foreach my $locus (@loci) {
                 $locus->unset_annotation_in_progress;
-                $ace .= $locus->ace_string;
                 $self->update_Locus($locus); # this will also update SQLite version
             }
 
+            my $ace = '';
+            my @loci_sqlite;
+            foreach my $locus (@loci) {
+                my $locus_acedb = $self->_locus_cache_acedb->get($locus->name);
+                $ace .= $locus->ace_string;
+
+                push @loci_sqlite, $self->_locus_cache_sqlite->get($locus->name);
+            }
+
             try { $self->_save_ace($ace); return 1; }
-            catch  { $self->logger->error("Aborting lace session exit:\n$_"); return 0; }
+            catch  { $self->logger->error("Aborting session exit (AceDB):\n$_"); return 0; }
+            or return;
+
+            my $vega_dba = $self->vega_dba;
+            try {
+                $vega_dba->begin_work;
+                foreach my $locus (@loci_sqlite) {
+                    $self->_from_HumAce->update_Gene($locus, $locus);
+                }
+                $vega_dba->commit;
+                $self->_mark_unsaved;
+                return 1;
+            }
+            catch {
+                $self->logger->error("Aborting session exit (SQLite):\n$_"); return 0;
+            }
             or return;
 
             if ($self->_save_data) {
@@ -1803,12 +1826,17 @@ sub _save_ace {
         $self->logger->logconfess("Error saving to acedb: $_");
     };
 
+    $self->_mark_unsaved;
+    return $val;
+}
+
+sub _mark_unsaved {
+    my ($self) = @_;
     if ($self->_flag_db_edits) {
         $self->AceDatabase->unsaved_changes(1);
         $self->_set_window_title;
     }
-
-    return $val;
+    return;
 }
 
 sub _flag_db_edits {
@@ -2358,6 +2386,7 @@ sub _delete_subsequences {
         }
 
         $vega_dba->commit;
+        $self->_mark_unsaved;
         return 1;
     }
     catch {
@@ -2774,6 +2803,7 @@ sub _save_simplefeatures_sqlite {
         }
 
         $vega_dba->commit;
+        $self->_mark_unsaved;
     }
     catch {
         my $err = $_;
@@ -2817,10 +2847,24 @@ sub delete_featuresets {
 sub replace_SubSeq {
     my ($self, $new, $old) = @_;
 
-    my $new_sqlite = $self->_copy_subseq($new);
+    # This convolvement can go in due course:
+    my ($new_acedb, $old_acedb, $new_sqlite, $old_sqlite);
+    if ($self->_master_db_is_acedb) {
+        $new_acedb  = $new;
+        $old_acedb  = $old;
+        $new_sqlite = $self->_copy_subseq($new);
+        $old_sqlite = $self->_subsequence_cache_sqlite->get($old->name);
+        $old_sqlite or $self->logger->logcroak('Cannot find SQLite version of ', $self->_debug_subseq($old));
+    } else { # master is sqlite
+        $new_sqlite = $new;
+        $old_sqlite = $old;
+        $new_acedb  = $self->_copy_subseq($new);
+        $old_acedb  = $self->_subsequence_cache_acedb->get($old->name);
+        $old_acedb or $self->logger->logcroak('Cannot find AceDB version of ', $self->_debug_subseq($old));
+    }
 
-    my ($done_acedb,  $done_zmap_acedb,  $err_acedb)  = $self->_replace_SubSeq_acedb($new, $old);
-    my ($done_sqlite, $done_zmap_sqlite, $err_sqlite) = $self->_replace_SubSeq_sqlite($new_sqlite, $old);
+    my ($done_acedb,  $done_zmap_acedb,  $err_acedb)  = $self->_replace_SubSeq_acedb($new_acedb, $old_acedb);
+    my ($done_sqlite, $done_zmap_sqlite, $err_sqlite) = $self->_replace_SubSeq_sqlite($new_sqlite, $old_sqlite);
 
     # This convolvement can go in due course:
     if (   ($self->_master_db_is_acedb  and $done_acedb)
@@ -2932,6 +2976,7 @@ sub _replace_SubSeq_sqlite {
     my $new_subseq_name = $new_subseq->name;
     my $old_subseq_name = $old_subseq->name || $new_subseq_name;
 
+    # This is now superfluous as we are always passed the old sqlite subseq.
     my $old_subseq_acedb;  # FIXME: required?
     unless ($self->_master_db_is_sqlite) {
         # We are passed the old SubSeq from the master AceDB
@@ -3029,6 +3074,7 @@ sub _replace_SubSeq_sqlite {
         }
 
         $vega_dba->commit;
+        $self->_mark_unsaved;
         $done_sqlite = 1;
 
         if ($self->_master_db_is_sqlite) {
