@@ -1597,7 +1597,7 @@ sub _compare_acedb_sqlite {
                                                   STYLE => 'Unified', CONTEXT => 5 });
     my $copy = $diffs;
     $copy =~ s{^[+-]{3} .+$}{}mg;      # delete the inital filename lines
-    $copy =~ s{^[+]\s+<author.+$}{}mg; # delete the addition of author and author_email
+    $copy =~ s{^[+-]\s+<author.+$}{}mg; # delete changes to author and author_email
     $adb->write_file('acedb_sqlite.diff', $copy);
 
     unless ($copy =~ /^[-+]/mg) {
