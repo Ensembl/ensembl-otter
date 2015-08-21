@@ -746,7 +746,9 @@ sub do_rename_locus {
         my $new_locus_sqlite = $self->_copy_locus($old_locus_sqlite);
         $new_locus_sqlite->name($new_name);
         $self->_locus_cache_sqlite->set($new_locus_sqlite);
-
+        foreach my $subseq ($self->_fetch_SubSeqs_by_locus_name_sqlite($old_name)) {
+            $subseq->Locus($new_locus_sqlite);
+        }
         $done{'int'} = 1;
 
         my $ace = qq{\n-R Locus "$old_name" "$new_name"\n};
@@ -826,6 +828,20 @@ sub _fetch_SubSeqs_by_locus_name {
    my @list;
    foreach my $name ($self->_subsequence_cache->names) {
        my $sub = $self->_subsequence_cache->get($name) or next;
+       my $locus = $sub->Locus or next;
+       if ($locus->name eq $locus_name) {
+           push(@list, $sub);
+       }
+   }
+   return @list;
+}
+
+sub _fetch_SubSeqs_by_locus_name_sqlite { # TEMP!
+   my ($self, $locus_name) = @_;
+
+   my @list;
+   foreach my $name ($self->_subsequence_cache_sqlite->names) {
+       my $sub = $self->_subsequence_cache_sqlite->get($name) or next;
        my $locus = $sub->Locus or next;
        if ($locus->name eq $locus_name) {
            push(@list, $sub);
@@ -3413,7 +3429,7 @@ sub _list_was_selected_subseq_names {
 sub rename_locus {
     my ($self, $locus_name) = @_;
 
-    $self->logger->info("Renaming locus '$locus_name'");
+    $self->logger->info("Renaming locus '", $locus_name // '<unspecified>', "'");
 
     unless ($self->_close_all_transcript_windows) {
         $self->message('Must close all transcript editing windows before renaming locus');
