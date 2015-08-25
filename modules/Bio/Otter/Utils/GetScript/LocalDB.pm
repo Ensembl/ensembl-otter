@@ -112,6 +112,7 @@ sub send_feature_gff {
     #                             });
 
     $self->_sfg->extra_gff_args({
+        use_name_attributes => 1,
         transcript_analyses => $self->arg('transcript_analyses'),
                                 });
 
