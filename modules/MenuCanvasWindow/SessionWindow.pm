@@ -1433,7 +1433,7 @@ sub _exit_save_data {
             my @loci_sqlite;
             foreach my $locus (@loci) {
                 my $locus_acedb = $self->_locus_cache_acedb->get($locus->name);
-                $ace .= $locus->ace_string;
+                $ace .= $locus_acedb->ace_string;
 
                 push @loci_sqlite, $self->_locus_cache_sqlite->get($locus->name);
             }
@@ -3065,7 +3065,7 @@ sub _replace_SubSeq_sqlite {
             if ($locus_diffs) {
                 $self->logger->debug("$locus_tag: diffs to original saved Locus.");
                 $self->_log_diffs($locus_diffs, $locus_tag);
-                $from_HumAce->update_Gene($new_locus, $old_locus, $locus_diffs);
+                $from_HumAce->update_Gene($new_locus, $old_locus);
             } else {
                 $self->logger->debug("$locus_tag: no diffs so stick with the old one.");
                 $new_subseq->Locus($old_locus);
