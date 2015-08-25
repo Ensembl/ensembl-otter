@@ -87,6 +87,7 @@ sub _transcript_from_SubSeq {
         -stable_id => $subseq->otter_id,
         -biotype   => $biotype,
         -status    => $status,
+        -source    => $subseq->Locus->gene_type_prefix || 'havana',
         -exons     => \@exons,
         );
     add_EnsEMBL_Attributes($transcript, 'name' => $subseq->name);
