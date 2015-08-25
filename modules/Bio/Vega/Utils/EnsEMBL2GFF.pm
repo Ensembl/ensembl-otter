@@ -353,8 +353,8 @@ my $_new_feature_id_sub = sub {
         elsif (my $xr = $self->display_xref) {
             $name = $xr->display_id;
         }
-        elsif (my $stable = $self->stable_id) {
-            if ($stable =~ /^OTT/) {
+        elsif (my $stable = $self->stable_id or $args{use_name_attributes}) {
+            if ($stable =~ /^OTT/ or $args{use_name_attributes}) {
                 $name = get_name_Attribute_value($self);
             }
             $name //= $stable; # default
