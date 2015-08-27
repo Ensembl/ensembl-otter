@@ -10,31 +10,28 @@ use Bio::Otter::Server::Config;
 {
     my $usage = sub { exec('perldoc', $0) };
     Bio::Otter::Lace::Defaults::do_getopt() or $usage->();
-    
-    my @code_db = qw{
-        SPR     kj2_mouse_SPRET_EiJ_20150415
-        PWK     kj2_mouse_PWK_PhJ_20150416
-        CAS     kj2_mouse_CAST_EiJ_20150414
-        WSB     kj2_mouse_WSB_EiJ_20150619
-        NZO     kj2_mouse_NZO_HlLtJ_20150506
-        C57     kj2_mouse_C57BL_6NJ_20150504
-        NOD     kj2_mouse_NOD_ShiLtJ_20150505
-        FVB     kj2_mouse_FVB_NJ_20150619
-        DBA     kj2_mouse_DBA_J_20150617
-        CBA     kj2_mouse_CBA_J_20150617
-        C3H     kj2_mouse_C3H_HeJ_20150520
-        AKR     kj2_mouse_AKR_J_20150611
-        BAL     kj2_mouse_BALB_cJ_20150611
-        AJ      kj2_mouse_A_J_20150611
-        APJ     kj2_mouse_LP_J_20150619
-        129     kj2_mouse_129S1_SvImJ_20150515
+
+    my %code_db = qw{
+        129    kj2_mouse_129S1_SvImJ_R20150814
+        AKR    kj2_mouse_AKR_J_R20150814
+        AJ     kj2_mouse_A_J_R20150814
+        BAL    kj2_mouse_BALB_cJ_R20150812
+        C3H    kj2_mouse_C3H_HeJ_R20150818
+        C57    kj2_mouse_C57BL_6NJ_R20150818
+        CBA    kj2_mouse_CBA_J_R20150818
+        DBA    kj2_mouse_DBA_J_R20150819
+        FVB    kj2_mouse_FVB_NJ_R20150819
+        APJ    kj2_mouse_LP_J_R20150819
+        NOD    kj2_mouse_NOD_ShiLtJ_R20150819
+        NZO    kj2_mouse_NZO_HlLtJ_R20150819
+        WSB    kj2_mouse_WSB_EiJ_R20150819
     };
+    # still waiting for CAS, SPR, PWK
 
-    # kj2_mouse_CAROLI_EiJ_20150519
-    # kj2_mouse_Pahari_EiJ_20150520
+    foreach my $CODE ( @ARGV ) {
+        my $grit_db_name = $code_db{$CODE};
+        $grit_db_name or die "Unknown code '$CODE'\n";
 
-    for (my $i = 0; $i < @code_db; $i += 2) {
-        my ($CODE, $grit_db_name) = @code_db[$i, $i+1];
         my $dataset_name = "mus_$CODE";
         warn "\n$dataset_name\n";
         my $ds = Bio::Otter::Server::Config->SpeciesDat->dataset($dataset_name);
