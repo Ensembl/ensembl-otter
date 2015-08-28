@@ -331,6 +331,7 @@ sub write_file {
     my ($self, $file_name, $content) = @_;
 
     my $full_file = join('/', $self->home, $file_name);
+    $self->logger->debug("write_file: $full_file");
     open my $LF, '>', $full_file or $self->logger->logdie("Can't write to '$full_file'; $!");
     print $LF $content;
     close $LF or $self->logger->logdie("Error writing to '$full_file'; $!");
