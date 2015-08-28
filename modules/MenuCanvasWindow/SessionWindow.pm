@@ -1521,9 +1521,12 @@ sub _save_data {
 
     $top->Busy;
 
+    my $xml_out = ($self->_master_db_is_acedb ? $adb->generate_XML_from_acedb : $adb->generate_XML_from_sqlite);
+    $adb->write_file('Out.xml', $xml_out);
+
     return try {
         my $xml = $adb->Client->save_otter_xml
-          ($adb->generate_XML_from_acedb,
+          ($xml_out,
            $adb->DataSet->name,
            $adb->fetch_lock_token);
         die "save_otter_xml returned no XML" unless $xml;
@@ -1585,13 +1588,13 @@ sub _compare_acedb_sqlite {
     my $xml_acedb  = $adb->generate_XML_from_acedb;
     my $xml_sqlite = $adb->generate_XML_from_sqlite;
 
+    $adb->write_file('AceDB.xml',  $xml_acedb);
+    $adb->write_file('SQLite.xml', $xml_sqlite);
+
     if ($xml_acedb eq $xml_sqlite) {
         $self->message('XML from SQLite and AceDB is identical');
         return;
     }
-
-    $adb->write_file('AceDB.xml',  $xml_acedb);
-    $adb->write_file('SQLite.xml', $xml_sqlite);
 
     my $diffs = diff(\$xml_acedb, \$xml_sqlite, { FILENAME_A => 'AceDB', FILENAME_B => 'SQLite',
                                                   STYLE => 'Unified', CONTEXT => 5 });
