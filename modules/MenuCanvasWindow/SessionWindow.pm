@@ -3121,7 +3121,7 @@ sub _replace_SubSeq_sqlite {
             $self->logger->info("Unsetting otter_id for locus '$prev_name'");
             $self->_locus_cache_sqlite->get($prev_name)->drop_otter_id;
         }
-        $self->_locus_cache_sqlite->set($locus);
+        $self->_update_Locus_sqlite($locus);
     }
 
     return ($done_sqlite, $done_zmap, $err);
