@@ -439,7 +439,7 @@ sub _update_slave_Locus_acedb {
         my $diffs = $self->_compare_loci($current_locus_sqlite, $new_locus_sqlite);
         if ($diffs) {
             $self->_log_diffs($diffs, "Locus $new_name");
-            $self->logger->logconfess("Don't know what to do with new locus '$new_name'");
+            $new_locus_acedb = $self->_copy_locus($new_locus_sqlite);
         } else {
             $self->logger->debug("No differences in new locus");
             $new_locus_acedb = $current_locus_acedb;
@@ -1425,8 +1425,10 @@ sub _exit_save_data {
         }
         elsif ($ans eq 'Yes') {
             foreach my $locus (@loci) {
-                $locus->unset_annotation_in_progress;
-                $self->update_Locus($locus); # this will also update SQLite version
+                my $cloned_locus = $self->_copy_locus($locus); # FIXME: REMOVE after acedb removal
+                $cloned_locus->ensembl_dbID($locus->ensembl_dbID);
+                $cloned_locus->unset_annotation_in_progress;
+                $self->update_Locus($cloned_locus); # this will also update the slave version (in theory)
             }
 
             my $ace = '';
@@ -1521,8 +1523,9 @@ sub _save_data {
 
     $top->Busy;
 
+    $self->_compare_acedb_sqlite;
+
     my $xml_out = ($self->_master_db_is_acedb ? $adb->generate_XML_from_acedb : $adb->generate_XML_from_sqlite);
-    $adb->write_file('Out.xml', $xml_out);
 
     return try {
         my $xml = $adb->Client->save_otter_xml
