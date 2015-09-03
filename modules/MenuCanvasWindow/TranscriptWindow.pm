@@ -92,7 +92,7 @@ sub initialise {
             $canvas->Tk::bind('<Control-e>',   $_select_evidence);
             $canvas->Tk::bind('<Control-E>',   $_select_evidence);
 
-            # Save into db via sgifaceserver
+            # Save into db
             my $save_command = sub{ $self->_save_if_changed };
             $file_menu->add('command',
                 -label          => 'Save',

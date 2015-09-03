@@ -1591,8 +1591,6 @@ sub _get_name {
 sub recover_session {
     my ($self, $dir) = @_;
 
-    $self->_kill_old_sgifaceserver($dir);
-
     my $adb = $self->new_AceDatabase;
     $adb->error_flag(1);
     my $home = $adb->home;
@@ -1617,23 +1615,6 @@ sub recover_session {
     $adb->reload_filter_state;
 
     return $adb;
-}
-
-sub _kill_old_sgifaceserver {
-    my ($self, $dir) = @_;
-
-    # Kill any sgifaceservers from crashed otterlace
-    my $proc_list = Proc::ProcessTable->new;
-    foreach my $proc (@{$proc_list->table}) {
-        next unless defined $proc->cmndline;
-        my ($cmnd, @args) = split /\s+/, $proc->cmndline;
-        next unless $cmnd eq 'sgifaceserver';
-        next unless $args[0] eq $dir;
-        $self->logger->info(sprintf "Killing old sgifaceserver '%s', pid %s", $proc->cmndline, $proc->pid);
-        kill 9, $proc->pid;
-    }
-
-    return;
 }
 
 ############## Session recovery methods end here ############################
