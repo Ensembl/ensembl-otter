@@ -133,6 +133,7 @@ sub initialise {
     $self->_set_window_title;
     $self->_colour_init;
 
+    $self->AceDatabase->master_db($self->_master_db);
 
     unless ($self->AceDatabase->write_access) {
         $self->menu_bar()->Label(
