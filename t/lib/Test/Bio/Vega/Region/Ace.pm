@@ -18,22 +18,6 @@ sub teardown {
     return;
 }
 
-sub make_ace_string : Test(2) {
-    my $test = shift;
-
-    my $bvra = $test->our_object;
-    can_ok $bvra, 'make_ace_string';
-
-    # quick check on _process_contig_attribs for 'annotated'
-    my $cs = ($test->parsed_region->clone_sequences)[0];
-    $cs->ContigInfo->add_Attributes(Bio::EnsEMBL::Attribute->new(-CODE => 'annotated', -VALUE => 'T'));
-
-    my $ace = $bvra->make_ace_string($test->parsed_region);
-    ok ($ace, '... produces output');
-
-    return;
-}
-
 # Null test: expected and actual are both now fetched by make_assembly - Doh!
 
 # sub make_assembly : Test(25) {  # n = 1 + 6 * @make_assembly_regions
