@@ -34,37 +34,39 @@ sub make_ace_string : Test(2) {
     return;
 }
 
-sub make_assembly : Test(25) {  # n = 1 + 6 * @make_assembly_regions
-    my $test = shift;
+# Null test: expected and actual are both now fetched by make_assembly - Doh!
 
-    my $bvra = $test->our_object;
-    can_ok $bvra, 'make_assembly';
+# sub make_assembly : Test(25) {  # n = 1 + 6 * @make_assembly_regions
+#     my $test = shift;
 
-    # FIXME: duplication (now only of intent) with T:B:V:Region::Store
+#     my $bvra = $test->our_object;
+#     can_ok $bvra, 'make_assembly';
 
-    my @make_assembly_regions = (
-        undef,                      # use default human_test:chr2-38:929903-1379472
-        'human_test:chr6-38:2557766-2647766',
-        'human_test:chr12-38:30351955-34820185',
-        'mouse:chr1-38:3009920-3786391',
-        );
+#     # FIXME: duplication (now only of intent) with T:B:V:Region::Store
 
-    my $need_teardown_setup;
-    foreach my $test_region (@make_assembly_regions) {
+#     my @make_assembly_regions = (
+#         undef,                      # use default human_test:chr2-38:929903-1379472
+#         'human_test:chr6-38:2557766-2647766',
+#         'human_test:chr12-38:30351955-34820185',
+#         'mouse:chr1-38:3009920-3786391',
+#         );
 
-        if ($test_region or $need_teardown_setup) {
-            $test->teardown;
-            $test->test_region(OtterTest::TestRegion->new($test_region));
-            $test->setup;
-        }
+#     my $need_teardown_setup;
+#     foreach my $test_region (@make_assembly_regions) {
 
-        $test->_do_make_assembly;
+#         if ($test_region or $need_teardown_setup) {
+#             $test->teardown;
+#             $test->test_region(OtterTest::TestRegion->new($test_region));
+#             $test->setup;
+#         }
 
-        $need_teardown_setup = 1;
-    }
+#         $test->_do_make_assembly;
 
-    return;
-}
+#         $need_teardown_setup = 1;
+#     }
+
+#     return;
+# }
 
 sub _do_make_assembly {
     my $test = shift;
