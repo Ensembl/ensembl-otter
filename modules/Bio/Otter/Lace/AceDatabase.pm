@@ -793,34 +793,6 @@ sub offset {
     return $offset;
 }
 
-sub generate_XML_from_acedb {
-    my ($self) = @_;
-
-    # Make Ensembl objects from the acedb database
-    my $feature_types =
-        [ $self->MethodCollection->get_all_mutable_non_transcript_Methods ];
-    my $converter = Bio::Vega::AceConverter->new;
-    $converter->ace_handle($self->aceperl_db_handle);
-    $converter->feature_types($feature_types);
-    $converter->otter_slice($self->slice);
-    $converter->generate_vega_objects;
-
-    # Pass the Ensembl objects to the XML formatter
-    my $region = Bio::Vega::Region->new;
-    $region->species($self->slice->dsname);
-    $region->slice(           $converter->ensembl_slice           );
-    $region->clone_sequences( @{$converter->clone_seq_list || []} );
-    $region->genes(           @{$converter->genes          || []} );
-    $region->seq_features(    @{$converter->seq_features   || []} );
-
-    # write_region requires that the client describe the region, to
-    # ensure it is the correct one, but then ignores ContigInfo.
-
-    my $formatter = Bio::Vega::Transform::RegionToXML->new;
-    $formatter->region($region);
-    return $formatter->generate_OtterXML;
-}
-
 sub generate_XML_from_sqlite {
     my ($self) = @_;
 
