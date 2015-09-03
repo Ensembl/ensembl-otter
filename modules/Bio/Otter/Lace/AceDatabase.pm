@@ -355,12 +355,18 @@ sub recover_slice_from_region_xml {
 sub fetch_assembly {
     my ($self) = @_;
 
-    my $ace  = $self->aceperl_db_handle;
+    my $ensembl_slice = $self->DB->session_slice;
 
-    my $assembly = Hum::Ace::Assembly->new;
-    $assembly->name($self->slice_name);
-    $assembly->MethodCollection($self->MethodCollection);
-    $assembly->express_data_fetch($ace);
+    my $region = Bio::Vega::Region->new_from_otter_db( slice => $ensembl_slice );
+
+    my $ace_maker = Bio::Vega::Region::Ace->new;
+    my $assembly = $ace_maker->make_assembly(
+        $region,
+        {
+            name             => $self->slice_name,
+            MethodCollection => $self->MethodCollection,
+        }
+        );
 
     return $assembly;
 }

@@ -2305,18 +2305,7 @@ sub _Assembly_sqlite {
         my $assembly;
 
         try {
-            my $ensembl_slice = $self->AceDatabase->DB->session_slice;
-
-            my $region = Bio::Vega::Region->new_from_otter_db( slice => $ensembl_slice );
-
-            my $ace_maker = Bio::Vega::Region::Ace->new;
-            $assembly = $ace_maker->make_assembly(
-                $region,
-                {
-                    name             => $self->slice_name,
-                    MethodCollection => $self->AceDatabase->MethodCollection, # FIXME: Where will this come from?
-                }
-                );
+            $assembly = $self->AceDatabase->fetch_assembly;
             return 1;
         }
         catch {
