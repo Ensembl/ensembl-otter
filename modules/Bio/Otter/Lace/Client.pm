@@ -1426,11 +1426,6 @@ sub _make_CloneSequence {
     return $clonesequence;
 }
 
-sub get_lace_acedb_tar {
-    my ($self) = @_;
-    return $self->_get_cache_config_file('lace_acedb_tar');
-}
-
 sub get_methods_ace {
     my ($self) = @_;
     return $self->_get_cache_config_file('methods_ace');
@@ -1546,16 +1541,10 @@ sub sessions_needing_recovery {
         my ( $lace_dir, $pid, $mtime ) = @{$_};
         next if $existing_pid{$pid};
 
-        my $ace_wrm = "$lace_dir/database/ACEDB.wrm";
-        if (-e $ace_wrm) {
-            if (my $name = $self->_get_name($lace_dir)) {
-                push(@$to_recover, [$lace_dir, $mtime, $name]);
-            }
-            else {
-                my $done = $self->_move_to_done($lace_dir);
-                $self->logger->logdie("Session with uninitialised or corrupted SQLite DB renamed to '$done'");
-            }
-        } else {
+        if (my $name = $self->_get_name($lace_dir)) {
+            push(@$to_recover, [$lace_dir, $mtime, $name]);
+        }
+        else {
             try {
                 # Attempt to release locks of uninitialised sessions
                 my $adb = $self->recover_session($lace_dir);
@@ -1570,7 +1559,7 @@ sub sessions_needing_recovery {
             if (-d $lace_dir) {
                 # Belt and braces - if the session was unrecoverable we want it to be deleted.
                 my $done = $self->_move_to_done($lace_dir);
-                $self->logger->logdie("No such file: '$lace_dir/database/ACEDB.wrm'\nDatabase moved to '$done'");
+                $self->logger->logdie("Uninitialised or corrupted SQLite DB: '$lace_dir' moved to '$done'");
             }
         }
     }
@@ -1614,7 +1603,7 @@ sub recover_session {
         $self->logger->logdie("Cannot move '$dir' to '$home'; $!");
     }
 
-    unless ($adb->db_initialized) {
+    unless ($adb->name) {
         # get the adb-with-slice back, for possible lock release and cleanup in sessions_needing_recovery()
         try { $adb->recover_slice_from_region_xml; }
         catch { $self->logger->warn($_); };
