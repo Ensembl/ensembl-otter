@@ -579,13 +579,6 @@ sub format_ace_output {
     return $ace;
 }
 
-sub list_GenomeSequence_names {
-    my ($self) = @_;
-
-    my $ace_dbh = $self->AceDatabase->aceperl_db_handle;
-    return map { $_->name } $ace_dbh->fetch(Genome_Sequence => '*');
-}
-
 sub get_softmasked_dna {
     my ($self, $dna_str) = @_;
 
