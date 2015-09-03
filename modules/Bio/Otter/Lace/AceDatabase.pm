@@ -166,15 +166,6 @@ sub fetch_lock_token {
     return $self->DB->get_tag_value('slicelock_token');
 }
 
-sub tace {
-    my ($self, $tace) = @_;
-
-    if ($tace) {
-        $self->{'_tace'} = $tace;
-    }
-    return $self->{'_tace'} || 'tace';
-}
-
 
 # It's more of a "don't delete this directory" flag.  It is cleared
 # while closing the session iff saving is done or not wanted.
@@ -837,39 +828,6 @@ sub unlock_otter_slice {
     return 1;
 }
 
-sub ace_server {
-    my ($self) = @_;
-
-    my $sgif;
-    unless ($sgif = $self->{'_ace_server'}) {
-        my $home = $self->home;
-        $sgif = Hum::Ace::LocalServer->new($home);
-        $sgif->server_executable('sgifaceserver');
-
-        $sgif->timeout_string('0:30:100:0');
-        # client_timeout:server_timeout:max_req_sizeKB:auto_save_interval
-
-        $sgif->start_server() or return 0; # this only check the fork was successful
-        my $pid = $sgif->server_pid;
-        $sgif->ace_handle(1)  or return 0; # this checks it can connect
-        $self->logger->info("sgifaceserver on $home running, pid $pid");
-        $self->{'_ace_server'} = $sgif;
-    }
-    return $sgif;
-}
-
-sub ace_server_registered {
-    my ($self) = @_;
-
-    return $self->{'_ace_server'};
-}
-
-sub aceperl_db_handle {
-    my ($self) = @_;
-
-    return $self->ace_server->ace_handle;
-}
-
 sub make_database_directory {
     my ($self) = @_;
 
@@ -1143,10 +1101,6 @@ sub DESTROY {
     }
     my $client = $self->Client;
     return if try {
-        if ($self->ace_server_registered) {
-            # $self->ace_server->kill_server; # this may hang...
-            $self->kill_ace_server;           # ...so do this instead
-        }
         if ($client) {
             $self->unlock_otter_slice() if $self->write_access;
         }
@@ -1171,21 +1125,6 @@ sub DESTROY {
     }
 
     return; # not the only return
-}
-
-#  This is basically $self->ace_server->kill_server except that it
-#  does not call waitpid to wait for the Ace server process to exit.
-#  This is necessary to prevent lockups when closing Otter sessions.
-
-sub kill_ace_server {
-    my( $self ) = @_;
-    my $ace_server = $self->ace_server;
-    my $ace_handle = $ace_server->ace_handle;
-    $ace_handle->raw_query('shutdown') if $ace_handle;
-    $ace_server->disconnect_client;
-    $ace_server->forget_port;
-    $ace_server->server_pid(undef);
-    return;
 }
 
 # Required by Bio::Otter::Log::WithContextMixin
