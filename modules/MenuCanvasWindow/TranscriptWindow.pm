@@ -2906,10 +2906,6 @@ sub _do_save_subseq_work {
         $self->name($new_name);
         $self->_evidence_hash($sub->clone_evidence_hash);
 
-        # update_Locus in this object will be called
-        # from update_Locus in the SessionWindow
-        $SessionWindow->update_Locus($sub->Locus);
-
         ### Update all subseq edit windows (needs a sane Ace server)
         $SessionWindow->draw_subseq_list;
 
