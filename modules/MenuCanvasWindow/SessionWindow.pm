@@ -1617,6 +1617,8 @@ sub _resync_with_db {
     $self->_empty_SubSeq_cache;
     $self->_empty_Locus_cache;
 
+    $self->AceDatabase->DB->vega_dba->clear_caches; # Is an AceDatabase function required?
+
     # Refetch transcripts
     $self->_Assembly_sqlite;
 
