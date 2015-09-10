@@ -2160,15 +2160,6 @@ sub _export_highlighted_text_to_selection {
     return substr($clip, $offset, $max_bytes);
 }
 
-# not used
-sub _export_ace_subseq_to_selection {
-    my ($self, $offset, $max_bytes) = @_;
-
-    my $sub = $self->_new_SubSeq_from_tk;
-
-    return substr($sub->ace_string, $offset, $max_bytes);
-}
-
 sub _middle_button_paste {
     my ($self) = @_;
 
