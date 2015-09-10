@@ -1082,7 +1082,6 @@ sub _close_GenomicFeaturesWindow {
         }
         foreach my $name (@select) {
             my $sub = $self->_subsequence_cache->get($name)->clone;
-            $sub->is_archival(0);
             push(@holding_pen, $sub);
         }
 
@@ -1676,7 +1675,6 @@ sub _edit_subsequences {
             my $edit = $sub->clone;
             $edit->otter_id($sub->otter_id);
             $edit->translation_otter_id($sub->translation_otter_id);
-            $edit->is_archival($sub->is_archival);
             $edit->ensembl_dbID($sub->ensembl_dbID);
             $edit->locus_level_errors($sub->locus_level_errors);
 
@@ -2154,11 +2152,7 @@ sub _debug_hum_ace {
     my $ref    = $object + 0;
     my $name   = $object->name // '<undef>';
     my $ens_id = $object->ensembl_dbID // '<undef>';
-    my $archival = '';
-    if ($object->can('is_archival')) {
-        $archival = sprintf(' {AceDB:%s}', $object->is_archival ? 'y' : 'n');
-    }
-    return sprintf("[%x] '%s' (%s)%s", $ref, $name, $ens_id, $archival);
+    return sprintf("[%x] '%s' (%s)", $ref, $name, $ens_id);
 }
 
 sub _raise_transcript_window {
@@ -2570,7 +2564,7 @@ sub _replace_SubSeq_sqlite {
         $self->_mark_unsaved;
         $done_sqlite = 1;
 
-        $done_zmap = $self->_replace_in_zmap($new_subseq, $old_subseq, $old_subseq->is_archival);
+        $done_zmap = $self->_replace_in_zmap($new_subseq, $old_subseq, $old_subseq->ensembl_dbID);
     }
     catch {
         $err = $_;

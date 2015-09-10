@@ -2677,7 +2677,7 @@ sub _get_SubSeq_if_changed {
     # warn sprintf "Comparing old:\n%s\nTo new:\n%s",
     #     $old->ace_string, $new->ace_string;
 
-    if ($old->is_archival and $new->ace_string eq $old->ace_string) {
+    if ($old->ensembl_dbID and $new->ace_string eq $old->ace_string) {
         # SubSeq is saved, and there are no changes.
         return;
     }
@@ -2908,8 +2908,6 @@ sub _do_save_subseq_work {
 
         ### Update all subseq edit windows (needs a sane Ace server)
         $SessionWindow->draw_subseq_list;
-
-        $sub->is_archival(1);
     }
 
     return 1;
