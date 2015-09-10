@@ -336,9 +336,6 @@ sub _add_genes {
                 $subseq->add_evidence_list($type, $evidence{$type});
             }
 
-            # Flag that the sequence is in the db - CHECK ME!!
-            $subseq->is_archival(1);
-
             $assembly->add_SubSeq($subseq);
         }
     }
