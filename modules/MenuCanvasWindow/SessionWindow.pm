@@ -290,8 +290,8 @@ sub _update_Locus {
     $self->logger->debug('_update_Locus: caching new_locus ', $self->_debug_locus($new_locus));
     $self->_locus_cache->set($new_locus);
 
-    foreach my $sub_name ($self->_subsequence_cache_sqlite->names) {
-        my $sub = $self->_subsequence_cache_sqlite->get($sub_name) or next;
+    foreach my $sub_name ($self->_subsequence_cache->names) {
+        my $sub = $self->_subsequence_cache->get($sub_name) or next;
         my $old_locus = $sub->Locus or next;
 
         if ($old_locus->name eq $locus_name) {
@@ -1340,7 +1340,7 @@ sub _save_region_updates {
         next unless $new_subseq->is_mutable;
 
         my $name = $new_subseq->name;
-        my $old_subseq = $self->_subsequence_cache_sqlite->get($name);
+        my $old_subseq = $self->_subsequence_cache->get($name);
         $old_subseq or die "Cannot find existing subseq for $name";
 
         $self->_replace_SubSeq_sqlite($new_subseq, $old_subseq);
@@ -1839,11 +1839,11 @@ sub _make_variant_subsequence {
     }
 
     # Make the variants
-    my $var_sqlite = $self->_make_variant($self->_subsequence_cache_sqlite->get($name), $var_name, $clip_sub);
-    $self->Assembly->add_SubSeq($var_sqlite);
-    $self->_add_SubSeq_sqlite($var_sqlite);
+    my $variant = $self->_make_variant($self->_subsequence_cache->get($name), $var_name, $clip_sub);
+    $self->Assembly->add_SubSeq($variant);
+    $self->_add_SubSeq_sqlite($variant);
 
-    $self->_add_SubSeq_window_and_paste_evidence($var_sqlite, $clip);
+    $self->_add_SubSeq_window_and_paste_evidence($variant, $clip);
 
     return;
 }
@@ -2575,9 +2575,9 @@ sub _replace_SubSeq_sqlite {
         $self->Assembly->replace_SubSeq($new_subseq, $old_subseq_name);
 
         if ($new_subseq_name ne $old_subseq_name) {
-            $self->_subsequence_cache_sqlite->delete($old_subseq_name);
+            $self->_subsequence_cache->delete($old_subseq_name);
         }
-        $self->_subsequence_cache_sqlite->set($new_subseq);
+        $self->_subsequence_cache->set($new_subseq);
 
         my $locus = $new_subseq->Locus;
         if (my $prev_name = $locus->drop_previous_name) {
@@ -2603,18 +2603,13 @@ sub _replace_in_zmap {
 
 sub _subsequence_cache {
     my ($self) = @_;
-    return $self->_subsequence_cache_sqlite;
-}
-
-sub _subsequence_cache_sqlite {
-    my ($self) = @_;
-    $self->{'_subsequence_cache_sqlite'} //= Bio::Otter::Utils::CacheByName->new;
-    return $self->{'_subsequence_cache_sqlite'};
+    $self->{'_subsequence_cache'} //= Bio::Otter::Utils::CacheByName->new;
+    return $self->{'_subsequence_cache'};
 }
 
 sub _empty_SubSeq_cache {
     my ($self) = @_;
-    $self->{'_subsequence_cache_sqlite'} = undef;
+    $self->{'_subsequence_cache'} = undef;
     return;
 }
 
@@ -2625,7 +2620,7 @@ sub _add_SubSeq {
 
 sub _add_SubSeq_sqlite {
     my ($self, $sub) = @_;
-    return $self->_do_add_SubSeq($sub, $self->_subsequence_cache_sqlite);
+    return $self->_do_add_SubSeq($sub, $self->_subsequence_cache);
 }
 
 sub _do_add_SubSeq {
@@ -2643,7 +2638,7 @@ sub _delete_SubSeq_sqlite {
     my $name = $sub->name;
     $self->Assembly->delete_SubSeq($name);
 
-    return $self->_subsequence_cache_sqlite->delete($name);
+    return $self->_subsequence_cache->delete($name);
 }
 
 # For external callers only - internal should use $self->_subsequence_cache*->get() for now
