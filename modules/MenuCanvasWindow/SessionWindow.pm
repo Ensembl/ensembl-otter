@@ -1156,7 +1156,7 @@ sub _exit_save_data {
     my ($self) = @_;
 
     my $adb = $self->AceDatabase;
-    my $dir = $self->_ace_path;
+    my $dir = $self->_session_path;
     unless ($adb->write_access) {
         $adb->error_flag(0);
         $self->_close_GenomicFeaturesWindow;   ### Why is this special?
@@ -1544,7 +1544,7 @@ sub _search_regex {
     return $regex;
 }
 
-sub _ace_path {
+sub _session_path {
     my ($self) = @_;
 
     return $self->AceDatabase->home;
@@ -3403,7 +3403,7 @@ sub zmap {
 sub DESTROY {
     my ($self) = @_;
 
-    $self->logger->info("Destroying SessionWindow for ", $self->_ace_path);
+    $self->logger->info("Destroying SessionWindow for ", $self->_session_path);
 
     $self->zmap_select_destroy;
 
