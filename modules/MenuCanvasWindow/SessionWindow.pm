@@ -260,18 +260,13 @@ sub get_default_mutable_GeneMethod {
 
 sub _locus_cache {
     my ($self) = @_;
-    return $self->_locus_cache_sqlite;
-}
-
-sub _locus_cache_sqlite {
-    my ($self) = @_;
-    $self->{'_locus_cache_sqlite'} //= Bio::Otter::Utils::CacheByName->new;
-    return $self->{'_locus_cache_sqlite'};
+    $self->{'_locus_cache'} //= Bio::Otter::Utils::CacheByName->new;
+    return $self->{'_locus_cache'};
 }
 
 sub _empty_Locus_cache {
     my ($self) = @_;
-    $self->{'_locus_cache_sqlite'} = undef;
+    $self->{'_locus_cache'} = undef;
     return;
 }
 
@@ -287,20 +282,13 @@ sub list_Locus_names {
     return @names;
 }
 
-sub update_Locus {
-    my ($self, $new_locus) = @_;
-
-    $self->_update_Locus_sqlite($new_locus);
-    return;
-}
-
-sub _update_Locus_sqlite {
+sub _update_Locus {
     my ($self, $new_locus) = @_;
 
     my $locus_name = $new_locus->name;
 
-    $self->logger->debug('_update_Locus_sqlite: caching new_locus ', $self->_debug_locus($new_locus));
-    $self->_locus_cache_sqlite->set($new_locus);
+    $self->logger->debug('_update_Locus: caching new_locus ', $self->_debug_locus($new_locus));
+    $self->_locus_cache->set($new_locus);
 
     foreach my $sub_name ($self->_subsequence_cache_sqlite->names) {
         my $sub = $self->_subsequence_cache_sqlite->get($sub_name) or next;
@@ -308,7 +296,7 @@ sub _update_Locus_sqlite {
 
         if ($old_locus->name eq $locus_name) {
             # Replace locus in subseq with new copy
-            $self->logger->debug('_update_Locus_sqlite: replacing locus for ', $self->_debug_subseq($sub));
+            $self->logger->debug('_update_Locus: replacing locus for ', $self->_debug_subseq($sub));
             $sub->Locus($new_locus);
 
             # Is there a transcript window open?
@@ -595,24 +583,24 @@ sub do_rename_locus {
             return 0;
         }
 
-        my $old_locus_sqlite = $self->_locus_cache_sqlite->delete($old_name);
-        unless ($old_locus_sqlite) {
+        my $old_locus = $self->_locus_cache->delete($old_name);
+        unless ($old_locus) {
             die "Cannot find locus called '$old_name' in sqlite cache";
         }
-        my $new_locus_sqlite = $self->_copy_locus($old_locus_sqlite);
-        $new_locus_sqlite->name($new_name);
-        $self->_locus_cache_sqlite->set($new_locus_sqlite);
+        my $new_locus = $self->_copy_locus($old_locus);
+        $new_locus->name($new_name);
+        $self->_locus_cache->set($new_locus);
         foreach my $subseq ($self->_fetch_SubSeqs_by_locus_name($old_name)) {
-            $subseq->Locus($new_locus_sqlite);
+            $subseq->Locus($new_locus);
         }
         $done{'int'} = 1;
 
         # Need to deal with gene type prefix, in case the rename
         # involves a prefix being added, removed or changed.
         if (my ($pre) = $new_name =~ /^([^:]+):/) {
-            $new_locus_sqlite->gene_type_prefix($pre);
+            $new_locus->gene_type_prefix($pre);
         } else {
-            $new_locus_sqlite->gene_type_prefix('');
+            $new_locus->gene_type_prefix('');
         }
 
         # Now we need to update ZMap with the new locus names
@@ -624,7 +612,7 @@ sub do_rename_locus {
         my $vega_dba = $self->vega_dba;
         try {
             $vega_dba->begin_work;
-            $self->_from_HumAce->update_Gene($new_locus_sqlite, $old_locus_sqlite);
+            $self->_from_HumAce->update_Gene($new_locus, $old_locus);
             $vega_dba->commit;
             $done{'sqlite'} = 1;
             $self->_mark_unsaved;
@@ -1226,7 +1214,7 @@ sub _exit_save_data {
         elsif ($ans eq 'Yes') {
             foreach my $locus (@loci) {
                 $locus->unset_annotation_in_progress;
-                $self->update_Locus($locus);
+                $self->_update_Locus($locus);
             }
 
             my $vega_dba = $self->vega_dba;
@@ -1736,16 +1724,16 @@ sub _edit_new_subsequence {
 
     my $locus_constructor = sub {
         my ($name) = @_;
-        my $locus = Hum::Ace::Locus->new;
-        $locus->name($name);
-        return $locus;
+        my $new_locus = Hum::Ace::Locus->new;
+        $new_locus->name($name);
+        return $new_locus;
     };
 
-    my $locus_sqlite = $self->_locus_cache_sqlite->get_or_new($loc_name, $locus_constructor);
-    $locus_sqlite->gene_type_prefix($prefix);
+    my $locus = $self->_locus_cache->get_or_new($loc_name, $locus_constructor);
+    $locus->gene_type_prefix($prefix);
 
     $new_subseq->name($seq_name);
-    $new_subseq->Locus($locus_sqlite);
+    $new_subseq->Locus($locus);
     my $gm = $self->get_default_mutable_GeneMethod or $self->logger->logconfess("No default mutable GeneMethod");
     $new_subseq->GeneMethod($gm);
     # Need to initialise translation region for coding transcripts
@@ -2330,7 +2318,7 @@ sub _set_SubSeqs_from_assembly_sqlite {
         # Ignore loci from non-editable SubSeqs
         next unless $sub->is_mutable;
         if (my $s_loc = $sub->Locus) {
-            my $locus = $self->_locus_cache_sqlite->get_or_this($s_loc);
+            my $locus = $self->_locus_cache->get_or_this($s_loc);
             $sub->Locus($locus);
             $self->logger->debug(sprintf('Setting locus %s for subseq %s',
                                          $self->_debug_hum_ace($locus), $self->_debug_hum_ace($sub)));
@@ -2504,7 +2492,7 @@ sub _replace_SubSeq_sqlite {
 
         if (my $prev_locus_name = $new_locus->drop_previous_name) {
 
-            $prev_locus = $self->_locus_cache_sqlite->get($prev_locus_name);
+            $prev_locus = $self->_locus_cache->get($prev_locus_name);
             unless ($prev_locus) {
                 $self->logger->logconfess("Cannot find cached sqlite locus for previous locus '$prev_locus_name'");
             }
@@ -2513,7 +2501,7 @@ sub _replace_SubSeq_sqlite {
             $prev_locus->drop_otter_id;
         }
 
-        $old_locus = $self->_locus_cache_sqlite->get($new_locus_name);
+        $old_locus = $self->_locus_cache->get($new_locus_name);
         if ($old_locus) {
             $self->logger->debug("Found sqlite version of new subseq's locus: ", $self->_debug_locus($old_locus));
         }
@@ -2585,9 +2573,9 @@ sub _replace_SubSeq_sqlite {
         my $locus = $new_subseq->Locus;
         if (my $prev_name = $locus->drop_previous_name) {
             $self->logger->info("Unsetting otter_id for locus '$prev_name'");
-            $self->_locus_cache_sqlite->get($prev_name)->drop_otter_id;
+            $self->_locus_cache->get($prev_name)->drop_otter_id;
         }
-        $self->_update_Locus_sqlite($locus);
+        $self->_update_Locus($locus);
     }
 
     return ($done_sqlite, $done_zmap, $err);
