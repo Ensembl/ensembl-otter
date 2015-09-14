@@ -25,8 +25,10 @@ use Bio::Otter::Server::Config;
         NOD    kj2_mouse_NOD_ShiLtJ_R20150819
         NZO    kj2_mouse_NZO_HlLtJ_R20150819
         WSB    kj2_mouse_WSB_EiJ_R20150819
+        CAS    kj2_mouse_CAST_EiJ_R20150909
+        SPR    kj2_mouse_SPRET_EiJ_R20150909
+        PWK    kj2_mouse_PWK_PhJ_R20150826
     };
-    # still waiting for CAS, SPR, PWK
 
     foreach my $CODE ( @ARGV ) {
         my $grit_db_name = $code_db{$CODE};
