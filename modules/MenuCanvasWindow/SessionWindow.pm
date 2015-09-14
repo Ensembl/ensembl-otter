@@ -2079,7 +2079,7 @@ sub _delete_subsequences {
 
     # Remove from our objects
     foreach my $sub_sqlite (@to_die) {
-        $self->_delete_SubSeq_sqlite($sub_sqlite);
+        $self->_delete_SubSeq($sub_sqlite);
     }
 
     $self->draw_subseq_list;
@@ -2624,7 +2624,7 @@ sub _add_SubSeq {
         );
 }
 
-sub _delete_SubSeq_sqlite {
+sub _delete_SubSeq {
     my ($self, $sub) = @_;
 
     my $name = $sub->name;
