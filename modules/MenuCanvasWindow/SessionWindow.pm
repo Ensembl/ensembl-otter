@@ -1742,7 +1742,7 @@ sub _edit_new_subsequence {
     }
 
     $self->Assembly->add_SubSeq($new_subseq);
-    $self->_add_SubSeq_sqlite($new_subseq);
+    $self->_add_SubSeq($new_subseq);
 
     $self->_add_SubSeq_window_and_paste_evidence($new_subseq, $clip);
 
@@ -1841,7 +1841,7 @@ sub _make_variant_subsequence {
     # Make the variants
     my $variant = $self->_make_variant($self->_subsequence_cache->get($name), $var_name, $clip_sub);
     $self->Assembly->add_SubSeq($variant);
-    $self->_add_SubSeq_sqlite($variant);
+    $self->_add_SubSeq($variant);
 
     $self->_add_SubSeq_window_and_paste_evidence($variant, $clip);
 
@@ -2330,7 +2330,7 @@ sub _set_SubSeqs_from_assembly {
     my ($self) = @_;
 
     foreach my $sub ($self->Assembly->get_all_SubSeqs) {
-        $self->_add_SubSeq_sqlite($sub);
+        $self->_add_SubSeq($sub);
 
         # Ignore loci from non-editable SubSeqs
         next unless $sub->is_mutable;
@@ -2614,22 +2614,14 @@ sub _empty_SubSeq_cache {
 }
 
 sub _add_SubSeq {
-    my ($self, $sub) = @_;
-    return $self->_do_add_SubSeq($sub, $self->_subsequence_cache);
-}
-
-sub _add_SubSeq_sqlite {
-    my ($self, $sub) = @_;
-    return $self->_do_add_SubSeq($sub, $self->_subsequence_cache);
-}
-
-sub _do_add_SubSeq {
-    my ($self, $sub, $cache) = @_;
-    return $cache->set($sub,
-                       sub {
-                           my $name = $sub->name;
-                           $self->logger->logconfess("already have SubSeq '$name'");
-                       });
+    my ($self, $subseq) = @_;
+    return $self->_subsequence_cache->set(
+        $subseq,
+        sub {
+            my $name = $subseq->name;
+            $self->logger->logconfess("already have SubSeq '$name'");
+        },
+        );
 }
 
 sub _delete_SubSeq_sqlite {
