@@ -141,7 +141,7 @@ sub initialise {
                     );
     }
 
-    $self->_Assembly_sqlite;
+    $self->Assembly;
 
     # Drawing the sequence list can take a long time the first time it is
     # called (QC checks not yet cached), so do it before zmap is launched.
@@ -1607,7 +1607,7 @@ sub _resync_with_db {
     $self->AceDatabase->DB->vega_dba->clear_caches; # Is an AceDatabase function required?
 
     # Refetch transcripts
-    $self->_Assembly_sqlite;
+    $self->Assembly;
 
     my @visible_columns = $self->AceDatabase->ColumnCollection->list_Columns_with_status('Visible');
     $self->_process_and_update_columns(@visible_columns);
@@ -1741,7 +1741,7 @@ sub _edit_new_subsequence {
         $new_subseq->translation_region($new_subseq->translation_region);
     }
 
-    $self->_Assembly_sqlite->add_SubSeq($new_subseq);
+    $self->Assembly->add_SubSeq($new_subseq);
     $self->_add_SubSeq_sqlite($new_subseq);
 
     $self->_add_SubSeq_window_and_paste_evidence($new_subseq, $clip);
@@ -1840,7 +1840,7 @@ sub _make_variant_subsequence {
 
     # Make the variants
     my $var_sqlite = $self->_make_variant($self->_subsequence_cache_sqlite->get($name), $var_name, $clip_sub);
-    $self->_Assembly_sqlite->add_SubSeq($var_sqlite);
+    $self->Assembly->add_SubSeq($var_sqlite);
     $self->_add_SubSeq_sqlite($var_sqlite);
 
     $self->_add_SubSeq_window_and_paste_evidence($var_sqlite, $clip);
@@ -2272,47 +2272,64 @@ sub _get_all_Subseq_clusters {
 
 sub Assembly {
     my ($self) = @_;
-    return $self->_Assembly_sqlite;
+    my $assembly = $self->_assembly_sqlite;
+    unless ($assembly) {
+        $assembly = $self->_load_Assembly_sqlite;
+    }
+    return $assembly;
 }
 
-sub _Assembly_sqlite {
+sub _assembly_sqlite {
+    my ($self, @args) = @_;
+    ($self->{'_assembly_sqlite'}) = @args if @args;
+    my $_assembly_sqlite = $self->{'_assembly_sqlite'};
+    return $_assembly_sqlite;
+}
+
+sub _empty_Assembly_cache {
     my ($self) = @_;
 
-    unless ($self->{'_assembly_sqlite'}) {
+    $self->{'_assembly_sqlite'} = undef;
 
-        my $canvas = $self->canvas;
-        my $slice_name = $self->slice_name;
+    return;
+}
 
-        my $before = time();
-        my $busy = Tk::ScopedBusy->new($canvas, -recurse => 0);
+sub _load_Assembly_sqlite {
+    my ($self) = @_;
 
-        my $assembly;
+    my $canvas = $self->canvas;
+    my $slice_name = $self->slice_name;
 
-        try {
-            $assembly = $self->AceDatabase->fetch_assembly;
-            return 1;
-        }
-        catch {
-            $self->exception_message($_, "Can't fetch Assembly '$slice_name' from SQLite");
-            return 0;
-        }
-        or return;
+    my $before = time();
+    my $busy = Tk::ScopedBusy->new($canvas, -recurse => 0);
 
-        $self->{'_assembly_sqlite'} = $assembly;
+    my $assembly;
 
-        $self->_set_SubSeqs_from_assembly_sqlite;
-        $self->_set_known_GeneMethods;
-
-        my $after  = time();
-        $self->logger->info(sprintf("SQLite fetch for '%s' took %d second(s)\n", $slice_name, $after - $before));
+    try {
+        $assembly = $self->AceDatabase->fetch_assembly;
+        return 1;
     }
-    return $self->{'_assembly_sqlite'};
+    catch {
+        $self->exception_message($_, "Can't fetch Assembly '$slice_name' from SQLite");
+        return 0;
+    }
+    or return;
+
+    $self->_assembly_sqlite($assembly);
+
+    $self->_set_SubSeqs_from_assembly_sqlite;
+    $self->_set_known_GeneMethods;
+
+    my $after  = time();
+    $self->logger->info(sprintf("SQLite fetch for '%s' took %d second(s)\n", $slice_name, $after - $before));
+
+    return $assembly;
 }
 
 sub _set_SubSeqs_from_assembly_sqlite {
     my ($self) = @_;
 
-    foreach my $sub ($self->_Assembly_sqlite->get_all_SubSeqs) {
+    foreach my $sub ($self->Assembly->get_all_SubSeqs) {
         $self->_add_SubSeq_sqlite($sub);
 
         # Ignore loci from non-editable SubSeqs
@@ -2357,7 +2374,7 @@ sub save_Assembly { ## no critic (Subroutines::RequireFinalReturn)
 
     # Set internal state only if we saved OK
     if ($done_sqlite) {
-        $self->_Assembly_sqlite->set_SimpleFeature_list($new->get_all_SimpleFeatures);
+        $self->Assembly->set_SimpleFeature_list($new->get_all_SimpleFeatures);
     }
 
     if ($done_zmap) {
@@ -2410,14 +2427,6 @@ sub _save_simplefeatures_sqlite {
 
         die "_save_simplefeatures_sqlite: $err";
     };
-
-    return;
-}
-
-sub _empty_Assembly_cache {
-    my ($self) = @_;
-
-    $self->{'_assembly_sqlite'} = undef;
 
     return;
 }
@@ -2563,7 +2572,7 @@ sub _replace_SubSeq_sqlite {
     if ($done_sqlite) {
 
         # update internal state
-        $self->_Assembly_sqlite->replace_SubSeq($new_subseq, $old_subseq_name);
+        $self->Assembly->replace_SubSeq($new_subseq, $old_subseq_name);
 
         if ($new_subseq_name ne $old_subseq_name) {
             $self->_subsequence_cache_sqlite->delete($old_subseq_name);
@@ -2632,7 +2641,7 @@ sub _delete_SubSeq_sqlite {
     my ($self, $sub) = @_;
 
     my $name = $sub->name;
-    $self->_Assembly_sqlite->delete_SubSeq($name);
+    $self->Assembly->delete_SubSeq($name);
 
     return $self->_subsequence_cache_sqlite->delete($name);
 }
