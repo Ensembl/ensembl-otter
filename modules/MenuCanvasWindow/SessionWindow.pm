@@ -14,13 +14,10 @@ use Try::Tiny;
 use File::Path (); # for make_path;
 use Readonly;
 
-use Text::Diff;
-
 require Tk::Dialog;
-require Tk::Balloon;
 
 use Hum::Ace::SubSeq;
-use Bio::Otter::ZMap::XML::SubSeq;
+use Bio::Otter::ZMap::XML::SubSeq; # mix-in for Hum::Ace::SubSeq
 use Hum::Ace::Locus;
 use Hum::Analysis::Factory::ExonLocator;
 use Hum::Sort qw{ ace_sort };
