@@ -546,27 +546,6 @@ sub _copy_locus {
     return $copy;
 }
 
-# FIXME - move to SubSeq->new_from_otter_SubSeq, if still here once we're done ??
-sub _copy_subseq {
-    my ($self, $subseq, $new_locus) = @_;
-
-    my $new_subseq = $subseq->clone;
-    foreach my $method (qw{
-        otter_id
-        translation_otter_id
-        })
-    {
-        $new_subseq->$method($subseq->$method);
-    }
-
-    unless ($new_locus) {
-        $new_locus = $self->_copy_locus($subseq->Locus);
-    }
-    $new_subseq->Locus($new_locus);
-
-    return $new_subseq;
-}
-
 sub do_rename_locus {
     my ($self, $old_name, $new_name) = @_;
 
