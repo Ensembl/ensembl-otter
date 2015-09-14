@@ -1313,7 +1313,7 @@ sub _save_data {
 
         $adb->unsaved_changes(0);
         $self->_flag_db_edits(0);    # or the save will set unsaved_changes back to "1"
-        $self->_save_region_updates_sqlite($region);
+        $self->_save_region_updates($region);
         $self->_flag_db_edits(1);
         $self->_resync_with_db;
 
@@ -1324,7 +1324,7 @@ sub _save_data {
     finally { $top->Unbusy; };
 }
 
-sub _save_region_updates_sqlite {
+sub _save_region_updates {
     my ($self, $new_region) = @_;
 
     my $ace_maker = Bio::Vega::Region::Ace->new;
@@ -2317,7 +2317,7 @@ sub _load_Assembly_sqlite {
 
     $self->_assembly_sqlite($assembly);
 
-    $self->_set_SubSeqs_from_assembly_sqlite;
+    $self->_set_SubSeqs_from_assembly;
     $self->_set_known_GeneMethods;
 
     my $after  = time();
@@ -2326,7 +2326,7 @@ sub _load_Assembly_sqlite {
     return $assembly;
 }
 
-sub _set_SubSeqs_from_assembly_sqlite {
+sub _set_SubSeqs_from_assembly {
     my ($self) = @_;
 
     foreach my $sub ($self->Assembly->get_all_SubSeqs) {
@@ -2356,7 +2356,7 @@ sub save_Assembly { ## no critic (Subroutines::RequireFinalReturn)
     my ($done_sqlite, $err);
     my $done_zmap = try {
 
-        $self->_save_simplefeatures_sqlite($new);
+        $self->_save_simplefeatures($new);
         $done_sqlite = 1;
 
         if ($delete_xml) {
@@ -2399,7 +2399,7 @@ sub save_Assembly { ## no critic (Subroutines::RequireFinalReturn)
     }
 }
 
-sub _save_simplefeatures_sqlite {
+sub _save_simplefeatures {
     my ($self, $new_assembly) = @_;
 
     my $vega_dba = $self->vega_dba;
@@ -2425,7 +2425,7 @@ sub _save_simplefeatures_sqlite {
         my $err = $_;
         $vega_dba->rollback;
 
-        die "_save_simplefeatures_sqlite: $err";
+        die "_save_simplefeatures: $err";
     };
 
     return;
