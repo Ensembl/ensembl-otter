@@ -19,7 +19,7 @@ Readonly my %_COORD_SYSTEM_SPEC => (
 
 # Our canned mappings - kept here for consistency with our canned coordinate systems
 #
-no warnings 'qw';
+no warnings 'qw';               ## no critic (TestingAndDebugging::ProhibitNoWarnings)
 Readonly my @_MAPPINGS_SPEC => qw(
     chromosome:Otter#dna_contig:Otter
     chromosome:Otter#contig

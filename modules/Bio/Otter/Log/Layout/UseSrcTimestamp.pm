@@ -32,8 +32,12 @@ sub render {
     my $placeholder = '__U_S_T_MSG__';
     my $wrapping = $self->SUPER::render($placeholder, $category, $priority, $caller_level+1);
 
-    # ZMap log timestamps are of form yyyy/MM/dd  HH:mm:ss,SSSSSS
-    my $zmap_ts_r = qr'
+    my $zmap_ts_r;
+    {
+        ## no critic (RegularExpressions::ProhibitComplexRegexes)
+
+        # ZMap log timestamps are of form yyyy/MM/dd  HH:mm:ss,SSSSSS
+        $zmap_ts_r = qr'
         ^
         (?<Z_pre>.*)
         (?<Z_yyyy>\d{4}) / (?<Z_MM>\d{2}) / (?<Z_dd>\d{2})    # date components
@@ -43,6 +47,7 @@ sub render {
         (?<Z_post>.*)
         $
       'sx;
+    }
 
     if ($message =~ $zmap_ts_r) {
 
