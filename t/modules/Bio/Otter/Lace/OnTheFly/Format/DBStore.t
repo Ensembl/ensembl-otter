@@ -64,8 +64,8 @@ foreach my $test ( fixed_genomic_tests() ) {
     ok($db_gff, 'GFF from DB');
 
     my $rs_gff = $result_set->gff($sfg->slice);
-    $rs_gff =~ s/(percentID \d+\.\d)0;/$1;/g; # strip trailing 0's on percentID
-    $rs_gff =~ s/(percentID \d+)\.0;/$1;/g;    # strip trailing 00's on percentID
+    $rs_gff =~ s/(percentID \d+\.\d)0(;|$)/$1$2/gm; # strip trailing 0's on percentID
+    $rs_gff =~ s/(percentID \d+)\.0+(;|$)/$1$2/gm;    # strip trailing 00's on percentID
     ok($rs_gff, 'GFF from result_set');
 
     is($db_gff, $rs_gff, 'GFF identical');

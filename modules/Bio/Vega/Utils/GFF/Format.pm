@@ -87,7 +87,7 @@ sub gff_line { ## no critic( Subroutines::ProhibitManyArgs )
     my $attribute_format = $self->attribute_format;
 
     my @attribute_strings = ();
-    for my $key (keys %{$attribute_hash}) {
+    for my $key (sort keys %{$attribute_hash}) {
         my $value = $attribute_hash->{$key};
         defined $value or next;
 
