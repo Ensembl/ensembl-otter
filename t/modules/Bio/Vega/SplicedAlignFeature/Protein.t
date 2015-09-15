@@ -105,15 +105,15 @@ $safd->slice($ctg_slice);
 $safd->percent_id(78.9);
 
 is($safd->to_gff(gff_args()), <<'__EO_GFF__', 'safd GFF');
-AL359765.6.1.13780	VSAF_test	protein_match	153	974	3047.000000	+	.	Target=QueryP 1 274 +;cigar_ensembl=822M;percentID=78.9;Name=QueryP
-AL359765.6.1.13780	VSAF_test	protein_match	3221	3253	3047.000000	+	.	Target=QueryP 275 285 +;cigar_ensembl=33M;percentID=78.9;Name=QueryP
-AL359765.6.1.13780	VSAF_test	protein_match	3255	3413	3047.000000	+	.	Target=QueryP 286 363 +;cigar_ensembl=156M75D3M;percentID=78.9;Name=QueryP
-AL359765.6.1.13780	VSAF_test	protein_match	4726	4779	3047.000000	+	.	Target=QueryP 364 381 +;cigar_ensembl=54M;percentID=78.9;Name=QueryP
-AL359765.6.1.13780	VSAF_test	protein_match	4781	4888	3047.000000	+	.	Target=QueryP 383 418 +;cigar_ensembl=108M;percentID=78.9;Name=QueryP
-AL359765.6.1.13780	VSAF_test	protein_match	13793	14020	3047.000000	+	.	Target=QueryP 420 495 +;cigar_ensembl=228M;percentID=78.9;Name=QueryP
-AL359765.6.1.13780	VSAF_test	protein_match	17937	18089	3047.000000	+	.	Target=QueryP 497 547 +;cigar_ensembl=153M;percentID=78.9;Name=QueryP
-AL359765.6.1.13780	VSAF_test	protein_match	18855	18932	3047.000000	+	.	Target=QueryP 549 574 +;cigar_ensembl=78M;percentID=78.9;Name=QueryP
-AL359765.6.1.13780	VSAF_test	protein_match	19536	19808	3047.000000	+	.	Target=QueryP 575 665 +;cigar_ensembl=273M;percentID=78.9;Name=QueryP
+AL359765.6.1.13780	VSAF_test	protein_match	153	974	3047.000000	+	.	Name=QueryP;Target=QueryP 1 274 +;cigar_ensembl=822M;percentID=78.9
+AL359765.6.1.13780	VSAF_test	protein_match	3221	3253	3047.000000	+	.	Name=QueryP;Target=QueryP 275 285 +;cigar_ensembl=33M;percentID=78.9
+AL359765.6.1.13780	VSAF_test	protein_match	3255	3413	3047.000000	+	.	Name=QueryP;Target=QueryP 286 363 +;cigar_ensembl=156M75D3M;percentID=78.9
+AL359765.6.1.13780	VSAF_test	protein_match	4726	4779	3047.000000	+	.	Name=QueryP;Target=QueryP 364 381 +;cigar_ensembl=54M;percentID=78.9
+AL359765.6.1.13780	VSAF_test	protein_match	4781	4888	3047.000000	+	.	Name=QueryP;Target=QueryP 383 418 +;cigar_ensembl=108M;percentID=78.9
+AL359765.6.1.13780	VSAF_test	protein_match	13793	14020	3047.000000	+	.	Name=QueryP;Target=QueryP 420 495 +;cigar_ensembl=228M;percentID=78.9
+AL359765.6.1.13780	VSAF_test	protein_match	17937	18089	3047.000000	+	.	Name=QueryP;Target=QueryP 497 547 +;cigar_ensembl=153M;percentID=78.9
+AL359765.6.1.13780	VSAF_test	protein_match	18855	18932	3047.000000	+	.	Name=QueryP;Target=QueryP 549 574 +;cigar_ensembl=78M;percentID=78.9
+AL359765.6.1.13780	VSAF_test	protein_match	19536	19808	3047.000000	+	.	Name=QueryP;Target=QueryP 575 665 +;cigar_ensembl=273M;percentID=78.9
 __EO_GFF__
 
 my @exons = $safd->get_all_exon_alignments;
