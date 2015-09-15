@@ -1,0 +1,63 @@
+#!/usr/bin/env perl
+
+### update_ens_satdb_values
+
+use strict;
+use warnings;
+use Bio::Otter::Lace::Defaults;
+use Bio::Otter::Server::Config;
+
+{
+    my $usage = sub { exec('perldoc', $0) };
+    # This do_getopt() call is needed to parse the otter config files
+    # even if you aren't giving any arguments on the command line.
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'h|help!'       => $usage,
+        ) or $usage->();
+
+    # DataSet interacts directly with an otter database
+    foreach my $ds (Bio::Otter::Server::Config->SpeciesDat->all_datasets) {
+        my $ds_name = $ds->name;
+        my $otter_dba = $ds->otter_dba;
+        my $sth = $otter_dba->dbc->prepare(q{
+            SELECT meta_key
+              , meta_value
+            FROM meta
+            WHERE meta_value like "%ens-livemirror%"
+        });
+        $sth->execute;
+
+        while (my ($key, $value) = $sth->fetchrow) {
+            my %config_hash = eval $value;
+            my $db_name = $config_hash{'-dbname'};
+            my ($db_root, $current_version, $asm_version) = $db_name =~ /(.+)_(\d+)_(\d+)$/
+                or next;
+            my $new_version = $current_version + 1;
+            my $new_db_name = join('_', $db_root, $new_version, $asm_version);
+            print STDERR join("\t", $ds_name, $key, $db_name, $new_db_name), "\n";
+            system "./save_satellite_db -dataset $ds_name -key $key -satdbname $new_db_name";
+        }
+    }
+}
+
+
+
+
+
+__END__
+
+=head1 NAME - update_ens_satdb_values
+
+=head1 DESCRIPTION
+
+Automatically updates meta table keys that point to satellite databases on
+ens-livemirror by incrementing the schema version part of the name by 1.
+
+Nees to be run in C<ensembl-otter/scripts/lace> because it calls
+C<save_satellite_db>, which is safe because that script checks that it can
+connect with the new parameters before saving.
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
