@@ -18,7 +18,7 @@ CREATE TABLE dna_spliced_align_feature (
   evalue                        DOUBLE,
   perc_ident                    FLOAT,
   alignment_type                TEXT,
-  alignment_string              TEXT,
+  alignment_string              ENUM('vulgar_exonerate_components'),
   external_db_id                INTEGER UNSIGNED,
   hcoverage                     DOUBLE,
   external_data                 TEXT,
@@ -47,7 +47,7 @@ CREATE TABLE protein_spliced_align_feature (
   evalue                            DOUBLE,
   perc_ident                        FLOAT,
   alignment_type                    TEXT,
-  alignment_string                  TEXT,
+  alignment_string                  ENUM('vulgar_exonerate_components'),
   external_db_id                    INTEGER UNSIGNED,
   hcoverage                         DOUBLE,
 
