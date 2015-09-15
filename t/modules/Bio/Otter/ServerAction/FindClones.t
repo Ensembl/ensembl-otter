@@ -53,13 +53,8 @@ __EO_RESULT__
     {
         dataset => 'zebrafish',
         queries => {
-            ENSDARG00000086319 => <<"__EO_RESULT__",
-ENSDARG00000086319\tEnsEMBL:ensembl:gene_stable_id\tCR847984.14\tchr11_20140314
-ENSDARG00000086319\tEnsEMBL:ensembl:gene_stable_id\tCR847984.14\tchr11_Zv10
-ENSDARG00000086319\tEnsEMBL:ensembl:gene_stable_id\tFQ482077.1\tchr11_20110419
-ENSDARG00000086319\tEnsEMBL:ensembl:gene_stable_id\tFQ482077.1\tchr11_20140314
-ENSDARG00000086319\tEnsEMBL:ensembl:gene_stable_id\tFQ482077.1\tchr11_Zv10
-ENSDARG00000086319\tEnsEMBL:ensembl:gene_stable_id\tFQ482077.1,CR847984.14\tchr11_20110419
+            ENSDARG00000086320 => <<"__EO_RESULT__",
+ENSDARG00000086320\tEnsEMBL:ncrna:gene_stable_id\tCU462817.8\tchr5_Zv10
 __EO_RESULT__
         },
     },
