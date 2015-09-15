@@ -102,7 +102,7 @@ foreach my $ta_acc_spec (@$ta_acc_specs) {
     my $query = $ta_acc_spec->{query};
     subtest $query => sub {
         my $result = $info_results->{$query};
-        if ($ta_acc_spec->{mm_db} and $query =~ /\.\d+$/) {
+        if ($ta_acc_spec->{mm_db}) {
             $result ||= {};
             foreach my $key (qw{ acc_sv evi_type source currency }) {
                 is($result->{$key}, $ta_acc_spec->{$key}, "$key") if $ta_acc_spec->{$key};
