@@ -43,7 +43,7 @@ sub try_load {
 sub species_groups_tt {
     plan tests => 4;
 
-    like(try_load(<<'INPUT'), qr{Unknown dataset 'dinosaur' .* under species_groups/bogus}, 'dinosaur');
+    like(try_load(<<'INPUT'), qr{No such dataset 'dinosaur' .* under species_groups/bogus}s, 'dinosaur');
 ---
 species_groups:
   main:
@@ -66,7 +66,7 @@ species_groups:
     - :main
 INPUT
 
-    like(try_load(<<'INPUT'), qr{Loop detected while resolving species_group dev .* under species_groups/dev}, 'loopygroup');
+    like(try_load(<<'INPUT'), qr{Loop detected while resolving species_group (dev|main) .* under species_groups/(main|dev)}, 'loopygroup');
 ---
 species_groups:
   main:
