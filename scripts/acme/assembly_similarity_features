@@ -9,9 +9,9 @@ use Bio::Otter::Lace::Defaults;
 use Bio::Otter::Server::Config;
 
 {
-    my $dataset_name = 'sheep';
-    my @chr_name_list = qw{ 3 11 };
-    my $assembly_suffix = "-31";
+    my $dataset_name = 'rat';
+    my @chr_name_list = (1..20, 'X', 'Y');
+    my $assembly_suffix = "-60";
 
     my $usage = sub { exec('perldoc', $0) };
     # This do_getopt() call is needed to parse the otter config files
