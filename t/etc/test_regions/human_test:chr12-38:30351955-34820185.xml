@@ -2614,7 +2614,7 @@
              <end_phase>0</end_phase>
            </exon>
            <exon>
-             <stable_id>OTTHUME00002066953</stable_id>
+             <stable_id>OTTHUME00002346952</stable_id>
              <start>30669268</start>
              <end>30669282</end>
              <strand>-1</strand>
@@ -2650,7 +2650,7 @@
              <end_phase>2</end_phase>
            </exon>
            <exon>
-             <stable_id>OTTHUME00002312208</stable_id>
+             <stable_id>OTTHUME00002346951</stable_id>
              <start>30680372</start>
              <end>30680638</end>
              <strand>-1</strand>
@@ -2844,12 +2844,12 @@
              <end_phase>-1</end_phase>
            </exon>
            <exon>
-             <stable_id>OTTHUME00002066969</stable_id>
+             <stable_id>OTTHUME00002352487</stable_id>
              <start>30684337</start>
              <end>30684457</end>
              <strand>-1</strand>
              <phase>-1</phase>
-             <end_phase>0</end_phase>
+             <end_phase>2</end_phase>
            </exon>
          </exon_set>
        </transcript>
@@ -2888,7 +2888,7 @@
              <end_phase>1</end_phase>
            </exon>
            <exon>
-             <stable_id>OTTHUME00002066977</stable_id>
+             <stable_id>OTTHUME00002346950</stable_id>
              <start>30684435</start>
              <end>30684457</end>
              <strand>-1</strand>
@@ -4117,8 +4117,8 @@
        </transcript>
        <transcript>
          <stable_id>OTTHUMT00000403324</stable_id>
-         <author>aeb</author>
-         <author_email>aeb</author_email>
+         <author>gm5</author>
+         <author_email>gm5</author_email>
          <remark>non canonical TEC</remark>
          <remark>not organism-supported</remark>
          <remark>Annotation_remark- Found in Macaca fascicularis (crab-eating macaque). There are bases which align either side of the non canonical splice and there is a good chance that it is an artefactual splice. However, I have made it TEC as it will go into an analysis pipeline</remark>
@@ -4250,7 +4250,7 @@
              <end_phase>0</end_phase>
            </exon>
            <exon>
-             <stable_id>OTTHUME00002069408</stable_id>
+             <stable_id>OTTHUME00002346960</stable_id>
              <start>30716623</start>
              <end>30716676</end>
              <strand>-1</strand>
@@ -4444,7 +4444,7 @@
              <end_phase>2</end_phase>
            </exon>
            <exon>
-             <stable_id>OTTHUME00002069399</stable_id>
+             <stable_id>OTTHUME00002346962</stable_id>
              <start>30733660</start>
              <end>30733711</end>
              <strand>-1</strand>
@@ -4504,7 +4504,7 @@
              <end_phase>2</end_phase>
            </exon>
            <exon>
-             <stable_id>OTTHUME00002069453</stable_id>
+             <stable_id>OTTHUME00002346961</stable_id>
              <start>30733707</start>
              <end>30733711</end>
              <strand>-1</strand>
@@ -4615,7 +4615,7 @@
              <end_phase>0</end_phase>
            </exon>
            <exon>
-             <stable_id>OTTHUME00002069425</stable_id>
+             <stable_id>OTTHUME00002346959</stable_id>
              <start>30734976</start>
              <end>30735206</end>
              <strand>-1</strand>
@@ -4675,7 +4675,7 @@
              <end_phase>0</end_phase>
            </exon>
            <exon>
-             <stable_id>OTTHUME00002069442</stable_id>
+             <stable_id>OTTHUME00002346963</stable_id>
              <start>30735154</start>
              <end>30735206</end>
              <strand>-1</strand>
@@ -4735,7 +4735,7 @@
              <end_phase>0</end_phase>
            </exon>
            <exon>
-             <stable_id>OTTHUME00002069415</stable_id>
+             <stable_id>OTTHUME00002346958</stable_id>
              <start>30735176</start>
              <end>30735206</end>
              <strand>-1</strand>
@@ -6410,8 +6410,8 @@
        </transcript>
        <transcript>
          <stable_id>OTTHUMT00000399798</stable_id>
-         <author>gm5</author>
-         <author_email>gm5</author_email>
+         <author>aeb</author>
+         <author_email>aeb</author_email>
          <mRNA_end_not_found>1</mRNA_end_not_found>
          <cds_end_not_found>1</cds_end_not_found>
          <transcript_class>Novel_CDS</transcript_class>
@@ -6483,7 +6483,7 @@
              <end_phase>1</end_phase>
            </exon>
            <exon>
-             <stable_id>OTTHUME00002056218</stable_id>
+             <stable_id>OTTHUME00002346683</stable_id>
              <start>31089886</start>
              <end>31089999</end>
              <strand>1</strand>
@@ -7248,8 +7248,8 @@
        </transcript>
        <transcript>
          <stable_id>OTTHUMT00000399799</stable_id>
-         <author>gm5</author>
-         <author_email>gm5</author_email>
+         <author>aeb</author>
+         <author_email>aeb</author_email>
          <remark>alternative 5&apos; UTR</remark>
          <mRNA_end_not_found>1</mRNA_end_not_found>
          <cds_end_not_found>1</cds_end_not_found>
@@ -7318,7 +7318,7 @@
              <end_phase>0</end_phase>
            </exon>
            <exon>
-             <stable_id>OTTHUME00002056217</stable_id>
+             <stable_id>OTTHUME00002346682</stable_id>
              <start>31089044</start>
              <end>31089111</end>
              <strand>1</strand>
@@ -8137,8 +8137,8 @@
        </transcript>
        <transcript>
          <stable_id>OTTHUMT00000399802</stable_id>
-         <author>gm5</author>
-         <author_email>gm5</author_email>
+         <author>aeb</author>
+         <author_email>aeb</author_email>
          <remark>downstream ATG</remark>
          <mRNA_end_not_found>1</mRNA_end_not_found>
          <cds_end_not_found>1</cds_end_not_found>
@@ -8187,7 +8187,7 @@
              <end_phase>0</end_phase>
            </exon>
            <exon>
-             <stable_id>OTTHUME00002056214</stable_id>
+             <stable_id>OTTHUME00002346681</stable_id>
              <start>31084583</start>
              <end>31084656</end>
              <strand>1</strand>
@@ -10150,7 +10150,7 @@
              <end_phase>1</end_phase>
            </exon>
            <exon>
-             <stable_id>OTTHUME00002058119</stable_id>
+             <stable_id>OTTHUME00002346718</stable_id>
              <start>31287737</start>
              <end>31287784</end>
              <strand>-1</strand>
@@ -10211,7 +10211,7 @@
              <end_phase>1</end_phase>
            </exon>
            <exon>
-             <stable_id>OTTHUME00002058100</stable_id>
+             <stable_id>OTTHUME00002346717</stable_id>
              <start>31287760</start>
              <end>31287784</end>
              <strand>-1</strand>
@@ -11729,12 +11729,12 @@
              <end_phase>-1</end_phase>
            </exon>
            <exon>
-             <stable_id>OTTHUME00002065213</stable_id>
+             <stable_id>OTTHUME00002352481</stable_id>
              <start>31661841</start>
              <end>31662169</end>
              <strand>1</strand>
              <phase>-1</phase>
-             <end_phase>1</end_phase>
+             <end_phase>0</end_phase>
            </exon>
          </exon_set>
        </transcript>
@@ -12221,8 +12221,8 @@
        </transcript>
        <transcript>
          <stable_id>OTTHUMT00000402812</stable_id>
-         <author>th2</author>
-         <author_email>th2</author_email>
+         <author>aeb</author>
+         <author_email>aeb</author_email>
          <remark>alternative 5&apos; UTR</remark>
          <mRNA_end_not_found>1</mRNA_end_not_found>
          <cds_end_not_found>1</cds_end_not_found>
@@ -12350,8 +12350,8 @@
        </transcript>
        <transcript>
          <stable_id>OTTHUMT00000402992</stable_id>
-         <author>th2</author>
-         <author_email>th2</author_email>
+         <author>aeb</author>
+         <author_email>aeb</author_email>
          <mRNA_end_not_found>1</mRNA_end_not_found>
          <cds_end_not_found>1</cds_end_not_found>
          <transcript_class>Putative_CDS</transcript_class>
@@ -12391,7 +12391,7 @@
              <end_phase>1</end_phase>
            </exon>
            <exon>
-             <stable_id>OTTHUME00002068129</stable_id>
+             <stable_id>OTTHUME00002346965</stable_id>
              <start>31701868</start>
              <end>31701991</end>
              <strand>-1</strand>
@@ -12402,8 +12402,8 @@
        </transcript>
        <transcript>
          <stable_id>OTTHUMT00000402993</stable_id>
-         <author>th2</author>
-         <author_email>th2</author_email>
+         <author>aeb</author>
+         <author_email>aeb</author_email>
          <mRNA_end_not_found>1</mRNA_end_not_found>
          <cds_end_not_found>1</cds_end_not_found>
          <transcript_class>Putative_CDS</transcript_class>
@@ -12467,7 +12467,7 @@
              <end_phase>1</end_phase>
            </exon>
            <exon>
-             <stable_id>OTTHUME00002068126</stable_id>
+             <stable_id>OTTHUME00002346966</stable_id>
              <start>31701999</start>
              <end>31702007</end>
              <strand>-1</strand>
@@ -13160,8 +13160,8 @@
        </transcript>
        <transcript>
          <stable_id>OTTHUMT00000403334</stable_id>
-         <author>th2</author>
-         <author_email>th2</author_email>
+         <author>gm5</author>
+         <author_email>gm5</author_email>
          <remark>alternative 5&apos; UTR</remark>
          <mRNA_end_not_found>1</mRNA_end_not_found>
          <cds_end_not_found>1</cds_end_not_found>
@@ -13198,12 +13198,12 @@
              <end_phase>-1</end_phase>
            </exon>
            <exon>
-             <stable_id>OTTHUME00002069475</stable_id>
+             <stable_id>OTTHUME00002351479</stable_id>
              <start>31980878</start>
              <end>31981060</end>
              <strand>1</strand>
              <phase>-1</phase>
-             <end_phase>2</end_phase>
+             <end_phase>0</end_phase>
            </exon>
          </exon_set>
        </transcript>
@@ -13551,8 +13551,8 @@
        </transcript>
        <transcript>
          <stable_id>OTTHUMT00000403338</stable_id>
-         <author>th2</author>
-         <author_email>th2</author_email>
+         <author>gm5</author>
+         <author_email>gm5</author_email>
          <remark>alternative 5&apos; UTR</remark>
          <remark>not organism-supported</remark>
          <mRNA_end_not_found>1</mRNA_end_not_found>
@@ -13586,12 +13586,12 @@
              <end_phase>-1</end_phase>
            </exon>
            <exon>
-             <stable_id>OTTHUME00002069466</stable_id>
+             <stable_id>OTTHUME00002351478</stable_id>
              <start>31980878</start>
              <end>31982979</end>
              <strand>1</strand>
              <phase>-1</phase>
-             <end_phase>1</end_phase>
+             <end_phase>2</end_phase>
            </exon>
          </exon_set>
        </transcript>
@@ -14583,8 +14583,8 @@
        <author_email>aeb</author_email>
        <transcript>
          <stable_id>OTTHUMT00000404118</stable_id>
-         <author>th2</author>
-         <author_email>th2</author_email>
+         <author>aeb</author>
+         <author_email>aeb</author_email>
          <remark>not organism-supported</remark>
          <transcript_class>Putative_CDS</transcript_class>
          <name>AC090440.1-013</name>
@@ -14735,7 +14735,7 @@
              <end_phase>0</end_phase>
            </exon>
            <exon>
-             <stable_id>OTTHUME00002072448</stable_id>
+             <stable_id>OTTHUME00002340610</stable_id>
              <start>32640276</start>
              <end>32640533</end>
              <strand>1</strand>
@@ -16069,8 +16069,8 @@
        </transcript>
        <transcript>
          <stable_id>OTTHUMT00000446365</stable_id>
-         <author>ib2</author>
-         <author_email>ib2</author_email>
+         <author>aeb</author>
+         <author_email>aeb</author_email>
          <remark>alternative 5&apos; UTR</remark>
          <remark>Annotation_remark- gencode6_bVI_multi_698/chr12:32709808-32709929. novel RT-PCRseq exons checking for U Lausanne (23/02/2012 - ib2)</remark>
          <mRNA_end_not_found>1</mRNA_end_not_found>
@@ -16112,12 +16112,12 @@
              <end_phase>-1</end_phase>
            </exon>
            <exon>
-             <stable_id>OTTHUME00002218938</stable_id>
+             <stable_id>OTTHUME00002351759</stable_id>
              <start>32576266</start>
              <end>32576448</end>
              <strand>1</strand>
              <phase>-1</phase>
-             <end_phase>2</end_phase>
+             <end_phase>1</end_phase>
            </exon>
          </exon_set>
        </transcript>
@@ -17618,8 +17618,8 @@
        </transcript>
        <transcript>
          <stable_id>OTTHUMT00000404131</stable_id>
-         <author>th2</author>
-         <author_email>th2</author_email>
+         <author>aeb</author>
+         <author_email>aeb</author_email>
          <mRNA_end_not_found>1</mRNA_end_not_found>
          <cds_end_not_found>1</cds_end_not_found>
          <transcript_class>Novel_CDS</transcript_class>
@@ -17683,7 +17683,7 @@
              <end_phase>0</end_phase>
            </exon>
            <exon>
-             <stable_id>OTTHUME00002072491</stable_id>
+             <stable_id>OTTHUME00002347107</stable_id>
              <start>32713209</start>
              <end>32713319</end>
              <strand>1</strand>
@@ -17694,8 +17694,8 @@
        </transcript>
        <transcript>
          <stable_id>OTTHUMT00000404132</stable_id>
-         <author>th2</author>
-         <author_email>th2</author_email>
+         <author>aeb</author>
+         <author_email>aeb</author_email>
          <mRNA_end_not_found>1</mRNA_end_not_found>
          <cds_end_not_found>1</cds_end_not_found>
          <transcript_class>Novel_CDS</transcript_class>
@@ -17743,7 +17743,7 @@
              <end_phase>0</end_phase>
            </exon>
            <exon>
-             <stable_id>OTTHUME00002072486</stable_id>
+             <stable_id>OTTHUME00002347106</stable_id>
              <start>32713209</start>
              <end>32713330</end>
              <strand>1</strand>
@@ -18487,8 +18487,8 @@
        </transcript>
        <transcript>
          <stable_id>OTTHUMT00000404139</stable_id>
-         <author>th2</author>
-         <author_email>th2</author_email>
+         <author>aeb</author>
+         <author_email>aeb</author_email>
          <mRNA_end_not_found>1</mRNA_end_not_found>
          <cds_end_not_found>1</cds_end_not_found>
          <transcript_class>Novel_CDS</transcript_class>
