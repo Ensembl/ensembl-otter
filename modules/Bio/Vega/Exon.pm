@@ -33,7 +33,7 @@ sub adjust_start_end {
 
     my $ensembl_exon = $self->SUPER::adjust_start_end(@args);
 
-    return bless $ensembl_exon, 'Bio::Vega::Exon';
+    return bless $ensembl_exon, 'Bio::Vega::Exon'; ## no critic (Anacode::ProhibitRebless)
 }
 
 sub vega_hashkey_structure {

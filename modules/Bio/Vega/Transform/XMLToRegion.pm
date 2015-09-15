@@ -125,7 +125,7 @@ sub parsefile {
 ## parser builder methods to build otter objects
 
 
-sub _save_species {
+sub _save_species {             ## no critic (Subroutines::ProhibitUnusedPrivateSubroutines)
     my ($self, $data) = @_;
 
     $region{$self}->species($data->{'species'});
@@ -133,7 +133,7 @@ sub _save_species {
     return;
 }
 
-sub _build_SequenceFragment {
+sub _build_SequenceFragment {   ## no critic (Subroutines::ProhibitUnusedPrivateSubroutines)
     my ($self, $data) = @_;
 
     $self->_create_or_extend_chr_slice($data);
@@ -296,7 +296,7 @@ sub _get_Analysis {
     return $ana;
 }
 
-sub _build_Evidence {
+sub _build_Evidence {           ## no critic (Subroutines::ProhibitUnusedPrivateSubroutines)
     my ($self, $data) = @_;
 
     my $evidence = Bio::Vega::Evidence->new(
@@ -309,7 +309,7 @@ sub _build_Evidence {
     return;
 }
 
-sub _build_XRef {
+sub _build_XRef {               ## no critic (Subroutines::ProhibitUnusedPrivateSubroutines)
     my ($self, $data) = @_;
 
     my $xref = Bio::EnsEMBL::DBEntry->new(
@@ -327,7 +327,7 @@ sub _build_XRef {
     return;
 }
 
-sub _build_Feature {
+sub _build_Feature {            ## no critic (Subroutines::ProhibitUnusedPrivateSubroutines)
     my ($self, $data) = @_;
 
     my $ana = $self->_get_Analysis($data->{'type'});
@@ -350,7 +350,7 @@ sub _build_Feature {
     return;
 }
 
-sub _build_Exon {
+sub _build_Exon {               ## no critic (Subroutines::ProhibitUnusedPrivateSubroutines)
     my ($self, $data) = @_;
 
     my $chr_slice = $self->_chr_slice;
@@ -394,7 +394,7 @@ sub add_xrefs_to_object {
     return;
 }
 
-sub _build_Transcript {
+sub _build_Transcript {         ## no critic (Subroutines::ProhibitUnusedPrivateSubroutines)
     my ($self, $data) = @_;
 
     my $exons = delete $exon_list{$self};
@@ -548,7 +548,7 @@ sub translation_pos {
   }
 }
 
-sub _build_Locus {
+sub _build_Locus {              ## no critic (Subroutines::ProhibitUnusedPrivateSubroutines)
     my ($self, $data) = @_;
 
     ## version and is_current ??
@@ -667,7 +667,7 @@ sub _build_gene_attributes
     return @gene_attributes;
 }
 
-sub _do_nothing {
+sub _do_nothing {               ## no critic (Subroutines::ProhibitUnusedPrivateSubroutines)
     return;
 }
 
