@@ -43,7 +43,6 @@ __EO_RESULT__
 
             'ENST00000380773,ENSG00000124535' => <<"__EO_RESULT__",
 ENSG00000124535\tEnsEMBL:ensembl_havana_gene:gene_stable_id\tAL139092.12\tchr6-38
-ENST00000380773\tCCDS_db:Ens_Hs_transcript:\tAL139092.12\tchr6-38
 ENST00000380773\tEnsEMBL:ensembl_havana_transcript:transcript_stable_id\tAL139092.12\tchr6-38
 __EO_RESULT__
                     'ACOT4' =>
