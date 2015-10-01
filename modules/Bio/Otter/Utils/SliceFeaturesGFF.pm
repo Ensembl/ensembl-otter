@@ -56,7 +56,15 @@ sub features_from_slice {
     my $feature_kind = $self->feature_kind;
     my $getter_method = "get_all_${feature_kind}s";
 
-    return $self->slice->$getter_method($self->logic_name);
+    my @logic_names = $self->logic_name ? split(/,/, $self->logic_name) : ( undef );
+    my @features;
+
+    foreach my $logic_name ( @logic_names ) {
+        my $feats = $self->slice->$getter_method($logic_name);
+        push @features, @$feats;
+    }
+
+    return \@features;
 }
 
 sub gff_for_features {
@@ -67,6 +75,11 @@ sub gff_for_features {
         gff_source        => $self->gff_source,
         %{$self->extra_gff_args},
         );
+
+    if ($self->extra_gff_args->{transcript_analyses}) {
+        # Let gff_source be set from the analysis gff_source field
+        delete $gff_args{gff_source};
+    }
 
     my $gff = Bio::Vega::Utils::GFF::gff_header($self->gff_version);
     foreach my $f (feature_sort @$features) {

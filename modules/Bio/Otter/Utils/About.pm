@@ -161,8 +161,6 @@ sub __need_tools {
     return
       ([ zmap => '--raw_version' ],
        [ blixemh => '--version' ], # represents other Seqtools
-       [ sgifaceserver => '-version',
-         qr{^(acedb \S+),}i ],
 
        # EditWindow::Preferences uses 'open -e' on Mac
 

@@ -731,3 +731,4 @@ concurrent=12
 min-batch=1
 send-queued-callback-timeout-ms=500
 requests-per-bin=2
+default-priority=5

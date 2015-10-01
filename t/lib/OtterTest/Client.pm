@@ -118,7 +118,6 @@ sub _s_a_accession_info {
 #   get_otter_schema
 #   get_loutre_schema
 #   get_server_ensembl_version
-#   get_lace_acedb_tar
 #   get_methods_ace
 #
 sub _get_cache_config_file {

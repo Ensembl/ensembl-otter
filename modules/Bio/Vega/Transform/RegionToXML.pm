@@ -13,11 +13,13 @@ use Bio::Vega::Utils::Attribute qw( get_first_Attribute_value get_name_Attribute
 use base 'Bio::Vega::XML::Writer_V1';
 
 my %region;
+my %squash_exon_phases_on_no_translation;
 
 sub DESTROY {
     my ($self) = @_;
 
     delete( $region{$self} );
+    delete( $squash_exon_phases_on_no_translation{$self} );
 
     $self->NEXT::DESTROY;
 
@@ -61,6 +63,13 @@ sub region {
 
     $region{$self} = shift @args if @args;
     return $region{$self};
+}
+
+sub squash_exon_phases_on_no_translation {
+    my ($self, @args) = @_;
+    ($squash_exon_phases_on_no_translation{$self}) = @args if @args;
+    my $squash_exon_phases_on_no_translation = $squash_exon_phases_on_no_translation{$self};
+    return $squash_exon_phases_on_no_translation;
 }
 
 sub get_geneXML {
@@ -343,15 +352,23 @@ sub generate_ExonSet {
   my $exon_set=$tran->get_all_Exons;
   my $exs=$self->prettyprint('exon_set');
   foreach my $exon (@$exon_set){
+      my ($phase, $end_phase);
+      if ($self->squash_exon_phases_on_no_translation and not $tran->translation) {
+          $phase     = -1;
+          $end_phase = -1;
+      } else {
+          $phase     = $exon->phase;
+          $end_phase = $exon->end_phase;
+      }
       my $e=$self->prettyprint('exon');
       if($exon->stable_id) {
           $e->attribvals($self->prettyprint('stable_id',$exon->stable_id));
       }
-      $e->attribvals($self->prettyprint('start',$exon->start + $coord_offset));
-      $e->attribvals($self->prettyprint('end',$exon->end  + $coord_offset));
-      $e->attribvals($self->prettyprint('strand',$exon->strand));
-      $e->attribvals($self->prettyprint('phase',$exon->phase));
-      $e->attribvals($self->prettyprint('end_phase',$exon->end_phase));
+      $e->attribvals($self->prettyprint('start',     $exon->start + $coord_offset));
+      $e->attribvals($self->prettyprint('end',       $exon->end  + $coord_offset));
+      $e->attribvals($self->prettyprint('strand',    $exon->strand));
+      $e->attribvals($self->prettyprint('phase',     $phase));
+      $e->attribvals($self->prettyprint('end_phase', $end_phase));
       $exs->attribobjs($e);
   }
   return $exs;

@@ -4,7 +4,7 @@ use strict;
 use warnings;
 use Bio::EnsEMBL::Utils::Argument  qw ( rearrange );
 use Bio::EnsEMBL::Utils::Exception qw ( throw warning );
-use Bio::Vega::Utils::Attribute    qw ( get_name_Attribute_value );
+use Bio::Vega::Utils::Attribute    qw ( get_first_Attribute_value get_name_Attribute_value );
 use Bio::Vega::Utils::AttributesMixin;
 use base 'Bio::EnsEMBL::Gene';
 
@@ -154,6 +154,23 @@ sub truncated_flag {
   return $self->{'truncated_flag'} || 0;
 }
 
+sub has_truncated_attribute {
+    my ($self) = @_;
+    return get_first_Attribute_value($self, 'otter_truncated');
+}
+
+sub add_truncated_attribute {
+    my ($self) = @_;
+    my $gene_attribs = $self->get_all_Attributes;
+
+    my $truncated_attrib = Bio::EnsEMBL::Attribute->new(
+        -CODE  => 'otter_truncated',
+        -VALUE => 1,
+        );
+    push @$gene_attribs, $truncated_attrib;
+    return;
+}
+
 # This is to be used by storing mechanism of GeneAdaptor,
 # to simplify the loading during comparison.
 
@@ -205,7 +222,7 @@ sub prune_Exons {
   my ($self) = @_;
 
   my( %stable_key, %unique_exons );
-  foreach my $tran (@{$self->get_all_Transcripts}) {
+  foreach my $tran (@{$self->get_all_Transcripts // []}) {
       my (@transcript_exons);
       foreach my $exon (@{$tran->get_all_Exons}) {
           my $exon_key = $exon->vega_hashkey;

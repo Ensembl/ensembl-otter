@@ -27,6 +27,7 @@ sub new {
         'send-queued-callback-timeout-ms' => '_cfg_send_queued_callback_timeout_ms',
         # try a simple global per-bin config before going further
         'requests-per-bin'                => '_cfg_requests_per_bin',
+        'default-priority'                => '_cfg_default_priority',
         );
     my $client = $session->AceDatabase->Client;
     my $logger = $self->_logger;
@@ -50,7 +51,44 @@ sub _queue_features {
     my ($self, @feature_list) = @_;
     push @{$self->_queue}, @feature_list;
     $self->_logger->debug('_queue_features: queued ', scalar(@feature_list));
+    $self->_sort_by_priority;
+    $self->_debug_queue if 0;
     return;
+}
+
+sub _debug_queue {
+    my ($self) = @_;
+    $self->_logger->debug('_queue_features: ',
+                          join(';',
+                               map {
+                                   sprintf("%s:%d",
+                                           $self->_request_to_name($_),
+                                           $self->_request_to_priority($_))
+                               } @{$self->{_queue}}
+                          )
+        );
+    return;
+}
+
+# 0 = highest priority (DNA)
+sub _sort_by_priority {
+    my ($self) = @_;
+    my @sorted = sort {
+        $self->_request_to_priority($a) <=> $self->_request_to_priority($b);
+    } @{$self->_queue};
+    $self->{_queue} = \@sorted;
+    return;
+}
+
+sub _request_to_priority {
+    my ($self, $request) = @_;
+
+    if (ref($request) and $request->can('priority')) {
+        my $priority = $request->priority;
+        return $priority if defined $priority;
+    }
+
+    return $self->_cfg_default_priority;
 }
 
 sub _send_queued_requests {
@@ -72,6 +110,7 @@ sub _send_queued_requests {
 
     my $queue = $self->_queue;
     my @to_send;
+    my $current_priority;
 
   SLOTS: while ($self->_slots_available and $self->_queue_not_empty) {
 
@@ -79,6 +118,18 @@ sub _send_queued_requests {
     QUEUE: for (my $i = 0; $i < @$queue; ) {
 
         my $request = $queue->[$i];
+
+        my $priority = $self->_request_to_priority($request);
+        if (defined $current_priority) {
+            if ($priority > $current_priority) {
+                $logger->debug("_send_queue_requests: need to finish priority '$current_priority'");
+                last SLOTS;
+            }
+        } else {
+            $current_priority = $priority;
+            $logger->debug("_send_queue_requests: setting current_priority to '$current_priority'");
+        }
+
         $bin = $self->_request_resource_bin($request);
         if ($bin) {
             # We've found something with resource_bin capacity
@@ -271,6 +322,13 @@ sub _cfg_requests_per_bin {
     ($self->{'_cfg_requests_per_bin'}) = @args if @args;
     my $_cfg_requests_per_bin = $self->{'_cfg_requests_per_bin'};
     return $_cfg_requests_per_bin;
+}
+
+sub _cfg_default_priority {
+    my ($self, @args) = @_;
+    ($self->{'_cfg_default_priority'}) = @args if @args;
+    my $_cfg_default_priority = $self->{'_cfg_default_priority'};
+    return $_cfg_default_priority;
 }
 
 sub _logger {

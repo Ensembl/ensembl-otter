@@ -29,6 +29,7 @@ use base 'Bio::Vega::XML::Parser';
 
 my (
     %region,
+    %analysis_from_transcript_class,
 
     # Temporaries, used during parsing
     %exon_list,
@@ -49,6 +50,7 @@ sub DESTROY {
     my ($self) = @_;
 
     delete $region{$self};
+    delete $analysis_from_transcript_class{$self};
     delete $exon_list{$self};
     delete $evidence_list{$self};
     delete $transcript_list{$self};
@@ -289,10 +291,15 @@ sub _build_clone_sequence {
     return;
 }
 
+# FIXME: dup with FromHumAce
 sub _get_Analysis {
     my ($self, $name) = @_;
 
-    my $ana = $logic_ana{$self}{$name} ||= Bio::EnsEMBL::Analysis->new(-logic_name => $name);
+    my $ana =   $logic_ana{$self}{$name}
+            ||= Bio::EnsEMBL::Analysis->new(
+        -logic_name => $name,
+        -gff_source => $name,
+                );
     return $ana;
 }
 
@@ -400,7 +407,13 @@ sub _build_Transcript {         ## no critic (Subroutines::ProhibitUnusedPrivate
     my $exons = delete $exon_list{$self};
     my $chr_slice = $self->_chr_slice;
 
-    my $ana = $self->_get_Analysis($data->{'analysis'} || 'Otter');
+    my $logic_name;
+    if ($self->analysis_from_transcript_class) {
+        $logic_name = $data->{'transcript_class'};
+    } else {
+        $logic_name = $data->{'analysis'};
+    }
+    my $ana = $self->_get_Analysis($logic_name || 'Otter');
 
     my $transcript = Bio::Vega::Transcript->new(
         -stable_id => $data->{'stable_id'},
@@ -604,6 +617,7 @@ sub _build_Locus {              ## no critic (Subroutines::ProhibitUnusedPrivate
     my $truncated=$data->{'truncated'};
     if (defined $truncated) {
         $gene->truncated_flag($truncated);
+        $gene->add_truncated_attribute if $truncated;
     }
 
     #convert coordinates from chromosomal coordinates to slice coordinates
@@ -618,6 +632,18 @@ sub _build_Locus {              ## no critic (Subroutines::ProhibitUnusedPrivate
     foreach my $transcript (@$transcripts){
         $transcript->start($transcript->start - $slice_offset);
         $transcript->end(  $transcript->end   - $slice_offset);
+
+        my $logic_name = $transcript->analysis->logic_name;
+        if ($self->analysis_from_transcript_class and $source ne 'havana' and $logic_name ne 'Otter') {
+            $logic_name = sprintf('%s:%s', $source, $logic_name);
+        }
+        if ($truncated) {
+            # update analysis to _trunc version
+            $logic_name .= '_trunc';
+        }
+        if ($logic_name ne $transcript->analysis->logic_name) {
+            $transcript->analysis($self->_get_Analysis($logic_name));
+        }
     }
 
     $gene->start($gene->start - $slice_offset);
@@ -695,6 +721,16 @@ sub coord_system_factory {
     ($coord_system_factory{$self}) = @args if @args;
     my $coord_system_factory = $coord_system_factory{$self};
     return $coord_system_factory;
+}
+
+## accessor
+
+
+sub analysis_from_transcript_class {
+    my ($self, @args) = @_;
+    ($analysis_from_transcript_class{$self}) = @args if @args;
+    my $analysis_from_transcript_class = $analysis_from_transcript_class{$self};
+    return $analysis_from_transcript_class;
 }
 
 1;

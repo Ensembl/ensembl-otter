@@ -21,7 +21,6 @@ Bio::Otter::ServerAction::Config - serve config files and info
 =cut
 
 my %PERMITTED = (
-    lace_acedb_tar => { filename => 'lace_acedb.tar.gz', content_type => 'application/x-tar-gzip' },
     loutre_schema  => { filename => 'loutre_schema_sqlite.sql' },
     methods_ace    => { filename => 'methods.ace'      },
     otter_config   => { filename => 'otter_config'     },

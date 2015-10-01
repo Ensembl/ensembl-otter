@@ -106,7 +106,7 @@ sub test_xml_fetch {
     $adb->smart_slice($smart_slice);
     $adb->make_database_directory;
     $adb->init_AceDatabase;
-    $adb->write_file('02_after.xml', $adb->generate_XML_from_acedb);
+    $adb->write_file('02_after.xml', $adb->generate_XML_from_sqlite);
     
     my (@before_after) = map join("/", $adb->home, $_), qw{ 01_before.xml 02_after.xml };
     
