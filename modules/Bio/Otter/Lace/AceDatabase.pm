@@ -27,6 +27,7 @@ use Bio::Otter::Lace::Chooser::Collection;
 use Bio::Otter::Lace::DB;
 use Bio::Otter::Lace::Slice; # a new kind of Slice that knows how to get pipeline data
 use Bio::Otter::Lace::ProcessGFF;
+use Bio::Otter::Source::Filter;
 use Bio::Otter::Utils::Config::Ini qw( config_ini_format );
 
 use Hum::Ace::Assembly;
@@ -165,15 +166,6 @@ sub fetch_lock_token {
     return $self->DB->get_tag_value('slicelock_token');
 }
 
-sub tace {
-    my ($self, $tace) = @_;
-
-    if ($tace) {
-        $self->{'_tace'} = $tace;
-    }
-    return $self->{'_tace'} || 'tace';
-}
-
 
 # It's more of a "don't delete this directory" flag.  It is cleared
 # while closing the session iff saving is done or not wanted.
@@ -250,12 +242,12 @@ sub init_AceDatabase {
     $self->write_file('01_before.xml', $xml_string);
 
     my $parser = Bio::Vega::Transform::XMLToRegion->new;
+    $parser->analysis_from_transcript_class(1);
 
     my $cs_factory = Bio::Vega::CoordSystemFactory->new( dba => $self->DB->vega_dba );
     $parser->coord_system_factory($cs_factory);
 
     my $region = $parser->parse($xml_string);
-    $self->write_otter_acefile($region);
 
     # This fixup is needed when using a shortcut to open a region directly, since we don't
     # have the necessary info until the region has been fetched from the server
@@ -277,35 +269,14 @@ sub init_AceDatabase {
 
     my ($raw_dna, @tiles) = $self->Client->get_assembly_dna($self->slice);
 
-    $self->write_dna_data($raw_dna, @tiles);
-
     my $storer = Bio::Vega::Region::Store->new(
         vega_dba => $self->DB->vega_dba,
         coord_system_factory => $cs_factory,
         );
     $storer->store($region, $raw_dna);
 
-    $self->write_methods_acefile;
-
     $self->save_region_xml($xml_string); # sets up $self->slice
     $self->DB->session_slice($self->slice->ensembl_slice);
-
-    $self->initialize_database;
-
-    return;
-}
-
-sub write_otter_acefile {
-    my ($self, $region) = @_;
-
-    my $ace_maker = Bio::Vega::Region::Ace->new;
-
-    # Storing ace_text in a file
-    my $ace_filename = $self->home . '/rawdata/otter.ace';
-    open my $ace_fh, '>', $ace_filename or $self->logger->logdie("Can't write to '$ace_filename'");
-    print $ace_fh $ace_maker->make_ace_string($region);
-    close $ace_fh or $self->logger->logconfess("Error writing to '$ace_filename' : $!");
-    $self->add_acefile($ace_filename);
 
     return;
 }
@@ -329,6 +300,7 @@ sub write_file {
     my ($self, $file_name, $content) = @_;
 
     my $full_file = join('/', $self->home, $file_name);
+    $self->logger->debug("write_file: $full_file");
     open my $LF, '>', $full_file or $self->logger->logdie("Can't write to '$full_file'; $!");
     print $LF $content;
     close $LF or $self->logger->logdie("Error writing to '$full_file'; $!");
@@ -358,6 +330,7 @@ sub recover_slice_from_region_xml {
     }
 
     my $parser = Bio::Vega::Transform::XMLToRegion->new;
+    $parser->analysis_from_transcript_class(1);
     $parser->coord_system_factory(Bio::Vega::CoordSystemFactory->new); # Should we get this from somewhere else?
     my $region = $parser->parse($xml);
 
@@ -373,12 +346,18 @@ sub recover_slice_from_region_xml {
 sub fetch_assembly {
     my ($self) = @_;
 
-    my $ace  = $self->aceperl_db_handle;
+    my $ensembl_slice = $self->DB->session_slice;
 
-    my $assembly = Hum::Ace::Assembly->new;
-    $assembly->name($self->slice_name);
-    $assembly->MethodCollection($self->MethodCollection);
-    $assembly->express_data_fetch($ace);
+    my $region = Bio::Vega::Region->new_from_otter_db( slice => $ensembl_slice );
+
+    my $ace_maker = Bio::Vega::Region::Ace->new;
+    my $assembly = $ace_maker->make_assembly(
+        $region,
+        {
+            name             => $self->slice_name,
+            MethodCollection => $self->MethodCollection,
+        }
+        );
 
     return $assembly;
 }
@@ -398,14 +377,19 @@ sub slice_name {
 
     my $slice_name;
     unless ($slice_name = $self->{'_slice_name'}) {
-        my @slice_list = $self->aceperl_db_handle->fetch(Assembly => '*');
-        my @slice_names = map { $_->name } @slice_list;
-        $self->logger->logdie("Error: more than 1 assembly in database: @slice_names") if @slice_names > 1;
-        $slice_name = $self->{'_slice_name'} = $slice_names[0];
+        $slice_name = $self->{'_slice_name'} = $self->_set_slice_name_sqlite;
     }
 
     return $slice_name;
 }
+
+sub _set_slice_name_sqlite {
+    my ($self) = @_;
+    my $slice = $self->DB->session_slice;
+    my $name = sprintf('%s_%s-%s', $slice->seq_region_name, $slice->start, $slice->end);
+    return $name;
+}
+
 
 sub session_colourset {
     my ($self) = @_;
@@ -546,7 +530,7 @@ sub zmap_config_write {
 sub zmap_config {
     my ($self) = @_;
 
-    my $config = $self->ace_config;
+    my $config = $self->_zmap_dna_config;
     _config_merge($config, $self->_zmap_config);
     _config_merge($config, $self->DataSet->zmap_config($self));
 
@@ -601,70 +585,29 @@ sub _zmap_config {
     return $config;
 }
 
-sub ace_config {
+sub _zmap_dna_config {
     my ($self) = @_;
 
-    my $slice_name = $self->slice_name;
-    my $gff_version = 2;
-    my $acedb_version = $self->DataSet->acedb_version;
-
-    my $ace_server = $self->ace_server;
-    my $url = sprintf 'acedb://%s:%s@%s:%d?gff_version=%d'
-        , $ace_server->user, $ace_server->pass, $ace_server->host, $ace_server->port
-        , $gff_version;
-
-    my @methods = $self->MethodCollection->get_all_top_level_Methods;
-    my @method_names = map { $_->name } @methods;
-
-    # extract DNA source into a separate initial stanza for pre-loading
-    #
-    my $dna         = [ grep { $_ eq 'DNA' } @method_names ];
-    my $featuresets = [ grep { $_ ne 'DNA' } @method_names ];
-
-    my @sources = $slice_name;
-    my $dna_slice_name;
-    if (@$dna) {
-        $dna_slice_name = sprintf '%s-DNA', $slice_name;
-        unshift @sources, $dna_slice_name;
-
-        # RT400142: we also put 'DNA' back in as the first item in the main stanza
-        unshift @$featuresets, @$dna;
-    }
+    my $dna_slice_name = sprintf '%s-DNA', $self->slice_name;
+    my $dna_source = $self->DataSet->filter_by_name('DNA');
+    $dna_source or $self->logger->logdie('No DNA stanza in config');
 
     my $config = {
-
         'ZMap' => {
-            sources => \@sources,
+            sources => [ $dna_slice_name ],
         },
-
-        $slice_name => $self->_ace_slice_config(
-            url         => $url,
-            featuresets => $featuresets,
-            version     => $acedb_version,
-        ),
-
+        $dna_slice_name => {
+            sequence    => 'true',
+            group       => 'always',
+            featuresets => 'DNA',
+            stylesfile  => $self->stylesfile,
+            url         => $dna_source->url($self),
+        },
     };
-
-    if ($dna_slice_name) {
-        $config->{$dna_slice_name} = $self->_ace_slice_config(
-            url         => $url,
-            featuresets => $dna,
-            version     => $acedb_version,
-            );
-    }
 
     return $config;
 }
 
-sub _ace_slice_config {
-    my ($self, @args) = @_;
-    return {
-        sequence    => 'true',
-        group       => 'always',
-        stylesfile  => $self->stylesfile,
-        @args,
-    }
-}
 
 my $sqlite_fetch_query = "
 SELECT  oai.accession_sv     AS  'Name'
@@ -847,31 +790,14 @@ sub offset {
     return $offset;
 }
 
-sub generate_XML_from_acedb {
+sub generate_XML_from_sqlite {
     my ($self) = @_;
 
-    # Make Ensembl objects from the acedb database
-    my $feature_types =
-        [ $self->MethodCollection->get_all_mutable_non_transcript_Methods ];
-    my $converter = Bio::Vega::AceConverter->new;
-    $converter->ace_handle($self->aceperl_db_handle);
-    $converter->feature_types($feature_types);
-    $converter->otter_slice($self->slice);
-    $converter->generate_vega_objects;
-
-    # Pass the Ensembl objects to the XML formatter
-    my $region = Bio::Vega::Region->new;
-    $region->species($self->slice->dsname);
-    $region->slice(           $converter->ensembl_slice           );
-    $region->clone_sequences( @{$converter->clone_seq_list || []} );
-    $region->genes(           @{$converter->genes          || []} );
-    $region->seq_features(    @{$converter->seq_features   || []} );
-
-    # write_region requires that the client describe the region, to
-    # ensure it is the correct one, but then ignores ContigInfo.
-
+    $self->DB->vega_dba->clear_caches;
+    my $region = Bio::Vega::Region->new_from_otter_db( slice => $self->DB->session_slice );
     my $formatter = Bio::Vega::Transform::RegionToXML->new;
     $formatter->region($region);
+    $formatter->squash_exon_phases_on_no_translation(1); # to match AceConverter
     return $formatter->generate_OtterXML;
 }
 
@@ -902,220 +828,14 @@ sub unlock_otter_slice {
     return 1;
 }
 
-sub ace_server {
-    my ($self) = @_;
-
-    my $sgif;
-    unless ($sgif = $self->{'_ace_server'}) {
-        my $home = $self->home;
-        $sgif = Hum::Ace::LocalServer->new($home);
-        $sgif->server_executable('sgifaceserver');
-
-        $sgif->timeout_string('0:30:100:0');
-        # client_timeout:server_timeout:max_req_sizeKB:auto_save_interval
-
-        $sgif->start_server() or return 0; # this only check the fork was successful
-        my $pid = $sgif->server_pid;
-        $sgif->ace_handle(1)  or return 0; # this checks it can connect
-        $self->logger->info("sgifaceserver on $home running, pid $pid");
-        $self->{'_ace_server'} = $sgif;
-    }
-    return $sgif;
-}
-
-sub ace_server_registered {
-    my ($self) = @_;
-
-    return $self->{'_ace_server'};
-}
-
-sub aceperl_db_handle {
-    my ($self) = @_;
-
-    return $self->ace_server->ace_handle;
-}
-
 sub make_database_directory {
     my ($self) = @_;
 
     my $logger = $self->logger;
     my $home   = $self->home;
-    my $tar    = $self->Client->get_lace_acedb_tar
-        or $logger->logconfess("Client did not return tar file for local acedb database directory structure");
     mkdir($home, 0777) or $logger->logdie("Can't mkdir('$home') : $!");
 
-    my $tar_command = "cd '$home' && tar xzf -";
-    try {
-        open my $expand, '|-', $tar_command or die "Can't open pipe '$tar_command'; $?";
-        print $expand $tar;
-        close $expand or die "Error running pipe '$tar_command'; $?";
-    }
-    catch {
-        $self->error_flag(1);
-        $logger->logconfess($_);
-    };
-
-    # rawdata used to be in tar file, but no longer because
-    # it doesn't (yet) contain any files.
-    my $rawdata = "$home/rawdata";
-    mkdir($rawdata, 0777);
-    $logger->logdie("Can't mkdir('$rawdata') : $!") unless -d $rawdata;
-
-    $self->make_passwd_wrm;
-
     return;
-}
-
-sub write_methods_acefile {
-    my ($self) = @_;
-
-    my $methods_file = $self->home . '/rawdata/methods.ace';
-    my $collect = $self->MethodCollection;
-    $collect->write_to_file($methods_file);
-    $self->add_acefile($methods_file);
-
-    return;
-}
-
-sub make_passwd_wrm {
-    my ($self) = @_;
-
-    my $passWrm = $self->home . '/wspec/passwd.wrm';
-    my ($prog) = $0 =~ m{([^/]+)$};
-    my $real_name      = ( getpwuid($<) )[0];
-    my $effective_name = ( getpwuid($>) )[0];
-
-    my $fh;
-    sysopen($fh, $passWrm, O_CREAT | O_WRONLY, 0644)
-        or $self->logger->logconfess("Can't write to '$passWrm' : $!");
-    print $fh "// PASSWD.wrm generated by $prog\n\n";
-
-    # acedb looks at the real user ID, but some
-    # versions of the code seem to behave differently
-    if ( $real_name ne $effective_name ) {
-        print $fh "root\n\n$real_name\n\n$effective_name\n\n";
-    }
-    else {
-        print $fh "root\n\n$real_name\n\n";
-    }
-
-    close $fh;    # Must close to ensure buffer is flushed into file
-
-    return;
-}
-
-sub initialize_database {
-    my ($self) = @_;
-
-    my $logger = $self->logger;
-    my $home   = $self->home;
-    my $tace   = $self->tace;
-
-    my $parse_log = "$home/init_parse.log";
-    my $pipe = "'$tace' '$home' >> '$parse_log'";
-
-    open my $pipe_fh, '|-', $pipe
-        or $logger->logdie("Can't open pipe '$pipe' : $!");
-    # Say "yes" to "initalize database?" question.
-    print $pipe_fh "y\n" unless $self->db_initialized;
-    foreach my $file ($self->list_all_acefiles) {
-        print $pipe_fh "parse $file\n";
-    }
-    close $pipe_fh or $logger->logdie("Error initializing database exit($?)");
-
-    open my $fh, '<', $parse_log or $logger->logdie("Can't open '$parse_log' : $!");
-    my $file_log = '';
-    my $in_parse = 0;
-    my $errors = 0;
-    while (<$fh>) {
-        if (/parsing/i) {
-            $file_log = "  $_";
-            $in_parse = 1;
-        }
-
-        if (/(\d+) (errors|parse failed)/i) {
-            if ($1) {
-                $logger->error("Parse error detected:\n$file_log  $_");
-                $errors++;
-            }
-        }
-        elsif (/Sorry/) {
-            $logger->warn("Apology detected:\n$file_log  $_");
-            $errors++;
-        }
-        elsif ($in_parse) {
-            $file_log .= "  $_";
-        }
-    }
-    close $fh;
-
-    $logger->confess("Error initializing database") if $errors;
-    $self->empty_acefile_list;
-    return 1;
-}
-
-
-sub db_initialized {
-    my ($self) = @_;
-
-    my $init_file = join('/', $self->home, 'database/ACEDB.wrm');
-    return -e $init_file;
-}
-
-sub write_dna_data {
-    my ($self, $dna, @tiles) = @_;
-
-    my $ace_filename = $self->home . '/rawdata/dna.ace';
-    $self->add_acefile($ace_filename);
-    open my $ace_fh, '>', $ace_filename
-        or $self->logger->logconfess("Can't write to '$ace_filename' : $!");
-    print $ace_fh $self->dna_ace_data($dna, @tiles);
-    close $ace_fh;
-
-    return;
-}
-
-sub dna_ace_data {
-    my ($self, $dna, @tiles) = @_;
-
-    $dna = lc $dna;
-    $dna =~ s/(.{60})/$1\n/g;
-
-    my @feature_ace;
-    my %seen_ctg = ( );
-    my @ctg_ace = ( );
-
-    for (@tiles) {
-
-        my ($start, $end,
-            $ctg_name, $ctg_start,
-            $ctg_end, $ctg_strand, $ctg_length,
-            ) = split /\t/;
-        ($start, $end) = ($end, $start) if $ctg_strand == -1;
-
-        my $strand_ace =
-            $ctg_strand == -1 ? 'minus' : 'plus';
-        my $feature_ace =
-            sprintf qq{Feature "Genomic_canonical" %d %d %f "%s-%d-%d-%s"\n},
-            $start, $end, 1.000, $ctg_name, $ctg_start, $ctg_end, $strand_ace;
-        push @feature_ace, $feature_ace;
-
-        unless ( $seen_ctg{$ctg_name} ) {
-            $seen_ctg{$ctg_name} = 1;
-            my $ctg_ace =
-                sprintf qq{\nSequence "%s"\nLength %d\n}, $ctg_name, $ctg_length;
-            push @ctg_ace, $ctg_ace;
-        }
-
-    }
-
-    my $name = $self->slice->name;
-    my $ace = join ''
-        , qq{\nSequence "$name"\n}, @feature_ace , @ctg_ace
-        , qq{\nSequence : "$name"\nDNA "$name"\n\nDNA : "$name"\n$dna\n}
-    ;
-
-    return $ace;
 }
 
 sub reload_filter_state {
@@ -1160,6 +880,7 @@ sub ColumnCollection {
     unless ($cc) {
         my $ds = $self->DataSet;
         $ds->load_client_config;
+        $self->_add_transcript_filters($ds);
         $cc = $self->{'_ColumnCollection'} =
             Bio::Otter::Lace::Chooser::Collection->new_from_Filter_list(
                 @{ $ds->filters },
@@ -1167,6 +888,44 @@ sub ColumnCollection {
             );
     }
     return $cc;
+}
+
+sub _add_transcript_filters {
+    my ($self, $dataset) = @_;
+
+    foreach my $top_level ( $self->MethodCollection->get_all_top_level_Methods ) {
+
+        my @methods = $top_level->get_all_child_Methods;
+        next unless @methods;
+        next unless $methods[0]->is_transcript;
+        my @method_names =
+            grep { $_ !~ /:$/ } # strip pure prefices
+            map  { $_->name   }
+            @methods;
+
+        my $filter_name = lc $top_level->name;
+        $filter_name =~ s/\s+/_/g;
+        next if $dataset->filter_by_name($filter_name); # may already have been added for previous region
+
+        my $child_list = join(',', @method_names);
+
+        my $filter = Bio::Otter::Source::Filter->from_config({
+            name                => $filter_name,
+            internal            => 'always_on',
+            priority            => 1,
+            script_name         => 'localdb_get',
+            resource_bin        => 'local',
+            analysis            => 'Otter',
+            feature_kind        => 'Gene',
+            zmap_column         => $top_level->name,
+            description         => $top_level->remark,
+            transcript_analyses => $child_list,
+            featuresets         => "${filter_name},${child_list}",
+                                                             });
+        $dataset->add_filter($filter);
+    }
+
+    return;
 }
 
 my @coverage_param_list = (
@@ -1342,10 +1101,6 @@ sub DESTROY {
     }
     my $client = $self->Client;
     return if try {
-        if ($self->ace_server_registered) {
-            # $self->ace_server->kill_server; # this may hang...
-            $self->kill_ace_server;           # ...so do this instead
-        }
         if ($client) {
             $self->unlock_otter_slice() if $self->write_access;
         }
@@ -1370,21 +1125,6 @@ sub DESTROY {
     }
 
     return; # not the only return
-}
-
-#  This is basically $self->ace_server->kill_server except that it
-#  does not call waitpid to wait for the Ace server process to exit.
-#  This is necessary to prevent lockups when closing Otter sessions.
-
-sub kill_ace_server {
-    my( $self ) = @_;
-    my $ace_server = $self->ace_server;
-    my $ace_handle = $ace_server->ace_handle;
-    $ace_handle->raw_query('shutdown') if $ace_handle;
-    $ace_server->disconnect_client;
-    $ace_server->forget_port;
-    $ace_server->server_pid(undef);
-    return;
 }
 
 # Required by Bio::Otter::Log::WithContextMixin

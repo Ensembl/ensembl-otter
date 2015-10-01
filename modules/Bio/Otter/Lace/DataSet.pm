@@ -390,6 +390,14 @@ sub _filter_add {
     return;
 }
 
+sub add_filter {
+    my ($self, $filter) = @_;
+    my $name = $filter->name;
+    $self->{_filter_by_name}->{$name} = $filter;
+    $self->_filter_add($name, 1);
+    return;
+}
+
 sub filter_by_name {
     my ($self, $name) = @_;
     return $self->{'_filter_by_name'}{$name};

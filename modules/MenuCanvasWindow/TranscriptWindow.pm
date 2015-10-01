@@ -92,7 +92,7 @@ sub initialise {
             $canvas->Tk::bind('<Control-e>',   $_select_evidence);
             $canvas->Tk::bind('<Control-E>',   $_select_evidence);
 
-            # Save into db via sgifaceserver
+            # Save into db
             my $save_command = sub{ $self->_save_if_changed };
             $file_menu->add('command',
                 -label          => 'Save',
@@ -2160,15 +2160,6 @@ sub _export_highlighted_text_to_selection {
     return substr($clip, $offset, $max_bytes);
 }
 
-# not used
-sub _export_ace_subseq_to_selection {
-    my ($self, $offset, $max_bytes) = @_;
-
-    my $sub = $self->_new_SubSeq_from_tk;
-
-    return substr($sub->ace_string, $offset, $max_bytes);
-}
-
 sub _middle_button_paste {
     my ($self) = @_;
 
@@ -2677,7 +2668,7 @@ sub _get_SubSeq_if_changed {
     # warn sprintf "Comparing old:\n%s\nTo new:\n%s",
     #     $old->ace_string, $new->ace_string;
 
-    if ($old->is_archival and $new->ace_string eq $old->ace_string) {
+    if ($old->ensembl_dbID and $new->ace_string eq $old->ace_string) {
         # SubSeq is saved, and there are no changes.
         return;
     }
@@ -2906,14 +2897,8 @@ sub _do_save_subseq_work {
         $self->name($new_name);
         $self->_evidence_hash($sub->clone_evidence_hash);
 
-        # update_Locus in this object will be called
-        # from update_Locus in the SessionWindow
-        $SessionWindow->update_Locus($sub->Locus);
-
         ### Update all subseq edit windows (needs a sane Ace server)
         $SessionWindow->draw_subseq_list;
-
-        $sub->is_archival(1);
     }
 
     return 1;

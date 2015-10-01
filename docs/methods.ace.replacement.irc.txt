@@ -1,0 +1,75 @@
+11:33 <@mg13> How does this look as an otter_config format extension:
+11:33 <@mg13> [default.filter.curated_transcripts]
+11:33 <@mg13> children=Transcript,Retained_intron,Disrupted_domain,IG_gene,TR_gene,...
+11:34 <@mg13> add_alternates=trunc
+11:34 <@mg13> transcript_analyses=__CHILDREN__
+11:34 <@mg13> featuresets=__SELF__,__CHILDREN__
+11:34 <@mg13> ...
+11:39 <@jgrg> Why do we need children?
+11:41 <@mg13> we need to set transcript_analyses and featuresets to the list of transcript types for each transcript column, repeated again with a _trunc suffix.
+11:41 <@mg13> ‘children’ may not be the best word
+11:42 <@mg13> in my example, __CHILDREN__ would expand to Transcript,Retained_intron,Disrupted_domain,IG_gene,TR_gene,Transcript_trunc,Retained_intron_trunc,Disrupted_domain_trunc,IG_gene_trunc,TR_gene_trunc
+11:42 <@mg13> (actual list is much longer)
+11:46 <@jgrg> The purpose of this is to group styles into one zmap column?
+11:47 <@mg13> This is for loading the transcript columns via filter scripts from SQLite. It’s replacing the config in methods.ace.
+11:48 <@mg13> methods.ace does it the other way around: each transcript method has a Column_parent
+11:48 <@mg13> (Thanks for answering Ruth’s query)
+11:57 <@jgrg> I think if you don't specify transcript_analyses you get them all.
+12:01 <@mg13> But we need to segment transcripts into the different ZMap columns - if they’re all in one GFF stream, can ZMap do that via config?
+12:04 <@jgrg> See line 375 of Bio::Vega::Utils::EnsEMBL2GFF
+12:05 <@jgrg> I think that will need to change.
+12:07 <@jgrg> In the loutre db, all the transcripts have the same analysis.
+12:08 <@mg13> They do, but I change the analysis on the client when storing to SQLite.
+12:10 <@jgrg> Lunch.
+12:59 -!- jgrg [~jgrg@gen1d.internal.sanger.ac.uk] has quit [Quit: jgrg]
+13:07 -!- jgrg [~jgrg@ssh.sanger.ac.uk] has joined #annosoft
+13:07 -!- mode/#annosoft [+o jgrg] by ChanServ
+14:02 -!- jgrg [~jgrg@ssh.sanger.ac.uk] has quit [Quit: jgrg]
+14:06 -!- jgrg [~jgrg@ssh.sanger.ac.uk] has joined #annosoft
+14:06 -!- mode/#annosoft [+o jgrg] by ChanServ
+14:06 -!- jgrg [~jgrg@ssh.sanger.ac.uk] has quit [Remote host closed the connection]
+14:06 -!- jgrg [~jgrg@gen1d.internal.sanger.ac.uk] has joined #annosoft
+14:06 -!- mode/#annosoft [+o jgrg] by ChanServ
+15:53 <@jgrg> Oh, the zmap config question.
+15:54 <@jgrg> We give it some groups of styles to put into the same column.
+15:54 <@jgrg> We do this for repeats.
+15:55 <@jgrg> For saving genes / transcripts into the SQLite db, I thought that would use the same mechanism as saving on the server into a loutre db.
+15:56 <@jgrg> So I'm surprised that we don't save them with analysis = Otter.
+15:57 <@mg13> It is the same code, but I added an option to modify the analysis before saving on the client. 
+16:00 <@mg13> It avoided having to modify (too much) the GFF generating code.
+16:02 <@jgrg> The "featuresets=" lines in otter_config group different gff source / style features into the same column.
+16:04 <@jgrg> Ermm, unless I mean the "zmap_column=" lines...
+16:04 <@mg13> There’s more than one way to do it, I think
+16:05 <@mg13> featuresets= is handy, but the context is per ZMap source spec, I think
+16:05 <@jgrg> I think you need to list the featuresets if you're going to produce more than one style of feature from the column.
+16:06 <@mg13> yes. but I think I need a pipe script invocation per column
+16:07 <@jgrg> ... and group into a named column.
+16:10 <@mg13> zmap_column= lets you put several sources into one column, as for Repeats.
+16:12 <@jgrg> Without it, if you produce several gff source / style from the same source, they each go into a separate column, don't they?
+16:13 <@mg13> Without featuresets= ? Yes, I think that’s correct.
+16:13 <@mg13> It’s making my head hurt!
+16:14 <@jgrg> I think the system is somewhat broken.
+16:14 <@jgrg> It currently achieves what we want.
+16:14 <@mg13> I think you’re right.
+16:14 <@jgrg> But doesn't have a senisible overarching design.
+16:14 <@mg13> I think it can be made to do what I need, but not necessarily optimally.
+16:15 <@mg13> I will need to run a pipe for each ZMap transcript column.
+16:15 <@jgrg> That's nasty.
+16:15 <@mg13> What I’d like to do is run one pipe and have ZMap filter different source types into its set of columns, but AFAICS that’s not possible.
+16:16 <@mg13> (ZMap filtering on gff_source)
+16:16 <@jgrg> I think you're right. They could be grouped into one column, but not filtered into more than one.
+16:17 <@jgrg> Ah, OK. I understand. One script per zmap transcript column isn't as bad.
+16:17 <@mg13> Okay, so my original plan is probably sensible.
+16:17 <@mg13> (Yes, that’s it. So we have a few scripts, but not one per transcript type)
+16:18 <@jgrg> I just feel uneasy about adding more syntax to the config file.
+16:19 <@mg13> I know. But some alternatives are (a) very verbose and error-prone config file, or (b) special-casing in the otter code, or (c) a script to generate otter_config from something else…
+16:19 <@jgrg> It would also be nice if when we need to add a new type of transcript, we don't have to make simultaneous edits in several places.
+16:20 <@mg13> True.
+16:21 <@mg13> Unfortunately the MethodsCollection from methods.ace is used fairly extensively, and I was planning to delay its removal as a separate task.
+16:21 <@jgrg> OK.
+16:21 <@mg13> But that should/could still inform any changes or extensions to otter_config
+16:25 <@mg13> It may make more sense, for the moment, to generate the config for these transcript columns automatically in otter from methods.ace.
+16:26 <@jgrg> Sounds reasonable.
+16:26 <@mg13> This discussion has been useful, thanks. 
+16:27 <@jgrg> Sorry I got distracted before lunch.
+16:27 <@mg13> no worries

@@ -249,6 +249,11 @@ sub reincarnate_gene {
         # force loading of gene attributes
         $gene->get_all_Attributes();
 
+        # Set the truncated flag if appropriate
+        if ($gene->has_truncated_attribute) {
+            $gene->truncated_flag(1);
+        }
+
         # force loading and reincarnation of transcripts
         foreach my $t (@{ $gene->get_all_Transcripts() }) {
 
@@ -413,7 +418,9 @@ sub fetch_all_by_Slice {
 
                 my $gene_att = $gene->get_all_Attributes;
                 push @$gene_att, $remark_att;
+
                 $gene->truncated_flag(1);
+                $gene->add_truncated_attribute; # for saving in SQLite schema
                 warn "Found a truncated gene ($message)\n";
             }
         }

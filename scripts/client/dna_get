@@ -1,0 +1,71 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+
+package Bio::Otter::GetScript::DNAGet;
+
+use Bio::EnsEMBL::SimpleFeature;
+
+use base 'Bio::Otter::Utils::GetScript::LocalDB';
+
+sub version { return 'dna_get 0.6'; };
+sub log_filename { return 'localdb_log.txt'; }
+
+sub do_it {
+    my ($self) = @_;
+
+    $self->do_requires;
+
+    my $slice = $self->vega_slice;
+    my $start = $slice->start;
+    my $end   = $slice->end;
+    my $label = $slice->seq_region_name;
+
+    my $feature = Bio::EnsEMBL::SimpleFeature->new(
+            -start         => 1,
+            -end           => $slice->length,
+            -strand        => 1,
+            -slice         => $slice,
+            -display_label => $label,
+        );
+
+    my $fasta = << "__EO_HEADER__";
+##sequence-region $label $start $end
+##FASTA
+>$label
+__EO_HEADER__
+
+    # FIXME: dup with Bio::Otter::Server::GFF
+    my $seq   = $feature->seq;
+    while ($seq =~ /(.{1,70})/g) {
+        $fasta .= $1 . "\n";
+    }
+
+    $self->send_feature_gff(
+        [ ],                    # no features!
+        0,                      # don't process_gff
+        \$fasta,
+        );
+
+    return;
+}
+
+## no critic (Modules::ProhibitMultiplePackages)
+
+package main;
+
+use Log::Log4perl::Level;
+
+Bio::Otter::GetScript::DNAGet
+    ->new(log4perl => $DEBUG)
+    ->run;
+
+exit;
+
+__END__
+
+=head1 AUTHOR
+
+Ana Code B<email> anacode@sanger.ac.uk
+

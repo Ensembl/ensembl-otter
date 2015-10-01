@@ -18,53 +18,39 @@ sub teardown {
     return;
 }
 
-sub make_ace_string : Test(2) {
-    my $test = shift;
+# Null test: expected and actual are both now fetched by make_assembly - Doh!
 
-    my $bvra = $test->our_object;
-    can_ok $bvra, 'make_ace_string';
+# sub make_assembly : Test(25) {  # n = 1 + 6 * @make_assembly_regions
+#     my $test = shift;
 
-    # quick check on _process_contig_attribs for 'annotated'
-    my $cs = ($test->parsed_region->clone_sequences)[0];
-    $cs->ContigInfo->add_Attributes(Bio::EnsEMBL::Attribute->new(-CODE => 'annotated', -VALUE => 'T'));
+#     my $bvra = $test->our_object;
+#     can_ok $bvra, 'make_assembly';
 
-    my $ace = $bvra->make_ace_string($test->parsed_region);
-    ok ($ace, '... produces output');
+#     # FIXME: duplication (now only of intent) with T:B:V:Region::Store
 
-    return;
-}
+#     my @make_assembly_regions = (
+#         undef,                      # use default human_test:chr2-38:929903-1379472
+#         'human_test:chr6-38:2557766-2647766',
+#         'human_test:chr12-38:30351955-34820185',
+#         'mouse:chr1-38:3009920-3786391',
+#         );
 
-sub make_assembly : Test(25) {  # n = 1 + 6 * @make_assembly_regions
-    my $test = shift;
+#     my $need_teardown_setup;
+#     foreach my $test_region (@make_assembly_regions) {
 
-    my $bvra = $test->our_object;
-    can_ok $bvra, 'make_assembly';
+#         if ($test_region or $need_teardown_setup) {
+#             $test->teardown;
+#             $test->test_region(OtterTest::TestRegion->new($test_region));
+#             $test->setup;
+#         }
 
-    # FIXME: duplication (now only of intent) with T:B:V:Region::Store
+#         $test->_do_make_assembly;
 
-    my @make_assembly_regions = (
-        undef,                      # use default human_test:chr2-38:929903-1379472
-        'human_test:chr6-38:2557766-2647766',
-        'human_test:chr12-38:30351955-34820185',
-        'mouse:chr1-38:3009920-3786391',
-        );
+#         $need_teardown_setup = 1;
+#     }
 
-    my $need_teardown_setup;
-    foreach my $test_region (@make_assembly_regions) {
-
-        if ($test_region or $need_teardown_setup) {
-            $test->teardown;
-            $test->test_region(OtterTest::TestRegion->new($test_region));
-            $test->setup;
-        }
-
-        $test->_do_make_assembly;
-
-        $need_teardown_setup = 1;
-    }
-
-    return;
-}
+#     return;
+# }
 
 sub _do_make_assembly {
     my $test = shift;

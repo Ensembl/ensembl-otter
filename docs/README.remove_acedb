@@ -1,0 +1,17 @@
+Otter without AceDB
+-------------------
+
+IMPORTANT:
+
+AceDB has been replaced as local storage of annotation, by SQLite via
+the EnsEMBL API. This has been done carefully, replicating most of the
+caching and processing previously done via Ace and AceDB.
+
+A consequence of this is that the in-memory EnsEMBL objects ARE NOT
+NECESSARILY CONNECTED AND CACHED in the expected EnsEMBL API fashion,
+and some DIRECT MANIPULATION of the SQLite data occurs.
+
+You have been warned!
+
+The code clears EnsEMBL caches at strategic places to ensure that the
+representation in SQLite is taken as canonical.
