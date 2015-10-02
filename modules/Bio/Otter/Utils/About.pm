@@ -48,9 +48,9 @@ sub about_text {
     # Extra info (beyond $anno) below can be found from log output or
     # the ensembl-otter commitid, so we only need to show it in GUI
     return <<"TEXT";
-This is Otterlace version $vsn, $desig_info
+This is Otter version $vsn, $desig_info
 $dev_server
-Otterlace web page
+Otter web page
   http://www.sanger.ac.uk/resources/software/otterlace/
 
 Contains\n${anno}Client Ensembl from $vsn_cliens

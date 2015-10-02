@@ -623,8 +623,8 @@ sub do_rename_locus {
             # bailed out on sqlite
             $msg = "Renamed in Ace but failed in SQLite";
         } elsif ($done{'int'}) {
-            # haven't told Ace, so Otterlace state is wrong
-            $msg = "Rename failed, please restart Otterlace";
+            # haven't told Ace, so Otter state is wrong
+            $msg = "Rename failed, please restart Otter";
         } else {
             $msg = "Could not rename";
         }
@@ -3103,7 +3103,7 @@ sub _zircon_timeouts {
 sub _zircon_app_id {
     my ($self) = @_;
     my $widget_id = $self->top_window->id;
-    my $_zircon_app_id = "Otterlace_${widget_id}";
+    my $_zircon_app_id = "Otter_${widget_id}";
     return $_zircon_app_id;
 }
 

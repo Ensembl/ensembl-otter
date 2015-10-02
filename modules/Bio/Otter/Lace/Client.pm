@@ -317,7 +317,7 @@ sub new_AceDatabase {
         my @used = grep { -e $_ } ($dir, "$dir.done");
         # Latter will be used later in _move_to_done.  RT410906
         #
-        # There is no race (vs. an honest Otterlace) because existing
+        # There is no race (vs. an honest Otter) because existing
         # directories would have been made by a previous run with what
         # is now our PID, on local machine.
         last if !@used;
@@ -760,7 +760,7 @@ sub _general_http_dialog {
             # 410 = Gone.  Not coming back; probably concise.  RT#234724
             # Actually, maybe not so concise.  RT#382740 returns "410 Gone" plus large HTML.
             $clogger->warn(__truncdent_for_log($content, 10240, '* '));
-            $clogger->logdie(sprintf("Otter Server v%s is gone, please download an up-to-date Otterlace.",
+            $clogger->logdie(sprintf("Otter Server v%s is gone, please download an up-to-date Otter.",
                                      Bio::Otter::Version->version));
         } else {
             # Some error.  Content-length: protection is not yet applied,
@@ -787,7 +787,7 @@ sub _general_http_dialog {
                     $err =~ s{[.\n]*\z}{,}; # "... at /www/.../foo line 30,"
                 } else {
                     # else some raw and probably large failure, hide it
-                    $err = 'error text not recognised, details in Otterlace log';
+                    $err = 'error text not recognised, details in Otter log';
                 }
                 $clogger->logdie(sprintf "Error %d: %s", $response->code, $err);
             }
@@ -1121,7 +1121,7 @@ sub _ensure_authorised {
     my ($self) = @_;
 
     # Is user associated with the cookiejar the one configured?
-    # Done here because it's the first action of Otterlace.
+    # Done here because it's the first action of Otter.
     my $who_am_i = $self->do_authentication;
     if ($who_am_i ne $self->author) {
         my $a = $self->author;
@@ -1219,27 +1219,27 @@ sub designate_this {
     my @standard = qw( live test old );
     if (defined $key && $key eq 'dev') {
         # dev -> no staleness check
-        $out{descr} = 'an unstable developer-edition Otterlace';
+        $out{descr} = 'an unstable developer-edition Otter';
     } elsif (defined $key && grep { $key eq $_ } @standard) {
         # a standard designation
         my ($L, $C) = $key eq 'old'
           ? qw( last final ) : qw( latest current );
         if ($txtvsn eq $out{latest_this_major}) {
-            $out{descr} = "the $L $key Otterlace";
+            $out{descr} = "the $L $key Otter";
         } else {
-            $out{descr} = "not the $C $key Otterlace\nIt is $txtvsn, $L is $out{latest_this_major}";
+            $out{descr} = "not the $C $key Otter\nIt is $txtvsn, $L is $out{latest_this_major}";
             $out{stale} = 1;
         }
     } elsif (defined $key && $key !~ /^\d+(_|$)/) {
         # a non-standard designation
-        $out{descr} = "a special $feat Otterlace";
+        $out{descr} = "a special $feat Otter";
         if ($txtvsn ne $out{latest_this_major}) {
             $out{descr} .= "\nIt is $txtvsn, latest is $out{latest_this_major}";
             $out{stale} = 1;
         }
     } elsif ($major > int($live)) {
         # not sure what it is, but not obsolete
-        $out{descr} = "an experimental $feat Otterlace";
+        $out{descr} = "an experimental $feat Otter";
         $out{major_designation} = 'dev'; # a small fib
         $out{latest_this_major} = undef;
 
@@ -1247,7 +1247,7 @@ sub designate_this {
         # not designated, or designated only by number
         # (the latter probably has an Otter Server)
         $out{major_designation} = undef;
-        $out{descr} = "an obsolete Otterlace.  We are now on $live";
+        $out{descr} = "an obsolete Otter.  We are now on $live";
         $out{stale} = 1;
     }
 

@@ -1,12 +1,12 @@
 =head1 ABOUT THIS REPOSITORY
 
-This repository contains Otterlace - client, server and supporting code.  It
+This repository contains Otter - client, server and supporting code.  It
 has dependencies on several other codebases, please contact the team before
 attempting to install it.
 
-=head2 Otterlace
+=head2 Otter
 
-Otterlace is an interactive, graphical client, which uses a local acedb
+Otter is an interactive, graphical client, which uses a local acedb
 database with ZMap and perl/Tk tools to curate genomic annotation.
 Annotation is stored in an extended Ensembl schema (the "otter" database),
 which presents the annotator with contiguous regions of a chromosome.  The

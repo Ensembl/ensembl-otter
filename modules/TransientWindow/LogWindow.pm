@@ -122,7 +122,7 @@ sub initialise {
     )->pack(-side => 'right');
     $self->balloon->attach
       ($rsbut,
-       -balloonmsg => "Copy all Otterlace logfiles to your network-home.\n".
+       -balloonmsg => "Copy all Otter logfiles to your network-home.\n".
        ($copy_dest
         ? 'May require ssh tunnel / VPN to be up.'
         : 'For laptops used by staff; requires configuration.'));
@@ -238,7 +238,7 @@ sub show_output {
     # event, but this is only possible when non-blocking works.
       ;# while ($nread && !$no_jump);
 
-    # Logfile can contain binary junk from Otterlace or child
+    # Logfile can contain binary junk from Otter or child
     # processes.  We can't prevent it & Tk::ROText cannot accept it.
     # => Quote here
     $add =~ s{\\x([0-9a-fA-F][0-9a-fA-F])}{\\5Cx$1}g; # Literal \x00 to \x5Cx00
@@ -277,10 +277,10 @@ sub _mailto_init {
 
     my $domain    = '@sanger.ac.uk';
     my @mailto =
-      ([ 'The Otterlace application, pipeline and data' =>  "anacode$domain" ],
-       [ 'The ZMap application'                         =>     "zmap$domain" ],
-       [ 'Blixem, Dotter and Belvu applications'        => "seqtools$domain" ],
-       [ 'All bugs found during testing'                => "annotest$domain" ]);
+      ([ 'The Otter application, pipeline and data' =>  "anacode$domain" ],
+       [ 'The ZMap application'                     =>     "zmap$domain" ],
+       [ 'Blixem, Dotter and Belvu applications'    => "seqtools$domain" ],
+       [ 'All bugs found during testing'            => "annotest$domain" ]);
 
     # We may get clues that tickets should go to annotest or developer.
     # Set for internal Linux by wrapper script, and perhaps otherwise by version_diagnosis

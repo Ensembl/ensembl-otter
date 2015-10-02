@@ -119,7 +119,7 @@ sub new {
     my $help_menu = $self->make_menu('Help', 0, 'right');
     $help_menu->add
       ('command',
-       -label => 'About Otterlace...',
+       -label => 'About Otter...',
        -underline => 0,
        -command => [ $self, 'show_about' ]);
 
@@ -152,14 +152,14 @@ sub ensure_tools {
         ();
     };
 
-    # Check we are running a sensible Otterlace version
+    # Check we are running a sensible Otter version
     $self->uptodate_check;
 
     if (@v) {
         local $" = "\n  ";
         $self->logger->info("Tools are\n  @v");
     } else {
-        $self->message("Some parts of Otterlace are not working\n".
+        $self->message("Some parts of Otter are not working\n".
                        "See Help > About... for info");
     }
 
@@ -190,7 +190,7 @@ sub show_about {
 
     $self->{'_about'} ||= do {
         my $A = $self->top_window->DialogBox
-          (-title => 'About Otterlace',
+          (-title => 'About Otter',
            -buttons => [qw[ Close ]]);
         $A->Tk::bind('<Escape>', [ $A, 'Exit' ]);
 

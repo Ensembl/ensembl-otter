@@ -536,7 +536,7 @@ If no chromosomes are specified, the currently visible set is taken.
 =over 4
 
 =item * Having two or more genes on a chromosome with the same name is
-bad.  It breaks Vega QC, and Otterlace will not load a session
+bad.  It breaks Vega QC, and Otter will not load a session
 containing both genes.
 
 These are probably created accidentally, when fixing problems in a
@@ -544,16 +544,16 @@ small region; then discovered by QC or when loading a larger region
 that contains both.
 
 =item * Genes may only be edited when the whole object is loaded into
-Otterlace.
+Otter.
 
 =over 2
 
 =item * Having a gene split across (with transcripts on) multiple
-chromosomes will prevent the gene ever being edited in Otterlace,
+chromosomes will prevent the gene ever being edited in Otter,
 since it will always be incomplete (grey).
 
 =item * Large gaps between transcripts of a gene will mean loading
-large regions into Otterlace.
+large regions into Otter.
 
 This is best avoided, but it is hard to set a simple cut-off.
 Therefore, during dry run sort the fusions by this parameter so
