@@ -93,7 +93,7 @@ sub _guarded_dataset {
         my $err = $_;
 
         # This is necessary to provoke the login mechanism of
-        # Otterlace when authentication has not been done.  It does a
+        # Otter when authentication has not been done.  It does a
         # (real) 403 and then hard exit; our 403 below is munged to a
         # 412 in ::Web to circumvent re-login in the case of not
         # having access to a dataset.

@@ -364,11 +364,11 @@ sub set_and_save {
         $ucfg->SetFileName($ucfg_fn);
         $ucfg->AddSection('client');
         $ucfg->SetSectionComment(client => "Config auto-created ".localtime());
-        die "File $ucfg_fn was created since this Otterlace started"
+        die "File $ucfg_fn was created since this Otter started"
           if -f $ucfg_fn;
         splice(@$CONFIG_INIFILES, $UCFG_POS, 0, $ucfg);
     } else {
-        # Did another Otterlace change the file since we loaded it?
+        # Did another Otter change the file since we loaded it?
         # (No file locks because we expect to be Quick)
         my $ucfg_new = Config::IniFiles->new(-file => $ucfg_fn);
         die "File $ucfg_fn changed and can no longer be read: @Config::IniFiles::errors"
@@ -377,7 +377,7 @@ sub set_and_save {
         my $new = __cfgini_to_txt($ucfg_new);
         if ($old ne $new) {
             warn "Config change detail in $ucfg_fn:\n---\n$old\n+++\n$new\n";
-            die "File $ucfg_fn changed since this Otterlace started";
+            die "File $ucfg_fn changed since this Otter started";
         }
         # nb. whitespace changes ignored because we can't preserve them
     }
