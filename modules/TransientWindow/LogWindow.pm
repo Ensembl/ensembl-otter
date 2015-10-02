@@ -284,7 +284,7 @@ sub _mailto_init {
 
     # We may get clues that tickets should go to annotest or developer.
     # Set for internal Linux by wrapper script, and perhaps otherwise by version_diagnosis
-    my $clue = $ENV{OTTERLACE_RAN_AS} || '';
+    my $clue = $ENV{OTTER_RAN_AS} || '';
     $clue =~ s{otterlace}{otter}g;
 
     @mailto[0,3] = @mailto[3,0]
@@ -313,8 +313,8 @@ sub mail_contents {
         "Program version: " . Bio::Otter::Git->param('head') . "\n"
         . "Program script name: $0\n"
         . "Log file: $file\n";
-    $info .= "Program ran as: $ENV{OTTERLACE_RAN_AS}\n"
-      if $ENV{OTTERLACE_RAN_AS};
+    $info .= "Program ran as: $ENV{OTTER_RAN_AS}\n"
+      if $ENV{OTTER_RAN_AS};
 
     open_uri("mailto:$to", {
         subject => $subj,
