@@ -549,7 +549,7 @@ sub _zmap_config {
     my $config = {
 
         'ZMap' => {
-            'cookie-jar'      => $ENV{'OTTERLACE_COOKIE_JAR'},
+            'cookie-jar'      => $ENV{'OTTER_COOKIE_JAR'},
             'pfetch-mode'     => ( $pfetch_www ? 'http' : 'pipe' ),
             'pfetch'          => ( $pfetch_www ? $pfetch_url : 'pfetch' ),
             'xremote-debug'   => $xremote_debug ? 'true' : 'false',
@@ -628,7 +628,7 @@ sub blixem_config {
         'fetch-mode'    => 'http',
         'errors'        => ['no match', 'Not authorized'],
         'url'           => $self->Client->pfetch_url,
-        'cookie-jar'    => $ENV{'OTTERLACE_COOKIE_JAR'},
+        'cookie-jar'    => $ENV{'OTTER_COOKIE_JAR'},
         'port'          => 80,
         );
 
@@ -1059,7 +1059,7 @@ sub core_script_arguments {
         client      => 'otterlace',
         session_dir => $self->home,
         url_root    => $self->Client->url_root,
-        cookie_jar  => $ENV{'OTTERLACE_COOKIE_JAR'},
+        cookie_jar  => $ENV{'OTTER_COOKIE_JAR'},
     };
 
     return $arguments;

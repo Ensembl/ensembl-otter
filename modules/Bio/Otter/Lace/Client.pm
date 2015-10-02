@@ -82,11 +82,11 @@ sub new {
     my ($script) = $0 =~ m{([^/]+)$};
     my $client_name = $script || 'otterlace';
 
-    $ENV{'OTTERLACE_COOKIE_JAR'} ||= __user_home()."/.otter/ns_cookie_jar";
+    $ENV{'OTTER_COOKIE_JAR'} ||= __user_home()."/.otter/ns_cookie_jar";
 
     my $new = bless {
         _client_name     => $client_name,
-        _cookie_jar_file => $ENV{'OTTERLACE_COOKIE_JAR'},
+        _cookie_jar_file => $ENV{'OTTER_COOKIE_JAR'},
     }, $pkg;
 
     my $debug = $new->config_value('debug');
