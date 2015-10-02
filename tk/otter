@@ -31,7 +31,7 @@ sub run_gui {
         );
 
     if (@ARGV) {
-        my $name = $ENV{OTTERLACE_RAN_AS};
+        my $name = $ENV{OTTER_RAN_AS};
         if (defined $name) {
             $name =~ s{ -> .*}{};
         } else {
