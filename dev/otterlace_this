@@ -1,6 +1,0 @@
-#!/bin/bash
-
-my_dir="$( cd -P $( dirname "${BASH_SOURCE[0]}" ); pwd )"
-source "${my_dir}/otterlace_env.sh"
-
-exec perl "${ENSEMBL_OTTER_DEV}/scripts/client/otterlace" "$@"

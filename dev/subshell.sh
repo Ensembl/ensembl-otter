@@ -1,4 +1,4 @@
-# called from tail of "scripts/client/otterlace -S"
+# called from tail of "scripts/client/otter -S"
 # to make subshell with environment
 
 export debian_chroot="${ENSEMBL_OTTER_DEV:+$( cd $ENSEMBL_OTTER_DEV && git rev-parse --abbrev-ref HEAD )@$( cd $ENSEMBL_OTTER_DEV && git rev-parse --short HEAD)+}$(basename "$OTTER_HOME")"
