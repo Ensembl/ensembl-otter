@@ -1,0 +1,8 @@
+zmap blixemh dotter belvu
+
+# The first line should be a space-separated list of
+# binaries to copy from the ZMap build into the
+# otter bin directory.
+
+# (Older versions omit this file, in which case the
+#  default list is in the otterlace_build script.)
