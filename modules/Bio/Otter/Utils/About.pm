@@ -74,7 +74,7 @@ sub version_diagnosis {
     my ($desig, $descr, $stale) =
       @{$desig_info}{qw{ major_designation descr stale }};
 
-    # Ugly trick to direct tickets, for dev/otterlace_this and testers on MacOS
+    # Ugly trick to direct tickets, for dev/otter_this and testers on MacOS
     $ENV{OTTERLACE_RAN_AS} = "inferred/otterlace_$desig"
       if defined $desig && !defined $ENV{OTTERLACE_RAN_AS};
 

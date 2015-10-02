@@ -1,5 +1,5 @@
 # The guts of setting up the otterlace environment,
-# usually called from otterlace_env.sh which will set:
+# usually called from otter_env.sh which will set:
 #
 # version
 # anasoft
@@ -142,7 +142,7 @@ $anasoft/lib/perl5\
 "
         if [ -z "$OTTER_MACOS" ]
         then
-            source "$ensembl_otter_home/scripts/client/_otterlace_macos_env.sh"
+            source "$ensembl_otter_home/scripts/client/_otter_macos_env.sh"
         fi
         ;;
 

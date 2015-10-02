@@ -25,10 +25,10 @@ fi
 
 unset resources_dir
 
-source "${OTTER_HOME}/ensembl-otter/scripts/client/_otterlace_macos_env.sh"
+source "${OTTER_HOME}/ensembl-otter/scripts/client/_otter_macos_env.sh"
 
 # Now try the default script
 
-exec $OTTER_HOME/bin/otterlace "$@"
+exec $OTTER_HOME/bin/otter "$@"
 
 # EOF

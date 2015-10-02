@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-### otterlace
+### otter
 
 use POSIX ();
 use Bio::Otter::Log::Log4perl;
@@ -90,7 +90,7 @@ sub run_gui {
     # postpone slow checks, for improved responsiveness
     $main_window->after(750, [ $SpeciesListWindow, 'ensure_tools' ]);
 
-    if ($do_recover) { # otterlace --recover
+    if ($do_recover) { # otter --recover
         $main_window->iconify;
         $main_window->afterIdle([ $SpeciesListWindow, 'recover_some_sessions', 'no_wait']);
     }
@@ -154,11 +154,11 @@ exit main();
 
 __END__
 
-=head1 NAME - otterlace
+=head1 NAME - otter
 
 =head1 DESCRIPTION
 
-B<otterlace> is a graphical client for the otter
+B<otter> is a graphical client for the otter
 annotation database that uses a local acedb
 database with ZMap and Perl/Tk tools to provide a
 gene annotation interface.

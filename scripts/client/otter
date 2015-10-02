@@ -1,5 +1,6 @@
 #!/bin/bash
 
+# UNLACE: fix when otter reaches old (otterlace_installed)
 # the installation script will append the proper values to these lines
 otterlace_installed=false
 
@@ -12,12 +13,12 @@ if $otterlace_installed || [ -z "$OTTER_HOME" ] ; then
     # Bear in mind,
     #   on Mac we have BSD readlink which takes no options
     #   on internal Linux we have a two-hop symlink
-    #     $swac/bin/otterlace -> $swac/otter/{otter_live -> otter_relX.Y}/bin/otterlace
+    #     $swac/bin/otter -> $swac/otter/{otter_live -> otter_relX.Y}/bin/otter
     #     and we want to resolve all links to reduce load on NFS
     if the_real_me="$( readlink -f "$0" 2>/dev/null )"; then
         # Canonicalised: all links resolved
         OTTERLACE_RAN_AS="$0 -> $( readlink -n "$0" ) -> $the_real_me"
-        . "$( dirname "$the_real_me" )/otterlace_env.sh"
+        . "$( dirname "$the_real_me" )/otter_env.sh"
     else
         # "readlink -f" doesn't work.  Probably MacOS, so
         # assume there is no symlink involved in startup.
@@ -27,7 +28,7 @@ if $otterlace_installed || [ -z "$OTTER_HOME" ] ; then
             my_real_dir="${my_dir}"
         fi
         OTTERLACE_RAN_AS="$0 -> $my_real_dir"
-        . "${my_real_dir}/otterlace_env.sh"
+        . "${my_real_dir}/otter_env.sh"
     fi
 fi
 
@@ -47,5 +48,5 @@ if [ "$1" = '-S' ]; then
     source "$ensembl_otter_home/dev/subshell.sh"
     # calls exec, does not return
 else
-    exec perl "$ensembl_otter_home/tk/otterlace" "$@"
+    exec perl "$ensembl_otter_home/tk/otter" "$@"
 fi
