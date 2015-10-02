@@ -33,7 +33,7 @@ use Bio::Otter::Lace::Slice;
     $end_i ||= $start_i;
     
     # Client communicates with otter HTTP server
-    $0 = 'otterlace';   # In order to see restricted datasets
+    $0 = 'otter';   # In order to see restricted datasets
     my $cl = Bio::Otter::Lace::Defaults::make_Client();
     $cl->get_server_otter_config;
     

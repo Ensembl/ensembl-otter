@@ -80,7 +80,7 @@ sub new {
     __PACKAGE__->_pkginit;
 
     my ($script) = $0 =~ m{([^/]+)$};
-    my $client_name = $script || 'otterlace';
+    my $client_name = $script || 'otter';
 
     $ENV{'OTTER_COOKIE_JAR'} ||= __user_home()."/.otter/ns_cookie_jar";
 
@@ -514,7 +514,7 @@ sub _create_UserAgent {
     my $ua = LWP::UserAgent->new(timeout => 9000);
     $ua->env_proxy;
     $ua->protocols_allowed([qw{ http https }]);
-    $ua->agent('otterlace/50.0 ');
+    $ua->agent('otter/50.0 ');
     push @{ $ua->requests_redirectable }, 'POST';
     $ua->cookie_jar($self->get_CookieJar);
 
