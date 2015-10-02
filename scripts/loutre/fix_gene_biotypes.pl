@@ -30,7 +30,7 @@ use Bio::EnsEMBL::DBSQL::DBAdaptor;
 
     # if (0) {
     #     # Client communicates with otter HTTP server
-    #     $0 = 'otterlace';   # For testing, to see restricted dataset.
+    #     $0 = 'otter';   # For testing, to see restricted dataset.
     #     my $cl = Bio::Otter::Lace::Defaults::make_Client();
     #
     #     # DataSet interacts directly with an otter database

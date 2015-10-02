@@ -1056,7 +1056,7 @@ sub core_script_arguments {
     my ($self) = @_;
 
     my $arguments = {
-        client      => 'otterlace',
+        client      => 'otter',
         session_dir => $self->home,
         url_root    => $self->Client->url_root,
         cookie_jar  => $ENV{'OTTER_COOKIE_JAR'},

@@ -38,7 +38,7 @@ my $time_now = time();
     my $cl = Bio::Otter::Lace::Defaults::make_Client();
 
     # For testing, so that we see restricted datasets
-    $0 = 'otterlace';
+    $0 = 'otter';
 
     my $ds = $cl->get_DataSet_by_name($dsname);
     my $dba = $ds->get_cached_DBAdaptor;

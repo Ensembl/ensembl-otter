@@ -76,7 +76,7 @@ my $opts = {
     }
 
     # Client communicates with otter HTTP server
-    local $0 = 'otterlace'; # for access to test_human
+    local $0 = 'otter'; # for access to test_human
     my $cl = Bio::Otter::Lace::Defaults::make_Client();
     
     # DataSet interacts directly with an otter database
