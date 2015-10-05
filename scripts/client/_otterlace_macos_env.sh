@@ -24,14 +24,6 @@ dot_otter_etc="$dot_otter/etc"
 mkdir -p "$dot_otter_etc"
 
 lib_path="${OTTER_SWAC}/lib"
-mysql_path="${lib_path}/mysql56/mysql"
-
-dyld_path="${lib_path}:${mysql_path}"
-unset mysql_path
-
-# Use the FALLBACK path.  Any dynamic libraries containing
-# file paths which are not found will look here.
-export DYLD_FALLBACK_LIBRARY_PATH="$dyld_path"
 
 # Create config file so that gdk-pixbuf can load
 # its bitmap image format loaders
@@ -60,7 +52,6 @@ export XLOCALEDIR="${OTTER_SWAC}/share/X11/locale"
 unset bin_dir
 unset dot_otter
 unset dot_otter_etc
-unset dyld_path
 unset lib_path
 
 export OTTER_MACOS=1
