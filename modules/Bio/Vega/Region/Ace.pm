@@ -175,7 +175,7 @@ sub _add_simple_features {
 sub _dna {
     my ($self, $region, $name) = @_;
 
-    my $dna = $region->slice->seq;
+    my $dna = lc $region->slice->seq;
 
     my $seq = Hum::Sequence::DNA->new;
     $seq->name($name);
