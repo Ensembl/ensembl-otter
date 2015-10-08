@@ -130,7 +130,7 @@ sub draw{
     my $runLace = $self->action('runLace');
     my $run_button =
         $run_cancel_frame->Button(
-            -text    => 'Run lace',
+            -text    => 'Launch session',
             -command => [ $runLace, $self ],
         )->pack(-side => 'left');
 
