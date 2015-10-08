@@ -459,18 +459,18 @@ sub initialise {
     $top->bind('<Control-A>', $refresh_all);
     $top->bind('<F6>',        $refresh_all);
 
-    my $run_lace_on_slice = sub{
+    my $launch_session_on_slice = sub{
         $self->slice_window;
     };
-    $self->make_button($button_frame_cmds, 'Open from chr coords', $run_lace_on_slice);
+    $self->make_button($button_frame_cmds, 'Open from chr coords', $launch_session_on_slice);
 
-    my $run_lace = sub{
+    my $launch_session = sub{
         my $busy = Tk::ScopedBusy->new($top);
         $self->run_lace;
     };
-    $self->make_button($button_frame_cmds, 'Run lace', $run_lace, 4);
-    $top->bind('<Control-l>', $run_lace);
-    $top->bind('<Control-L>', $run_lace);
+    $self->make_button($button_frame_cmds, 'Launch session', $launch_session, 0);
+    $top->bind('<Control-l>', $launch_session);
+    $top->bind('<Control-L>', $launch_session);
 
     my $print_to_file = sub {
         $self->page_width(591);

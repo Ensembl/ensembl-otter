@@ -74,7 +74,7 @@ sub _user_agent { # create and cache a user agent
     return $self->{'_user_agent'} ||= do {
         my $ua = LWP::UserAgent->new;
         my $v = Bio::Otter::Version->version;
-        $ua->agent("Otterlace/$v ");
+        $ua->agent("Otter/$v ");
         push @{ $ua->requests_redirectable }, 'POST'; # seeds and models return through a redirect
         $ua->env_proxy;
         $ua;

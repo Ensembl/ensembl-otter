@@ -12,4 +12,4 @@ then
     exit 1
 fi
 
-source "${OTTER_HOME}/bin/_otterlace_env_core.sh"
+source "${OTTER_HOME}/bin/_otter_env_core.sh"

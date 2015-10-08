@@ -132,7 +132,7 @@ sub auth_tt {
     #
     # Do not trample caller's cookies!
     my ($fh, $fn) = tempfile('auth_tt.cookies.XXXXXX', TMPDIR => 1, CLEANUP => 1);
-    local $ENV{'OTTERLACE_COOKIE_JAR'} = $fn;
+    local $ENV{'OTTER_COOKIE_JAR'} = $fn;
     my $cl_safejar = OtterClient();
     my $ua = $cl_safejar->get_UserAgent;
     my @usr_cookie = cookie_names($ua);

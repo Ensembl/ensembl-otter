@@ -1,0 +1,9 @@
+otter
+
+# The first line should be the base name to be used
+# for all binaries and scripts.
+
+# (Older versions omit this file, in which case the
+#  default name 'otterlace' is set in the otterlace_build script.)
+
+# UNLACE: This can go once otterlace has disappeared beyond otterlace_old.

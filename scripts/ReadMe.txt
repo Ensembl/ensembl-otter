@@ -1,22 +1,22 @@
 
-    Installation of Linux otterlace client
+    Installation of Linux otter client
 
 You'll need a friendly local Linux administrator if any of the following
 instructions don't mean anything to you.
 
-Please email anacode@sanger.ac.uk if you have problems getting otterlace to
+Please email anacode@sanger.ac.uk if you have problems getting otter to
 work, discover bugs, or don't have a Linux administrator and need some help.
 
-There is a sh script called otterlace in the base directory. This should be
+There is a sh script called otter in the base directory. This should be
 installed somewhere in your PATH, or the system PATH. Edit the commented out
 line near top so that OTTER_HOME points to the directory where you expanded
-the otterlace client (ie: the one this ReadMe.txt file is in).
+the otter client (ie: the one this ReadMe.txt file is in).
 
-Otterlace makes use of other code (Zircon and the Hum::* modules)
+Otter makes use of other code (Zircon and the Hum::* modules)
 which have not been published.  Please contact us if you need them.
 
 You will almost certainly need to install some perl modules from CPAN before
-otterlace will compile. Some of these CPAN modules will be provided as
+otter will compile. Some of these CPAN modules will be provided as
 optional components by most Linux distributions, so try your package manager
 before using CPAN. Modules you are likely to need to install include:
 

@@ -26,7 +26,7 @@ sub initialise {
        'The email address with which you identify yourself to the Otter Server.');
     $self->opt_add
       (write_access => 'Request write access', 'Checkbutton',
-       'When this is off, Otterlace will not ask to save your changes to the Otter Server.');
+       'When this is off, Otter will not ask to save your changes to the Otter Server.');
 
     if ($self->Client->no_user_config) {
         $self->opt_banner
@@ -35,7 +35,7 @@ sub initialise {
     } else {
         # TEMPORARY
         $self->opt_banner
-          ("Sorry, Otterlace is not ready for established users to reconfigure ".
+          ("Sorry, Otter is not ready for established users to reconfigure ".
            "it while it is running.  You may edit the configuration file ".
            "directly, and changes will take effect after you restart the ".
            "application.  On the Mac the 'Edit directly' button helps with this.");
@@ -314,7 +314,7 @@ sub _save { ## no critic (Subroutines::ProhibitUnusedPrivateSubroutines)
         warn "Preference save for '$cfg' failed: $_";
         $self->_error
           ("Unable to overwrite preferences file due to changes from another application.\n
-Please restart Otterlace if you need to make changes.\n
+Please restart Otter if you need to make changes.\n
 Details are in the Error Log.");
         0;
     };
