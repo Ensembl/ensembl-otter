@@ -464,10 +464,10 @@ sub recover_some_sessions {
             -wrap    => 400,
             -justify => 'left',
             -text    => join("\n\n",
-                "You have one or more lace sessions on this computer which are not"
-                . " associated with a running otterlace process.",
+                "You have one or more otter sessions on this computer which are not"
+                . " associated with a running otter process.",
 
-                "This should not happen, except where lace has crashed or it has"
+                "This should not happen, except where otter has crashed or it has"
                 . " been exited by pressing the exit button in the 'Choose Dataset'"
                 . " window.",
 
@@ -517,7 +517,7 @@ sub recover_some_sessions {
             }
             catch {
                 $self->exception_message(
-                    $_, 'Error recovering lace sessions');
+                    $_, 'Error recovering otter sessions');
             };
             # XXX: we should make a stronger protest if it fails - maybe a
             # pop up error dialog, or put a sticker on the session itself

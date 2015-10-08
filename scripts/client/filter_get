@@ -100,7 +100,7 @@ sub _spool_gff {
 
     # zmap waits for STDOUT to be closed as an indication that all
     # data has been sent, so we close the handle now so that zmap
-    # doesn't tell otterlace about the successful loading of the column
+    # doesn't tell otter about the successful loading of the column
     # before we have the SQLite db updated and the cache file saved.
     close STDOUT or die "Error writing to STDOUT; $!";
 
