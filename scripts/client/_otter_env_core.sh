@@ -1,4 +1,4 @@
-# The guts of setting up the otterlace environment,
+# The guts of setting up the otter environment,
 # usually called from otter_env.sh which will set:
 #
 # version

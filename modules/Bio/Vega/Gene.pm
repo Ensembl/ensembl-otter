@@ -280,7 +280,7 @@ sub set_biotype_status_from_transcripts {
     unless ($self->is_known) {
         # Not setting gene status to KNOWN if there is a transcript
         # with status KNOWN.  So KNOWN is only set if radio button in
-        # otterlace is checked.
+        # otter is checked.
         my $status = 'UNKNOWN';
         if ($tsct_status{'PUTATIVE'} and keys(%tsct_status) == 1) {
             # Gene status is PUTATIVE if that is the only kind of transcript

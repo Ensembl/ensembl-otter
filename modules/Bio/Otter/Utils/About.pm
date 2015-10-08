@@ -75,7 +75,7 @@ sub version_diagnosis {
       @{$desig_info}{qw{ major_designation descr stale }};
 
     # Ugly trick to direct tickets, for dev/otter_this and testers on MacOS
-    $ENV{OTTER_RAN_AS} = "inferred/otterlace_$desig"
+    $ENV{OTTER_RAN_AS} = "inferred/otter_$desig"
       if defined $desig && !defined $ENV{OTTER_RAN_AS};
 
     my %colour = ( live => 'white',

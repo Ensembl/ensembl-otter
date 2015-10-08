@@ -400,7 +400,7 @@ See also F<t/obtain-db.t>
             # Test scripts shall not request user password
             my $no_pass = sub {
                 my ($self) = @_;
-                warn "$self: wanted your password.  Run live otterlace to get a cookie!\n";
+                warn "$self: wanted your password.  Run live otter to get a cookie!\n";
                 return;
             };
             $cl->password_prompt($no_pass);

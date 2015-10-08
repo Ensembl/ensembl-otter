@@ -307,7 +307,7 @@ sub mail_contents {
 
     my $to      = $self->_mailto();
     my $file    = hostfqdn() . ":" . $self->current_logfile;
-    my $subj    = "otterlace error: <PLEASE REPLACE WITH SHORT DESCRIPTION>";
+    my $subj    = "otter error: <PLEASE REPLACE WITH SHORT DESCRIPTION>";
     my $mess    = $self->get_log_contents();
     my $info   =
         "Program version: " . Bio::Otter::Git->param('head') . "\n"
