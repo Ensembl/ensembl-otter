@@ -1530,10 +1530,10 @@ sub sessions_needing_recovery {
     my ($self) = @_;
 
     my $proc_table = Proc::ProcessTable->new;
-    my @otterlace_procs =
-      grep { defined $_->cmndline && $_->cmndline =~ /otterlace/ }
+    my @otter_procs =
+      grep { defined $_->cmndline && $_->cmndline =~ /otter/ }
         @{$proc_table->table};
-    my %existing_pid = map {$_->pid, 1} @otterlace_procs;
+    my %existing_pid = map {$_->pid, 1} @otter_procs;
 
     my $to_recover = [];
 
