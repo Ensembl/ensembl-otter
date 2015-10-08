@@ -67,7 +67,7 @@ sub designations_tt {
                 $do->({ head => 'humpub-release-85-dev-66-g9cf15b2' },
                       major => 85),
                 major_designation => 'dev',
-                descr => 'an unstable developer-edition Otterlace',
+                descr => 'an unstable developer-edition Otter',
                 stale => 0,
                 latest_this_major => 85,
                 current_live => '84.04');
@@ -77,7 +77,7 @@ sub designations_tt {
                         feature => 'anyfeat' },
                       major => 85),
                 major_designation => 'dev',
-                descr => 'an experimental anyfeat Otterlace',
+                descr => 'an experimental anyfeat Otter',
                 stale => 0,
                 latest_this_major => undef,
                 current_live => '84.04');
@@ -86,7 +86,7 @@ sub designations_tt {
     _check_hash('live seen from live=84',
                 $do->({ head => 'humpub-release-84-04' }, major => 84),
                 major_designation => 'live',
-                descr => 'the latest live Otterlace',
+                descr => 'the latest live Otter',
                 stale => 0,
                 latest_this_major => '84.04',
                 current_live => '84.04');
@@ -94,13 +94,13 @@ sub designations_tt {
     _check_hash('live,stale seen from live=84',
                 $do->({ head => 'humpub-release-84-01-7-g96d4f8f' }, major => 84),
                 major_designation => 'live',
-                descr => "not the current live Otterlace\nIt is 84.01+7ci, latest is 84.04",
+                descr => "not the current live Otter\nIt is 84.01+7ci, latest is 84.04",
                 stale => 1);
 
     _check_hash('old seen from live=84',
                 $do->({ head => 'humpub-release-83-05' }, major => 83),
                 major_designation => 'old',
-                descr => 'the last old Otterlace',
+                descr => 'the last old Otter',
                 stale => 0,
                 latest_this_major => '83.05',
                 current_live => '84.04');
@@ -108,7 +108,7 @@ sub designations_tt {
     _check_hash('(prev) seen from live=84',
                 $do->({ head => 'humpub-release-81-05' }, major => 81),
                 major_designation => undef,
-                descr => 'an obsolete Otterlace.  We are now on 84.04',
+                descr => 'an obsolete Otter.  We are now on 84.04',
                 stale => 1,
                 latest_this_major => '81.06',
                 current_live => '84.04');
@@ -117,7 +117,7 @@ sub designations_tt {
     _check_hash('(unknown) seen from live=84',
                 $do->({ head => 'humpub-release-77-01' }, major => 77),
                 major_designation => undef,
-                descr => 'an obsolete Otterlace.  We are now on 84.04',
+                descr => 'an obsolete Otter.  We are now on 84.04',
                 stale => 1,
                 latest_this_major => '84.04',
                 current_live => '84.04');

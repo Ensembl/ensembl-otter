@@ -20,7 +20,7 @@ use Bio::Otter::Lace::Defaults;
 
     # foreach my $ds ($cl->get_DataSet_by_name('human')) {
 
-    $0 = 'otterlace';    # In order to see restricted datasets
+    $0 = 'otter';    # In order to see restricted datasets
     foreach my $ds ($cl->get_DataSet_by_name('human_test')) {
 
         my $dba = $ds->make_Vega_DBAdaptor;

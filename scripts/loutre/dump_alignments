@@ -42,7 +42,7 @@ use Bio::Otter::Lace::Defaults;
     foreach my $cs (@{ $ss->CloneSequence_list }) {
         
         # http://wwwdev.sanger.ac.uk:80/cgi-bin/otter/52/get_features?
-        #     client    = otterlace
+        #     client    = otter
         #     dataset   = pig
         #     cs        = chromosome
         #     csver     = Otter

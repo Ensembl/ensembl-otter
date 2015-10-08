@@ -120,7 +120,7 @@ Flip satellite databases to/from MySQL slaves by maintaining the port
 number and switching the hostname.
 
 By default it updates the C<pipeline_db_head> meta_key (or another if
-specified) to switch the read-only queries from Otterlace via the
+specified) to switch the read-only queries from Otter via the
 Otter Server, between master & slave database servers.
 
 By default it does this for all species in C<species.dat>.  By giving

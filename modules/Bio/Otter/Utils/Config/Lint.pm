@@ -176,7 +176,7 @@ sub check_species {
     #   use_filters lists the actual source (eg. RAMPAGE_pks_filtered_temporal_lobe_minus).
     #   "zmap_column=RAMPAGE_filtered_minus" just tells ZMap where to
     #   show the data in the ZMap view - it has nothing to do with
-    #   configuring the filter in Otterlace or fetching the data.
+    #   configuring the filter in Otter or fetching the data.
     my @clus_used = grep { $cluster_col{$_} } sort(keys %$used);
     push @bad, "Column-cluster name (@clus_used) given in *.use_filters"
       if @clus_used;

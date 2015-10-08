@@ -1,7 +1,7 @@
-# Attempts to set up a sane otterlace environment for running or testing otterlace
+# Attempts to set up a sane otter environment for running or testing otter
 # using *this* ensembl-otter tree.
 #
-# An installed otterlace elsewhere provides other components.
+# An installed otter elsewhere provides other components.
 # If not specified by OTTER_HOME, we attempt to find one.
 
 ENSEMBL_OTTER_DEV="$( cd -P $( dirname "${BASH_SOURCE[0]}" )/..; pwd )"
@@ -42,7 +42,7 @@ __otter_find_installed() {
             local_client_only=1 # to muffle warning, $nfswub: not a directory
             if [ -n "$leafname" ]; then
                 # construct path to some designated release
-                # scripts/client/otterlace chases the symlink, but we don't bother.
+                # scripts/client/otter chases the symlink, but we don't bother.
                 # (otter_dev doesn't leave the previous version around like otter_test)
                 otter_swac=$OTTER_SWAC otter_ipath_get "" holtdir && \
                     printf '/%s' "$leafname"
@@ -108,8 +108,8 @@ esac
 
 printf '  OTTER_HOME=%s\n' "$OTTER_HOME"
 
-source "${ENSEMBL_OTTER_DEV}/scripts/client/_otterlace_env_core.sh" || exit 5
+source "${ENSEMBL_OTTER_DEV}/scripts/client/_otter_env_core.sh" || exit 5
 
 # Libs which are needed to run tests for Otter Server, but provided or
-# requred for otterlace client
+# requred for otter client
 PERL5LIB="$PERL5LIB:$otter_server_perl5lib"

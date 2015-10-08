@@ -1,5 +1,5 @@
 # The guts of setting up MacOS specifics,
-# usually called from _otterlace_env_core.sh.
+# usually called from _otter_env_core.sh.
 #
 # Assumes that the following have been set:
 # OTTER_SWAC (to .../Contents/Resources)
