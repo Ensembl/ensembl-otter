@@ -285,7 +285,6 @@ sub _mailto_init {
     # We may get clues that tickets should go to annotest or developer.
     # Set for internal Linux by wrapper script, and perhaps otherwise by version_diagnosis
     my $clue = $ENV{OTTER_RAN_AS} || '';
-    $clue =~ s{otterlace}{otter}g;
 
     @mailto[0,3] = @mailto[3,0]
       if $clue =~ m{\botter_test|test_otter\b};
