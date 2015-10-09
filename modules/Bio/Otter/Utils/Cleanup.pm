@@ -26,7 +26,8 @@ sub client {
 
 sub clean {
     my ($self) = @_;
-    $self->cleanup_log_dir('otterlace');
+    $self->cleanup_log_dir('otter');
+    $self->cleanup_log_dir('otterlace'); # UNLACE: can go in due course
     $self->cleanup_sessions;
     $self->cleanup_zmap_configs;
     return;
@@ -43,7 +44,7 @@ sub fork_and_clean {
     } else {
         # child
         try {
-            $0 = 'otterlace_cleanup';
+            $0 = 'otter_cleanup';
             sleep $delay;
             $self->clean;
             $self->logger->info("Cleanup finished, pid $$\n");
