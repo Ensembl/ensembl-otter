@@ -230,24 +230,29 @@ $support->log("Done. ".$support->date_and_mem."\n\n");
 # print log results
 $support->log("\nProcessed ".scalar(keys %$vega_ids)." identifiers.\n");
 $support->log("OK: $num_success\n");
-if ($successful) {
-  $support->log("\nTranscripts which had a CCDS identifier added:\n");
-  $support->log(sprintf "    %-30s%-20s%-20s\n", qw(STABLE_ID DBID CCDS_ID));
-  $support->log("    " . "-"x70 . "\n");
-  $support->log($successful);
+if ($support->param('verbose')) {
+  if ($successful) {
+    $support->log("\nTranscripts which had a CCDS identifier added:\n");
+    $support->log(sprintf "    %-30s%-20s%-20s\n", qw(STABLE_ID DBID CCDS_ID));
+    $support->log("    " . "-"x70 . "\n");
+    $support->log($successful);
+  }
+  if ($missing_transcript) {
+    $support->log_warning("\n\n\nIdentifiers with no matching transcript in Vega: $no_match.", 1);
+    $support->log($missing_transcript);
+  }
+  if ($non_translating) {
+    $support->log_warning("\n\n\nTranscripts in this set that don't translate: $no_trans.", 1);
+    $support->log($non_translating);
+  }
 }
 
-if ($missing_transcript) {
-  $support->log_warning("\n\n\nIdentifiers with no matching transcript in Vega: $no_match.", 1);
-  $support->log($missing_transcript);
+if ($support->param('dry_run')) {
+  $support->log("\nThis was a dry_run, but if it hadn't been then transcripts of the following logic_names would have had CCDS xrefs added:\n");
 }
-
-if ($non_translating) {
-  $support->log_warning("\n\n\nTranscripts in this set that don't translate: $no_trans.", 1);
-  $support->log($non_translating);
+else {
+  $support->log("\nTranscripts with xrefs added had the following logic_names:\n");
 }
-
-$support->log("\nTranscripts with xrefs added had the following logic_names:\n");
 while (my ($ln, $c) = each %sources) {
   $support->log("$c with logic_name of $ln\n",1);
 }
