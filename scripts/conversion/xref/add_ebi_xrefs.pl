@@ -332,7 +332,12 @@ foreach my $chr (@chr_sorted) {
       }
     }
   }
-  $support->log("$chr_c GO xrefs added for chromosome $chr\n");
+  if ($support->param('dry_run')) {
+    $support->log("$chr_c GO xrefs wold have been added for chromosome $chr\n");
+  }
+  else {
+    $support->log("$chr_c GO xrefs added for chromosome $chr\n");
+  }
 }
 
 ### POST ###
