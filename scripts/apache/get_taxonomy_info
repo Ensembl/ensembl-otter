@@ -14,8 +14,8 @@ Bio::Otter::Server::Support::Web->send_response(
     -content_type => 'application/json',
     sub {
         my ($server) = @_;
-        my $tsv = Bio::Otter::ServerAction::Apache::AccessionInfo->new($server)->get_taxonomy_info;
-        return $tsv;
+        my $info = Bio::Otter::ServerAction::Apache::AccessionInfo->new($server)->get_taxonomy_info;
+        return $info;
     });
 
 __END__
