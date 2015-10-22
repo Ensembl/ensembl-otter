@@ -8,13 +8,13 @@ use SangerPaths qw{ core bioperl123 otter };
 use Bio::Otter::Git qw{ :server_ensembl :match };
 
 use Bio::Otter::Server::Support::Web;
-use Bio::Otter::ServerAction::XML::Region;
+use Bio::Otter::ServerAction::Region;
 
 sub lock_region {
     my ($server) = @_;
     $server->dataset_assert_write;
 
-    my $sa_region = Bio::Otter::ServerAction::XML::Region->new_with_slice($server);
+    my $sa_region = Bio::Otter::ServerAction::Region->new_with_slice($server);
     my $token = $sa_region->lock_region;
 
     return $token;
