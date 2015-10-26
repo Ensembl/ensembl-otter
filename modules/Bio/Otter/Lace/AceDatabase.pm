@@ -9,6 +9,7 @@ use Carp;
 
 use Fcntl qw{ O_WRONLY O_CREAT };
 use File::Basename;
+use File::Path qw(make_path);
 use Config::IniFiles;
 use Try::Tiny;
 use Scalar::Util 'weaken';
@@ -502,7 +503,7 @@ sub zmap_dir_init {
 
     my $dir = $self->zmap_dir;
     unless (-d $dir) {
-        mkdir $dir or $self->logger->logconfess("failed to create the directory '$dir': $!");
+        make_path($dir) or $self->logger->logconfess("failed to create the directory '$dir': $!");
     }
 
     $self->MethodCollection->ZMapStyleCollection->write_to_file($self->stylesfile);
@@ -833,7 +834,7 @@ sub make_database_directory {
 
     my $logger = $self->logger;
     my $home   = $self->home;
-    mkdir($home, 0777) or $logger->logdie("Can't mkdir('$home') : $!");
+    make_path($home, 0777) or $logger->logdie("Can't make_path('$home') : $!");
 
     return;
 }
