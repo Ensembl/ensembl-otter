@@ -3018,7 +3018,7 @@ sub _make_config {
 sub _make_zmap_config_dir {
     my ($self) = @_;
 
-    my $config_dir = $self->zmap_configs_dir;
+    my $config_dir = $self->_zmap_configs_dir_otter;
     my $key;
     do {
         $key = sprintf "%09d", int(rand(1_000_000_000));
@@ -3036,7 +3036,20 @@ sub _make_zmap_config_dir {
     return $config_dir;
 }
 
-sub zmap_configs_dir {
+sub zmap_configs_dirs {
+    my ($called) = @_;
+    return ( $called->_zmap_configs_dir_otter, $called->_zmap_configs_dir_lace );
+}
+
+sub _zmap_configs_dir_otter {
+    my ($called) = @_;
+    # we make a class method call as we might be called as a class method by cleanup
+    my $vtod = Bio::Otter::Lace::Client->var_tmp_otter_dir;
+    return sprintf '%s/ZMap', $vtod;
+}
+
+# UNLACE: can go in due course
+sub _zmap_configs_dir_lace {
     my ($called) = @_;
     my $user = getpwuid($<);
     return "/var/tmp/otter_${user}/ZMap";
