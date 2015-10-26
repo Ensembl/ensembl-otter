@@ -253,16 +253,29 @@ sub cleanup {
     sub _new_session_path {
         my ($self) = @_;
 
-        my $user = (getpwuid($<))[0];
-
         ++$session_number;
-        return sprintf("%s.%s.%d.%d",
-                       $self->_session_root, $user, $$, $session_number);
+        return sprintf('%s.%d.%d',
+                       $self->_session_root_otter, $$, $session_number);
     }
 }
 
-sub _session_root {
-    my ($called, $version) = @_;
+sub var_tmp_otter_dir {
+    my ($self) = @_;
+
+    my $user = (getpwuid($<))[0];
+    return sprintf '/var/tmp/otter/%s', $user;
+}
+
+sub _session_root_otter {
+    my ($self, $version) = @_;
+    $version ||= Bio::Otter::Version->version;
+
+    return sprintf '%s/v%s', $self->var_tmp_otter_dir, $version;
+}
+
+# UNLACE: can go in due course
+sub _session_root_lace {
+    my ($self, $version) = @_;
     $version ||= Bio::Otter::Version->version;
     return '/var/tmp/lace_'.$version;
 }
@@ -283,7 +296,7 @@ sub _session_from_dir {
     # this ignores completed sessions, as they have been renamed to
     # end in ".done"
 
-    my ($pid) = $dir =~ m{lace[^/]+\.(\d+)\.\d+$};
+    my ($pid) = $dir =~ m{v[^/]+\.(\d+)\.\d+$};
     return unless $pid;
 
     my $mtime = (stat($dir))[9];
@@ -292,13 +305,31 @@ sub _session_from_dir {
 
 sub all_session_dirs {
     my ($self, $version_glob) = @_;
-
-    my $session_dir_pattern = $self->_session_root($version_glob) . ".*";
-    my @session_dirs = glob($session_dir_pattern);
+    my @session_dirs = ( $self->_all_session_dirs_otter($version_glob),
+                         $self->_all_session_dirs_lace( $version_glob) );
 
     # Skip if directory is not ours
     my $uid = $<;
     @session_dirs = grep { (stat($_))[4] == $uid } @session_dirs;
+
+    return @session_dirs;
+}
+
+sub _all_session_dirs_otter {
+    my ($self, $version_glob) = @_;
+
+    my $session_dir_pattern = $self->_session_root_otter($version_glob) . ".*";
+    my @session_dirs = glob($session_dir_pattern);
+
+    return @session_dirs;
+}
+
+# UNLACE: can go in due course
+sub _all_session_dirs_lace {
+    my ($self, $version_glob) = @_;
+
+    my $session_dir_pattern = $self->_session_root_lace($version_glob) . ".*";
+    my @session_dirs = glob($session_dir_pattern);
 
     return @session_dirs;
 }
