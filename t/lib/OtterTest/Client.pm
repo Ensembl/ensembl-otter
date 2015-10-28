@@ -170,10 +170,8 @@ sub get_assembly_dna {
     my $_local_server = $self->_local_server;
     $_local_server->set_params($self->slice_query($slice));
 
-    my $raw = Bio::Otter::ServerAction::XML::Region->new_with_slice($_local_server)->get_assembly_dna;
-    my ($dna, @tiles) = split /\n/, $raw;
-
-    return ($dna, @tiles);
+    my $raw = Bio::Otter::ServerAction::Region->new_with_slice($_local_server)->get_assembly_dna;
+    return $raw->{dna};
 }
 
 sub _cached_loutre_db_response {

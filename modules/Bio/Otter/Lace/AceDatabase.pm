@@ -268,7 +268,7 @@ sub init_AceDatabase {
         $s_end = $self->slice->end($r_end);
     }
 
-    my ($raw_dna, @tiles) = $self->Client->get_assembly_dna($self->slice);
+    my $raw_dna = $self->Client->get_assembly_dna($self->slice);
 
     my $storer = Bio::Vega::Region::Store->new(
         vega_dba => $self->DB->vega_dba,

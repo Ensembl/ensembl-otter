@@ -1666,14 +1666,12 @@ sub get_region_xml {
 sub get_assembly_dna {
     my ($self, $slice) = @_;
 
-    my ($dna, @tiles) = split /\n/
-        , $self->http_response_content(
+    my $response = $self->otter_response_content(
         'GET',
         'get_assembly_dna',
         { $self->slice_query($slice) },
         );
-
-    return ($dna, @tiles);
+    return $response->{dna};
 }
 
 sub lock_region {
