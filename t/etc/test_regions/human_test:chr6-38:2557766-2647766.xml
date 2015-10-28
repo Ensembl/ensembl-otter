@@ -38,15 +38,23 @@
        <type>TEC</type>
        <known>0</known>
        <truncated>0</truncated>
-       <author>anacode</author>
-       <author_email>anacode</author_email>
+       <author>mg13</author>
+       <author_email>mg13</author_email>
        <transcript>
          <stable_id>OTTHUMT00000431233</stable_id>
-         <author>anacode</author>
-         <author_email>anacode</author_email>
+         <author>mg13</author>
+         <author_email>mg13</author_email>
          <transcript_class>TEC</transcript_class>
          <name>RP11-299J5.1-001</name>
          <evidence_set>
+           <evidence>
+             <name>Em:AL044491.1</name>
+             <type>EST</type>
+           </evidence>
+           <evidence>
+             <name>Tr:B9GPM8.1</name>
+             <type>Protein</type>
+           </evidence>
            <evidence>
              <name>Em:AK057938.1</name>
              <type>cDNA</type>
