@@ -12,13 +12,10 @@ use Test::More;
 use Test::Otter qw( db_or_skipall );
 use Test::OtterLaceOnTheFly qw( fixed_genomic_tests build_target run_otf_genomic_test );
 
-use OtterTest::AccessionTypeCache;
 use OtterTest::Exonerate;
 
 use Bio::EnsEMBL::CoordSystem;
 use Bio::EnsEMBL::Slice;
-use Bio::Otter::Server::Support::Local;
-use Bio::Otter::ServerAction::Region;
 use Bio::Otter::Utils::FeatureSort qw( feature_sort );
 
 use Hum::ClipboardUtils;
@@ -45,24 +42,6 @@ foreach my $module ( @modules ) {
     critic_module_ok($module);
 }
 
-my @todo_tests = (
-    );
-
-my %species_tests = (
-    human => [
-        { title => 'AL133351.34', chr => 'chr6-38', start => 2864137, end => 3037706, },
-    ],
-    mouse => [
-        { title => 'AC144852+5k', chr => 'chr10-38', start => 127162862, end => 127313035, },
-    ],
-    zebrafish => [
-        { title => 'CR753817.13', chr => 'chr6_20110419', start => 35489955, end => 35724691, },
-    ],
-    tas_devil => [
-        { title => 'With_gap', chr => 'MHC-06', start => 139316, end => 424882, },
-    ],
-    );
-
 main_tests();
 done_testing;
 
@@ -71,37 +50,6 @@ sub main_tests {
     foreach my $test ( fixed_genomic_tests() ) {
         run_fixed_test($test);
     }
-
-  TODO: {
-      local $TODO = "Protein handling not yet compatible for frameshift and split codon";
-
-      foreach my $test ( @todo_tests ) {
-          run_fixed_test($test);
-      }
-    }
-
-  SKIP: {
-
-      unless ($ENV{OTTER_OTF_RUN_LIVE_TESTS}) {
-          my $msg = 'live tests as OTTER_OTF_RUN_LIVE_TESTS is not set';
-          diag "skipping $msg"; # to show in non-verbose mode.
-          skip $msg, 1;
-      }
-
-      my $at_cache = OtterTest::AccessionTypeCache->new();
-
-      while (my ($species, $regions) = each %species_tests) {
-          note("Live tests for: $species");
-          my $local_server = Bio::Otter::Server::Support::Local->new();
-          foreach my $region ( @$regions ) {
-              $local_server->set_params(%$region, dataset => $species, cs => 'chromosome', csver => 'Otter');
-              my $sa_region = Bio::Otter::ServerAction::Region->new_with_slice($local_server);
-              run_region($region->{title}, $sa_region, $at_cache);
-          }
-      }
-
-    } # SKIP
-
     return;
 }
 
@@ -218,56 +166,6 @@ sub run_test {
     }
 
     return;
-}
-
-sub run_region {
-    my ($title, $sa_region, $at_cache) = @_;
-    note("  Region: ", $title);
-
-    # FIXME: get_assembly_dna should return components
-    my ($dna, @tiles) = split(/\n/, $sa_region->get_assembly_dna);
-    my $target_seq = Hum::Sequence::DNA->new;
-    $target_seq->name($title);
-    $target_seq->sequence_string($dna);
-
-    my @genes = $sa_region->get_region->genes;
-    foreach my $gene (@genes) {
-        note("    Gene: ", $gene->stable_id);
-        my $transcripts = $gene->get_all_Transcripts;
-        foreach my $ts (@$transcripts) {
-            note("      Transcript: ", $ts->stable_id);
-            my $evi_list = $ts->evidence_list;
-            my $q_validator = get_query_validator($at_cache, $evi_list);
-            foreach my $type ( $q_validator->seq_types ) {
-                my $seqs = $q_validator->seqs_for_type($type);
-                my @seq_names = map{ $_->name } @$seqs;
-                note("        ", $type, ": ", join(',', @seq_names));
-                run_test({
-                    name       => join('_', $ts->stable_id, $type),
-                    target_seq => $target_seq,
-                    query_seqs => $seqs,
-                    query_ids  => \@seq_names,
-                    type       => $type,
-                         });
-            }
-        }
-    }
-    return;
-}
-
-sub get_query_validator {
-    my ($at_cache, $evi_list) = @_;
-    my @evi_names = map { Hum::ClipboardUtils::accessions_from_text($_->name) } @$evi_list;
-    my $q_validator = Bio::Otter::Lace::OnTheFly::QueryValidator->new(
-        accession_type_cache => $at_cache,
-        accessions           => \@evi_names,
-        problem_report_cb    => sub {
-            my ($self, $msgs) = @_;
-            map { diag("QV ", $_, ": ", $msgs->{$_}) if $msgs->{$_} } keys %$msgs;
-        },
-        long_query_cb        => sub { diag("QV long q: ", shift, "(", shift, ")"); },
-        );
-    return $q_validator;
 }
 
 1;
