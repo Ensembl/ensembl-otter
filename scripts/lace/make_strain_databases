@@ -18,7 +18,7 @@ use File::Basename qw{ dirname };
         CBA    kj2_mouse_CBA_J_R20150818
         DBA    kj2_mouse_DBA_J_R20150819
         FVB    kj2_mouse_FVB_NJ_R20150819
-        APJ    kj2_mouse_LP_J_R20150819
+        LPJ    kj2_mouse_LP_J_R20150819
         NOD    kj2_mouse_NOD_ShiLtJ_R20150819
         NZO    kj2_mouse_NZO_HlLtJ_R20150819
         WSB    kj2_mouse_WSB_EiJ_R20150819
