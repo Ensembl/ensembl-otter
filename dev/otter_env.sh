@@ -60,7 +60,8 @@ __otter_find_installed() {
         printf "    OTTER_SWAC=%s plus ENSEMBL_OTTER_DEV=%s\n      makes OTTER_HOME=%s ,\n      but that is not a directory\n" \
             "$OTTER_SWAC" "$ENSEMBL_OTTER_DEV" "$OTTER_HOME" >&2
         return 1
-    elif ! grep -q otterlace_installed=true $OTTER_HOME/bin/otterlace; then
+                   # vvv UNLACE: fix when otter reaches old (otterlace_installed)
+    elif ! grep -q otterlace_installed=true $OTTER_HOME/bin/otter; then
         printf "    OTTER_HOME=%s: broken or not properly installed." \
             "$OTTER_HOME" >&2
         return 1
@@ -82,7 +83,7 @@ case "$osname" in
                 OTTER_SWAC="$( cd -P "${OTTER_HOME}/../.."; pwd )"
             fi
         else
-            : ${OTTER_SWAC:=/Applications/otterlace.app/Contents/Resources}
+            : ${OTTER_SWAC:=/Applications/otter.app/Contents/Resources}
         fi
         printf '  OTTER_SWAC=%s\n' "$OTTER_SWAC"
         export OTTER_SWAC
