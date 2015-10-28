@@ -76,42 +76,11 @@ sub get_assembly_dna {
     my $self = shift;
 
     my $slice = $self->slice;
-    my $output_string = $slice->seq . "\n";
+    my $output = {
+        dna => $slice->seq,
+    };
 
-    my $tiler = Bio::Vega::Tiler->new($slice);
-    my $posn = 0;
-    foreach my $tile ($tiler->feature_pairs) {
-
-        my $start = $tile->start;
-        my $end   = $tile->end;
-
-        # Is there a gap before this piece?
-        if (my $gap = $start - $posn - 1) {
-            # Debugging.  Show the char immediately before and after the string of "N".
-            # $output_string .= substr($output_string, $posn == 0 ? 0 : $posn - 1, $posn == 0 ? $gap + 1 : $gap + 2) . "\n";
-            # Change assembly gaps to dashes.
-            substr($output_string, $posn, $gap, '-' x $gap);
-        }
-        $posn = $end;
-
-        # To save copying large strings, we append onto the
-        # end of the sequence in the output string.
-        $output_string .= join("\t",
-                               $start,
-                               $end,
-                               $tile->hseqname,
-                               $tile->hstart,
-                               $tile->hend,
-                               $tile->hstrand,
-                               $tile->score, # abused to pass clone length
-            ) . "\n";
-    }
-    if (my $gap = $slice->length - $posn) {
-        # If the slice ends in a gap, turn to dashes too
-        substr($output_string, $posn, $gap, '-' x $gap);
-    }
-
-    return $output_string;
+    return $output;
 }
 
 

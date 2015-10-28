@@ -56,7 +56,8 @@ sub test_regions_tt {
     my $sa_region = $modules{region}->new_with_slice($local_server);
     isa_ok($sa_region, $modules{region});
 
-    my $dna = $sa_region->get_assembly_dna;
+    my $hash = $sa_region->get_assembly_dna;
+    my $dna = $hash->{dna};
     is($dna, $test_region->assembly_dna(), 'get_assembly_dna');
 
     my $region = $sa_region->get_region;

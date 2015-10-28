@@ -363,6 +363,7 @@ sub assembly_dna {
 
     my $name =  $self->base_name;
     $assembly_dna = read_file("${REGION_PATH}/${name}.assembly_dna.txt");
+    chomp $assembly_dna;
 
     return $self->{'assembly_dna'} = $assembly_dna;
 }

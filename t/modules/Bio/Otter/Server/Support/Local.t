@@ -34,7 +34,8 @@ isa_ok($otter_dba, 'Bio::Vega::DBSQL::DBAdaptor');
 my $sa_region = Bio::Otter::ServerAction::Region->new_with_slice($local_server);
 isa_ok($sa_region, 'Bio::Otter::ServerAction::Region');
 
-my $dna = $sa_region->get_assembly_dna;
+my $result = $sa_region->get_assembly_dna;
+my $dna = $result->{dna};
 ok($dna, 'get_assembly_dna');
 note('Got ', length $dna, ' bp');
 
