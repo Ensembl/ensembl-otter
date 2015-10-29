@@ -13,6 +13,7 @@ use Bio::Otter::ServerAction::Region;
 sub unlock_region {
     my ($server) = @_;
     $server->dataset_assert_write;
+    $server->content_type('application/json');
 
     my $sa_region = Bio::Otter::ServerAction::Region->new($server);
     return $sa_region->unlock_region;

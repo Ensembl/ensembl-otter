@@ -579,7 +579,7 @@ sub _strip_incomplete_genes {
 
 Input: region, author, hostname, client.
 
-Output (JSON): error or { locknums => $txt }.
+Output: error or { locknums => $txt }.
 
 =cut
 
@@ -587,7 +587,6 @@ sub lock_region {
     my ($self) = @_;
 
     my $server = $self->server;
-    $server->content_type('application/json');
 
     my $client = $server->param('client') || $server->cgi->user_agent;
     substr($client, 35) = '...' ## no critic (BuiltinFunctions::ProhibitLvalueSubstr)
@@ -637,7 +636,6 @@ host.
 sub unlock_region {
     my ($self) = @_;
     my $server = $self->server;
-    $server->content_type('application/json');
 
     my (%out, $action);
     try {
