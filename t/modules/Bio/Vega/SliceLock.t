@@ -11,7 +11,6 @@ use Time::HiRes qw( gettimeofday tv_interval usleep );
 use Date::Format 'time2str';
 
 use Test::Otter qw( ^db_or_skipall get_BOLDatasets get_BOSDatasets try_err );
-use Bio::Vega::ContigLockBroker;
 use Bio::Vega::SliceLockBroker;
 use Bio::Vega::Author;
 use Bio::Otter::Version;
@@ -151,11 +150,6 @@ sub _tidy_database {
     my $dbh = $dataset->get_cached_DBAdaptor->dbc->db_handle;
     $dbh->do(qq{delete from slice_lock where hostname           = '$TESTHOST'});
     $dbh->do(qq{delete from author     where author_email like '%\@$TESTHOST'});
-    try {
-        $dataset->get_cached_DBAdaptor->get_ContigLockAdaptor->clean_lost_legacy;
-    } catch {
-        warn "[Time to delete unused code?]  $_";
-    };
     noise "purged test rows from ".($dataset->name);
     return;
 }
@@ -1735,11 +1729,6 @@ sub __by_dbID {
 sub _support_which {
     my ($thing) = @_;
     my @out;
-    push @out, try {
-        Bio::Vega::ContigLockBroker->supported($thing) ? ('old') : (),
-      } catch {
-          ("old:ERR:$_");
-      };
     push @out, try {
         Bio::Vega::SliceLockBroker->supported($thing) ? ('new') : (),
       } catch {
