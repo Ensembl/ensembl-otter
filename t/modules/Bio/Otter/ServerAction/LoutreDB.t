@@ -29,6 +29,16 @@ my $meta = $ldb_plain->get_meta;
 ok($meta, 'get_meta');
 note('Got ', scalar keys %$meta, ' keys');
 
+$server->set_params( key => 'species.' );
+my $s_meta = $ldb_plain->get_meta;
+ok($s_meta, 'get_meta(species.)');
+note('Got ', scalar keys %$s_meta, ' keys');
+
+$server->set_params( key => 'species.taxonomy_id' );
+$s_meta = $ldb_plain->get_meta;
+ok($s_meta, 'get_meta(species.taxonomy_id)');
+is(scalar keys %$s_meta, 1, 'only one key when exact spec');
+
 my $db_info = $ldb_plain->get_db_info;
 ok($db_info, 'get_db_info');
 note('Got ', scalar keys %$db_info, ' entries');
