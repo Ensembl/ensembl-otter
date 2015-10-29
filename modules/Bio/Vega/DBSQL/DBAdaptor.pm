@@ -13,7 +13,6 @@ use Bio::Vega::DBSQL::StableIdAdaptor;
 use Bio::Vega::DBSQL::ExonAdaptor;
 use Bio::Vega::DBSQL::TranscriptAdaptor;
 use Bio::Vega::DBSQL::AssemblyTagAdaptor;
-use Bio::Vega::DBSQL::ContigLockAdaptor;
 use Bio::Vega::DBSQL::MetaContainer;
 use Bio::Vega::DBSQL::SliceAdaptor;
 use Bio::Vega::DBSQL::SliceLockAdaptor;
@@ -127,15 +126,6 @@ sub get_AssemblyTagAdaptor {
   return $self->{'AssemblyTag'};
 }
 
-sub get_ContigLockAdaptor {
-  my ($self) = @_;
-  if ( !exists $self->{'ContigLock'} ){
-      my $ad=Bio::Vega::DBSQL::ContigLockAdaptor->new($self);
-      $self->{'ContigLock'}=$ad;
-  }
-  return $self->{'ContigLock'};
-}
-
 sub get_DnaSplicedAlignFeatureAdaptor {
   my ($self) = @_;
   if ( !exists $self->{'VegaSplicedAlignFeatureDNA'} ){
@@ -201,7 +191,6 @@ sub _adaptor_tag_list {
         VegaExon
         VegaTranscript
         AssemblyTag
-        ContigLock
         VegaSplicedAlignFeatureDNA
         VegaSplicedAlignFeatureProtein
         VegaMetaContainer
