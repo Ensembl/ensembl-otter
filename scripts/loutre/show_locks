@@ -11,7 +11,6 @@ use Try::Tiny;
 use Bio::Otter::Lace::Defaults;
 use Bio::Otter::Server::Config;
 
-use Bio::Vega::ContigLockBroker;
 use Bio::Vega::SliceLockBroker;
 
 $| = 1;
@@ -21,7 +20,6 @@ sub main {
     my $author    = undef;
     my $assembly  = undef;
     my $hostname  = undef;
-    my $do_delete = 0;
     my ($do_interrupt, $do_expire) = (0, 0);
     my @lock_id_range = ();
     my $range_parser = sub{
@@ -40,16 +38,15 @@ sub main {
         'annotator=s'   => \$author,
         'set=s'         => \$assembly,
         'machine=s'     => \$hostname,
-        'delete!'       => \$do_delete,
-        'interrupt!'    => \$do_interrupt,
+        'interrupt|delete!' => \$do_interrupt,
         'expire!'       => \$do_expire,
         'range=s'       => $range_parser,
         # -h | --help : implicit in do_getopt
         ) or die "Bad options";
     die "No dataset name given" unless $dataset_name;
     die "Did not understand extra argv (@ARGV)" if @ARGV;
-    die "Can only perform one of < -delete | -expire | -interrupt >"
-      if (!!$do_delete + !!$do_expire + !!$do_interrupt) > 1;
+    die "Can only perform one of < -expire | -interrupt >"
+      if (!!$do_expire + !!$do_interrupt) > 1;
 
     my $ds = Bio::Otter::Server::Config->SpeciesDat->dataset($dataset_name);
     die "Unknown dataset '$dataset_name'" unless $ds;
@@ -57,23 +54,10 @@ sub main {
 
     my $exit = 0;
 
-    my $emulated_slice = {};
-    if (Bio::Vega::ContigLockBroker->supported($ds)) {
-        $exit |= process_contig_locks
-          ($otter_db, $author, $hostname, $assembly,
-           $do_delete, $emulated_slice, @lock_id_range)
-            if !$do_interrupt && !$do_expire;
-    } else {
-        warn "CONTIG_LOCKs not supported in dataset $dataset_name\n";
-        $exit |= $do_delete ? 8 : 0;
-    }
-
     if (Bio::Vega::SliceLockBroker->supported($ds)) {
         $exit |= process_slice_locks
           ($otter_db, $author, $hostname, $assembly,
-           $emulated_slice,
-           $do_interrupt, $do_expire, @lock_id_range)
-            if !$do_delete;
+           $do_interrupt, $do_expire, @lock_id_range);
     } else {
         warn "SLICE_LOCKs not supported in dataset $dataset_name\n";
         $exit |= $do_interrupt || $do_expire ? 8 : 0;
@@ -84,13 +68,10 @@ sub main {
 
 sub process_slice_locks {
     my ($otter_db, $author_name, $hostname, $assembly,
-        $emulated_slice,
         $do_interrupt, $do_expire, @lock_id_range) = @_;
 
     warn "Processing SLICE_LOCKs\n";
     my $SLdba = $otter_db->get_SliceLockAdaptor;
-
-    check_stale_contig_lock($SLdba, $emulated_slice);
 
     my $author;
     if (defined $author_name) {
@@ -163,161 +144,6 @@ sub process_slice_locks {
     # Early return for error conditions
 }
 
-sub process_contig_locks {
-    my ($otter_db, $author, $hostname, $assembly,
-        $do_delete, $emulated_slice, @lock_id_range) = @_;
-
-    warn "Processing CONTIG_LOCKs\n";
-
-    my $sql = q{
-        SELECT l.contig_lock_id
-          , l.hostname
-          , au.author_name
-          , clone.name
-          , intl.value
-          , l.timestamp
-          , ss.name
-        FROM (author au
-              , contig_lock l
-              , seq_region contig
-              , seq_region ss
-              , seq_region clone
-              , assembly ss_asm
-              , assembly clone_asm)
-        LEFT JOIN seq_region_attrib hidden
-          ON ss.seq_region_id = hidden.seq_region_id
-          AND hidden.attrib_type_id =
-        (SELECT attrib_type_id
-            FROM attrib_type
-            WHERE code = 'hidden')
-        LEFT JOIN seq_region_attrib intl
-          ON clone.seq_region_id = intl.seq_region_id
-          AND intl.attrib_type_id =
-        (SELECT attrib_type_id
-            FROM attrib_type
-            WHERE code = 'intl_clone_name')
-        WHERE au.author_id = l.author_id
-          AND l.seq_region_id = contig.seq_region_id
-          AND contig.seq_region_id = ss_asm.cmp_seq_region_id
-          AND ss_asm.asm_seq_region_id = ss.seq_region_id
-          AND ss.coord_system_id =
-        (SELECT coord_system_id
-            FROM coord_system
-            WHERE name = 'chromosome'
-              AND version = 'Otter')
-          AND contig.seq_region_id = clone_asm.cmp_seq_region_id
-          AND clone_asm.asm_seq_region_id = clone.seq_region_id
-          AND clone.coord_system_id =
-        (SELECT coord_system_id
-            FROM coord_system
-            WHERE name = 'clone')
-          AND hidden.value != 1
-        };
-    my( @param );
-    if ($author) {
-        $sql .= ' AND au.author_name = ? ';
-        push(@param, $author);
-    }
-    if ($assembly) {
-        $sql .= ' AND ss.name = ? ';
-        push(@param, $assembly);
-    }
-    if ($hostname) {
-        $sql .= ' AND l.hostname = ? ';
-        push(@param, $hostname);
-    }
-    if (@lock_id_range) {
-        $sql .= ' AND l.contig_lock_id BETWEEN ? AND ? ';
-        push(@param, @lock_id_range);
-    }
-    $sql .= ' ORDER BY l.contig_lock_id ASC ';
-
-    # warn "Preparing SQL $sql";
-    my $sth = $otter_db->dbc->prepare($sql);
-    # warn "Executing SQL";
-    $sth->execute(@param);
-    
-    my( %lock_id );
-    while (my @row = $sth->fetchrow) {
-        my ($lid, $host, $author, $acc_sv, $intl, $date, $type, $start, $end) = @row;
-        if (my $info = $lock_id{$lid}) {
-            push(@$info, $type);
-        } else {
-            $lock_id{$lid} = [$host, $author, $acc_sv, $intl, $date, $type, $start, $end];
-            push @{ $emulated_slice->{$1} }, $lid
-              if $host =~ /^SliceLock\.(\d+)$/;
-        }
-    }
-
-    my $ditto = '';
-    my $last_set = '';
-    my $row_pattern = "  %6d  %-20s  %7s  %-12s  %15s  %19s  %10s\n";
-    foreach my $lid (sort {$a <=> $b} keys %lock_id) {
-        my $info = $lock_id{$lid};
-        
-        my $host   = shift @$info;
-        my $author = shift @$info;
-        my $acc_sv = shift @$info;
-        my $intl   = shift @$info || '';    # From left join
-        my $date   = shift @$info;
-        # my $type   = join ' ', sort  @$info;
-        my $type   = shift @$info;
-        
-        my $this_set = join(' ', $host, $author, $date, $type);
-        
-        # Make output easier to read by using ditto marks where
-        # columns are the same in a locked set of clones
-        if ($this_set eq $last_set) {
-            printf  $row_pattern,
-              $lid, $ditto,  $ditto, $acc_sv, $intl, $ditto, $ditto;
-        } else {
-            print "\n";
-            printf  $row_pattern,
-              $lid,  $host, $author, $acc_sv, $intl,  $date,  $type;
-        }
-        $last_set = $this_set;
-    }
-    print "\n";
-    
-    my $lock_count = scalar keys %lock_id;
-
-    if ($do_delete and scalar keys %lock_id) {
-        warn "\n *** -delete operate on the old contig_lock rows\n *** use -interrupt or -expire for slice_lock rows\n\n";
-        if (q_del("delete")) {
-            my $del_sth = $otter_db->dbc->prepare(q{
-                DELETE FROM contig_lock
-                WHERE contig_lock_id = ?
-                });
-            my $count = 0;
-            foreach my $lid (sort {$a <=> $b} keys %lock_id) {
-                $del_sth->execute($lid);
-                $count += $del_sth->rows;
-            }
-            print "Deleted $count locks\n";
-        }
-    }
-    return 0;
-}
-
-sub check_stale_contig_lock {
-    my ($SLdba, $emulated_slice) = @_;
-
-    # First, remove the valid $emulated_slice
-    while (my ($slid, $contig_lock) = each %$emulated_slice) {
-        my $lock = try { $SLdba->fetch_by_dbID($slid) };
-        delete $emulated_slice->{$slid} if $lock && $lock->is_held;
-    }
-
-    foreach my $slid (sort { $a <=> $b } keys %$emulated_slice) {
-        # Warn of stale contig_lock
-        my $contig_lock = $emulated_slice->{$slid};
-        local $" = ', ';
-        warn "\n*** contig_lock_id in (@$contig_lock) emulating slice_lock_id=$slid is stale\n    Try with\n      ... -delete -machine SliceLock.$slid\n";
-    }
-
-    return;
-}
-
 sub q_del {
     my ($op) = @_;
     print STDERR "\u$op all these locks? [y|N] ";
@@ -341,7 +167,7 @@ wrong in the annotation system - which may need to be fixed!
 
 =head1 SYNOPSIS
 
-  show_locks -dataset <DATASET_NAME> [-delete | -interrupt | -expire ] \
+  show_locks -dataset <DATASET_NAME> [ -interrupt | -expire ] \
     [-annotator <UNAME>] [-set <TYPE>] [-machine <HOSTNAME>] [-range <INT[-INT]>]
 
 =head1 ARGUMENTS
@@ -358,10 +184,11 @@ With one of these flags set, the script will show the list of locks
 that match the search criteria followed by a prompt which asks if all
 the locks in the list should be cancelled.
 
-"Delete" is for the old contig locks.  "Expire" is for SliceLocks
+"Expire" is for SliceLocks
 which have been unused for long enough to be considered stale.
 "Interrupt" is for SliceLocks when the need to interrupt a region of
 work justifies preventing its owner saving.
+"Delete" is a synonym for "Expire".
 
 =back
 
