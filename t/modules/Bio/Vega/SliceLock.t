@@ -651,7 +651,6 @@ sub exclwork_tt {
 
     subtest assert_bumped => sub {
         plan tests => 9;
-        local $SLdba->{_TESTCODE_no_legacy} = 1; # because we have adjacent slicelocks
         my $br = $BVSLB->new(-locks => $L);
         my $Sdba = $SLdba->db->get_SliceAdaptor;
         my @r = map { $Sdba->fetch_by_seq_region_id(@$_) || die "? (@$_)" }

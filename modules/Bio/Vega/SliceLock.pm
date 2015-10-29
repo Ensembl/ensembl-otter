@@ -5,7 +5,6 @@ use warnings;
 use Bio::EnsEMBL::Utils::Exception qw ( throw warning );
 use Bio::EnsEMBL::Utils::Argument qw ( rearrange );
 use Bio::EnsEMBL::Slice;
-use Bio::Vega::ContigLockBroker;
 
 use Date::Format 'time2str';
 use Try::Tiny;
@@ -531,94 +530,6 @@ sub contains_slice {
     }
 #warn join "\n  ", @$why_not if @$why_not;
     return 0 == @$why_not ? 1 : 0;
-}
-
-
-=head1 LEGACY CONTIGLOCK INTERACTION
-
-In order to support old code during the transition to SliceLocks from
-ContigLocks, it is possible to use both in the same database.
-
-When the C<contig_lock> table is not present, this does nothing.
-
-Otherwise, old ContigLocks continue to operate as they did before.
-The SliceLockAdaptor instructs each SliceLock to create, check or
-remove matching ContigLocks to exclude any old code from (at least)
-the SliceLock'ed region.
-
-This abuses the C<contig_lock.hostname> field as a composite foreign
-key to the C<slice_lock> row.
-
-=cut
-
-# dbc-cached ContigLockBroker->supported flag.
-#
-# This is a small memory leak, and the code will be removed later.
-my %dbc_legacy;
-sub _legacy_supported {
-    my ($self) = @_;
-    my $adap = $self->adaptor
-      or throw "ContigLockBroker linkage requires a stored SliceLock";
-    my $dbc = $adap->dbc;
-    if (!exists $dbc_legacy{"$dbc"}) {
-        $dbc_legacy{"$dbc"} =
-          Bio::Vega::ContigLockBroker->supported($dbc->db_handle);
-    }
-    return $dbc_legacy{"$dbc"};
-}
-
-# Return a broker (configured with hostname and author) iff
-# contig_locks supported.
-sub _legacy_contig_broker {
-    my ($self) = @_;
-
-    my $broker;
-    if ($self->adaptor->{_TESTCODE_no_legacy}) {
-        # set during some test cases
-    } elsif ($self->_legacy_supported) {
-        my $dbID = $self->dbID or throw "need dbID";
-        $broker = Bio::Vega::ContigLockBroker->new
-          (-author => $self->author,
-           -hostname => "SliceLock.$dbID");
-    } # else no contig_locks here
-    return $broker;
-}
-
-
-=head2 legacy_contig_lock()
-
-To be called by the SliceLockAdaptor.  Obtains locks for overlapping
-contigs.  Can cause "lock wait timeout" or other errors.
-
-=cut
-
-sub legacy_contig_lock {
-    my ($self) = @_;
-    my $broker = $self->_legacy_contig_broker
-      or return;
-
-    return $broker->lock_clones_by_slice($self->slice, '', $self->adaptor->db);
-}
-
-
-=head2 legacy_contig_unlock()
-
-To be called by the SliceLockAdaptor.  Removes any related
-ContigLocks, returns nothing.
-
-=cut
-
-sub legacy_contig_unlock {
-    my ($self) = @_;
-    my $broker = $self->_legacy_contig_broker
-      or return;
-
-    my $CLdba = $self->adaptor->db->get_ContigLockAdaptor;
-    my $locks = $CLdba->list_by_hostname($broker->client_hostname);
-    foreach my $lock (@$locks) {
-        $CLdba->remove($lock);
-    }
-    return;
 }
 
 
