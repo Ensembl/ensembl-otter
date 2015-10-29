@@ -475,14 +475,12 @@ sub do_lock {
         AND seq_region_end >= ?
         AND seq_region_start <= ?
         });
-        $lock->legacy_contig_lock();
         my $rv = $sth_activate->execute
           ($lock_id, $lock_id, $lock_id, $lock_id, $lock_id,
            $author_id,
            $srID, $sr_start, $sr_end);
         push @too_late, # for debug only
           $rv > 0 ? "race looks won? (rv=$rv)" : "beaten in race? (rv=$rv)";
-        $lock->legacy_contig_unlock() unless $rv > 0;
     }
 
     push @$debug, @too_late if defined $debug;
@@ -597,7 +595,6 @@ sub unlock {
       AND active <> 'free'
   });
   my $rv = $sth->execute($freed, $freed_author_id, $dbID);
-  $slice_lock->legacy_contig_unlock();
 
   $self->freshen($slice_lock);
 
