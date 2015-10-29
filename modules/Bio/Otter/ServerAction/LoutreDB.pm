@@ -37,9 +37,15 @@ my @white_list = qw(
 my %white_list = map { $_ => 1 } @white_list;
 
 sub get_meta {
-    my $self = shift;
+    my ($self) = @_;
+    my $server = $self->server;
 
-    my $sth = $self->server->otter_dba()->dbc()->prepare($select_meta_sql);
+    my $key_pattern;
+    if (my $key_param = $server->param('key')) {
+        $key_pattern = qr/^${key_param}/;
+    }
+
+    my $sth = $server->otter_dba()->dbc()->prepare($select_meta_sql);
     $sth->execute;
 
     my $counter = 0;
@@ -49,6 +55,10 @@ sub get_meta {
 
         my ($key_prefix) = $meta_key =~ /^(\w+)\.?/;
         next unless $white_list{$key_prefix};
+
+        if ($key_pattern) {
+            next unless $meta_key =~ $key_pattern;
+        }
 
         $meta_hash{$meta_key}->{species_id} = $species_id;
         push @{$meta_hash{$meta_key}->{values}}, $meta_value; # as there can be multiple values for one key
