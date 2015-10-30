@@ -93,8 +93,8 @@ use File::Basename qw{ dirname };
         );
 
         # Make chromosomes visible, writable and give them descriptions
-        foreach my $gut (qq{49, CONCAT("$CODE chromosome ", name)}, q{97, name}, q{128, 1}, q{129, 0}) {
-            system_do(qq{$loutre --execute='INSERT seq_region_attrib (seq_region_id, attrib_type_id, value) SELECT seq_region_id, $gut FROM seq_region WHERE coord_system_id = (SELECT coord_system_id FROM coord_system WHERE name = "chromosome")'});
+        foreach my $gut (qq{49, CONCAT("$CODE chromosome ", name)}, q{97, name}, q{98, "REL-1508"}, q{128, 1}, q{129, 0}) {
+            system_do(qq{$loutre --execute='INSERT seq_region_attrib (seq_region_id, attrib_type_id, value) SELECT sr.seq_region_id, $gut FROM seq_region sr, coord_system cs WHERE sr.coord_system_id = cs.coord_system_id AND cs.name = "chromosome"'});
         }
 
         # Copy data from loutre into pipe database.
