@@ -37,6 +37,7 @@ use Zircon::ZMap;
 use Bio::Otter::Lace::Chooser::Item::Column;
 use Bio::Otter::Lace::Client;
 use Bio::Otter::RequestQueuer;
+use Bio::Otter::UI::AboutBoxMixIn;
 use Bio::Otter::Utils::CacheByName;
 use Bio::Otter::Zircon::ProcessHits;
 use Bio::Otter::ZMap::XML;
@@ -691,6 +692,10 @@ sub _populate_menus {
     my $debug_menu = $file->Menu(-tearoff => 0);
     $file->add('cascade', -menu => $debug_menu,
                -label => 'Debug', -underline => 0);
+    $debug_menu->add('command',
+                     -label => 'About session',
+                     -underline => 1,
+                     -command => sub { $self->_show_about_session });
     $debug_menu->add('command',
                      -label => 'Copy directory name to selection',
                      -underline => 5,
@@ -1592,6 +1597,38 @@ sub _resync_with_db {
     return;
 }
 
+
+sub _show_about_session {
+    my ($self) = @_;
+
+    # Regenerate each time, as ZMap may have changed
+    my $adb    = $self->AceDatabase;
+    my $home   = $adb->home;
+    my $sqlite = $adb->DB->file;
+
+    my $zmap_session_dir    = $adb->zmap_dir;
+    my $zmap_session_config = sprintf('%s/%s', $zmap_session_dir, 'ZMap');
+
+    my $zmap_process_dir    = $self->{'_zmap_config_dir'};
+    my $zmap_process_config = sprintf('%s/%s', $zmap_process_dir, 'ZMap');
+
+    my $content = <<"__TEXT";
+Session:
+  directory:   $home
+  SQLite:      $sqlite
+  ZMap dir:    $zmap_session_dir
+    config:    $zmap_session_config
+
+ZMap process:
+  directory:   $zmap_process_dir
+  config:      $zmap_process_config
+__TEXT
+
+    $self->{'_about_session'} = $self->Bio::Otter::UI::AboutBoxMixIn::make_box('About Otter', $content, 1);
+    $self->{'_about_session'}->Show;
+
+    return;
+}
 
 sub _clipboard_setup {
     my ($self, $with_host) = @_;
@@ -3033,7 +3070,7 @@ sub _make_zmap_config_dir {
        map {( (%$_)[0] || '(general error)' ).': '.(%$_)[1] } @$err)
         if @$err;
 
-    return $config_dir;
+    return $self->{'_zmap_config_dir'} = $config_dir;
 }
 
 sub zmap_configs_dirs {

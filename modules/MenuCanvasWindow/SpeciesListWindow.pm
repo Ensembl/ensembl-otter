@@ -14,6 +14,7 @@ use Tk::DialogBox;
 use Zircon::ZMap;
 
 use Bio::Otter::Utils::About;
+use Bio::Otter::UI::AboutBoxMixIn;
 use Bio::Otter::Lace::Client;
 use Bio::Vega::Utils::URI qw( open_uri );
 use Tk::ScopedBusy;
@@ -189,42 +190,8 @@ sub show_about {
     my ($self) = @_;
 
     $self->{'_about'} ||= do {
-        my $A = $self->top_window->DialogBox
-          (-title => 'About Otter',
-           -buttons => [qw[ Close ]]);
-        $A->Tk::bind('<Escape>', [ $A, 'Exit' ]);
-
         my $content = Bio::Otter::Utils::About->about_text;
-        # Any number of URLs may be inserted.  If we want images or
-        # other markup, it's time to break out a new class.
-
-        my ($x, $y) = (30, 0);
-        foreach my $ln (split /\n/, $content) {
-            $y++;
-            $x = length($ln) if length($ln) > $x;
-        }
-
-        my $font = $self->named_font('prop');
-        my $mono = $self->named_font('mono');
-        my $txt = $A->ROText
-          (-bg => 'white',
-           -height => $y, -width => $x,
-           -selectborderwidth => 0,
-           -borderwidth => 0,
-           -font => $font)->pack
-            (-side => 'top', -fill => 'both', -expand => 1);
-
-        foreach my $seg (split m{(\w+://\S+)}, $content) {
-            my @tag;
-            push @tag, 'link' if $seg =~ m{://};
-            $txt->insert(end => $seg, @tag);
-        }
-
-        $txt->tagConfigure(link => -foreground => 'blue', -underline => 1, -font => $mono);
-        $txt->tagBind(link => '<Button-1>', [ $self, 'about_hyperlink', $txt, Tk::Ev('@') ]);
-        $txt->configure(-state => 'disabled');
-
-        $A;
+        $self->Bio::Otter::UI::AboutBoxMixIn::make_box('About Otter', $content);
     };
 
     $self->{'_about'}->Show;
