@@ -1624,7 +1624,7 @@ ZMap process:
   config:      $zmap_process_config
 __TEXT
 
-    $self->{'_about_session'} = $self->Bio::Otter::UI::AboutBoxMixIn::make_box('About Otter', $content, 1);
+    $self->{'_about_session'} = $self->Bio::Otter::UI::AboutBoxMixIn::make_box('About session', $content, 1);
     $self->{'_about_session'}->Show;
 
     return;
