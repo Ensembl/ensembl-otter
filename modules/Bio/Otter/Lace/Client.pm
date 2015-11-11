@@ -263,7 +263,7 @@ sub var_tmp_otter_dir {
     my ($self) = @_;
 
     my $user = (getpwuid($<))[0];
-    return sprintf '/var/tmp/otter/%s', $user;
+    return sprintf '/var/tmp/otter_%s', $user;
 }
 
 sub _session_root_otter {
