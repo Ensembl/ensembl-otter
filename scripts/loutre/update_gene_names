@@ -28,11 +28,13 @@ Log::Log4perl->easy_init;
 
     my $usage = sub { exec('perldoc', $0) };
     my $dataset = undef;
+    my $warn_up_to_date = 0;
     # This do_getopt() call is needed to parse the otter config files
     # even if you aren't giving any arguments on the command line.
     Bio::Otter::Lace::Defaults::do_getopt(
       'h|help!'     => $usage,
       'dataset=s'   => \$dataset,
+      'uptodate!'   => \$warn_up_to_date,
       ) or $usage->();
     $usage->() unless $dataset;
 
@@ -87,7 +89,7 @@ Log::Log4perl->easy_init;
         my $stable_id = $data->{'stable_id'};
         my $current = $current_genes{$stable_id};
         unless ($current) {
-            warn "No current gene: ", Dumper($data);
+            warn "\nNo current gene: ", Dumper($data);
             next;
         }
         # Do we care if the old_name fields don't match?
@@ -95,7 +97,7 @@ Log::Log4perl->easy_init;
         $data->{'old_desc'} = $current->{'old_desc'};
         
         if ($data->{'new_name'} eq $data->{'old_name'} and $data->{'new_desc'} eq $data->{'old_desc'}) {
-            warn "Up to date: ", Dumper($data);
+            warn "\nUp to date: ", Dumper($data) if $warn_up_to_date;
             next;
         }
         
@@ -136,7 +138,7 @@ sub update_gene_name {
         $broker->exclusive_work($work, 1);
     } catch {
         my $fail_type = $lock_ok ? 'Error saving' : 'Cannot lock region';
-        warn "$fail_type for: ".Dumper($data)."\n  $_";
+        warn "\n$fail_type for: ".Dumper($data)."\n  $_";
     } finally {
         $broker->unlock_all;
     };
@@ -154,6 +156,20 @@ __END__
 
   grep OTTHUMG hgnc_names_to_fix_2013-02-25.txt | ./update_gene_names \
     -dataset human > hgnc_names_to_fix_2013-02-25.log 2>&1
+
+=head1 PARAMETERS
+
+=over 4
+
+=item B<-dataset NAME>
+
+Name of dataset (species) to operate on.
+
+=item B<-uptodate>
+
+Print a warning for every gene whose data is up to date with the data in the file.
+
+=back
 
 =head1 EXAMPLE DATA
 
