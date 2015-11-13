@@ -58,6 +58,7 @@ use Sys::Hostname qw{ hostname };
 use Try::Tiny;
 
 use Bio::Otter::Lace::Defaults;
+use Bio::Otter::Server::Config;
 use Bio::Vega::SliceLockBroker;
 
 {
@@ -86,13 +87,10 @@ use Bio::Vega::SliceLockBroker;
     # Split any comma separated lists of stable IDs
     @stable_ids = map { split /,/, $_ } @stable_ids;
 
-    # Client communicates with otter HTTP server
-    my $cl = Bio::Otter::Lace::Defaults::make_Client();
-
     # DataSet interacts directly with an otter database
-    my $ds = $cl->get_DataSet_by_name($dataset_name);
+    my $ds = Bio::Otter::Server::Config->SpeciesDat->dataset($dataset_name);
 
-    my $otter_dba = $ds->get_cached_DBAdaptor;
+    my $otter_dba = $ds->otter_dba;
 
     my $list_sth = $otter_dba->dbc->prepare(qq{
         SELECT g.gene_id
