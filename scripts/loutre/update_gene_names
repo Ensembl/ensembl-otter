@@ -127,6 +127,7 @@ sub update_gene_name {
     my $lock_ok;
     my $work = sub {
         $lock_ok = 1;
+        print STDERR "\n";
         $gene_aptr->store($gene);
         return;
     };
