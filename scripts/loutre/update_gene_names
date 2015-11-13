@@ -82,7 +82,9 @@ Log::Log4perl->easy_init;
         }
         push @gene_data, $data;
     }
-    
+
+    check_for_same_gene_stable_id_more_than_once(\@gene_data);
+
     my $author_obj = Bio::Vega::Author->new_for_uid;
     
     foreach my $data (@gene_data) {
@@ -103,6 +105,22 @@ Log::Log4perl->easy_init;
         
         update_gene_name($author_obj, $otter_dba, $data);
     }
+}
+
+sub check_for_same_gene_stable_id_more_than_once {
+    my ($gene_data) = @_;
+
+    my %seen_stable;
+    foreach my $data (@$gene_data) {
+        $seen_stable{$data->{'stable_id'}}++
+    }
+    my @more_than_once = sort {$a cmp $b} grep { $seen_stable{$_} > 1 } keys %seen_stable;
+    if (@more_than_once) {
+        die "These stable IDs occur more than once in the input:\n",
+          map({ "  $_\n" } @more_than_once),
+          "Aborting...\n";
+    }
+    return 0;
 }
 
 sub update_gene_name {
