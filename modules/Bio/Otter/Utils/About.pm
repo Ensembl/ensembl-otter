@@ -51,7 +51,7 @@ sub about_text {
 This is Otter version $vsn, $desig_info
 $dev_server
 Otter web page
-  http://www.sanger.ac.uk/resources/software/otterlace/
+  http://www.sanger.ac.uk/science/tools/otter
 
 Contains\n${anno}Client Ensembl from $vsn_cliens
 PerlModules from $vsn_perlmod
