@@ -45,7 +45,7 @@ use Bio::EnsEMBL::Utils::Exception qw(warning);
             SELECT oa.value
               , COUNT(DISTINCT stable_id) cnt
               , GROUP_CONCAT(CONCAT(o.${component}_id,':',stable_id,':',sr.name,':',o.seq_region_start,':',o.seq_region_end)
-                ORDER BY o.${component}_id ASC )
+                ORDER BY o.${component}_id DESC )
             FROM ${component}_attrib oa
               , $component o
               , attrib_type at
