@@ -83,7 +83,7 @@ sub wanted_default {
 # source methods
 
 sub featuresets {
-    confess "featuresets() not implemented in parent ", __PACKAGE__;
+    confess "featuresets() not implemented in ", ref(shift);
 }
 
 sub zmap_column {
@@ -133,7 +133,7 @@ sub gff_source {
 # Utility methods
 
 sub script_name {
-    confess "script_name() not implemented in parent ", __PACKAGE__;
+    confess "script_name() not implemented in ", ref(shift);
 }
 
 sub url {
@@ -143,7 +143,7 @@ sub url {
 
 sub _url_query_string {
     my ($self, $session) = @_;
-    confess "_query_string() not implemented in parent ", __PACKAGE__;
+    confess "_url_query_string() not implemented in ", ref(shift);
 }
 
 sub _param_value { ## no critic(Subroutines::ProhibitUnusedPrivateSubroutines)
@@ -162,7 +162,7 @@ sub resource_bin {
 }
 
 sub init_resource_bin {
-    confess "init_resource_bin() not implemented in parent ", __PACKAGE__;
+    confess "init_resource_bin() not implemented in ", ref(shift);
 }
 
 sub resource_bin_from_uri {
