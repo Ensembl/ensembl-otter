@@ -44,8 +44,8 @@ sub _url_query_string { ## no critic(Subroutines::ProhibitUnusedPrivateSubroutin
 }
 
 sub content_type { return; }
-sub zmap_style  { die "the derived class must implement &zmap_style";  }
-sub script_name { die "the derived class must implement &script_name"; }
+sub zmap_style  { confess  "zmap_style() not implemented in ", ref(shift); }
+sub script_name { confess "script_name() not implemented in ", ref(shift); }
 
 # GFF methods
 
