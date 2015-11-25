@@ -541,9 +541,6 @@ sub zmap_config {
 sub _zmap_config {
     my ($self) = @_;
 
-    my $pfetch_www = $ENV{'PFETCH_WWW'};
-    my $pfetch_url = $self->Client->pfetch_url;
-
     my $blixemrc = sprintf '%s/blixemrc', $self->zmap_dir;
     my $xremote_debug = Bio::Otter::Debug->debug('XRemote');
 
@@ -551,8 +548,8 @@ sub _zmap_config {
 
         'ZMap' => {
             'cookie-jar'      => $ENV{'OTTER_COOKIE_JAR'},
-            'pfetch-mode'     => ( $pfetch_www ? 'http' : 'pipe' ),
-            'pfetch'          => ( $pfetch_www ? $pfetch_url : 'pfetch' ),
+            'pfetch-mode'     => 'http',
+            'pfetch'          => $self->Client->pfetch_url,
             'xremote-debug'   => $xremote_debug ? 'true' : 'false',
             'stylesfile'      => $self->stylesfile,
             ($self->colour ? ('session-colour'  => $self->colour) : ()),
