@@ -671,6 +671,7 @@ push @sql_fixes, "UPDATE transcript SET biotype = 'siRNA' where biotype = 'sirna
 push @sql_fixes, "UPDATE transcript SET biotype = 'snRNA' where biotype = 'snrna';\n";
 push @sql_fixes, "UPDATE transcript SET biotype = 'tRNA' where biotype = 'trna';\n";
 push @sql_fixes, "UPDATE transcript SET biotype = 'miRNA' where biotype = 'mirna';\n";
+push @sql_fixes, "UPDATE transcript SET biotype = 'scRNA' where biotype = 'scrna';\n";
 push @sql_fixes, qq(UPDATE transcript SET biotype = "3prime_overlapping_ncrna" where biotype = "3'_overlapping_ncrna";\n);
 
 #update some statuses

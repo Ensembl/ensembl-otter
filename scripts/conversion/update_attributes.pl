@@ -165,7 +165,7 @@ if (check_consistency($dbh, \@rows)) {
 sub repair {
     my ($dbh, $attribs) = @_;
 
-    my @tables = qw(seq_region_attrib misc_attrib translation_attrib transcript_attrib);
+    my @tables = qw(seq_region_attrib misc_attrib translation_attrib transcript_attrib gene_attrib);
 
     # create backup of attrib_type table
     $support->log("Creating backup of attrib_type table...\n", 1);
@@ -215,7 +215,7 @@ sub repair {
     $dbh->do("DROP TABLE tmp_attrib_types");
 
     if (@{ $ref }) {
-      $support->log_warning("These codes are in Vega but ensembl_production, please check: '".join("','", map { $_->[0] } @{ $ref })."'\n", 2);
+      $support->log_warning("These codes are in Vega but not in ensembl_production, please check: '".join("','", map { $_->[0] } @{ $ref })."'\n", 2);
     }
 
     my %missing_codes = map { $_->[0], 1 } @{ $ref };

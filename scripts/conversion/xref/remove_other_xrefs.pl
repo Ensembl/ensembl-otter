@@ -135,7 +135,7 @@ $num = $ev_dbh->do(qq(
 $support->log("Done deleting $num entries.\n",1);
 
 $support->log("Resetting gene.display_xref_id...\n");
-$num = $ev_dba->do(qq(
+$num = $ev_dbh->do(qq(
            UPDATE gene g, xref x
            SET g.display_xref_id = x.xref_id
            WHERE g.stable_id = x.dbprimary_acc

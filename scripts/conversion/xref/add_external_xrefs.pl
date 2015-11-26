@@ -1122,9 +1122,9 @@ sub parse_mgi {
     'mgifile_uni_ref' => {
       'MGI Marker Accession ID' => 'MGI_PID',
       'Marker Symbol'           => 'MGI',
-      'RefSeq transcript ID'    => 'RefSeq_dna',
-      'RefSeq protein ID'       => 'RefSeq_peptide',
-      'TrEMBL ID'               => 'TrEMBL',
+      'RefSeq transcript IDs'   => 'RefSeq_dna',
+      'RefSeq protein IDs'      => 'RefSeq_peptide',
+      'TrEMBL IDs'               => 'TrEMBL',
     },
   };
 
@@ -1200,7 +1200,7 @@ sub parse_mgi {
         if ($db eq 'MGI') {
           $xrefs->{$marker_symbol}{$db} = [ $marker_symbol .'||'. $accessions{'MGI_PID'} ] unless $xrefs->{$marker_symbol}{$db};
         }
-        elsif ( $db eq 'RefSeq_peptide') {
+        elsif ( $db =~ /RefSeq/) {
           foreach my $acc (split (/\|/, $accessions{$db})) {
             $db = 'RefSeq_peptide_predicted' if ($acc =~ /^XP_/);
             push @{$xrefs->{$marker_symbol}{$db}}, $acc .'||'. $acc ;
