@@ -12,7 +12,6 @@ use Bio::Otter::Lace::OnTheFly::Utils::SeqList;
 use Bio::Otter::Lace::OnTheFly::Utils::Types;
 
 use Bio::Vega::Evidence::Types qw{ new_evidence_type_valid seq_is_protein };
-use Hum::Pfetch;
 
 has accession_type_cache => ( is => 'ro', isa => 'Bio::Otter::Lace::AccessionTypeCache', required => 1 );
 
