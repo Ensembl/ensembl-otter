@@ -13,7 +13,6 @@ use Try::Tiny;
 use Bio::Otter::Lace::OnTheFly::Genomic;
 use Bio::Vega::Evidence::Types qw( evidence_is_sra_sample_accession seq_is_protein );
 use Bio::Otter::Lace::Client;
-use Hum::Pfetch;
 use Hum::FastaFileIO;
 use Hum::ClipboardUtils qw{ accessions_from_text };
 use Hum::Sort qw{ ace_sort };
