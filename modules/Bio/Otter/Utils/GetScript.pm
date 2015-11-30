@@ -9,7 +9,7 @@ use Carp;
 use IO::Handle;
 use Scalar::Util qw(weaken);
 use Time::HiRes qw( time gettimeofday );
-use URI::Escape  qw(uri_unescape);
+use URI::Escape  qw(uri_escape uri_unescape);
 
 use Bio::Otter::Utils::TimeDiff;
 
@@ -79,7 +79,7 @@ sub run {
 
     my $args = $self->_parse_uri_style_args;
 
-    $self->show_version if exists $args->{'--version'}; # exits
+    $self->show_version if exists $args->{'version'};   # exits
     die "failing as required" if $args->{'fail'};       # test case
 
     $self->_use_session_dir($self->read_delete_args('session_dir'));
@@ -131,6 +131,7 @@ sub _parse_uri_style_args {
 
     foreach my $pair (@ARGV) {
         my ($key, $val) = split(/=/, $pair);
+        $key =~ s/^-{1,2}//;    # Remove (up to two) minus signs from --opt=val style arguments
         $getscript_args{uri_unescape($key)} = uri_unescape($val);
     }
     return \%getscript_args;
@@ -159,6 +160,14 @@ sub require_arg {
 sub arg {
     my ($self, $key) = @_;
     return $getscript_args{$key};
+}
+
+sub format_params {
+    my ($self, $args) = @_;
+
+    return join '&', map {
+        uri_escape($_) . '=' . uri_escape($args->{$_});
+    } sort keys %$args;
 }
 
 sub _log_arguments {
@@ -306,10 +315,33 @@ sub user_agent {
     return $getscript_user_agent;
 }
 
+sub get_mapping {
+    my ($self) = @_;
+
+    my ($dataset, $csver_remote, $chr, $start, $end, $gff_source) =
+        $self->read_args(qw{ dataset csver_remote chr start end gff_source });
+    my $params = $self->format_params({
+        dataset => $dataset,
+        cs      => $csver_remote,
+        chr     => $chr,
+        start   => $start,
+        end     => $end,
+    });
+    if ($dataset and defined($csver_remote)) {
+        my $mapping_xml = $self->do_http_request('GET', 'get_mapping', $params);
+        return Bio::Otter::Mapping->new_from_xml($mapping_xml);
+    }
+    else {
+        return Bio::Otter::Mapping::_equiv_new(-chr => $chr); 
+    }
+}
+
 # FIXME: duplication with B:O:L:Client->_do_http_request()
 #
 sub do_http_request {
-    my ($self, $method, $scriptname, $params, $context) = @_;
+    my ($self, $method, $scriptname, $params) = @_;
+
+    my $context = $self->log_context;
 
     # create a user agent to send the request
     # (side-effect: require's HTTP::Request on first use)
@@ -352,11 +384,14 @@ sub do_http_request {
         });
 
     if ($response->is_success) {
-
-        return $self->_json_content($response)
-            if $response->content_type =~ m{^application/json($|;)}; # charset ignored
-
-        return $response->decoded_content;
+        if ($response->content_type =~ m{^application/json($|;)}) { # charset ignored
+            return $self->_json_content($response)
+        }
+        else {
+            my $xml = $response->decoded_content;
+            my ($content) = $xml =~ m{<otter[^\>]*\>\s*(.*)</otter>}s;
+            return $content ? $content : $xml;
+        }
     }
     else {
 
