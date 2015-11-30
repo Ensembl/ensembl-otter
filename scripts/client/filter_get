@@ -6,7 +6,6 @@ use warnings;
 package Bio::Otter::GetScript::Filter;
 
 use Digest::MD5 qw(md5_hex);
-use URI::Escape qw(uri_escape);
 
 use Bio::Otter::Utils::AccessionInfo::Serialise qw(unescape_fasta_description);
 
@@ -28,10 +27,7 @@ sub do_it {
     $args->{log} = 1 if $LOG; # enable logging on the server
 
     # concatenate the rest of the arguments into a parameter string
-
-    my $params = join '&', map {
-        uri_escape($_).'='.uri_escape($args->{$_});
-    } sort keys %$args;
+    my $params = $self->format_params($args);
 
     my $gff_source = $args->{gff_source};
     my $gff_filename = sprintf '%s_%s.gff', $gff_source, md5_hex($params);
@@ -56,7 +52,7 @@ sub do_it {
 
     $self->log_message("cache file: $gff_filename: cache miss");
 
-    my $gff = $self->do_http_request('GET', $server_script, $params, $gff_source);
+    my $gff = $self->do_http_request('GET', $server_script, $params);
 
     # cache the result
     $self->time_diff_for(
@@ -91,7 +87,7 @@ sub _spool_gff {
         while (my $line = <$fh>) {
             if ($line =~ /^>/) {
                 # FASTA header
-                print unescape_fasta_description($line);
+                print unescape_fasta_description($line);    ### Why do we do this here?
             } else {
                 print $line;
             }

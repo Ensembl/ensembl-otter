@@ -3,6 +3,15 @@
 use strict;
 use warnings;
 
+package Bio::Otter::GetScript::BAM;
+
+use base 'Bio::Otter::Utils::GetScript';
+
+sub version      { return 'bam_get 0.6'; }
+sub log_filename { return 'gff_log.txt'; }
+
+my $LOG = 1;
+
 use Bio::Otter::Log::Log4perl qw(:easy);
 use URI::Escape qw(uri_unescape);
 
@@ -14,102 +23,46 @@ use Bio::Otter::Fetch::BAM;
 use Bio::Otter::Mapping;
 use Bio::Vega::Utils::GFF;
 
-my $paired_flag = RFLAGS->{'PAIRED'};
+# variables used by _print_feature()
+my ($gff_seqname, $gff_source, $gff_format);
 
-# parse the command line
+sub do_it {
+    my ($self) = @_;
 
-my $options = {
-    gff_version => 3,
-};
+    my $args = $self->args;
+    $gff_seqname = $args->{'gff_seqname'} || $args->{'chr'};
+    $gff_source  = $args->{'gff_source'};
+    my $gff_version = $args->{'gff_version'} || 3;
+    $gff_format = Bio::Vega::Utils::GFF::gff_format($gff_version);
 
-my @options_specs = qw(
-    gff_version=s
-    file=s
-    csver_remote=s
-    dataset=s
-    chr=s
-    start=i
-    end=i
-    gff_source=s
-    gff_seqname=s
-    version
+    my ($file, $dataset, $csver_remote, $chr, $start, $end) =
+        $self->read_args(qw{ file dataset csver chr start end });
+
+    my $sam = Bio::DB::Sam->new(
+        -bam        => $file,
+        -autoindex  => 0,   # Does setting this to zero trigger an error on calling bam_index if there is no .bai?
     );
 
-my @options_required = qw(
-    file
-    chr
-    start
-    end
-    );
+    # Get list of chromosomes so that a failure is triggered before GFF header is printed.
+    $sam->bam_index;
+    # print STDERR "Header: ", $sam->header->text, "\n";
 
-sub _key {
-    my ($key) = m(^(.*?)(?:=|$));
-    return $key;
-}
-sub _option {
-    return ( $_, \$options->{_key()} );
-}
+    my $bam_fetch = Bio::Otter::Fetch::BAM->new(-sam => $sam);
+    my $mapping = $self->get_mapping;
 
-sub show_version {
-    print "bam_get 0.5\n";
-    exit 0;
-}
-
-print STDERR "$0", ( map { " '$_'" } @ARGV ), "\n";
-
-my @keys    = map { _key()    } @options_specs;
-my @options = map { _option() } @options_specs;
-
-Bio::Otter::Lace::Defaults::do_getopt(@options);
-show_version() if $options->{version};
-
-Bio::Otter::Log::Log4perl->easy_init
-  ({ level => $DEBUG,
-     layout => 'bam_get.%c %p: %m%n' });
-
-my @options_missing = grep { ! defined $options->{$_} } @options_required;
-die sprintf "missing options: %s\n",
-    join ', ', sort @options_missing
-    if @options_missing;
-$options->{$_} = uri_unescape($options->{$_}) for keys %{$options};
-my (
-    $gff_version,
-    $file,
-    $csver_remote,
-    $dataset,
-    $chr,
-    $start,
-    $end,
-    $gff_source,
-    $gff_seqname
-    ) = @{$options}{@keys};
-
-my $sam = Bio::DB::Sam->new
-    (
-     -bam   => $file,
-     # -fasta => $fasta_path,
-    );
-
-my $bam_fetch = Bio::Otter::Fetch::BAM->new( -sam => $sam );
-my $gff_format = Bio::Vega::Utils::GFF::gff_format($gff_version);
-
-sub _print_header {
-    print
-        <<"GFF",
-##gff-version $gff_version
-GFF
-;
-    return;
+    # map and print the features
+    print "##gff-version $gff_version\n";
+    $mapping->do_features($bam_fetch, $start, $end, \&_print_feature);
 }
 
 # CIGAR commands
 my %clip_command  = map { $_ => 1 } qw( H S ); # these clip
 my %query_command = map { $_ => 1 } qw( M I ); # these contribute to the query sequence of the match
+my $paired_flag = RFLAGS->{'PAIRED'};
 
 sub _print_feature {
     my ($feature, $fstart, $fend) = @_;
 
-    my $seq_id = $gff_seqname || $chr;
     my $source = $gff_source || $feature->source_tag;
     my ($score) = $feature->get_tag_values('AS');
 
@@ -151,22 +104,25 @@ sub _print_feature {
     my $phase = $feature->phase;
 
     print $gff_format->gff_line(
-        $seq_id, $source, 'read',
+        $gff_seqname, $source, 'read',
         $fstart, $fend, $score, $strand, $phase,
         $attribute_hash);
 
     return;
 }
 
-my $mapping =
-    Bio::Otter::Mapping->new_from_otter(
-        $dataset, $csver_remote, $chr, $start, $end);
+## no critic (Modules::ProhibitMultiplePackages)
 
-# map and print the features
-_print_header;
-$mapping->do_features($bam_fetch, $start, $end, \&_print_feature);
+package main;
+
+use Log::Log4perl::Level;
+
+Bio::Otter::GetScript::BAM
+    ->new(log4perl => $DEBUG)
+    ->run;
 
 exit;
+
 
 __END__
 
