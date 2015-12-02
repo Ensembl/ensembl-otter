@@ -11,6 +11,8 @@ use Bio::Otter::Server::Config;
     my $usage = sub { exec('perldoc', $0) };
     Bio::Otter::Lace::Defaults::do_getopt() or $usage->();
 
+    # Consider replacing %code_db with Bio::Otter::Utils::Script::MouseStrains
+    # if any further work is done on this script.
     my %code_db = qw{
         129    kj2_mouse_129S1_SvImJ_R20150814
         AKR    kj2_mouse_AKR_J_R20150814
