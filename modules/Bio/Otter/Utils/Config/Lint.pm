@@ -147,6 +147,10 @@ sub check_species {
           ("$species.filter.$comp_col", 'zmap_column');
         $clus = Bio::Otter::Lace::Defaults::config_value
           ("default.filter.$comp_col", 'zmap_column') if !defined $clus;
+        # It's okay for a single column to have a self-named zmap_column
+        # (e.g. curated_features)
+        $clus = undef if ($clus and $comp_col eq $clus);
+
         $comp_col{$comp_col} = $clus;
         $cluster_col{$clus} ++ if defined $clus;
     }
