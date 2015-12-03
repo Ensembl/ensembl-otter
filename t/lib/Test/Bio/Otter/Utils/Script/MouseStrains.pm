@@ -11,9 +11,26 @@ sub setup : Tests(setup) {
     return;
 }
 
-sub codes : Test(3) {
+sub all : Test(3) {
     my $test = shift;
     my $ms = $test->our_object;
+
+    can_ok $ms, 'all';
+    my $all =  $ms->all;
+    my $n_all = scalar(@$all);
+
+    ok($n_all > 1, '...have more than 1 entry');
+    isa_ok($all->[0], 'Bio::Otter::Utils::Script::MouseStrain', '...first is correct type');
+
+    return;
+}
+
+sub codes : Test(5) {
+    my $test = shift;
+    my $ms = $test->our_object;
+
+    can_ok $ms, 'old_codes';
+    can_ok $ms, 'new_codes';
 
     my $old_codes = $ms->old_codes;
     my $new_codes = $ms->new_codes;
@@ -37,8 +54,8 @@ sub consistent : Test(1) {
     my @old_codes = sort @{ $ms->old_codes };
     my @mapped_codes = sort map {
         my $o1 = $ms->by_old_code($_);
-        my $o2 = $ms->by_new_code($o1->{new_code});
-        $o2->{old_code};
+        my $o2 = $ms->by_new_code($o1->new_code);
+        $o2->old_code;
     } @old_codes;
 
     cmp_deeply(\@mapped_codes, \@old_codes, 'two-way map');
@@ -49,7 +66,7 @@ sub consistent : Test(1) {
 
 sub unique : Test(4) {
     my $test = shift;
-    foreach my $field ( qw{ old_code new_code strain_name grit_db_name } ) {
+    foreach my $field ( qw{ old_code strain_name grit_db_name } ) {
         $test->_unique($field);
     }
     return;
@@ -68,11 +85,13 @@ sub _unique {
     return;
 }
 
-sub dataset_name : Test(1) {
+sub dataset_name : Test(2) {
     my ($test) = @_;
     my $ms = $test->our_object;
 
-    is($ms->dataset_name_by_code('C57'), 'mouse-C57BL-6NJ', 'dataset_name_by_code');
+    my $c57 = $ms->by_code('C57');
+    is($c57->dataset_name,     'mouse-C57BL-6NJ', 'dataset_name');
+    is($c57->old_dataset_name, 'mus_C57',         'old_dataset_name');
     return;
 }
 
@@ -81,8 +100,10 @@ sub dataset_names : Test(1) {
     my $ms = $test->our_object;
 
     foreach my $nc (sort @{$ms->new_codes}) {
-        note($nc, ' => ', $ms->old_dataset_name_by_code($nc),
-                  ' => ', $ms->dataset_name_by_code($nc));
+        my $s = $ms->by_code($nc);
+        note($nc, ' => ', $s->old_dataset_name,
+                  ' => ', $s->dataset_name
+            );
     }
 
     pass('dataset_names');
