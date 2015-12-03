@@ -110,4 +110,16 @@ sub dataset_names : Test(1) {
     return;
 }
 
+sub db_name : Test(4) {
+    my ($test) = @_;
+    my $ms = $test->our_object;
+    my $c57 = $ms->by_code('C57');
+
+    can_ok $c57, 'db_name';
+    is($c57->db_name,                'loutre_mus_r_c57', '...C57 name ok');
+    is($c57->db_name('pipe'),        'pipe_mus_r_c57',   '...C57 pipe name ok');
+    is($ms->by_code('LPJ')->db_name, 'loutre_mus_r_apj', '...LPJ name ok');
+    return;
+}
+
 1;
