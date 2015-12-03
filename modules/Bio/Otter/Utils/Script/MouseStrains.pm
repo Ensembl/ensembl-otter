@@ -59,6 +59,7 @@ const my @raw => (
      'old_code'     => 'LPJ',
      'strain_name'  => 'LP/J',
      'grit_db_name' => 'kj2_mouse_LP_J_R20150819',
+     'db_name_suffix' => 'mus_r_apj',
     },
     {
      'old_code'     => 'NOD',
@@ -140,6 +141,20 @@ has old_code     => ( is => 'ro', isa => Str );
 has new_code     => ( is => 'ro', isa => Str, lazy => 1, builder => sub { shift->old_code } );
 has strain_name  => ( is => 'ro', isa => Str );
 has grit_db_name => ( is => 'ro', isa => Str );
+
+has db_name_suffix => ( is => 'lazy', isa => Str );
+
+sub _build_db_name_suffix {    ## no critic(Subroutines::ProhibitUnusedPrivateSubroutines)
+    my ($self) = @_;
+    my $oc = lc $self->old_code;
+    return sprintf('mus_r_%s', $oc);
+}
+
+sub db_name {
+    my ($self, $prefix) = @_;
+    $prefix //= 'loutre';
+    return sprintf('%s_%s', $prefix, $self->db_name_suffix);
+}
 
 sub dataset_name {
     my ($self) = @_;
