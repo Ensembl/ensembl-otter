@@ -1,0 +1,47 @@
+#!/usr/bin/env perl
+
+### add_strain_meta_tags
+
+use strict;
+use warnings;
+
+use Bio::Otter::Lace::Defaults;
+use Bio::Otter::Server::Config;
+use Bio::Otter::Utils::Script::MouseStrains;
+
+{
+    my $usage = sub { exec('perldoc', $0) };
+    Bio::Otter::Lace::Defaults::do_getopt() or $usage->();
+
+    my $mouse_strains = Bio::Otter::Utils::Script::MouseStrains->new;
+    foreach my $code (@{$mouse_strains->new_codes}) {
+        my $str = $mouse_strains->by_code($code);
+        my $strain = $str->strain_name;
+        my $dataset = $str->dataset_name;
+
+        print STDERR "$dataset:\n";
+        my $ds = Bio::Otter::Server::Config->SpeciesDat->dataset($dataset);
+
+        add_strain_meta_tag('loutre', $ds->otter_dba,                  $strain);
+        add_strain_meta_tag('pipe',   $ds->pipeline_dba('pipe', 'rw'), $strain);
+    }
+    exit;
+}
+
+sub add_strain_meta_tag {
+    my ($desc, $dba, $strain) = @_;
+    printf STDERR "\t%-6s: species.strain => %s\n", $desc, $strain;
+    my $sth = $dba->dbc->prepare(q{
+        REPLACE INTO meta (species_id, meta_key, meta_value) VALUES (1, 'species.strain', ?)
+    });
+    $sth->execute($strain);
+    return;
+}
+
+__END__
+
+=head1 NAME - add_strain_meta_tags
+
+=head1 AUTHOR
+
+Michael Gray B<email> mg13@sanger.ac.uk
