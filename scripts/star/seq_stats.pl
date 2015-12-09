@@ -12,7 +12,7 @@ use Hum::FastaFileIO;
     while (my $seq = $in->read_one_sequence) {
         push(@$lengths, $seq->sequence_length);
     }
-    print_stat("Sequence lengths", @$lengths);
+    print_stat("Sequence lengths", $lengths);
 }
 
 sub print_stat {
@@ -29,7 +29,7 @@ sub print_stat {
         $total += $n;
     }
     my $med = $list->[$count / 2];
-    my $pattern = "%7s  %7d\n";
+    my $pattern = "%7s  %9d\n";
     printf $pattern, 'count', $count;
     printf $pattern, 'min',   $min;
     printf $pattern, 'avg',   $total / $count;
