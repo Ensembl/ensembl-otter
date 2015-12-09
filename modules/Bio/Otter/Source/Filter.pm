@@ -379,6 +379,15 @@ sub script_name {
     return $self->{'_script_name'} || "filter_get"; # see also Bio::Otter::Utils::About
 }
 
+sub is_seq_data {
+    my ($self, $flag) = @_;
+
+    if (defined $flag) {
+        $self->{'_is_seq_data'} = $flag;
+    }
+    return $self->{'_is_seq_data'};
+}
+
 sub init_resource_bin {
     my ($self, $mk_to_rb_config) = @_;
 
