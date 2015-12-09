@@ -24,14 +24,14 @@ use Bio::Otter::Mapping;
 use Bio::Vega::Utils::GFF;
 
 # variables used by _print_feature()
-my ($gff_seqname, $gff_source, $gff_format);
+my ($gff_seqname, $gff_source, $gff_format, $fasta);
 
 sub do_it {
     my ($self) = @_;
 
     my $args = $self->args;
     $gff_seqname = $args->{'gff_seqname'} || $args->{'chr'};
-    $gff_source  = $args->{'gff_source'};
+    $gff_source  = $args->{'zmap_style'} || $args->{'gff_source'};
     my $gff_version = $args->{'gff_version'} || 3;
     $gff_format = Bio::Vega::Utils::GFF::gff_format($gff_version);
 
@@ -53,6 +53,10 @@ sub do_it {
     # map and print the features
     print "##gff-version $gff_version\n";
     $mapping->do_features($bam_fetch, $start, $end, \&_print_feature);
+    if ($fasta) {
+        print "##FASTA\n", $fasta;
+        $fasta = '';
+    }
 }
 
 # CIGAR commands
@@ -104,9 +108,16 @@ sub _print_feature {
     my $phase = $feature->phase;
 
     print $gff_format->gff_line(
-        $gff_seqname, $source, 'read',
+        $gff_seqname, $source, 'nucleotide_match',
         $fstart, $fend, $score, $strand, $phase,
         $attribute_hash);
+
+    # if (my $seq = $feature->qseq) {
+    #     $fasta .= '>' . $feature->name . "\n";
+    #     while ($seq =~ /(.{1,60})/g) {
+    #         $fasta .= $1 . "\n";
+    #     }
+    # }
 
     return;
 }

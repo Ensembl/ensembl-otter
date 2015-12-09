@@ -82,7 +82,9 @@ sub run {
     $self->show_version if exists $args->{'version'};   # exits
     die "failing as required" if $args->{'fail'};       # test case
 
-    $self->_use_session_dir($self->read_delete_args('session_dir'));
+    if (my $dir = $self->read_delete_args('session_dir')) {
+        $self->_use_session_dir($dir);
+    }
 
     $self->_set_log_context($self->log_context);
     $self->_open_log($self->log_filename);
