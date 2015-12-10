@@ -227,7 +227,7 @@ sub pipeline_dba {
     my $adaptor_class =
       (delete $opt{pipe}
        ? 'Bio::EnsEMBL::Pipeline::DBSQL::Finished::DBAdaptor'
-       : 'Bio::EnsEMBL::DBSQL::DBAdaptor');
+       : 'Bio::Vega::DBSQL::DBAdaptor');
 
     my $meta_key =
       (delete $opt{rw}
