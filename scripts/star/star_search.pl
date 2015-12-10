@@ -6,7 +6,7 @@ use strict;
 use warnings;
 use Getopt::Long qw{ GetOptions };
 use File::Temp qw{ tmpnam };
-use DBI;
+use Bio::EnsEMBL::DBSQL::DBAdaptor;
 
 {
     my $usage       = sub { exec('perldoc', $0) };
@@ -18,24 +18,32 @@ use DBI;
     my ($db_name, $db_host, $db_port, $db_user, $db_pass);
     my @command_line = @ARGV;
     GetOptions(
-
         # DB connection parameters chosen to be compatible with EnsEMBL pipeline script convention
-        'dbname=s' => \$db_name,
         'dbhost=s' => \$db_host,
         'dbport=s' => \$db_port,
+        'dbname=s' => \$db_name,
         'dbuser=s' => \$db_user,
         'dbpass=s' => \$db_pass,
 
-        'analysis=s'    => \$analysis_logic_name,
-        'genome=s' => \$genome_star,
-        'fasta=s'  => \$fasta_input,
-        'run!'     => \$run_flag,
-        'h|help!'  => $usage,
+        'analysis=s' => \$analysis_logic_name,
+        'genome=s'   => \$genome_star,
+        'fasta=s'    => \$fasta_input,
+        'run!'       => \$run_flag,
+        'h|help!'    => $usage,
     ) or $usage->();
     $usage->() unless $genome_star and $fasta_input and $analysis_logic_name;
 
-    my $dbh = DBI->connect("DBI:mysql:database=$db_name;host=$db_host;port=$db_port",
-        $db_user, $db_pass, {RaiseError => 1, AutoCommit => 0});
+    my $db_aptr = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
+        -host   => $db_host,
+        -port   => $db_port,
+        -dbname => $db_name,
+        -user   => $db_user,
+        -pass   => $db_pass,
+    );
+
+    my $dbh = $db_aptr->dbc->db_handle;
+    $dbh->{AutoCommit} = 0;
+    $dbh->{RaiseError} = 1;
 
     my $lsf_mem    = 30_000;
     my $n_threads  = 4;
@@ -55,7 +63,7 @@ use DBI;
                 --outFilterScoreMinOverLread     0
                 --outFilterMatchNminOverLread    0.66
                 --outFilterMismatchNmax          1000
-                --outSAMattributes               jM
+                --outSAMattributes               jM AS NM
                 --winAnchorMultimapNmax          200
                 --seedSearchStartLmax            12
                 --alignWindowsPerReadNmax        30000
@@ -67,8 +75,8 @@ use DBI;
         ];
         fetch_analysis_id($dbh, $analysis_logic_name);
         fetch_chr_seq_region_ids($dbh, $genome_star);
-        # run_and_store($dbh, $cmd);
-        ### Update meta_coord table!
+        my $count = run_and_store($db_aptr, $cmd);
+        print STDERR "Found and stored $count matches\n";
     }
     else {
         my $star_v = "STAR_2.4.2a";
@@ -87,16 +95,15 @@ use DBI;
         # print STDERR "@bsub\n";
         system(@bsub);
     }
-
-    $dbh->disconnect;
 }
 
 sub run_and_store {
-    my ($dbh, $cmd) = @_;
+    my ($db_aptr, $cmd) = @_;
 
     open(my $star, '-|', @$cmd) or die "Error launching '@$cmd'; $!";
-    parse_and_store($dbh, $star);
+    my ($n_rows) = parse_and_store($db_aptr, $star);
     close($star) or die "Error running '@$cmd'; exit $?";
+    return $n_rows;
 }
 
 {
@@ -133,6 +140,17 @@ sub run_and_store {
     sub chr_seq_region_ids {
         return $chr_to_seq_region_id;
     }
+    
+    sub update_meta_coord_table {
+        my ($db_aptr, $max_genomic_length) = @_;
+
+        foreach my $cs_id (@coord_system_id) {
+            my $cs = $db_aptr->get_CoordSystemAdaptor->fetch_by_dbID($cs_id)
+                or die "Failed to fetch CoordSystem with dbID = '$cs_id'\n";
+            $db_aptr->get_MetaCoordContainer->add_feature_type($cs, 'dna_spliced_align_feature', $max_genomic_length);
+        }
+        $db_aptr->dbc->db_handle->commit;
+    }
 }
 
 {
@@ -155,36 +173,6 @@ sub run_and_store {
     }
 }
 
-# CREATE TABLE dna_spliced_align_feature (
-#
-#   dna_spliced_align_feature_id  INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
-#   seq_region_id                 INT(10) UNSIGNED NOT NULL,
-#   seq_region_start              INT(10) UNSIGNED NOT NULL,
-#   seq_region_end                INT(10) UNSIGNED NOT NULL,
-#   seq_region_strand             TINYINT(1) NOT NULL,
-#   hit_start                     INT NOT NULL,
-#   hit_end                       INT NOT NULL,
-#   hit_strand                    TINYINT(1) NOT NULL,
-#   hit_name                      VARCHAR(40) NOT NULL,
-#   analysis_id                   SMALLINT UNSIGNED NOT NULL,
-#   score                         DOUBLE,
-#   evalue                        DOUBLE,
-#   perc_ident                    FLOAT,
-#   alignment_type                TEXT,
-#   alignment_string              ENUM('vulgar_exonerate_components'),
-#   external_db_id                INTEGER UNSIGNED,
-#   hcoverage                     DOUBLE,
-#   external_data                 TEXT,
-#
-#   PRIMARY KEY (dna_spliced_align_feature_id),
-#   KEY seq_region_idx (seq_region_id, analysis_id, seq_region_start, score),
-#   KEY seq_region_idx_2 (seq_region_id, seq_region_start),
-#   KEY hit_idx (hit_name),
-#   KEY analysis_idx (analysis_id),
-#   KEY external_db_idx (external_db_id)
-#
-# ) ENGINE=InnoDB;
-
 {
     my %sth_n;
 
@@ -196,37 +184,39 @@ sub run_and_store {
             my $sql = q{ INSERT INTO dna_spliced_align_feature (
                 seq_region_id, seq_region_start, seq_region_end, seq_region_strand
               , hit_name,             hit_start,        hit_end,        hit_strand
-              , analysis_id, score, perc_ident, alignment_type, alignment_string
-              , hcoverage
+              , analysis_id, score, perc_ident, alignment_type, alignment_string, hcoverage
               ) VALUES };
-            my $values = q{(?,?,?,?,?,?,?,?,?,?,?,'vulgar_exonerate_components',?,?,?),} x $n_rows;
+            my $values = q{(?,?,?,?,?,?,?,?,?,?,?,'vulgar_exonerate_components',?,?),} x $n_rows;
             chop($values);
             $sth = $sth_n{$n_rows} = $dbh->prepare($sql . $values);
         }
         return $sth;
     }
+}
 
-    sub store_vulgar_features {
-        my ($dbh, $data) = @_;
+sub store_vulgar_features {
+    my ($dbh, $data) = @_;
 
-        my $sth = get_sth_for_n_rows($dbh, @$data / 13);
-        $sth->execute(@$data);
-        $dbh->commit;
-    }
+    my $sth = get_sth_for_n_rows($dbh, @$data / 13);
+    $sth->execute(@$data);
+    $dbh->commit;
 }
 
 sub parse_and_store {
-    my ($dbh, $star_fh) = @_;
+    my ($db_aptr, $star_fh) = @_;
+
+    my $dbh = $db_aptr->dbc->db_handle;
 
     my $chr_to_seq_region_id = chr_seq_region_ids();
     my $analysis_id = analysis_id();
 
     my $data = [];
-    my $hit_n = 0;
+    my $hit_count = 0;
+    my $max_genomic_length = 0;
     my $chunk_size = 1000;
     while (<$star_fh>) {
         next if /^@/;
-        $hit_n++;
+        $hit_count++;
         chomp;
         my ($hit_name
           , $binary_flags
@@ -355,7 +345,7 @@ sub parse_and_store {
 
         push(@$data,
             $chr_db_id, $chr_start, $chr_end, $chr_strand,
-            $hit_name, $hit_start, $hit_end, $hit_start,
+            $hit_name,  $hit_start, $hit_end, $hit_strand,
             $analysis_id, $score, $percent_identity, "@vulgar_fields", $hit_coverage);
 
         # my $pattern = "%18s  %-s\n";
@@ -373,7 +363,12 @@ sub parse_and_store {
 
         # print STDERR join("\t", $chr_name, $chr_strand, $hit_name, $hit_start, $hit_end, $hit_strand, "@vulgar_fields"), "\n";
         
-        unless ($hit_n % $chunk_size) {
+        my $genomic_length = $chr_end - $chr_start + 1;
+        if ($genomic_length > $max_genomic_length) {
+            $max_genomic_length = $genomic_length;
+        }
+        
+        unless ($hit_count % $chunk_size) {
             store_vulgar_features($dbh, $data);
             $data = [];
         }
@@ -382,6 +377,9 @@ sub parse_and_store {
         store_vulgar_features($dbh, $data);
         $data = [];
     }
+    
+    update_meta_coord_table($db_aptr, $max_genomic_length);
+    return $hit_count;
 }
 
 
