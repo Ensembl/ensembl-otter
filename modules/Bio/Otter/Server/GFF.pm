@@ -7,6 +7,7 @@ use warnings;
 use Bio::Otter::Utils::AccessionInfo::Serialise qw( fasta_header_column_order escape_fasta_description );
 use Bio::Otter::Utils::RequireModule qw(require_module);
 use Bio::Vega::Enrich::SliceGetAllAlignFeatures;
+use Bio::Vega::Enrich::SliceGetSplicedAlignFeatures;
 use Bio::Vega::Utils::Detaint qw( detaint_sprintfn_url_fmt );
 use Bio::Vega::Utils::GFF;
 use Bio::Vega::Utils::EnsEMBL2GFF;
@@ -199,6 +200,16 @@ sub get_requested_features {
         PredictionTranscript => [
             ['analysis' => undef],
             ['load_exons' => 1],
+        ],
+        DnaSplicedAlignFeature => [
+            ['analysis' => undef],
+            ['score' => undef],
+            ['dbtype' => undef],
+        ],
+        ProteinSplicedAlignFeature => [
+            ['analysis' => undef],
+            ['score' => undef],
+            ['dbtype' => undef],
         ],
 
         # dummy
