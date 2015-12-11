@@ -15,6 +15,7 @@ use List::MoreUtils qw( uniq );
 use Bio::Otter::Log::Log4perl 'logger';
 use Log::Log4perl::Level;
 use LWP;
+use URI;
 use URI::Escape qw{ uri_escape };
 use HTTP::Cookies::Netscape;
 use Term::ReadKey qw{ ReadMode ReadLine };
@@ -681,6 +682,13 @@ sub pfetch_url {
     my ($self) = @_;
 
     return $self->url_root . '/pfetch';
+}
+
+sub pfetch_port {
+    my ($self) = @_;
+
+    my $uri = URI->new($self->pfetch_url)->canonical;
+    return $uri->port;
 }
 
 sub _setup_pfetch_env {
