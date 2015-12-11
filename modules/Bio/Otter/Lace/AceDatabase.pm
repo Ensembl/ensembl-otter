@@ -550,6 +550,7 @@ sub _zmap_config {
             'cookie-jar'      => $ENV{'OTTER_COOKIE_JAR'},
             'pfetch-mode'     => 'http',
             'pfetch'          => $self->Client->pfetch_url,
+            'port'            => $self->Client->pfetch_port,
             'xremote-debug'   => $xremote_debug ? 'true' : 'false',
             'stylesfile'      => $self->stylesfile,
             ($self->colour ? ('session-colour'  => $self->colour) : ()),
@@ -626,8 +627,8 @@ sub blixem_config {
         'fetch-mode'    => 'http',
         'errors'        => ['no match', 'Not authorized'],
         'url'           => $self->Client->pfetch_url,
+        'port'          => $self->Client->pfetch_port,
         'cookie-jar'    => $ENV{'OTTER_COOKIE_JAR'},
-        'port'          => 80,
         );
 
     if (my $proxy = $ENV{'http_proxy'}) {
