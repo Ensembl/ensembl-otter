@@ -168,11 +168,18 @@ sub generate {
       };
     $out{version}{code} = try { Bio::Otter::Git->as_text } catch { "FAIL: $_" };
 
-    my $dbh = DBI->connect
-      ("DBI:mysql:database=pipe_human;host=otp1slave;port=3322",
+    my $db = 'otp1_slave';
+    my $otp1_slave = try { Bio::Otter::Server::Config->Database($db) };
+    if ($otp1_slave) {
+        my $h = $otp1_slave->host;
+        my $p = $otp1_slave->port;
+        my $dbh = DBI->connect
+      ("DBI:mysql:database=pipe_human;host=${h};port=${p}",
        "ottro", undef, { RaiseError => 0 });
-    $out{DBI} = $dbh ? { connected => "$dbh" } : { error => DBI->errstr };
-
+        $out{DBI} = $dbh ? { connected => "$dbh" } : { error => DBI->errstr };
+    } else {
+        $out{DBI} = { error => "'$db' not found via BOS:Config->Database()" };
+    }
 
     if ($server->param('load')) {
         $out{load_modules} = _require_all();
