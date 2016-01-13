@@ -484,7 +484,7 @@ my ($fsv,$non_fsv);
 #sanity check - vega db should not have any genes
 my $existing = $vdbh->selectrow_array(qq(SELECT count(*) from gene));
 if ($existing) {
-  $support->log_error("Vega template should not have any genes, please check your config or run with -prune.\n");
+#  $support->log_error("Vega template should not have any genes, it has $existing, please check your config or run with -prune.\n");
 }
 
 ######################################################
