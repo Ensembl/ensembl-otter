@@ -192,6 +192,6 @@ chr17-60	17	Chromosome 17	17
 chr18-60	18	Chromosome 18	18
 chr19-60	19	Chromosome 19	19
 chr20-60	20	Chromosome 20	20
-chrX-60	Y	Chromosome Y	Y
+chrY-60	Y	Chromosome Y	Y
 chrX-60	X	Chromosome X	X
 
