@@ -92,12 +92,6 @@ my $support = new Bio::EnsEMBL::Utils::ConversionSupport($SERVERROOT);
 $support->parse_common_options(@_);
 $support->parse_extra_options(
   'prune',
-  'evegahost=s',
-  'evegaport=s',
-  'evegauser=s',
-  'evegapass=s',
-  'evegadbname=s',
-  'evegassembly=s',
   'ccdshost=s',
   'ccdsport=s',
   'ccdsuser=s',
@@ -107,12 +101,6 @@ $support->parse_extra_options(
 $support->allowed_params(
   $support->get_common_params,
   'prune',
-  'evegahost',
-  'evegaport',
-  'evegauser',
-  'evegapass',
-  'evegadbname',
-  'evegaassembly',
   'ccdshost',
   'ccdsport',
   'ccdsuser',
@@ -269,19 +257,16 @@ $support->finish_log;
 sub parse_ccds {
   my ($ids,$chrname) = @_;
   my $e_dba = $support->get_database('ensembl','ensembl');
-  my $ev_dba = $support->get_database('ensembl','evega');
-  my $ev_sa = $ev_dba->get_SliceAdaptor;
+  my $sa = $dba->get_SliceAdaptor;
   my $ccds_dba = $support->get_database('ensembl','ccds');
   my $ccds_sa = $ccds_dba->get_SliceAdaptor;
-  $ev_dba->dnadb($e_dba);
   $ccds_dba->dnadb($e_dba);
-  my $path = $support->param('evegaassembly');
   $support->log_stamped("Retrieving info from CCDS database\n");
   my $chr = $ccds_sa->fetch_by_name($chrname);
   return unless $chr;
   $support->log_stamped("Ensembl $chrname\n",1);
   foreach my $ccds_gene ( @{$chr->get_all_Genes()} ){
-    $ccds_gene = $ccds_gene->transform('chromosome', $path);
+    $ccds_gene = $ccds_gene->transform('chromosome');
   T:
     foreach my $ccds_trans (@{$ccds_gene->get_all_Transcripts()}){
       my %xref_hash;
@@ -306,10 +291,10 @@ sub parse_ccds {
       my $start = $ccds_trans->start();
       my $end   = $ccds_trans->end();
       my @ccds_exons = @{$ccds_trans->get_all_translateable_Exons()};
-      my $slice = $ev_sa->fetch_by_region('chromosome',$chr_name, $start, $end, '1', $path );
+      my $slice = $sa->fetch_by_region('chromosome',$chr_name, $start, $end, '1');
       foreach my $gene (@{$slice->get_all_Genes()}){
         next if ($gene->biotype ne "protein_coding");
-        $gene = $gene->transform('chromosome', $path);
+        $gene = $gene->transform('chromosome');
         foreach my $trans (@{$gene->get_all_Transcripts}){
           my @exons = @{$trans->get_all_translateable_Exons()};
           my $match = 0;
