@@ -156,7 +156,7 @@ foreach my $chr (@chr_sorted) {
     foreach my $rec (@{$records->{$gsi}}) {
       my $new_mgi_name = $rec->{'symbol'};
       if ($new_mgi_name eq $display_name) {
-        $support->log_warning("Something's up, the name downloaded from MGI matches the name in Vega ($new_mgi_name) but the gene ($gsi) doesn't have an MGI display_xref\n",1);
+        $support->log_warning("The name downloaded from MGI matches the name in Vega ($new_mgi_name) but the gene ($gsi) doesn't have an MGI display_xref. Please re-add the MGI xrefs\n",1);
       }
 
       $support->log_verbose("Gene $gsi ($display_name) has a name at MGI ($new_mgi_name), need to add an xref\n");
