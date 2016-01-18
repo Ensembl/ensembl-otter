@@ -480,13 +480,6 @@ my ($fsv,$non_fsv);
 
 ### PRE # # $fsv $non_fsv ###
 
-
-#sanity check - vega db should not have any genes
-my $existing = $vdbh->selectrow_array(qq(SELECT count(*) from gene));
-if ($existing) {
-#  $support->log_error("Vega template should not have any genes, it has $existing, please check your config or run with -prune.\n");
-}
-
 ######################################################
 # delete any entries from previous runs if requested #
 ######################################################
@@ -533,47 +526,55 @@ while (my ($logic_name) = $vsth->fetchrow_array) {
 }
 my $attribs_to_keep = "('" . (join '\',\'',@attrib_types_to_keep) . "\')"; 
 
-# do the deletions
-if ($support->param('prune') && $support->user_proceed("\nDo you want to delete all entries from all previous runs of this script?")) {
-  $support->log("Deleting db entries from previous runs of this script...\n");
-  $vdbh->do(qq(DELETE FROM exon));
-  $vdbh->do(qq(DELETE FROM exon_transcript));
-  $vdbh->do(qq(DELETE FROM gene));
-  $vdbh->do(qq(DELETE FROM protein_feature));
-  $vdbh->do(qq(DELETE FROM transcript));
-  $vdbh->do(qq(DELETE FROM translation));
-  $vdbh->do(qq(DELETE FROM interpro));
-  $vdbh->do(qq(DELETE FROM object_xref));
-  $vdbh->do(qq(DELETE FROM xref));
-  $vdbh->do(qq(DELETE FROM gene_attrib));
-  $vdbh->do(qq(DELETE FROM transcript_attrib));
-  $vdbh->do(qq(DELETE FROM translation_attrib));
-  $vdbh->do(qq(
+# delete from previous runs if requested, otherwise check there are no genes before going any further
+if ($support->param('prune')){
+  if ($support->user_proceed("\nDo you want to delete all entries from all previous runs of this script?")) {
+    $support->log("Deleting db entries from previous runs of this script...\n");
+    $vdbh->do(qq(DELETE FROM exon));
+    $vdbh->do(qq(DELETE FROM exon_transcript));
+    $vdbh->do(qq(DELETE FROM gene));
+    $vdbh->do(qq(DELETE FROM protein_feature));
+    $vdbh->do(qq(DELETE FROM transcript));
+    $vdbh->do(qq(DELETE FROM translation));
+    $vdbh->do(qq(DELETE FROM interpro));
+    $vdbh->do(qq(DELETE FROM object_xref));
+    $vdbh->do(qq(DELETE FROM xref));
+    $vdbh->do(qq(DELETE FROM gene_attrib));
+    $vdbh->do(qq(DELETE FROM transcript_attrib));
+    $vdbh->do(qq(DELETE FROM translation_attrib));
+    $vdbh->do(qq(
            DELETE sra
            FROM seq_region_attrib sra, attrib_type at
            WHERE sra.attrib_type_id = at.attrib_type_id
            AND at.code NOT IN $attribs_to_keep
         ));
-  $vdbh->do(qq(
+    $vdbh->do(qq(
            DELETE sf
            FROM simple_feature sf, analysis a
            WHERE sf.analysis_id = a.analysis_id
            AND a.logic_name NOT IN $features_to_keep
         ));
-  $vdbh->do(qq(DELETE FROM misc_feature));
-  $vdbh->do(qq(DELETE FROM misc_feature_misc_set));
-  $vdbh->do(qq(DELETE FROM misc_set));
-  $vdbh->do(qq(DELETE FROM misc_attrib));
-  foreach my $t (keys %constraints) {
-    if ($constraints{$t} =~ /d|s/) {
-      $vdbh->do(qq(DROP TABLE IF EXISTS $t));
-    }
-  }	
-  $vdbh->do(qq(DELETE FROM meta where meta_key = 'genebuild.havana_datafreeze_date'));
-  $vdbh->do(qq(DELETE FROM meta_coord));
-  $vdbh->do(qq(INSERT INTO meta_coord SELECT * FROM backup_meta_coord));
+    $vdbh->do(qq(DELETE FROM misc_feature));
+    $vdbh->do(qq(DELETE FROM misc_feature_misc_set));
+    $vdbh->do(qq(DELETE FROM misc_set));
+    $vdbh->do(qq(DELETE FROM misc_attrib));
+    foreach my $t (keys %constraints) {
+      if ($constraints{$t} =~ /d|s/) {
+        $vdbh->do(qq(DROP TABLE IF EXISTS $t));
+      }
+    }	
+    $vdbh->do(qq(DELETE FROM meta where meta_key = 'genebuild.havana_datafreeze_date'));
+    $vdbh->do(qq(DELETE FROM meta_coord));
+    $vdbh->do(qq(INSERT INTO meta_coord SELECT * FROM backup_meta_coord));
 
-  $support->log("Done deleting previous entries.\n");
+    $support->log("Done deleting previous entries.\n");
+  }
+}
+else {
+  my $existing = $vdbh->selectrow_array(qq(SELECT count(*) from gene));
+  if ($existing) {
+    $support->log_error("Vega template should not have any genes, it has $existing, please check your config or run with -prune.\n");
+  }
 }
 
 ###################################################################
