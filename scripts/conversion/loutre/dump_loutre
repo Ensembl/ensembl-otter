@@ -182,11 +182,8 @@ $support->parse_extra_options(
   'ignore_annotrack',
   'ignore_QCreports=s',
 );
-$support->allowed_params(
-  'currentdbname',
-  'currenthost',
-  'currentport',
-  'currentuser',
+
+my @allowed_params = (
   'vega_release',
   'release_type',
   'chr',
@@ -204,8 +201,18 @@ $support->allowed_params(
   'ignore_QCreports',
   $support->get_loutre_params,
   $support->get_common_params,
-  $support->get_annotrack_params,
 );
+
+if ($support->param('live_update')) {
+  push @allowed_params, (
+    'currentdbname',
+    'currenthost',
+    'currentport',
+    'currentuser',
+  );
+}
+
+$support->allowed_params(@allowed_params);
 
 $support->check_required_params(
   $support->get_loutre_params,
