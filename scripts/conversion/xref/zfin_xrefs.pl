@@ -30,12 +30,12 @@ General options:
 
 Specific options:
 
-    --zfin_name_file=FILE               File downloaded from Zfin (http://zfin.org/data_transfer/Downloads/vega_transcript.txt)
+    --zfin_name_file=FILE               File downloaded from Zfin (zfin.org/downloads/vega_transcript.txt)
                                         containing relationships between OTT transcript IDs and Zfin records
-    --zfin_desc_file=FILE               File downloaded from Zfin (http://zfin.org/transfer/MEOW/zfin_genes.txt)
+    --zfin_desc_file=FILE               File downloaded from Zfin (zfin.org/transfer/MEOW/zfin_genes.txt)
                                         containing Zfin descriptions of genes, plus some other names that could be used
                                         if any were mssing from vega_transcript.txt.
-    --zfin_alias_file=FILE              File downloaded from Zfin (http://zfin.org/data_transfer/Downloads/aliases.txt)
+    --zfin_alias_file=FILE              File downloaded from Zfin (http://zfin.org/downloads/aliases.txt)
                                         containing other Zfin names
 
 =head1 DESCRIPTION
@@ -155,8 +155,8 @@ my $sth_trans_desc    = $dba->dbc->prepare("UPDATE transcript SET description = 
 
 #try and download direct
 my $urls = {
-  alias    => 'http://zfin.org/data_transfer/Downloads/aliases.txt',
-  vegafile => 'http://zfin.org/data_transfer/Downloads/vega_transcript.txt',
+  alias    => 'http://zfin.org/downloads/aliases.txt',
+  vegafile => 'http://zfin.org/downloads/vega_transcript.txt',
   zfinfile => 'http://zfin.org/transfer/MEOW/zfin_genes.txt',
 };
 
