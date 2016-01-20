@@ -30,7 +30,7 @@ General options:
 Specific options:
 
     --genbank_file=FILE                 ZFIN genbank file (from http://zfin.org/downloads/genbank.txt)
-    --xpat_file=FILE                    ZFIN xpat file (from http://zfin.org/downloads/xpat.txt)
+    --xpat_file=FILE                    ZFIN xpat file (from http://zfin.org/downloads/xpat_fish.txt)
     --outputdir=PATH                    Directory where script should write its output files (defaults to log dir)
 
 =head1 DESCRIPTION
@@ -119,7 +119,7 @@ my (%est2accession,%genes2accession);
 #download direct or read from file
 my $urls = {
   genbank => 'http://zfin.org/downloads/genbank.txt',
-  xpat    => 'http://zfin.org/downloads/xpat.txt',
+  xpat    => 'http://zfin.org/downloads/xpat_fish.txt',
 };
 
 my $ua = LWP::UserAgent->new;
@@ -159,7 +159,7 @@ else {
 }
 @recs = split "\n", $page;
 foreach (@recs) {
-  my ($zfin_gene_id, undef, $zfin_est_id, undef, undef, $zfin_xpat_id) = split(/\t/, $_);
+  my ($zfin_gene_id, undef, $zfin_est_id, undef, undef, undef) = split(/\t/, $_);
   if (!$zfin_est_id) {
     $count_xpat_no_est++;
   }
@@ -180,8 +180,6 @@ if ($support->param('verbose')) {
 
 $support->log("Expression patterns without an EST ID: $count_xpat_no_est\n",2);
 $support->log("Expression patterns with an EST ID: $count_xpat_est\n\n",2);
-
-#exit;
 
 # Link ZFIN Gene IDs to ESTs and to genes via associated EST dna_align_features
 $support->log("Looking for links between Genbank EST dna_align_features and genes they overlap...\n",1);
