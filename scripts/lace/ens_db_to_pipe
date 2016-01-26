@@ -35,14 +35,15 @@ use File::Basename qw{ dirname };
     # Copy data (with --no-create-info because we don't want MyISAM databases from ens dbs).
     system_do("mysqldump --no-create-info $ens_param $ens_db_name coord_system seq_region assembly dna meta | $pipe");
 
-    # Copy repeat data into pipeline database.
-    system_do("mysqldump $ens_param $ens_db_name repeat_feature repeat_consensus | $pipe");
-    system_do(qq{mysqldump --no-create-info --where='logic_name IN ("submit_contig", "repeatmask", "trf", "dust")' $ens_param $ens_db_name analysis | $pipe});
-    system_do(qq{$pipe --execute='UPDATE analysis SET logic_name = "RepeatMasker" WHERE logic_name = "repeatmask"'});
-    system_do(qq{$pipe --execute='UPDATE analysis SET logic_name = "SubmitContig" WHERE logic_name = "submit_contig"'});
-    system_do(qq{mysqldump $ens_param $ens_db_name --where='table_name = "repeat_feature"' meta_coord | $pipe});
+    # # Copy repeat data into pipeline database.
+    # system_do("mysqldump $ens_param $ens_db_name repeat_feature repeat_consensus | $pipe");
+    # system_do(qq{mysqldump --no-create-info --where='logic_name IN ("submit_contig", "repeatmask", "trf", "dust")' $ens_param $ens_db_name analysis | $pipe});
+    # system_do(qq{$pipe --execute='UPDATE analysis SET logic_name = "RepeatMasker" WHERE logic_name = "repeatmask"'});
+    # system_do(qq{$pipe --execute='UPDATE analysis SET logic_name = "SubmitContig" WHERE logic_name = "submit_contig"'});
+    # system_do(qq{mysqldump $ens_param $ens_db_name --where='table_name = "repeat_feature"' meta_coord | $pipe});
 
     # Link pipeline db to loutre:
+    system_do(qq{$this_dir/save_satellite_db -dataset mouse -key pipeline_ens_rw -satdbname $pipe_db_name -sathost mcs17 -satport 3322 -satuser ottadmin -satpass lutralutra});
     system_do(qq{$this_dir/save_satellite_db -dataset mouse -key pipeline_ens -satdbname $pipe_db_name -sathost mcs18 -satport 3322 -satuser ottro});
 }
 
@@ -52,7 +53,7 @@ sub system_do {
     my $echo_command = $command;
     $echo_command =~ s/--password=\S+/--password=******/;
     print STDERR "$echo_command\n";
-    # system($command) == 0 or die "Error executing '$echo_command'; exit $?";
+    system($command) == 0 or die "Error executing '$echo_command'; exit $?";
 }
 
 sub password_prompt {
