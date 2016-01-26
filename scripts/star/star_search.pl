@@ -12,6 +12,7 @@ use Bio::EnsEMBL::DBSQL::DBAdaptor;
     my $usage       = sub { exec('perldoc', $0) };
     my $genome_star = '';
     my $fasta_input = '';
+    my $star_output_dir = '';
     my $analysis_logic_name = '';
     my $run_flag    = 0;
 
@@ -25,13 +26,15 @@ use Bio::EnsEMBL::DBSQL::DBAdaptor;
         'dbuser=s' => \$db_user,
         'dbpass=s' => \$db_pass,
 
-        'analysis=s' => \$analysis_logic_name,
-        'genome=s'   => \$genome_star,
-        'fasta=s'    => \$fasta_input,
-        'run!'       => \$run_flag,
-        'h|help!'    => $usage,
+        'analysis=s'  => \$analysis_logic_name,
+        'genome=s'    => \$genome_star,
+        'fasta=s'     => \$fasta_input,
+        'outprefix=s' => \$star_output_dir,
+        'run!'        => \$run_flag,
+        'h|help!'     => $usage,
     ) or $usage->();
-    $usage->() unless $genome_star and $fasta_input and $analysis_logic_name;
+    $usage->() unless $genome_star and $fasta_input and $analysis_logic_name and $star_output_dir;
+    $star_output_dir .= "/" unless $star_output_dir =~ m{/$};
 
     my $db_aptr = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
         -host   => $db_host,
@@ -47,7 +50,10 @@ use Bio::EnsEMBL::DBSQL::DBAdaptor;
 
     my $lsf_mem    = 30_000;
     my $n_threads  = 4;
-    my $intron_max = 1e5;
+    my $intron_max = 1e6;
+
+    # Incorporating advice from this page:
+    # https://github.com/PacificBiosciences/cDNA_primer/wiki/Bioinfx-study:-Optimizing-STAR-aligner-for-Iso-Seq-data
 
     if ($run_flag) {
         my $cmd = [
@@ -57,28 +63,45 @@ use Bio::EnsEMBL::DBSQL::DBAdaptor;
             '--outTmpDir'                     => scalar(tmpnam()),
             '--readFilesIn'                   => $fasta_input,
             '--alignIntronMax'                => $intron_max,
+            '--outFileNamePrefix'             => $star_output_dir,
+
             qw{
                 --outStd                         SAM
-                --outFilterMultimapScoreRange    100
-                --outFilterScoreMinOverLread     0
-                --outFilterMatchNminOverLread    0.66
-                --outFilterMismatchNmax          1000
                 --outSAMattributes               jM AS NM
-                --winAnchorMultimapNmax          200
-                --seedSearchStartLmax            12
-                --alignWindowsPerReadNmax        30000
+
+                --seedSearchStartLmax            50
                 --seedPerReadNmax                100000
                 --seedPerWindowNmax              1000
+                --alignWindowsPerReadNmax        30000
                 --alignTranscriptsPerReadNmax    100000
                 --alignTranscriptsPerWindowNmax  10000
+                --winAnchorMultimapNmax          200
+
+                --outFilterMultimapScoreRange    1
+                --outFilterMultimapNmax          10000
+                --outFilterScoreMinOverLread     0
+                --outFilterMatchNmin             0
+                --outFilterMatchNminOverLread    0
+                --outFilterMismatchNmax          999
+                --outFilterMismatchNoverLmax     1
+                
+                --scoreGapNoncan    -20
+                --scoreGapGCAG      -4
+                --scoreGapATAC      -8
+                --scoreDelOpen      -1
+                --scoreDelBase      -1
+                --scoreInsOpen      -1
+                --scoreInsBase      -1
             },
         ];
+        
         fetch_analysis_id($dbh, $analysis_logic_name);
         fetch_chr_seq_region_ids($dbh, $genome_star);
         my $count = run_and_store($db_aptr, $cmd);
         print STDERR "Found and stored $count matches\n";
     }
     else {
+        mkdir($star_output_dir) or die "Failed to create dirctory '$star_output_dir'; $!";
         my $star_v = "STAR_2.4.2a";
         $ENV{'PATH'} = "/software/svi/bin/$star_v/bin/Linux_x86_64:$ENV{PATH}";
         my @bsub = (
@@ -87,8 +110,8 @@ use Bio::EnsEMBL::DBSQL::DBAdaptor;
             -n => $n_threads,
             -M => $lsf_mem,
             -R => "select[mem>$lsf_mem] rusage[mem=$lsf_mem] span[hosts=1]",
-            -o => "$fasta_input.out",
-            -e => "$fasta_input.err",
+            -o => "$star_output_dir/$fasta_input.out",
+            -e => "$star_output_dir/$fasta_input.err",
             $0, '-run', @command_line,
         );
 
