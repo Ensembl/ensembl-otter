@@ -341,8 +341,6 @@ sub _fasta_item {
     my ($accession_info) = @_;
     my $sequence = $accession_info->{sequence};
 
-    $accession_info->{'taxon_id'} = $accession_info->{'taxon_list'};
-
     my @taxon_list = split /,/, $accession_info->{'taxon_list'};
     # Take the first taxon ID which beings with a non-zero digit.
     # (Has side-effect of adding to $accession_info, but we don't mind.)
