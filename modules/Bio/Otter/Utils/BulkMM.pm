@@ -283,20 +283,22 @@ sub _chunk_size {
 }
 
 sub get_accession_types {
-    my ($self, $accs) = @_;
+    my ($self, $accs, @opt) = @_;
     return $self->_get_accessions(
         acc_list      => $accs,
         db_categories => [ @DEFAULT_DB_CATEGORIES ],
         sv_search     => 1,
+        @opt,
         );
 }
 
 sub get_accession_info {
-    my ($self, $accs) = @_;
+    my ($self, $accs, @opt) = @_;
     return $self->_get_accessions_managed(
         acc_list      => $accs,
         db_categories => $self->db_categories,
         sv_search     => 1,
+        @opt,
         );
 }
 
@@ -322,6 +324,7 @@ sub _get_accessions {
 
     my %acc_hash = map { $_ => 1 } @{$opts{acc_list}};
     my $results = $opts{existing_results} || {};
+    my $fetch_sequence = $opts{'no_sequence'} ? 0 : 1;
 
   DB: for my $db_name (@{$opts{db_categories}}) {
 
@@ -366,10 +369,12 @@ sub _get_accessions {
           } # chunk of terms
       } # search type
 
-      @get_seq = sort { $a->{entry_id} <=> $b->{entry_id} } @get_seq;
-      while (@get_seq) {
-          my @chunk_of_rows = splice @get_seq, 0, $BULK;
-          $self->_get_sequence($db_name, \@chunk_of_rows);
+      if ($fetch_sequence) {
+          @get_seq = sort { $a->{entry_id} <=> $b->{entry_id} } @get_seq;
+          while (@get_seq) {
+              my @chunk_of_rows = splice @get_seq, 0, $BULK;
+              $self->_get_sequence($db_name, \@chunk_of_rows);
+          }
       }
 
       # We don't need to search any further databases if we've found everything
