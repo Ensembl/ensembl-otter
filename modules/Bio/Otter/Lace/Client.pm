@@ -681,7 +681,7 @@ sub url_root_is_default {
 sub pfetch_url {
     my ($self) = @_;
 
-    return $self->url_root . '/pfetch';
+    return $self->url_root . '/nfetch';
 }
 
 sub pfetch_port {
@@ -694,14 +694,7 @@ sub pfetch_port {
 sub _setup_pfetch_env {
     my ($self) = @_;
 
-    # Need to use pfetch via HTTP proxy if we are outside Sanger
-    my $hostname = hostfqdn();
-    my $old_PW = defined $ENV{'PFETCH_WWW'} ? "'$ENV{'PFETCH_WWW'}'" : "undef";
-    if ($hostname =~ /\.sanger\.ac\.uk$/) {
-        delete($ENV{'PFETCH_WWW'});
-    } else {
-        $ENV{'PFETCH_WWW'} = $self->pfetch_url;
-    }
+    $ENV{'PFETCH_WWW'} = $self->pfetch_url;
 
     # Belvu's fetch is manually switched (as of 4.26-62-g75547)
     $ENV{'BELVU_FETCH_WWW'} = $self->pfetch_url.'?request=%s'; # RT#405174
@@ -711,7 +704,7 @@ sub _setup_pfetch_env {
     my $new_PW = defined $ENV{'PFETCH_WWW'} ? "'$ENV{'PFETCH_WWW'}'" : "undef";
     my $blix_cfg = __user_home()."/.blixemrc";
     my $blix_cfg_exist = -f $blix_cfg ? "exists" : "not present";
-    $self->_client_logger->info("setup_pfetch_env: PFETCH_WWW was $old_PW, now $new_PW; $blix_cfg $blix_cfg_exist");
+    $self->_client_logger->info("setup_pfetch_env: PFETCH_WWW now $new_PW; $blix_cfg $blix_cfg_exist");
 
     return;
 }
