@@ -1580,21 +1580,22 @@ sub sessions_needing_recovery {
         my ( $lace_dir, $pid, $mtime ) = @{$_};
         next if $existing_pid{$pid};
 
-        if (my $name = $self->_get_name($lace_dir)) {
+        if (my $name = $self->_maybe_recoverable($lace_dir)) {
             push(@$to_recover, [$lace_dir, $mtime, $name]);
         }
         else {
             try {
                 # Attempt to release locks of uninitialised sessions
-                my $adb = $self->recover_session($lace_dir);
+                my $adb = $self->recover_session($lace_dir, 1);
                 $adb->error_flag(0);    # It is uninitialised, so we want it to be removed
                 $lace_dir = $adb->home;
                 if ($adb->write_access) {
-                    $adb->unlock_otter_slice;
+                    my ($dsname, $slice_name) = split(/ /, $adb->name);
+                    $adb->unlock_otter_slice($dsname, $slice_name);
                     $self->logger->warn("Removed lock from uninitialised database in '$lace_dir'");
                 }
             }
-            catch { $self->logger->error("error while recoving session '$lace_dir': $_"); };
+            catch { $self->logger->error("error while recovering session '$lace_dir': $_"); };
             if (-d $lace_dir) {
                 # Belt and braces - if the session was unrecoverable we want it to be deleted.
                 my $done = $self->_move_to_done($lace_dir);
@@ -1620,15 +1621,19 @@ sub _move_to_done {
     return $done;
 }
 
-sub _get_name {
+sub _maybe_recoverable {
     my ($self, $home_dir) = @_;
 
     my $db = Bio::Otter::Lace::DB->new(home => $home_dir, client => $self);
+
+    my $xml = $db->get_tag_value('region_xml');
+    return unless $xml;
+
     return $db->get_tag_value('name');
 }
 
 sub recover_session {
-    my ($self, $dir) = @_;
+    my ($self, $dir, $unrecoverable) = @_;
 
     my $adb = $self->new_AceDatabase;
     $adb->error_flag(1);
@@ -1640,7 +1645,7 @@ sub recover_session {
         $self->logger->logdie("Cannot move '$dir' to '$home'; $!");
     }
 
-    unless ($adb->name) {
+    if ($unrecoverable) {
         # get the adb-with-slice back, for possible lock release and cleanup in sessions_needing_recovery()
         try { $adb->recover_slice_from_region_xml; }
         catch { $self->logger->warn($_); };

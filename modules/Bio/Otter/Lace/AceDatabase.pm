@@ -821,11 +821,13 @@ sub generate_XML_from_sqlite {
 }
 
 sub unlock_otter_slice {
-    my ($self) = @_;
+    my ($self, $dsname, $slice_name) = @_;
 
-    my $slice = $self->slice();
-    my $slice_name  = $slice->name();
-    my $dsname      = $slice->dsname();
+    unless ($dsname and $slice_name) {
+        my $slice = $self->slice();
+        $slice_name  = $slice->name();
+        $dsname      = $slice->dsname();
+    }
 
     $self->logger->info("Unlocking $dsname:$slice_name");
 
