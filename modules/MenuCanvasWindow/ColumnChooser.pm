@@ -790,6 +790,11 @@ sub DESTROY {
 
     warn "Destroying ColumnChooser\n";
 
+    # If we never initialised, clear the AceDatabase error_flag to ensure clean-up.
+    if ($self->init_flag) {
+        $self->AceDatabase->error_flag(0);
+    }
+
     $self->zmap_select_destroy;
 
     if (my $slw = $self->SpeciesListWindow) {
