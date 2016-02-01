@@ -2,9 +2,11 @@
 package MenuCanvasWindow::SessionWindow;
 
 use strict;
-use warnings;
 
+# Turn off the new "experimental::smartmatch" warnings in v5.018 and later.
+use warnings;
 no if $] >= 5.018, warnings => "experimental::smartmatch";
+
 use feature 'switch';
 
 use Carp qw(longmess);
