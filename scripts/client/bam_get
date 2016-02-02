@@ -24,7 +24,7 @@ use Bio::Otter::Mapping;
 use Bio::Vega::Utils::GFF;
 
 # variables used by _print_feature()
-my ($gff_seqname, $gff_source, $gff_format, $fasta);
+my ($gff_seqname, $gff_source, $gff_format);
 
 sub do_it {
     my ($self) = @_;
@@ -53,24 +53,19 @@ sub do_it {
     # map and print the features
     print "##gff-version $gff_version\n";
     $mapping->do_features($bam_fetch, $start, $end, \&_print_feature);
-    if ($fasta) {
-        print "##FASTA\n", $fasta;
-        $fasta = '';
-    }
 }
 
 # CIGAR commands
 my %clip_command  = map { $_ => 1 } qw( H S ); # these clip
 my %query_command = map { $_ => 1 } qw( M I ); # these contribute to the query sequence of the match
-my $paired_flag = RFLAGS->{'PAIRED'};
+my $paired_flag   = RFLAGS->{'PAIRED'};
+my $reversed_flag = RFLAGS->{'REVERSED'};
 
 sub _print_feature {
     my ($feature, $fstart, $fend) = @_;
 
     my $source = $gff_source || $feature->source_tag;
     my ($score) = $feature->get_tag_values('AS');
-
-    my $strand = '+';
 
     # $feature->query->{start,end} are buggy when there is hard
     # clipping (CIGAR command 'H'), see
@@ -89,17 +84,33 @@ sub _print_feature {
         $q_end += $arg if $query_command{$command};
     }
 
-    my @target_fields = ( $feature->name, $q_start, $q_end, $strand );
+    # my $flags = join ' ', $feature->get_tag_values('FLAGS');
 
-    my $flags = join ' ', $feature->get_tag_values('FLAGS');
+    my $strand = '+';
+    my $query_seq = $feature->qseq;
+    my $cigar_str = $feature->cigar_str;
+    my $query_len = $feature->l_qseq;
+    if ($feature->flag & $reversed_flag) {
+        $strand = '-';
+        # # Reverse and complement sequence
+        $query_seq = reverse($query_seq);
+        $query_seq =~ tr{acgtrymkswhbvdnACGTRYMKSWHBVDN}
+                        {tgcayrkmswdvbhnTGCAYRKMSWDVBHN};
+        my @cigar_fields = $cigar_str =~ /(\d+\D)/g;
+        $cigar_str = join('', reverse @cigar_fields);
+        my $new_start = $query_len - $q_end   + 1;
+        my $new_end   = $query_len - $q_start + 1;
+        $q_start = $new_start;
+        $q_end   = $new_end;
+    }
 
     my $attribute_hash = {
         Name       => $feature->name,
-        length     => $feature->l_qseq,
-        cigar_bam  => $feature->cigar_str,
-        bam_flags  => $flags,
-        Target     => \ @target_fields,
-        sequence   => $feature->qseq,
+        length     => $query_len,
+        cigar_bam  => $cigar_str,
+        # bam_flags  => $flags,
+        Target     => [$feature->name, $q_start, $q_end, '+'],
+        sequence   => $query_seq,
     };
     if ($feature->flag & $paired_flag) {
        $attribute_hash->{'ID'} = $feature->display_name;
@@ -111,13 +122,6 @@ sub _print_feature {
         $gff_seqname, $source, 'nucleotide_match',
         $fstart, $fend, $score, $strand, $phase,
         $attribute_hash);
-
-    # if (my $seq = $feature->qseq) {
-    #     $fasta .= '>' . $feature->name . "\n";
-    #     while ($seq =~ /(.{1,60})/g) {
-    #         $fasta .= $1 . "\n";
-    #     }
-    # }
 
     return;
 }
