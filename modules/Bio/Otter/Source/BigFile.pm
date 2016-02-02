@@ -68,6 +68,7 @@ sub url_query {
         dataset => $DataSet->name,
         ( map { $self->_param_value($_) } @{$bigfile_parameters} ),
         gff_version => $DataSet->gff_version,
+        %{$session->core_script_arguments},
     };
     return $query;
 }
@@ -90,13 +91,13 @@ sub init_resource_bin {
 
 sub _query_string {
     my ($query) = @_;
-    my $arguments = [ ];
+    my @arguments;
     for my $key (sort keys %{$query}) {
         my $value = $query->{$key};
         next unless defined $value;
-        push @{$arguments}, sprintf '--%s=%s', $key, uri_escape($value);
+        push @arguments, sprintf '--%s=%s', $key, uri_escape($value);
     }
-    my $query_string = join '&', @{$arguments};
+    my $query_string = join '&', @arguments;
     return $query_string;
 }
 
