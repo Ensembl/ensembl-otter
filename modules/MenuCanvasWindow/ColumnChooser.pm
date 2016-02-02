@@ -799,11 +799,9 @@ sub DESTROY {
 
     if (my $slw = $self->SpeciesListWindow) {
         my $slice = $self->AceDatabase->slice;
-        my $dataset_name     = $slice->dsname;
-        my $sequenceset_name = $slice->ssname;
         $self->AceDatabase->post_exit_callback(
             sub {
-                $slw->refresh_lock_display_for_dataset_sequence_set($dataset_name, $sequenceset_name);
+                $slw->refresh_lock_display_for_slice($slice);
             }
         );
     }

@@ -561,7 +561,7 @@ sub _open_Slice_write_flag {
             return 0;
         }
         finally {
-            try { $self->refresh_lock_columns };
+            try { $self->refresh_lock_display_for_slice($adb->slice) };
         }
           or return;
     }
@@ -571,8 +571,11 @@ sub _open_Slice_write_flag {
     return $cc;
 }
 
-sub refresh_lock_display_for_dataset_sequence_set {
-    my ($self, $dataset_name, $sequenceset_name) = @_;
+sub refresh_lock_display_for_slice {
+    my ($self, $slice) = @_;
+
+    my $dataset_name     = $slice->dsname;
+    my $sequenceset_name = $slice->ssname;
 
     printf STDERR "Updating lock display for %s > %s\n", $dataset_name, $sequenceset_name;
     my $locks_refreshed = 0;
