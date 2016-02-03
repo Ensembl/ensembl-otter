@@ -9,7 +9,7 @@ use Carp;
 use Try::Tiny;
 
 use base 'CanvasWindow';
-use Bio::Otter::Lace::Client;
+
 use CanvasWindow::SequenceNotes::History;
 use CanvasWindow::SequenceNotes::Status;
 use TransientWindow::OpenRange;
@@ -18,6 +18,9 @@ use MenuCanvasWindow::ColumnChooser;
 use POSIX qw(ceil);
 use Tk::Checkbutton;
 use Tk::ScopedBusy;
+
+use Bio::Otter::Lace::Client;
+use Bio::Otter::Utils::OpenSliceMixin;
 
 sub name {
     my ($self, $name) = @_;
@@ -749,40 +752,24 @@ sub open_SequenceSet {
     my ($dsname, $ssname, $chr_name, $chr_start, $chr_end) = $self->SequenceSet->selected_CloneSequences_parameters;
     my $slice = Bio::Otter::Lace::Slice->new($self->Client, $dsname, $ssname,
         'chromosome', 'Otter', $chr_name, $chr_start, $chr_end);
-    return $self->open_Slice($slice, $name);
+
+    return $self->Bio::Otter::Utils::OpenSliceMixin::open_Slice(
+        slice        => $slice,
+        write_access => ${$self->write_access_var_ref()},
+        name         => $name,
+        );
 }
 
-sub open_Slice {
-    my ($self, $slice, $name) = @_;
+# Bio::Otter::Utils::OpenSliceMixin::open_Slice expects this.
+sub make_ColumnChoser {
+    my ($self, @args) = @_;
+    return $self->SequenceSetChooser->SpeciesListWindow->make_ColumnChoser(@args);
+}
 
-    my $adb_write_access = ${$self->write_access_var_ref()};
-    my $adb = $self->Client->new_AceDatabase_from_Slice($slice);
-    $adb->name($name);
-    $adb->write_access($adb_write_access);
-
-    if ($adb_write_access) {
-        # only lock the region if we have write access.
-        try { $adb->try_to_lock_the_block }
-        catch {
-            $adb->error_flag(0);
-            $adb->write_access(0);  # Stops AceDatabase DESTROY from trying to unlock clones
-            if (/Locking slice failed during locking.*do_lock failed <lost the race/s) {
-                # a message concatenated in the lock_region action, from the SliceLockBroker
-                $self->message("The region you are trying to open is locked\n");
-            } else {
-                $self->exception_message($_, 'Error initialising database');
-            }
-            return 0;
-        }
-        finally {
-            try { $self->refresh_lock_columns };
-        }
-          or return;
-    }
-
-    my $cc = $self->SequenceSetChooser->SpeciesListWindow->make_ColumnChoser($adb);
-    $cc->init_flag(1);
-    return $cc;
+# Bio::Otter::Utils::OpenSliceMixin::open_Slice expects this name:
+sub refresh_lock_display {
+    my ($self, $slice) = @_;
+    return $self->refresh_lock_columns; # doesn't need slice
 }
 
 # creates a string based on the selected clones
