@@ -14,6 +14,7 @@ use Tk::DialogBox;
 use Zircon::ZMap;
 
 use Bio::Otter::Utils::About;
+use Bio::Otter::Utils::OpenSliceMixin;
 use Bio::Otter::UI::AboutBoxMixIn;
 use Bio::Otter::Lace::Client;
 use Bio::Vega::Utils::URI qw( open_uri );
@@ -531,44 +532,25 @@ sub make_ColumnChoser {
 sub open_Slice_read_only {
     my ($self, $slice) = @_;
 
-    return $self->_open_Slice_write_flag($slice, 0);
+    return $self->Bio::Otter::Utils::OpenSliceMixin::open_Slice(
+        slice        => $slice,
+        write_access => 0,
+        );
 }
 
 sub open_Slice {
     my ($self, $slice) = @_;
 
-    return $self->_open_Slice_write_flag($slice, 1);
+    return $self->Bio::Otter::Utils::OpenSliceMixin::open_Slice(
+        slice        => $slice,
+        write_access => $self->Client->write_access,
+        );
 }
 
-sub _open_Slice_write_flag {
-    my ($self, $slice, $write_flag) = @_;
-
-    my $adb = $self->Client->new_AceDatabase_from_Slice($slice);
-    $adb->write_access($write_flag && $self->Client->write_access);
-
-    if ($adb->write_access) {
-        # only lock the region if we have write access.
-        try { $adb->try_to_lock_the_block }
-        catch {
-            $adb->error_flag(0);
-            $adb->write_access(0);  # Stops AceDatabase DESTROY from trying to unlock clones
-            if (/Locking slice failed during locking.*do_lock failed <lost the race/s) {
-                # a message concatenated in the lock_region action, from the SliceLockBroker
-                $self->message("The region you are trying to open is locked\n");
-            } else {
-                $self->exception_message($_, 'Error initialising database');
-            }
-            return 0;
-        }
-        finally {
-            try { $self->refresh_lock_display_for_slice($adb->slice) };
-        }
-          or return;
-    }
-
-    my $cc = $self->make_ColumnChoser($adb);
-    $cc->init_flag(1);
-    return $cc;
+# Bio::Otter::Utils::OpenSliceMixin::open_Slice expects this name:
+sub refresh_lock_display {
+    my ($self, $slice) = @_;
+    return $self->_refresh_lock_display_for_slice($slice);
 }
 
 sub refresh_lock_display_for_slice {
