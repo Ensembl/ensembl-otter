@@ -761,9 +761,9 @@ sub open_SequenceSet {
 }
 
 # Bio::Otter::Utils::OpenSliceMixin::open_Slice expects this.
-sub make_ColumnChoser {
+sub make_ColumnChooser {
     my ($self, @args) = @_;
-    return $self->SequenceSetChooser->SpeciesListWindow->make_ColumnChoser(@args);
+    return $self->SequenceSetChooser->SpeciesListWindow->make_ColumnChooser(@args);
 }
 
 # Bio::Otter::Utils::OpenSliceMixin::open_Slice expects this name:

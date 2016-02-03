@@ -478,7 +478,7 @@ sub recover_some_sessions {
                     # Bring up GUI
                     my $adb = $client->recover_session($session_dir);
 
-                    my $cc = $self->make_ColumnChoser($adb);
+                    my $cc = $self->make_ColumnChooser($adb);
 
                     $cc->load_filters(is_recover => 1);
                 }
@@ -512,7 +512,7 @@ sub zircon_delete {
     return;
 }
 
-sub make_ColumnChoser {
+sub make_ColumnChooser {
     my ($self, $adb) = @_;
 
     warn "Making ColumnChooser";
