@@ -550,7 +550,7 @@ sub open_Slice {
 # Bio::Otter::Utils::OpenSliceMixin::open_Slice expects this name:
 sub refresh_lock_display {
     my ($self, $slice) = @_;
-    return $self->_refresh_lock_display_for_slice($slice);
+    return $self->refresh_lock_display_for_slice($slice);
 }
 
 sub refresh_lock_display_for_slice {
