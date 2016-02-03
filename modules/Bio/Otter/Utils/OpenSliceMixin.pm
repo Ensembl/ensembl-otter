@@ -70,7 +70,7 @@ sub open_Slice {
           or return;
     }
 
-    my $cc = $self->make_ColumnChoser($adb);
+    my $cc = $self->make_ColumnChooser($adb);
     $cc->init_flag(1);
     return $cc;
 }
