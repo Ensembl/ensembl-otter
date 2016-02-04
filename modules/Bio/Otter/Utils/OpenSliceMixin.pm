@@ -54,13 +54,25 @@ sub open_Slice {
         # only lock the region if we have write access.
         try { $adb->try_to_lock_the_block }
         catch {
+            my $error = $_;
             $adb->error_flag(0);
             $adb->write_access(0);  # Stops AceDatabase DESTROY from trying to unlock clones
-            if (/Locking slice failed during locking.*do_lock failed <lost the race/s) {
-                # a message concatenated in the lock_region action, from the SliceLockBroker
+
+            # This is nasty as it relies on and repeats error literal thrown from:
+            #  Bio::Otter::ServerAction::Region->lock_region() - which includes another thrown from:
+            #  Bio::Vega::SliceLockBroker->exclusive_work()
+            my $server_action_region_msg = qr/\QLocking slice failed during locking\E/;
+            my $slice_lock_broker_msg    = qr/\Qdo_lock failed <lost the race\E/;
+            my $locked_re = qr/
+                $server_action_region_msg
+                .*
+                $slice_lock_broker_msg
+                /sx;
+
+            if ($error =~ $locked_re) {
                 $self->message("The region you are trying to open is locked\n");
             } else {
-                $self->exception_message($_, 'Error initialising database');
+                $self->exception_message($error, 'Error initialising database');
             }
             return 0;
         }
