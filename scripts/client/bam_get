@@ -7,7 +7,7 @@ package Bio::Otter::GetScript::BAM;
 
 use base 'Bio::Otter::Utils::GetScript';
 
-sub version      { return 'bam_get 0.6'; }
+sub version      { return 'bam_get 0.9'; }
 sub log_filename { return 'gff_log.txt'; }
 
 my $LOG = 1;
@@ -16,7 +16,6 @@ use Bio::Otter::Log::Log4perl qw(:easy);
 use URI::Escape qw(uri_unescape);
 
 use Bio::DB::Sam;
-use Bio::DB::Sam::Constants qw(RFLAGS);
 
 use Bio::Otter::Lace::Defaults;
 use Bio::Otter::Fetch::BAM;
@@ -55,68 +54,79 @@ sub do_it {
     $mapping->do_features($bam_fetch, $start, $end, \&_print_feature);
 }
 
-# CIGAR commands
-my %clip_command  = map { $_ => 1 } qw( H S ); # these clip
-my %query_command = map { $_ => 1 } qw( M I ); # these contribute to the query sequence of the match
-my $paired_flag   = RFLAGS->{'PAIRED'};
-my $reversed_flag = RFLAGS->{'REVERSED'};
+my %seen;
 
 sub _print_feature {
     my ($feature, $fstart, $fend) = @_;
 
-    my $source = $gff_source || $feature->source_tag;
-    my ($score) = $feature->get_tag_values('AS');
+    my $name  = $feature->name;
+    my $flags = $feature->flag;
 
-    # $feature->query->{start,end} are buggy when there is hard
-    # clipping (CIGAR command 'H'), see
-    # https://github.com/GMOD/GBrowse-Adaptors/issues/4 , so we
-    # calculate $start and $end from the CIGAR ourselves
-
-    my @cigar = @{$feature->cigar_array};
-    while ($cigar[0][0] eq 'H') { shift @cigar } # skip hard clipping
-    my $soft_clip = 0;
-    while ($cigar[0][0] eq 'S') { $soft_clip += $cigar[0][1]; shift @cigar }
-    my $q_start = $soft_clip + 1;
-    my $q_end = $soft_clip;
-    for (@cigar) {
-        my ($command, $arg) = @{$_};
-        last if $clip_command{$command};
-        $q_end += $arg if $query_command{$command};
+    # For BAM files with multiple reads from the same template, mangle
+    # the name so that each read sequence gets a unique name.
+    # See SAM specifications:
+    # https://samtools.github.io/hts-specs/SAMv1.pdf
+    if ($flags & 0x40) {
+        if ($flags & 0x80) {
+            # Internal read from template
+            my $i = 1;
+            while ($seen{"i$i$name"}) {
+                $i++;
+            }
+            $name = "i$i$name";
+        }
+        else {
+            # First read from template
+            $name = 'w' . $name;
+        }
     }
-
-    # my $flags = join ' ', $feature->get_tag_values('FLAGS');
+    elsif ($flags & 0x80) {
+        # Last read from template
+        $name = 'c' . $name;
+    }
+    $seen{$name} = 1;
 
     my $strand = '+';
     my $query_seq = $feature->qseq;
-    my $cigar_str = $feature->cigar_str;
-    my $query_len = $feature->l_qseq;
-    if ($feature->flag & $reversed_flag) {
+    my @cigar = @{ $feature->cigar_array };
+    if ($flags & 0x10) {
         $strand = '-';
-        # # Reverse and complement sequence
+        # Reverse complement sequence
         $query_seq = reverse($query_seq);
         $query_seq =~ tr{acgtrymkswhbvdnACGTRYMKSWHBVDN}
                         {tgcayrkmswdvbhnTGCAYRKMSWDVBHN};
-        my @cigar_fields = $cigar_str =~ /(\d+\D)/g;
-        $cigar_str = join('', reverse @cigar_fields);
-        my $new_start = $query_len - $q_end   + 1;
-        my $new_end   = $query_len - $q_start + 1;
-        $q_start = $new_start;
-        $q_end   = $new_end;
+        @cigar = reverse(@cigar);
     }
 
+    # We calculate the query start and end ourselves.
+    # This used to be wrong in Bio::DB::Sam, but may now be fixed:
+    # https://github.com/GMOD/GBrowse-Adaptors/issues/4
+    my $q_start = 1;
+    my $q_end   = 0;
+    foreach my $ele (@cigar) {
+        my ($op, $len) = @$ele;
+        if ($op eq 'S' and ! $q_end) {
+            # A soft clipping operator at the start
+            $q_start += $len;
+            $q_end   += $len;
+        }
+        elsif ($op eq 'M' or $op eq 'I') {
+            # Operators that move along the query
+            $q_end += $len;
+        }
+    }
+
+    my $cigar_str = join('', map { $_->[1] . $_->[0] } @cigar);
     my $attribute_hash = {
-        Name       => $feature->name,
-        length     => $query_len,
+        length     => $feature->l_qseq,
         cigar_bam  => $cigar_str,
-        # bam_flags  => $flags,
-        Target     => [$feature->name, $q_start, $q_end, '+'],
+        Target     => [$name, $q_start, $q_end, '+'],
         sequence   => $query_seq,
     };
-    if ($feature->flag & $paired_flag) {
-       $attribute_hash->{'ID'} = $feature->display_name;
-    }
 
     my $phase = $feature->phase;
+    my $source = $gff_source || $feature->source_tag;
+    my ($score) = $feature->get_tag_values('AS');
 
     print $gff_format->gff_line(
         $gff_seqname, $source, 'nucleotide_match',
