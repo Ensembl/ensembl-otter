@@ -167,7 +167,7 @@ sub _set_exon_phases_translation_cds_start_end {
 
     if ($start_phase) {
         if ($cds_start != 1) {
-            $self->logger->logconfess(
+            $self->logger->warn(
                 sprintf("Error in transcript '%s'; Start_not_found [%s] set, but there is 5' UTR)",
                         $name, $start_phase));
         }
