@@ -254,12 +254,15 @@ sub __options_from_file {
 
 sub __fast_ini {
     # a heuristic to detect O(n^2) versions of Config::IniFiles and
-    # warn, to insulate against build regression
+    # warn, to insulate against build regression.  O(n^2) behaviour
+    # fixed in v2.88 distribution.
     my $civ = Config::IniFiles->VERSION;
-    if ($civ =~ m{^\d+\.\d+$} && $civ < 2.84) {
-        warn "***\n*** Suspect we have the slow Config::IniFiles v$civ"
-          unless Config::IniFiles->can('_cache_purge');
-    } else {
+    if ($civ =~ m{^\d+\.\d+$}) {
+        if ($civ < 2.88 and ! Config::IniFiles->can('_cache_purge')) {
+            warn "***\n*** Suspect we have the slow Config::IniFiles v$civ";
+        }
+    }
+    else {
         warn "Config::IniFiles v$civ: unknown, is it a slow one?";
     }
     return;
