@@ -102,7 +102,7 @@ bg=yellow</panel_attributes>
     </coordinates>
     <panel_attributes>lt=&lt;&lt;-
 [4] open ott-cli/prot/status
-/&lt;ott-cli-SID&gt;/</panel_attributes>
+</panel_attributes>
     <additional_attributes>10.0;20.0;230.0;20.0</additional_attributes>
   </element>
   <element>
@@ -140,7 +140,7 @@ bg=#7FFFD4</panel_attributes>
     </coordinates>
     <panel_attributes>lt=-&gt;&gt;
 [5] GET ott-cli/prot/status
-/&lt;ott-cli-SID&gt;/</panel_attributes>
+</panel_attributes>
     <additional_attributes>10.0;20.0;230.0;20.0</additional_attributes>
   </element>
   <element>
@@ -153,7 +153,7 @@ bg=#7FFFD4</panel_attributes>
     </coordinates>
     <panel_attributes>lt=&lt;&lt;-
 [6] NOT AUTH, redirect
-</panel_attributes>
+/SET &lt;ott-cli-SID&gt;/</panel_attributes>
     <additional_attributes>10.0;20.0;230.0;20.0</additional_attributes>
   </element>
   <element>
@@ -166,7 +166,7 @@ bg=#7FFFD4</panel_attributes>
     </coordinates>
     <panel_attributes>lt=-&gt;&gt;
 [7] GET ott-srv-OP/authenticate
-/&lt;ott-cli-SID&gt;/</panel_attributes>
+/&lt;ott-cli-inst&gt;/</panel_attributes>
     <additional_attributes>10.0;20.0;470.0;20.0</additional_attributes>
   </element>
   <element>
@@ -228,7 +228,7 @@ bg=#afeeee</panel_attributes>
     </coordinates>
     <panel_attributes>lt=&lt;&lt;-
 [E1] present login choices
-/&lt;ott-srv-SID&gt;/</panel_attributes>
+/SET &lt;ott-srv-SID&gt;/</panel_attributes>
     <additional_attributes>10.0;20.0;570.0;20.0</additional_attributes>
   </element>
   <element>
@@ -453,7 +453,7 @@ auth ok</panel_attributes>
     </coordinates>
     <panel_attributes>lt=&lt;&lt;-
 [14] redirect: ott-cli-RP/callback
-/&lt;ext-code&gt;, &lt;ott-srv-code&gt;/</panel_attributes>
+/&lt;ott-srv-code&gt;/</panel_attributes>
     <additional_attributes>10.0;20.0;470.0;20.0</additional_attributes>
   </element>
   <element>
@@ -811,5 +811,18 @@ response:
     <panel_attributes>
 bg=#ffd700</panel_attributes>
     <additional_attributes/>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>560</x>
+      <y>90</y>
+      <w>120</w>
+      <h>50</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;-
+generate
+/ott-cli-inst/</panel_attributes>
+    <additional_attributes>10.0;30.0;30.0;30.0;30.0;10.0;10.0;10.0</additional_attributes>
   </element>
 </diagram>
