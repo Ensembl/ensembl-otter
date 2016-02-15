@@ -392,14 +392,10 @@ sub extant_versions {
 }
 
 
-=head2 Access($given_email)
+=head2 Access()
 
 Return a L<Bio::Otter::Auth::Access> object, which tells dataset
 access for any user.
-
-Implicit access was granted to unlisted staff by the users.txt
-mechanism.  That is granted here (by adding permissions to the Access
-object) if an email address is passed in.
 
 Currently freshly loaded.  Maybe should be cached.
 
@@ -407,12 +403,11 @@ Currently freshly loaded.  Maybe should be cached.
 
 my $_access;
 sub Access {
-    my ($pkg, $given_email) = @_;
+    my ($pkg) = @_;
     my $acc = $pkg->_get_yaml('/access.yaml');
     # this is not caching (like a singleton), it prevents weak refs to
     # the B:O:A:Access vanishing during multi-statement method chains
     $_access = Bio::Otter::Auth::Access->new($acc, $pkg->_SpeciesDat);
-    $_access->legacy_access($given_email) if $given_email;
     return $_access;
 }
 
