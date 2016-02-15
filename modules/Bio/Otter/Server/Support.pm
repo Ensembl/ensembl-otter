@@ -53,13 +53,10 @@ sub dataset_name {
     die "no default dataset name";
 }
 
-# this is a local cache, and a shim to grant legacy access
+# this is a local cache
 sub Access {
     my ($self) = @_;
-    my $acc = $self->{_Access} ||= do {
-        my $username = $self->authenticated_username;
-        Bio::Otter::Server::Config->Access($username);
-    };
+    my $acc = $self->{_Access} ||= Bio::Otter::Server::Config->Access();
     return $acc;
 }
 

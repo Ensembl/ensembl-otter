@@ -16,7 +16,7 @@ Bio::Otter::Auth::Access - authorisation for authors' dataset access
 
 =head1 SYNOPSIS
 
- # New style.  NB. implicit access is only granted to staff by L</legacy_access>
+ # New style.
  my $acc = Bio::Otter::Server::Config->Access;
  my $user = $acc->user($email) or die "User not authorised";
  my $ds = $user->write_dataset($dataset_name)
@@ -175,8 +175,7 @@ Return the hashref of C<{ $email => $user_object }>.
 
 This is intended for code testing, not production use.  It has the
 weakness that it may not include all possible users, due to
-L</legacy_access> and the fact that it doesn't ask databases for lists
-of authors.
+the fact that it doesn't ask databases for lists of authors.
 
 =cut
 
@@ -198,37 +197,6 @@ sub _flatten_users {
         }
     }
     $self->{'_users'} = \%out;
-    return;
-}
-
-
-=head2 legacy_access($email)
-
-Given an email address, modify the objects state to grant legacy
-access as under F<users.txt>; but read only.
-
-If the user was already listed explicitly, nothing happens.  This
-could result in reduced access.
-
-=cut
-
-sub legacy_access {
-    my ($self, $email) = @_;
-
-    # XXX:DUP belongs to Bio::Otter::Auth::SSO::auth_user
-    my $internal_flag = ($email =~ m{^[a-z0-9]+$});
-
-    if ($internal_flag && !$self->user($email)) {
-        my %G = (comment => "Made by $self->legacy_access for $email",
-                 read => [ ':main' ]);
-        my $G = Bio::Otter::Auth::UserGroup->new($self, \%G);
-        my $U = Bio::Otter::Auth::User->new($self, $email);
-        $U->in_group($G);
-
-        $self->_user_groups->{'legacy_access'} = $G;
-        $self->all_users->{$email} = $U;
-    }
-
     return;
 }
 
