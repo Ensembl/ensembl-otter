@@ -15,7 +15,7 @@ use Bio::Otter::Auth::Access;
 my $BOAA = 'Bio::Otter::Auth::Access';
 
 sub main {
-    my @t = qw( species_groups_tt user_groups_tt dslist_tt dup_tt );
+    my @t = qw( species_groups_tt user_groups_tt dslist_tt dup_tt user_aliases_tt );
     plan tests => scalar @t;
 
     foreach my $subt (@t) {
@@ -88,6 +88,7 @@ species_groups:
     - human_test
     - :main
 user_groups: {}
+user_aliases: {}
 INPUT
 
     return;
@@ -123,6 +124,7 @@ user_groups:
       - sheep
     users:
       - Shaun
+user_aliases: {}
 INPUT
 
     isa_ok($acc, 'Bio::Otter::Auth::Access') or die "got $acc";
@@ -185,6 +187,7 @@ user_groups:
     frobnitz: should not be here
     users:
       - bob
+user_aliases: {}
 INPUT
 
 
@@ -196,6 +199,7 @@ user_groups:
     users:
       - alice:
       - bob
+user_aliases: {}
 INPUT
 
     return;
@@ -220,6 +224,7 @@ species_groups:
     - human
     - mouse
 user_groups: {}
+user_aliases: {}
 INPUT
 
     like(try_err { Bio::Otter::Auth::DsList->new($acc, 'bar') },
@@ -249,6 +254,7 @@ user_groups:
   two:
     users:
       - bob
+user_aliases: {}
 INPUT
 
 
@@ -260,6 +266,7 @@ user_groups:
     users:
       - BOB
       - Bob
+user_aliases: {}
 INPUT
 
     my $dup_ds = try_load(<<'INPUT');
@@ -274,6 +281,7 @@ user_groups:
           write:
             - human
       - bob
+user_aliases: {}
 INPUT
 
     isa_ok($dup_ds, $BOAA, 'alice has human*2');
@@ -294,6 +302,7 @@ user_groups:
       - chuck:
           read:
             - human
+user_aliases: {}
 INPUT
     my $ds_rorw = try_load(<<'INPUT');
 ---
@@ -306,6 +315,7 @@ user_groups:
       - chuck:
           write:
             - human
+user_aliases: {}
 INPUT
     foreach my $pair ([ rorw => $ds_rorw ],
                       [ rwro => $ds_rwro ]) {
@@ -327,3 +337,59 @@ INPUT
     return;
 }
 
+sub user_aliases_tt {
+    plan tests => 6;
+
+    like(try_load(<<'INPUT'), qr{user_alias user 'chick' not found in user_groups}s, 'user not found');
+---
+species_groups: {}
+user_groups:
+  ug1:
+    read:
+      - human
+    users:
+      - chuck
+user_aliases:
+  chick:
+    facebook: chucky
+INPUT
+
+    my $access = try_load(<<'INPUT');
+---
+species_groups: {}
+user_groups:
+  ug1:
+    read:
+      - human
+    users:
+      - chuck
+user_aliases:
+  chuck:
+    facebook: chucky
+    Yahoo:    Chucklet
+INPUT
+    isa_ok($access, 'Bio::Otter::Auth::Access');
+
+    my %extant_aliases = (
+        facebook => 'CHUCKY',
+        yahoo    => 'chucklet',
+        );
+    while (my ($provider, $id) = each %extant_aliases) {
+        subtest "user_by_alias $provider/$id" => sub {
+            plan tests => 2;
+            my $user = $access->user_by_alias($provider, $id);
+            isa_ok($user, 'Bio::Otter::Auth::User');
+            is($user->email, 'chuck', 'email');
+        };
+    }
+
+    my %missing_aliases = (
+        google   => 'CHUCKY',
+        yahoo    => 'chucky',
+        );
+    while (my ($provider, $id) = each %missing_aliases) {
+        is($access->user_by_alias($provider, $id), undef, "missing alias $provider/$id");
+    }
+
+    return;
+}
