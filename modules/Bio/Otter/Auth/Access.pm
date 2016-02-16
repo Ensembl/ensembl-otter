@@ -78,6 +78,7 @@ sub new {
     try {
         $self->_check_species_groups;
         $self->_flatten_users;
+        $self->_alias_map;      # causes map to be built
     } catch {
         my $err = $_;
         $err =~ s{\.?\s*\Z}{, under $$self{_ptr}};
@@ -200,6 +201,42 @@ sub _flatten_users {
     return;
 }
 
+
+=head2 user_by_alias($provider, $identifier)
+
+This translates externally authenticated identifiers into Otter users.
+
+Return an authorised L<Bio::Otter::Auth::User>, or undef if not found.
+
+=cut
+
+sub user_by_alias {
+    my ($self, $provider, $identifier) = @_;
+    my $email = $self->_alias_map->{lc($provider)}->{lc($identifier)};
+    return unless $email;
+    return $self->user($email);
+}
+
+
+sub _alias_map {
+    my ($self) = @_;
+    return $self->{'_alias_map'}
+      ||= $self->_build_alias_map($self->_input('user_aliases'));
+}
+
+sub _build_alias_map {
+    my ($self, $u_aliases) = @_;
+    my %by_provider;
+    while (my ($name, $alias_hash) = each %{ $u_aliases }) {
+        $self->{'_ptr'} = "user_aliases/$name";
+        die "user_alias user '$name' not found in user_groups" unless $self->user($name);
+        while (my ($provider, $alias) = each %{ $alias_hash }) {
+            die "Duplicate alias '$provider/$alias' for '$name'" if $by_provider{lc($provider)}->{lc($alias)};
+            $by_provider{lc($provider)}->{lc($alias)} = $name;
+        }
+    }
+    return \%by_provider;
+}
 
 =head1 AUTHOR
 
