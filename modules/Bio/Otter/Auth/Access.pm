@@ -205,6 +205,7 @@ sub _flatten_users {
 =head2 user_by_alias($provider, $identifier)
 
 This translates externally authenticated identifiers into Otter users.
+$provider and $identifier are case-insensitive.
 
 Return an authorised L<Bio::Otter::Auth::User>, or undef if not found.
 
@@ -213,10 +214,28 @@ Return an authorised L<Bio::Otter::Auth::User>, or undef if not found.
 sub user_by_alias {
     my ($self, $provider, $identifier) = @_;
     my $email = $self->_alias_map->{lc($provider)}->{lc($identifier)};
-    return unless $email;
-    return $self->user($email);
+    return $self->user($email) if $email;
+
+    return unless lc($provider) eq 'google';
+    return $self->_sanger_google_alias($identifier);
 }
 
+# As a special case, internal users are assumed to have a google account
+# with the same email address as their official sanger address.
+#
+sub _sanger_google_alias {
+    my ($self, $identifier) = @_;
+
+    my ($uname) = $identifier =~ /
+      ^
+      ([a-z0-9]+)      # simple user name
+      \@sanger\.ac\.uk  # sanger mail
+      $
+    /ix;               # case-insensitive
+
+    return unless $uname;
+    return $self->user($uname);
+}
 
 sub _alias_map {
     my ($self) = @_;

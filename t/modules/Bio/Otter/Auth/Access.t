@@ -338,7 +338,7 @@ INPUT
 }
 
 sub user_aliases_tt {
-    plan tests => 6;
+    plan tests => 10;
 
     like(try_load(<<'INPUT'), qr{user_alias user 'chick' not found in user_groups}s, 'user not found');
 ---
@@ -354,7 +354,7 @@ user_aliases:
     facebook: chucky
 INPUT
 
-    my $access = try_load(<<'INPUT');
+    like(try_load(<<'INPUT'), qr{Duplicate alias 'facebook/chucky' for}s, 'duplicate alias');
 ---
 species_groups: {}
 user_groups:
@@ -363,31 +363,73 @@ user_groups:
       - human
     users:
       - chuck
+      - chet
 user_aliases:
   chuck:
     facebook: chucky
+  chet:
+    facebook: chucky
+INPUT
+
+    my $access = try_load(<<'INPUT');
+---
+species_groups: {}
+user_groups:
+  ug1:
+    read:
+      - human
+    users:
+      - chuck@beta.edu
+      - abc123
+      - spqr1
+      - xyz9
+user_aliases:
+  abc123:
+    google:   alpha@beta.com
+  chuck@beta.edu:
+    facebook: chucky
     Yahoo:    Chucklet
+  spqr1:
+    ORCID:    0000-0002-1234-5678
 INPUT
     isa_ok($access, 'Bio::Otter::Auth::Access');
 
     my %extant_aliases = (
-        facebook => 'CHUCKY',
-        yahoo    => 'chucklet',
+        'chuck@beta.edu' => {
+            facebook => 'CHUCKY',
+            yahoo    => 'chucklet',
+        },
+        'spqr1' => {
+            orcid    => '0000-0002-1234-5678',
+            google   => 'spqr1@sanger.ac.uk',
+        },
+        'xyz9' => {
+            google   => 'xyz9@sanger.ac.uk',
+        },
+        'abc123' => {
+            google   => 'alpha@beta.com',
+        },
         );
-    while (my ($provider, $id) = each %extant_aliases) {
-        subtest "user_by_alias $provider/$id" => sub {
-            plan tests => 2;
-            my $user = $access->user_by_alias($provider, $id);
-            isa_ok($user, 'Bio::Otter::Auth::User');
-            is($user->email, 'chuck', 'email');
+    while (my ($email, $aliases) = each %extant_aliases) {
+        subtest "user_by_alias $email" => sub {
+            plan tests => 2 * scalar(keys(%$aliases));
+            while (my ($provider, $id) = each %$aliases) {
+                my $user = $access->user_by_alias($provider, $id);
+                isa_ok($user, 'Bio::Otter::Auth::User', "$provider/$id");
+              SKIP: {
+                  skip "alias not found", 1 unless $user;
+                  is($user->email, $email, "$provider/$id is $email");
+                }
+            }
         };
     }
 
-    my %missing_aliases = (
+    my @missing_aliases = (
         google   => 'CHUCKY',
         yahoo    => 'chucky',
+        google   => 'spqr2@sanger.ac.uk',
         );
-    while (my ($provider, $id) = each %missing_aliases) {
+    while (my ($provider, $id) = splice(@missing_aliases, 0, 2)) {
         is($access->user_by_alias($provider, $id), undef, "missing alias $provider/$id");
     }
 
