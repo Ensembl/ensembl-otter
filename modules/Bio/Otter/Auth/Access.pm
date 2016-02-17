@@ -104,10 +104,15 @@ sub species_dat {
     return $self->{'_species_dat'};
 }
 
-sub _input {
+sub _input_optional {
     my ($self, $key) = @_;
     $self->{'_ptr'} = $key;
-    return $self->{'_input'}->{$key} || die "Key $key not found in input";
+    return $self->{'_input'}->{$key};
+}
+
+sub _input {
+    my ($self, $key) = @_;
+    return $self->_input_optional($key) || die "Key $key not found in input";
 }
 
 sub species_groups {
@@ -239,12 +244,15 @@ sub _sanger_google_alias {
 
 sub _alias_map {
     my ($self) = @_;
-    return $self->{'_alias_map'}
-      ||= $self->_build_alias_map($self->_input('user_aliases'));
+    return $self->{'_alias_map'} ||= $self->_build_alias_map;
 }
 
 sub _build_alias_map {
-    my ($self, $u_aliases) = @_;
+    my ($self) = @_;
+
+    my $u_aliases = $self->_input_optional('user_aliases');
+    return {} unless $u_aliases;
+
     my %by_provider;
     while (my ($name, $alias_hash) = each %{ $u_aliases }) {
         $self->{'_ptr'} = "user_aliases/$name";
