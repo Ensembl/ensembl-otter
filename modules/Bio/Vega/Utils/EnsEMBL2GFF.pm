@@ -424,11 +424,7 @@ my $_new_feature_id_sub = sub {
 
             my ($start, $end, $gff_phase, $stable);
 
-            if ($pg_fake_cds) {
-                $start     = $self->seq_region_start;
-                $end       = $self->seq_region_end;
-                $gff_phase = 0;
-            } else {
+            if ($tsl) {
                 $start = $self->coding_region_start + $self->slice->start - 1;
                 $end   = $self->coding_region_end   + $self->slice->start - 1;
 
@@ -437,6 +433,10 @@ my $_new_feature_id_sub = sub {
                     defined $ens_phase ? $ens_phase_to_gff_phase{$ens_phase} : 0;
 
                 $stable = $tsl->stable_id;
+            } elsif ($pg_fake_cds) {
+                $start     = $self->seq_region_start;
+                $end       = $self->seq_region_end;
+                $gff_phase = 0;
             }
 
             my $attrib_hash = {
