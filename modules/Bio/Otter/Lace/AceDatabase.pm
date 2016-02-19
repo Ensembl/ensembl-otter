@@ -579,6 +579,10 @@ sub _zmap_config {
             %{ $self->DataSet->config_section('blixem') },
         },
 
+        'column-groups' => {
+            %{ $self->DataSet->config_section('column-groups') },
+        },
+
     };
 
     return $config;
