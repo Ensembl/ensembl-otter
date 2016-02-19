@@ -32,7 +32,6 @@ use Bio::Otter::Source::Filter;
 use Bio::Otter::Utils::Config::Ini qw( config_ini_format );
 
 use Hum::Ace::Assembly;
-use Hum::Ace::LocalServer;
 use Hum::Ace::MethodCollection;
 use Hum::ZMapStyleCollection;
 
