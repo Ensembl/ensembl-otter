@@ -10,7 +10,6 @@ use feature 'switch';
 use Try::Tiny;
 
 use Bio::Vega::Author;
-use Bio::Otter::Server::Config;
 use Bio::Otter::Auth::SSO;
 
 use IO::Compress::Gzip qw(gzip);
