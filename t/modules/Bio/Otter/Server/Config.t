@@ -7,6 +7,7 @@ use Test::More;
 use Try::Tiny;
 use File::Temp 'tempdir';
 use File::Path 'make_path';
+use YAML::Any;
 
 use Test::Otter 'try_err';
 
@@ -24,21 +25,31 @@ use Bio::Otter::Server::Config;
 
 
 sub main {
-    plan tests => 5;
+    plan tests => 6;
 
     my $tmp = tempdir('BOSConfig.t.XXXXXX', TMPDIR => 1, CLEANUP => 1);
     my $vsn = Bio::Otter::Version->version;
-    foreach my $test ( qw( asc_tt web_tt/data/otter priv_tt/main priv_tt/dev with_local_tt/no_local with_local_tt/local ) ) {
+    foreach my $test ( qw( asc_tt
+                           web_tt/data/otter
+                           priv_tt/main            priv_tt/dev
+                           with_local_tt/no_local  with_local_tt/local
+                           yaml_tt
+                         ) )
+    {
         my $dir = "$tmp/$test";
         foreach my $file ("$vsn/otter_config", "$vsn/otter_styles.ini",
                           "access.yaml", "species.dat", "databases.yaml") {
             mkfile("$dir/$file");
         }
     }
-    mkfile("$tmp/with_local_tt/local/.local/databases.yaml");
-    mkfile("$tmp/with_local_tt/local/.local/databases.test.yaml");
+    foreach my $test ( qw( with_local_tt/local
+                           yaml_tt ) )
+    {
+        mkfile("$tmp/$test/.local/databases.yaml");
+        mkfile("$tmp/$test/.local/databases.test.yaml");
+    }
 
-    foreach my $test (qw( asc_tt web_tt priv_tt with_local_tt )) {
+    foreach my $test (qw( asc_tt web_tt priv_tt with_local_tt yaml_tt )) {
         subtest $test => sub {
             return __PACKAGE__->$test("$tmp/$test");
         }
@@ -65,7 +76,12 @@ sub mkfile {
 # Set specified vars, clear other relevant ones
 sub set_env { ## no critic (Foo)
     my (%kv) = @_;
-    delete @ENV{qw{ ANACODE_SERVER_CONFIG ANACODE_SERVER_DEVCONFIG DOCUMENT_ROOT REQUEST_URI SCRIPT_NAME }};
+    delete @ENV{qw{ ANACODE_SERVER_CONFIG
+                    ANACODE_SERVER_DEVCONFIG
+                    DOCUMENT_ROOT
+                    OTTER_WEB_STREAM
+                    REQUEST_URI
+                    SCRIPT_NAME }};
     while (my ($k, $v) = each %kv) {
         $ENV{$k} = $v;
     }
@@ -257,6 +273,65 @@ sub with_local_tt {
               ],
               'local, stream only');
 
+    return;
+}
+
+sub yaml_tt {
+    my ($pkg, $dir) = @_;
+    my $BOSC = 'Bio::Otter::Server::Config';
+    plan tests => 3;
+
+    set_env(ANACODE_SERVER_CONFIG => "$dir");
+    __chmod(0750, "$dir");
+    __chmod(0750, "$dir/.local");
+    __chmod(0600, "$dir/databases.yaml");
+    __chmod(0600, "$dir/.local/databases.yaml");
+    __chmod(0600, "$dir/.local/databases.test.yaml");
+
+    like(try_err { $BOSC->_get_yaml('databases.yaml') },
+         qr{^ERR:YAML Error},
+         'Bad YAML');
+
+    __write_yaml($dir);
+
+    my %exp = (
+        a => 1,
+        b => {
+            c => 2,
+            d => [3, 4],
+            e => 'boo',
+        },
+        f => 'hoo',
+        );
+
+    is_deeply($BOSC->_get_yaml('databases.yaml'), \%exp, 'no stream');
+
+    set_env(ANACODE_SERVER_CONFIG => "$dir", OTTER_WEB_STREAM => 'test');
+    $exp{b}->{e} = 'changed';
+    $exp{g} = 42;
+    is_deeply($BOSC->_get_yaml('databases.yaml'), \%exp, 'with stream');
+
+    return;
+}
+
+sub __write_yaml {
+    my ($dir) = @_;
+
+    YAML::DumpFile("$dir/databases.yaml", {
+        a => 1,
+        b => {
+            c => 2,
+            d => [3, 4],
+        },
+                   });
+    YAML::DumpFile("$dir/.local/databases.yaml", {
+        b => { e => 'boo' },
+        f => 'hoo',
+                   });
+    YAML::DumpFile("$dir/.local/databases.test.yaml", {
+        b => { e => 'changed' },
+        g => 42,
+                   });
     return;
 }
 
