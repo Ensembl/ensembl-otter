@@ -518,8 +518,15 @@ sub get_file {
 
 sub _get_yaml {
     my ($pkg, $name) = @_;
+    require Hash::Merge::Simple;
+    my @paths = $pkg->data_filenames_with_local($name);
+    my @hashes = map { $pkg->_get_one_yaml($_) } @paths;
+    return Hash::Merge::Simple->merge(@hashes);
+}
+
+sub _get_one_yaml {
+    my ($pkg, $fn) = @_;
     require YAML::Any;
-    my $fn = $pkg->data_filename($name);
     my @load = YAML::Any::LoadFile($fn);
     die "expected one object in $fn" unless 1 == @load;
     return $load[0];
