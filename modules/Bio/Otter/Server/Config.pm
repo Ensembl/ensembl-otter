@@ -3,6 +3,8 @@ use strict;
 use warnings;
 
 use Carp;
+use File::Basename ();
+use File::Spec     ();
 use Try::Tiny;
 use List::MoreUtils 'uniq';
 # require YAML::Any; # sometimes (below), but it is a little slow
@@ -89,7 +91,7 @@ sub data_dir {
 }
 
 
-=head mid_url_args()
+=head2 mid_url_args()
 
 Return a hashref of key-value items taken from C<$1> of URL
 C<http://server:port/cgi-bin/otter([^/]*)/\d+/\w+>
@@ -242,6 +244,89 @@ sub __git_head {
         die "branch name '$branch' does not tell me (major version|root)";
     }
     return ($vsn, $branch);
+}
+
+=head2 data_filenames_with_local($fn, $add_vsn)
+
+Returns a list of full pathnames for Otter Server Config file C<$fn>
+and its private local siblings.
+
+C<($fn, $add_vsn)> are first expanded to a full path by calling
+L<data_filename()>, with any resulting L</mid_url_args> alterations.
+
+If there is a F<.local/> subdirectory adjacent to the config file, and
+given that C<$fn> is of the form C<$name.$ext> (for example
+F<databases.yaml>),
+
+=over
+
+=item * F<.local/${name}.${ext}> is added to the list if it exists and
+is readable.
+
+=item * F<.local/${name}.${OTTER_WEB_STREAM}.${ext}> is added to the
+list if the C<OTTER_WEB_STREAM> environment variable is set and the
+resulting file exists and is readable.
+
+=back
+
+If no readable files are found, the empty list is returned.
+
+For example, C<data_filenames_with_local('server.yaml')>, with
+C<OTTER_WEB_STREAM> set to C<live>, will always return either empty
+(if not found) or at least as its first element:
+
+=over
+
+=item * F<${data_dir}/server.yaml> - non-sensitive config
+
+=back
+
+and could also return either or both of:
+
+=over
+
+=item * F<${data_dir}/.local/server.yaml> - private config
+
+=item * F<${data_dir}/.local/server.live.yaml> - stream-specific config
+
+=back
+
+as subsequent elements, in that order.
+
+=cut
+
+sub data_filenames_with_local {
+    my ($pkg, $fn, $add_vsn) = @_;
+
+    my $data_filename = $pkg->data_filename($fn, $add_vsn);
+    return unless $data_filename;
+
+    my @paths = ( $data_filename );
+
+    my ($name, $data_dir, $ext) = File::Basename::fileparse($data_filename, qr/\.[^.]*?/);
+    # NB $ext starts with '.' separator!
+
+    my $local_data_dir = File::Spec->catdir($data_dir, '.local');
+
+    if ( -d $local_data_dir ) {
+
+        $pkg->_assert_private($local_data_dir);
+
+        push @paths, File::Spec->catfile($local_data_dir, "$name$ext");
+
+        if (my $stream = $ENV{OTTER_WEB_STREAM}) {
+            push @paths, File::Spec->catfile($local_data_dir, "$name.$stream$ext");
+        }
+    }
+
+    my @good_paths;
+    foreach my $path (@paths) {
+        next unless -r $path;
+        $pkg->_assert_private($path);
+        push @good_paths, $path;
+    }
+
+    return @good_paths;
 }
 
 # Directories containing databases.yaml or .git/ with its history must
