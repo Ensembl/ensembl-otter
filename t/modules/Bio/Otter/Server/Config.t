@@ -24,19 +24,21 @@ use Bio::Otter::Server::Config;
 
 
 sub main {
-    plan tests => 4;
+    plan tests => 5;
 
     my $tmp = tempdir('BOSConfig.t.XXXXXX', TMPDIR => 1, CLEANUP => 1);
     my $vsn = Bio::Otter::Version->version;
-    foreach my $file ("$vsn/otter_config", "$vsn/otter_styles.ini",
-                      "access.yaml", "species.dat") {
-        mkfile("$tmp/asc_tt/$file");
-        mkfile("$tmp/web_tt/data/otter/$file");
-        mkfile("$tmp/priv_tt/main/$file");
-        mkfile("$tmp/priv_tt/dev/$file");
+    foreach my $test ( qw( asc_tt web_tt/data/otter priv_tt/main priv_tt/dev with_local_tt/no_local with_local_tt/local ) ) {
+        my $dir = "$tmp/$test";
+        foreach my $file ("$vsn/otter_config", "$vsn/otter_styles.ini",
+                          "access.yaml", "species.dat", "databases.yaml") {
+            mkfile("$dir/$file");
+        }
     }
+    mkfile("$tmp/with_local_tt/local/.local/databases.yaml");
+    mkfile("$tmp/with_local_tt/local/.local/databases.test.yaml");
 
-    foreach my $test (qw( asc_tt web_tt priv_tt )) {
+    foreach my $test (qw( asc_tt web_tt priv_tt with_local_tt )) {
         subtest $test => sub {
             return __PACKAGE__->$test("$tmp/$test");
         }
@@ -189,5 +191,73 @@ sub fallback_tt {
     return;
 }
 
+
+sub with_local_tt {
+    my ($pkg, $dir) = @_;
+    my $BOSC = 'Bio::Otter::Server::Config';
+    plan tests => 8;
+
+    # Not there
+    set_env(ANACODE_SERVER_CONFIG => "$dir/absent");
+    like(try_err { $BOSC->data_filenames_with_local('databases.yaml') },
+         qr{^ERR:data_dir \S+_tt/absent \(from \$ANACODE_SERVER_CONFIG\): not found },
+         'absent');
+
+    # No .local dir
+    set_env(ANACODE_SERVER_CONFIG => "$dir/no_local");
+    __chmod(0750, "$dir/no_local");
+    __chmod(0600, "$dir/no_local/databases.yaml");
+    my @paths = $BOSC->data_filenames_with_local('databases.yaml');
+    is_deeply(\@paths, [ "$dir/no_local/databases.yaml" ], 'no local');
+
+    # Bad privacy on .local
+    set_env(ANACODE_SERVER_CONFIG => "$dir/local");
+    __chmod(0750, "$dir/local");
+    __chmod(0600, "$dir/local/databases.yaml");
+    like(try_err { $BOSC->data_filenames_with_local('databases.yaml') },
+         qr{^ERR:Insufficient privacy \(found mode 0755, want 0750\) on .*local/.local},
+         'privacy on .local dir');
+
+    __chmod(0700, "$dir/local/.local");
+    like(try_err { $BOSC->data_filenames_with_local('databases.yaml') },
+         qr{^ERR:Insufficient privacy \(found mode 0644, want 0640\) on .*local/.local/databases.yaml},
+         'privacy on .local/databases.yaml');
+
+    # .local, stream not set
+    __chmod(0600, "$dir/local/.local/databases.yaml");
+    @paths = $BOSC->data_filenames_with_local('databases.yaml');
+    is_deeply(\@paths,
+              [ "$dir/local/databases.yaml",
+                "$dir/local/.local/databases.yaml",
+              ],
+              'local, no stream');
+
+    # Bad privacy on .local/databases.test.yaml
+    set_env(ANACODE_SERVER_CONFIG => "$dir/local", OTTER_WEB_STREAM => 'test');
+    like(try_err { $BOSC->data_filenames_with_local('databases.yaml') },
+         qr{^ERR:Insufficient privacy \(found mode 0644, want 0640\) on .*local/.local/databases.test.yaml},
+         'privacy on .local/databases.test.yaml');
+
+    # .local, stream not set
+    __chmod(0600, "$dir/local/.local/databases.test.yaml");
+    @paths = $BOSC->data_filenames_with_local('databases.yaml');
+    is_deeply(\@paths,
+              [ "$dir/local/databases.yaml",
+                "$dir/local/.local/databases.yaml",
+                "$dir/local/.local/databases.test.yaml",
+              ],
+              'local, with stream');
+
+    # .local, stream only
+    unlink("$dir/local/.local/databases.yaml");
+    @paths = $BOSC->data_filenames_with_local('databases.yaml');
+    is_deeply(\@paths,
+              [ "$dir/local/databases.yaml",
+                "$dir/local/.local/databases.test.yaml",
+              ],
+              'local, stream only');
+
+    return;
+}
 
 main();
