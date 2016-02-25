@@ -324,7 +324,8 @@ sub data_filenames_with_local {
     my @good_paths;
     foreach my $path (@paths) {
         next unless -r $path;
-        $pkg->_assert_private($path);
+        # this would be nice, but the deployment toolchain needs work to ensure it remains so:
+        # $pkg->_assert_private($path);
         push @good_paths, $path;
     }
 
