@@ -302,13 +302,14 @@ sub yaml_tt {
             e => 'boo',
         },
         f => 'hoo',
+        LOCAL => { 'colour' => 'Red' },
         );
 
     is_deeply($BOSC->_get_yaml('databases.yaml'), \%exp, 'no stream');
 
     set_env(ANACODE_SERVER_CONFIG => "$dir", OTTER_WEB_STREAM => 'test');
     $exp{b}->{e} = 'changed';
-    $exp{g} = 42;
+    @exp{qw( g h j k )} = ( 42, $dir, 'Red', 'test' );
     is_deeply($BOSC->_get_yaml('databases.yaml'), \%exp, 'with stream');
 
     return;
@@ -325,12 +326,16 @@ sub __write_yaml {
         },
                    });
     YAML::DumpFile("$dir/.local/databases.yaml", {
+        LOCAL => { 'colour' => 'Red' },
         b => { e => 'boo' },
         f => 'hoo',
                    });
     YAML::DumpFile("$dir/.local/databases.test.yaml", {
         b => { e => 'changed' },
         g => 42,
+        h => '__ENV(ANACODE_SERVER_CONFIG)__',
+        j => '__LOCAL(colour)__',
+        k => '__STREAM__',
                    });
     return;
 }

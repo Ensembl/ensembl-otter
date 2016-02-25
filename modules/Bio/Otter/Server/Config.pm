@@ -3,10 +3,12 @@ use strict;
 use warnings;
 
 use Carp;
+use Data::Rmap     qw(rmap);
 use File::Basename ();
 use File::Spec     ();
+use Hash::Merge::Simple;
+use List::MoreUtils qw(uniq);
 use Try::Tiny;
-use List::MoreUtils 'uniq';
 # require YAML::Any; # sometimes (below), but it is a little slow
 
 use Bio::Otter::SpeciesDat;
@@ -516,22 +518,110 @@ sub get_file {
     return $content;
 }
 
+=head2 Config substitutions
+
+Three macros are provided for use in YAML config files:
+
+=over
+
+=item __ENV(env_var)__
+
+Replaced with the value of environment variable C<env_var>.
+
+=item __STREAM__
+
+Short-hand for C<__ENV(OTTER_WEB_STREAM)__>.
+
+=item __LOCAL(var)__
+
+The combined config should contain a C<LOCAL> stanza with a definition
+for C<var>, which will be substituted for C<__LOCAL(VAR)__>. For
+example:
+
+  ---
+  LOCAL:
+    colour: red
+  interface:
+    background: __LOCAL(colour)__
+
+will set C<{interface}-E<gt>{background}> to C<red>.
+
+=back
+
+=cut
+
 sub _get_yaml {
     my ($pkg, $name) = @_;
-    require Hash::Merge::Simple;
+    require YAML::Any;
     my @paths = $pkg->data_filenames_with_local($name);
     my @hashes = map { $pkg->_get_one_yaml($_) } @paths;
-    return Hash::Merge::Simple->merge(@hashes);
+    my $conf = Hash::Merge::Simple->merge(@hashes);
+    $pkg->_finalise_config($conf);
+    return $conf;
 }
 
 sub _get_one_yaml {
     my ($pkg, $fn) = @_;
-    require YAML::Any;
     my @load = YAML::Any::LoadFile($fn);
     die "expected one object in $fn" unless 1 == @load;
     return $load[0];
 }
 
+# Nicked from Catalyst::Plugin::ConfigLoader
+sub _finalise_config {
+    my ($pkg, $conf) = @_;
+    Data::Rmap::rmap { $_ = $pkg->_do_substitutions($_, $conf) } $conf;
+    return $conf;
+}
+
+{
+    my %subs = (
+        ENV    => \&_subst_from_env,
+        LOCAL  => \&_subst_from_local,
+        STREAM => sub { shift->_subst_from_env(shift, 'OTTER_WEB_STREAM') },
+        );
+    my $subsre = join( '|', keys %subs );
+
+    sub _do_substitutions {
+        my ($pkg, $value, $conf) = @_;
+        return unless $value;
+        $value =~
+            s{
+              __           # substitutions look like __NAME__ ...
+                ($subsre)  # NAME is  $1
+                (?:        #   ...or optionally
+                   \(      #                    like __NAME(args)__
+                     (.+?) # args are $2
+                   \)
+                )?
+              __
+             }
+             { $subs{ $1 }->( $pkg, $conf, $2 ? split( /,/, $2 ) : () ) }egx;
+        return $value;
+    }
+
+}
+
+sub _subst_from_env {
+    my ($pkg, $conf, $v) = @_;
+    my $e = $ENV{$v};
+    if (defined($e)) {
+        return $e;
+    } else {
+        croak("Missing environment variable: $v");
+    }
+}
+
+sub _subst_from_local {
+    my ($pkg, $conf, $v) = @_;
+    my $c_local = $conf->{LOCAL} || croak 'No LOCAL section';
+    my $l = $c_local->{$v};
+    if (defined($l)) {
+        return $l;
+    } else {
+        croak("Missing local variable: $v");
+    }
+}
 
 =head1 AUTHOR
 
