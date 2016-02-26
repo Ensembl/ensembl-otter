@@ -500,6 +500,21 @@ sub Access {
 }
 
 
+=head2 Server()
+
+Returns the Otter Server configuration.
+
+Currently freshly loaded.  Maybe should be cached.
+
+=cut
+
+sub Server {
+    my ($pkg) = @_;
+    my $conf = $pkg->_get_yaml('/server.yaml');
+    return $conf;
+}
+
+
 =head2 get_file($name)
 
 Return the contents of the Otter Server config file C<$name> for the
