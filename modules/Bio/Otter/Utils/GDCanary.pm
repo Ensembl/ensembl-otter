@@ -13,7 +13,11 @@ sub new {
 
 sub DESTROY {
     my ($self) = @_;
-    warn "Global destruction canary gone"; # loggers may already be gone
+
+    # loggers may already be gone
+    if (*STDERR) {
+        warn "Global destruction canary gone";
+    }
     return;
 }
 
