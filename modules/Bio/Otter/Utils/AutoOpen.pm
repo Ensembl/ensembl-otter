@@ -188,12 +188,12 @@ sub parse_path {
             }
             push @$work, $self->_init_pos($pos);
         }
+    }
 
-        if (defined $load) {
-            die "$self($path): Load Columns syntax is not yet defined"
-              unless $load =~ /^(|=none)$/;
-            push @$work, [ load_columns => $load ], [ 'load_columns_hide' ];
-        }
+    if (defined $load) {
+        die "$self($path): Load Columns syntax is not yet defined"
+            unless $load =~ /^(|=none)$/;
+        push @$work, [ load_columns => $load ], [ 'load_columns_hide' ];
     }
 
     $self->logger->info(sprintf("Queued %s at \$^T+%.2fs",
@@ -299,12 +299,14 @@ sub do_open {
 sub open_slice {
     my ($self, $slice, $write_access) = @_;
 
+    my $cc;
     if ($write_access) {
-        $self->_SLW->open_Slice($slice);
+        $cc = $self->_SLW->open_Slice($slice);
     }
     else {
-        $self->_SLW->open_Slice_read_only($slice);
+        $cc = $self->_SLW->open_Slice_read_only($slice);
     }
+    $self->{cc} = $cc;
 }
 
 sub open_dataset_by_name {
