@@ -14,10 +14,10 @@ use Bio::Otter::Server::Config;
 # The DBA team maintains (essentially) a registry of port numbers used
 # for databases and we are included.
 
-my %MASTER = (3322 => 'lutra5', 3323 => 'lutra7'); # otterlive:3324 is not relevant in this script
-my %SLAVE  = (3322 => 'lutra6', 3323 => 'lutra6'); # mcs14:3324 also exists
+my %MASTER = (3322 => 'mcs17', 3323 => 'mcs17'); # otterlive:3324 is not relevant in this script
+my %SLAVE  = (3322 => 'mcs18', 3323 => 'mcs18'); # mcs14:3324 also exists
 # %SLAVE  = (3322 => 'mcs30', 3323 => 'mcs31'); # off-site
-my @other_hosts = qw( mcs30 mcs31 lutra6 );
+my @other_hosts = qw( mcs30 mcs31 mcs18 );
 
 # Switching Otter Server's "otterlive" is done via species.dat
 # see http://mediawiki.internal.sanger.ac.uk/wiki/index.php/Anacode_Databases#Downtime
