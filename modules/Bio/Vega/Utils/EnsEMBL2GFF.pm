@@ -5,8 +5,6 @@ package Bio::Vega::Utils::EnsEMBL2GFF;
 use strict;
 use warnings;
 
-use Try::Tiny;
-
 use Bio::EnsEMBL::Utils::Exception qw(verbose);
 
 # This module allows conversion of ensembl/otter objects to GFF by
@@ -589,9 +587,11 @@ my $_new_feature_id_sub = sub {
 
         my ($start, $end, $hstart, $hend, $cigar_string);
 
+        my $offset = $self->slice->start - 1;
+
         if ($self->ditag_side eq "F") {
-            $start        = $self->start;
-            $end          = $self->end;
+            $start        = $offset + $self->start;
+            $end          = $offset + $self->end;
             $hstart       = $self->hit_start;
             $hend         = $self->hit_end;
             $cigar_string = $self->cigar_line;
@@ -601,41 +601,39 @@ my $_new_feature_id_sub = sub {
             # we only return some GFF for L side ditags, as the R side
             # one will be included here
 
-            my ($df1, $df2);
-            try {
-                ($df1, $df2) =
-                    @{$self->adaptor->fetch_all_by_ditagID(
-                          $self->ditag_id, $self->ditag_pair_id, $self->analysis->dbID)};
+            my ($df1, $df2) = @{
+                $self->adaptor->fetch_all_by_ditagID($self->ditag_id, $self->ditag_pair_id, $self->analysis->dbID)
+            };
+
+            my $error;
+            unless ($df1 && $df2) {
+                $error = 'Failed to find matching ditag pair';
             }
-            catch { die "Failed to find matching ditag pair: $_"; };
-
-            (defined $df1 && defined $df2)
-                or die "Failed to find matching ditag pair";
-
-            die "Mismatching strands on in a ditag feature pair" unless $df1->strand == $df2->strand;
+            elsif ($df1->strand != $df2->strand) {
+                $error = 'Mismatching strands on in a ditag feature pair';
+            }
+            if ($error) {
+                die sprintf("%s for ditag_id = %d, ditag_pair_id = %d, analysis = %d",
+                    $error, $self->ditag_id, $self->ditag_pair_id, $self->analysis->dbID);
+            }
 
             ($df1, $df2) = ($df2, $df1) if $df1->start > $df2->start;
-
-            $start = $df1->start;
-            $end   = $df2->end;
-            my $fw = $df1->strand == 1;
-            $hstart = $fw ? $df1->hit_start : $df2->hit_start;
-            $hend   = $fw ? $df2->hit_end   : $df1->hit_end;
-
             my $insert = $df2->start - $df1->end - 1;
 
-            # XXX: gr5: this generates GFF slightly differently from
-            # the ace server for instances where the hit_end of df1
-            # and the hit_start of df2 are the same e.g. 1-19, 19-37,
-            # which seems to occur fairly often. I don't really know
-            # what this means (do the pair share a base of the
-            # alignment?), but I do not cope with it here, and the GFF
-            # will show that such a pair have hit coords 1-19,
-            # 20-38. The coords on the genomic sequence will be
-            # correct though.
+            $start  = $df1->start - $offset;
+            $end    = $df2->end   - $offset;
 
-            $cigar_string = $df1->cigar_line . $insert . 'I' . $df2->cigar_line;
+            # Get the span on the hit  (hit_strand == 1 always)
+            $hstart = $df1->hit_start < $df2->hit_start ? $df1->hit_start : $df2->hit_start;
+            $hend   = $df1->hit_end   > $df2->hit_end   ? $df1->hit_end   : $df2->hit_end;
 
+            # Need to get the CIGAR string the right way round.
+            if ($df1->strand == 1) {
+                $cigar_string = $df1->cigar_line . $insert . 'I' . $df2->cigar_line;
+            }
+            else {
+                $cigar_string = $df2->cigar_line . $insert . 'I' . $df1->cigar_line;
+            }
         }
         else {
 
@@ -650,8 +648,8 @@ my $_new_feature_id_sub = sub {
 
         my $daf = Bio::EnsEMBL::DnaDnaAlignFeature->new(
             -slice        => $self->slice,
-            -start        => $start - $self->slice->start + 1,
-            -end          => $end - $self->slice->start + 1,
+            -start        => $start,
+            -end          => $end,
             -strand       => $self->strand,
             -hseqname     => $self->ditag->type . ':' . $self->ditag->name,
             -hstart       => $hstart,
@@ -659,7 +657,7 @@ my $_new_feature_id_sub = sub {
             -hstrand      => $self->hit_strand,
             -analysis     => $self->analysis,
             -cigar_string => $cigar_string,
-            );
+        );
 
         return $daf->to_gff(@args);
     }
