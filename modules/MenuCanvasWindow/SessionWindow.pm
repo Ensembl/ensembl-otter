@@ -2314,7 +2314,7 @@ sub _load_Assembly_sqlite {
     my $slice_name = $self->slice_name;
 
     my $before = time();
-    my $busy = Tk::ScopedBusy->new($self->top_window(), -recurse => 0);
+    my $busy = Tk::ScopedBusy->new_if_not_busy($self->top_window(), -recurse => 0);
 
     my $assembly;
 

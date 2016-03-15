@@ -29,8 +29,11 @@ Ana Code B<email> anacode@sanger.ac.uk
 
 
 sub new {
-    my ($class, $widget, @busy_arg) = @_;
-    my $caller = join ':', (caller())[1,2];
+    my ($class, $widget, %busy_opt) = @_;
+
+    my $caller = delete $busy_opt{'--caller'};
+    $caller ||= join ':', (caller())[1,2];
+
     my $self = { widget => $widget,
                  caller => $caller };
     bless $self, $class;
@@ -38,7 +41,7 @@ sub new {
     cluck "[w] double-Busy on $widget from $caller in $self\n"
       if $widget->{'Busy'};
 
-    $widget->Busy(@busy_arg);
+    $widget->Busy(%busy_opt);
     my $B = $widget->{'Busy'};
 
     if ($B) {
@@ -51,6 +54,18 @@ sub new {
     }
 
     return $self;
+}
+
+sub new_if_not_busy {
+    my ($class, $widget, @busy_arg) = @_;
+    my $caller = join ':', (caller())[1,2];
+
+    if ($widget->{'Busy'}) {
+        warn "[w] $widget is already Busy, at $caller\n";
+        return;
+    } else {
+        return $class->new($widget, '--caller' => $caller, @busy_arg);
+    }
 }
 
 our $_during_DESTROY = 0;
