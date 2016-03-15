@@ -680,7 +680,10 @@ sub _populate_menus {
     $top->bind('<Control-S>', $save_command);
 
     # Resync with database
-    my $resync_command = sub { $self->_resync_with_db };
+    my $resync_command = sub {
+        my $busy = Tk::ScopedBusy->new($self->top_window(), -recurse => 0);
+        $self->_resync_with_db;
+    };
     $file->add('command',
         -label          => 'Resync',
         -hidemargin     => 1,
@@ -1574,13 +1577,10 @@ sub _flag_db_edits {
 sub _resync_with_db {
     my ($self) = @_;
 
-
     unless ($self->_close_all_edit_windows) {
         $self->message("All editor windows must be closed before a ReSync");
         return;
     }
-
-    my $busy = Tk::ScopedBusy->new($self->top_window(), -recurse => 0);
 
     $self->_empty_Assembly_cache;
     $self->_empty_SubSeq_cache;
