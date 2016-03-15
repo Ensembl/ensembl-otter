@@ -148,6 +148,8 @@ sub path {
 sub parse_path {
     my ($self, $path) = @_;
 
+    $path =~ s/^\s+|\s+$//g;    # trim whitespace from either end
+
     $self->{_path} = $path;
     my $work = $self->{_work} = [];
 
