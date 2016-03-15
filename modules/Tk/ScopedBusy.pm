@@ -69,7 +69,7 @@ sub DESTROY {
     }
     if ($widget) {
         warn "[w] double-Unbusy on $widget from $caller in $self\n"
-          unless $widget->{'Busy'};
+          unless ($widget->{'Busy'} or $self->{bad_Busy});
         local $_during_DESTROY = 1;
 
         # call it even when !Tk::Exists, because there may be other
