@@ -1276,9 +1276,8 @@ sub _save_data {
         $self->message("Read only session - not saving");
         return 1;   # Can't save - but is OK
     }
-    my $top = $self->top_window();
 
-    $top->Busy;
+    my $busy = Tk::ScopedBusy->new($self->top_window());
 
     my $xml_out = $adb->generate_XML_from_sqlite;
     $adb->write_file('Out.xml', $xml_out);
@@ -1304,8 +1303,7 @@ sub _save_data {
         $self->_set_window_title;
         return 1;
     }
-    catch { $self->exception_message($_, 'Error saving to otter'); return 0; }
-    finally { $top->Unbusy; };
+    catch { $self->exception_message($_, 'Error saving to otter'); return 0; };
 }
 
 sub _save_region_updates {
@@ -1582,7 +1580,7 @@ sub _resync_with_db {
         return;
     }
 
-    my $busy = Tk::ScopedBusy->new($self->canvas, -recurse => 0);
+    my $busy = Tk::ScopedBusy->new($self->top_window(), -recurse => 0);
 
     $self->_empty_Assembly_cache;
     $self->_empty_SubSeq_cache;
@@ -1667,7 +1665,7 @@ sub _edit_selected_subsequences {
 sub _edit_subsequences {
     my ($self, @sub_names) = @_;
 
-    my $busy = Tk::ScopedBusy->new($self->canvas);
+    my $busy = Tk::ScopedBusy->new($self->top_window());
     my $retval = 1;
 
     foreach my $sub_name (@sub_names) {
@@ -2313,11 +2311,10 @@ sub _empty_Assembly_cache {
 sub _load_Assembly_sqlite {
     my ($self) = @_;
 
-    my $canvas = $self->canvas;
     my $slice_name = $self->slice_name;
 
     my $before = time();
-    my $busy = Tk::ScopedBusy->new($canvas, -recurse => 0);
+    my $busy = Tk::ScopedBusy->new($self->top_window(), -recurse => 0);
 
     my $assembly;
 
