@@ -9,13 +9,13 @@ use Bio::EnsEMBL::Transcript;
 # more cleanly.
 
 BEGIN {
-    OtterTest::Class->use_imports(
+    __PACKAGE__->use_imports(
         [ qw( add_EnsEMBL_Attributes make_EnsEMBL_Attribute get_first_Attribute_value get_name_Attribute_value ) ]
         );
 };
 
 # because not OO, we need to also import here into this test class
-BEGIN { use Bio::Vega::Utils::Attribute @{OtterTest::Class->use_imports()} }
+BEGIN { use Bio::Vega::Utils::Attribute @{__PACKAGE__->use_imports()} }
 
 sub build_attributes { return; } # none
 
