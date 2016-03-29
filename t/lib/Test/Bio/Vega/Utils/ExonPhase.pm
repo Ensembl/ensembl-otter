@@ -6,10 +6,10 @@ use Test::Class::Most
 # This is a bit clunky, we could do with a non-OO parent class to handle critic and use_ok
 # more cleanly.
 
-BEGIN { OtterTest::Class->use_imports( [ qw( exon_phase_EnsEMBL_to_Ace exon_phase_Ace_to_EnsEMBL ) ] ) };
+BEGIN { __PACKAGE__->use_imports( [ qw( exon_phase_EnsEMBL_to_Ace exon_phase_Ace_to_EnsEMBL ) ] ) };
 
 # because not OO, we need to also import here into this test class
-BEGIN { use Bio::Vega::Utils::ExonPhase @{OtterTest::Class->use_imports()} }
+BEGIN { use Bio::Vega::Utils::ExonPhase @{__PACKAGE__->use_imports()} }
 
 sub build_attributes { return; } # none
 
