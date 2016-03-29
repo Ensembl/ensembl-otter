@@ -132,7 +132,7 @@ sub constructor : Test(3) {
 
     my $class = $test->class;
     can_ok $class, 'new';
-    ok my  $cs = $class->new, '... and the constructor should succeed';
+    ok my  $cs = $class->new(@{$test->our_args // []}), '... and the constructor should succeed';
     isa_ok $cs,  $test->_expected_class,                '... and the object it returns';
     return;
 }
