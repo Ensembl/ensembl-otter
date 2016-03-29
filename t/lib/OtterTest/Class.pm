@@ -13,6 +13,7 @@ BEGIN {
     __PACKAGE__->mk_classdata('class');
     __PACKAGE__->mk_classdata('run_all');
     __PACKAGE__->mk_classdata('use_imports');
+    __PACKAGE__->mk_classdata('expected_class');
 }
 
 {
@@ -120,6 +121,11 @@ sub _critic : Test(1) {
     return;
 }
 
+sub _expected_class {
+    my ($self) = @_;
+    return $self->expected_class || $self->class;
+}
+
 sub constructor : Test(3) {
     my $test = shift;
     return 'abstract base class' if $test->is_abstract;
@@ -127,7 +133,7 @@ sub constructor : Test(3) {
     my $class = $test->class;
     can_ok $class, 'new';
     ok my  $cs = $class->new, '... and the constructor should succeed';
-    isa_ok $cs,  $class,      '... and the object it returns';
+    isa_ok $cs,  $test->_expected_class,                '... and the object it returns';
     return;
 }
 
