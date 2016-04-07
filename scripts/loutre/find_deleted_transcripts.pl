@@ -26,6 +26,7 @@ sub ottscript_options {
         );
 }
 
+my $ts_count;
 sub process_dataset {
     my ($self, $dataset) = @_;
 
@@ -33,6 +34,7 @@ sub process_dataset {
     $dataset->callback_data('genes' => $genes);
 
     $dataset->iterate_transcripts( sub { my ($dataset, $ts) = @_; return $self->do_transcript($dataset, $ts); } );
+    say "[i] Processed ${ts_count} transcripts.";
 
     my $sth = $self->_current_ts_by_name_sth($dataset);
     $dataset->callback_data('current_ts_by_name_sth' => $sth);
@@ -64,6 +66,7 @@ sub do_transcript {
                       $lost_ts->seq_region_name,
         );
 
+    ++$ts_count;
     return ($msg, undef);  # $msg, $verbose_msg
 }
 
