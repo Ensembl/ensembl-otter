@@ -36,8 +36,10 @@ sub process_dataset {
     $dataset->iterate_transcripts( sub { my ($dataset, $ts) = @_; return $self->do_transcript($dataset, $ts); } );
     say "[i] Processed ${ts_count} transcripts.";
 
-    my $sth = $self->_current_ts_by_name_sth($dataset);
-    $dataset->callback_data('current_ts_by_name_sth' => $sth);
+    my $c_sth = $self->_current_ts_by_name_sth($dataset);
+    $dataset->callback_data('current_ts_by_name_sth' => $c_sth);
+    my $l_sth = $self->_latest_ts_by_stable_id_and_name_sth($dataset);
+    $dataset->callback_data('latest_ts_by_stable_id_and_name_sth' => $l_sth);
 
     foreach my $gene ( sort {
 
@@ -87,7 +89,9 @@ sub _process_gene {
     my %parent_gene_ids;
     my %gene_names;
     foreach my $lost_ts (@$gene) {
-        my $ts = $dataset->transcript_adaptor->fetch_latest_by_stable_id($lost_ts->stable_id);
+
+        my $ts_id = $self->_latest_ts_by_stable_id_and_name($dataset, $lost_ts->stable_id, $lost_ts->name);
+        my $ts = $dataset->transcript_adaptor->fetch_by_dbID($ts_id);
         push @transcripts, $ts;
 
         my $gene = $ts->get_Gene;
@@ -124,7 +128,7 @@ sub _process_gene {
     foreach my $ts ( @transcripts ) {
         my $ts_name = $self->_get_name($ts);
         my $current_ts_by_name = $self->_current_ts_by_name($dataset, $ts_name);
-        $ctsbn_map{$ts->stable_id} = $current_ts_by_name if $current_ts_by_name;
+        $ctsbn_map{join '/', $ts->stable_id, $ts_name} = $current_ts_by_name if $current_ts_by_name;
     }
 
     foreach my $gene_id (sort keys %parent_gene_ids) {
@@ -145,20 +149,18 @@ sub _process_gene {
                         $ts->dbID,
                         $self->_mod_date_time($ts),
                         $ts->transcript_author->name,
-                        $ctsbn_map{$ts->stable_id} ? ', NAME EXISTS' : '',
+                        $ctsbn_map{join '/', $ts->stable_id, $ts_name} ? ', NAME EXISTS' : '',
                 );
-            # if (my $ctsbn_id = $ctsbn_map{$ts->stable_id}) {
-            #     say sprintf('          [W] current transcript exists with same name, ts_id: %s', $ctsbn_id);
-            # }
         }
     }
 
     if (%ctsbn_map) {
         my %gene_map;
         say '    [i] Current transcripts with same name as deleted transcript:';
-        foreach my $stable_id (sort keys %ctsbn_map) {
-            my $cts_id = $ctsbn_map{$stable_id};
+        foreach my $key (sort keys %ctsbn_map) {
+            my $cts_id = $ctsbn_map{$key};
             my $cts = $dataset->transcript_adaptor->fetch_by_dbID($cts_id);
+            my ($stable_id, $cts_name) = split '/', $key;
             say sprintf('          %18s  %-25s => %s (%7d), modified %s, author %s',
                         $stable_id,
                         $self->_get_name($cts),
@@ -228,6 +230,39 @@ sub _current_ts_by_name_sth {
         WHERE
               t.is_current = 1
           AND ta.value     = ?
+    });
+    return $sth;
+}
+
+sub _latest_ts_by_stable_id_and_name {
+    my ($self, $dataset, $stable_id, $name) = @_;
+    my $sth = $dataset->callback_data('latest_ts_by_stable_id_and_name_sth');
+    $sth->execute($stable_id, $name);
+    my $rows = $sth->fetchall_arrayref({});
+    return unless @$rows;
+    return $rows->[0]->{transcript_id};
+}
+
+sub _latest_ts_by_stable_id_and_name_sth {
+    my ($self, $dataset) = @_;
+
+    my $dbc = $dataset->otter_dba->dbc;
+    my $sth = $dbc->prepare(q{
+        SELECT
+          t.transcript_id as transcript_id
+        FROM
+               transcript        t
+          JOIN transcript_attrib ta  ON t.transcript_id = ta.transcript_id
+          JOIN attrib_type       at  ON ta.attrib_type_id = at.attrib_type_id
+                                    AND at.code = 'name'
+        WHERE
+              t.stable_id = ?
+          AND ta.value    = ?
+        ORDER BY
+          t.is_current    DESC,
+          t.modified_date DESC,
+          t.transcript_id DESC
+        LIMIT 1
     });
     return $sth;
 }
