@@ -73,26 +73,28 @@ my $current_sr_name = '';
 sub _process_gene {
     my ($self, $dataset, $gene) = @_;
 
+    # new chromosome?
     my $spec_ts = $gene->[0];
     if ((my $sr_name = $spec_ts->seq_region_name) ne $current_sr_name) {
         $current_sr_name = $sr_name;
         say "\n$sr_name:";
     }
 
+    say sprintf("  %18s  %s:",
+                $spec_ts->gene_stable_id,
+                $spec_ts->gene_name,
+        );
+
+    # inflate transcripts to Vega objects, classify on parent gene
     my @transcripts;
-    my %gene_ids;
+    my %parent_gene_ids;
     foreach my $lost_ts (@$gene) {
         my $ts = $dataset->transcript_adaptor->fetch_latest_by_stable_id($lost_ts->stable_id);
         push @transcripts, $ts;
 
-        my $by_parent_gene = $gene_ids{$ts->get_Gene->dbID} //= [];
+        my $by_parent_gene = $parent_gene_ids{$ts->get_Gene->dbID} //= [];
         push @$by_parent_gene, $ts;
     }
-
-    say sprintf("  %18s (%s):",
-                $spec_ts->gene_stable_id,
-                $spec_ts->gene_name,
-        );
 
     my $current_gene;
     if ($spec_ts->current_gene) {
@@ -106,10 +108,11 @@ sub _process_gene {
                     $current_gene->gene_author->name,
             );
     }
-    if (scalar keys %gene_ids > 1) {
+    if (scalar keys %parent_gene_ids > 1) {
         say '    [W] Deleted transcripts belong to more than one previous version of this gene';
     }
 
+    # look for current transcripts with same name as deleted transcript
     my %ctsbn_map;
     foreach my $ts ( @transcripts ) {
         my $ts_name = $self->_get_name($ts);
@@ -117,35 +120,68 @@ sub _process_gene {
         $ctsbn_map{$ts->stable_id} = $current_ts_by_name if $current_ts_by_name;
     }
 
-    foreach my $gene_id (sort keys %gene_ids) {
+    foreach my $gene_id (sort keys %parent_gene_ids) {
         my $gene = $dataset->gene_adaptor->fetch_by_dbID($gene_id);
-        say sprintf('     -  gene_id: %d, modified %s, author %s',
+        say sprintf('     -  Deleted gene_id: %d, modified %s, author %s',
                     $gene_id,
                     $self->_mod_date_time($gene),
                     $gene->gene_author->name,
             );
 
-        foreach my $ts (sort { $a->stable_id cmp $b->stable_id } @{$gene_ids{$gene_id}}) {
+        foreach my $ts (sort { $a->stable_id cmp $b->stable_id } @{$parent_gene_ids{$gene_id}}) {
             my $ts_gene = $ts->get_Gene;
             my $ts_name = $self->_get_name($ts);
 
-            say sprintf('          %18s %s %s (%-25s) %s => %5d %s %s',
+            say sprintf('          %18s  %-25s - ts_id: %d, modified %s, author %s%s',
                         $ts->stable_id,
-                        $ts->is_current,
-                        $self->_mod_date_time($ts),
                         $ts_name,
-                        $ctsbn_map{$ts->stable_id} ? 'CT!!' : '    ',
-                        $ts_gene->dbID,
-                        $ts_gene->is_current,
-                        $self->_mod_date_time($ts_gene),
+                        $ts->dbID,
+                        $self->_mod_date_time($ts),
+                        $ts->transcript_author->name,
+                        $ctsbn_map{$ts->stable_id} ? ', NAME EXISTS' : '',
                 );
+            # if (my $ctsbn_id = $ctsbn_map{$ts->stable_id}) {
+            #     say sprintf('          [W] current transcript exists with same name, ts_id: %s', $ctsbn_id);
+            # }
         }
     }
 
+    if (%ctsbn_map) {
+        my %gene_map;
+        say '    [i] Current transcripts with same name as deleted transcript:';
+        foreach my $stable_id (sort keys %ctsbn_map) {
+            my $cts_id = $ctsbn_map{$stable_id};
+            my $cts = $dataset->transcript_adaptor->fetch_by_dbID($cts_id);
+            say sprintf('          %18s  %-25s => %s (%7d), modified %s, author %s',
+                        $stable_id,
+                        $self->_get_name($cts),
+                        $cts->stable_id,
+                        $cts_id,
+                        $self->_mod_date_time($cts),
+                        $cts->transcript_author->name,
+                );
+            my $cts_gene = $cts->get_Gene;
+            $gene_map{$cts_gene->stable_id} = $cts_gene;
+        }
+        if (scalar keys %gene_map > 1) {
+            say '    [W] These current transcripts are on MULTIPLE GENES.';
+        }
+        foreach my $gene (values %gene_map) {
+            say sprintf('%s on %s %-25s (%7d), modified %s, author %s',
+                        ' ' x 29,
+                        $gene->stable_id,
+                        $self->_get_name($gene),
+                        $gene->dbID,
+                        $self->_mod_date_time($gene),
+                        $gene->gene_author->name,
+                );
+        }
+    }
     if (scalar keys %ctsbn_map eq scalar @transcripts) {
         say '    [i] All transcripts have current version by name - no further action.';
     }
 
+    say;
     return;
 }
 
