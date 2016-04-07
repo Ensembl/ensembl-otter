@@ -57,10 +57,9 @@ sub do_transcript {
     my $gene_ts = $genes->{$lost_ts->gene_stable_id} //= [];
     push @$gene_ts, $lost_ts;
 
-    my $msg = sprintf('(%-25s) on %18s (%-25s) [%s] - %s',
+    my $msg = sprintf('(%-25s) on %18s [%s] - %s',
                       $lost_ts->name,
                       $lost_ts->gene_stable_id,
-                      $lost_ts->gene_name,
                       $lost_ts->current_gene ? 'CG' : '--',
                       $lost_ts->seq_region_name,
         );
@@ -80,27 +79,32 @@ sub _process_gene {
         say "\n$sr_name:";
     }
 
-    say sprintf("  %18s  %s:",
-                $spec_ts->gene_stable_id,
-                $spec_ts->gene_name,
-        );
-
     # inflate transcripts to Vega objects, classify on parent gene
     my @transcripts;
     my %parent_gene_ids;
+    my %gene_names;
     foreach my $lost_ts (@$gene) {
         my $ts = $dataset->transcript_adaptor->fetch_latest_by_stable_id($lost_ts->stable_id);
         push @transcripts, $ts;
 
-        my $by_parent_gene = $parent_gene_ids{$ts->get_Gene->dbID} //= [];
+        my $gene = $ts->get_Gene;
+        my $by_parent_gene = $parent_gene_ids{$gene->dbID} //= [];
         push @$by_parent_gene, $ts;
+
+        my $gene_name = $self->_get_name($gene);
+        $gene_names{$gene_name}++;
     }
+
+    say sprintf("  %18s  %s:",
+                $spec_ts->gene_stable_id,
+                join(', ', sort keys %gene_names),
+        );
 
     my $current_gene;
     if ($spec_ts->current_gene) {
         $current_gene = $dataset->gene_adaptor->fetch_by_stable_id($spec_ts->gene_stable_id);
         my $cg_name = $self->_get_name($current_gene);
-        my $name_match = ($cg_name eq $spec_ts->gene_name);
+        my $name_match = $gene_names{$cg_name};
         say sprintf('    %s There is a current gene with this stable_id %s (gene_id %d, author %s).',
                     $name_match ? '[i]'      : '[W]',
                     $name_match ? "and name" : "BUT DIFFERENT NAME ${cg_name}",
@@ -181,7 +185,7 @@ sub _process_gene {
         say '    [i] All transcripts have current version by name - no further action.';
     }
 
-    say;
+    say '';
     return;
 }
 
@@ -235,24 +239,17 @@ sub transcript_sql {
     my $sql = q{
         SELECT DISTINCT
                 g1.stable_id        AS gene_stable_id,
-                gan.value           AS gene_name,
                 t1.stable_id        AS transcript_stable_id,
-                t1.seq_region_start AS transcript_start,
-                t1.seq_region_end   AS transcript_end,
                 tan.value           AS transcript_name,
                 sr.name             AS seq_region_name,
-                srh.value           AS seq_region_hidden,
                 g2.is_current       AS current_gene,
-                -1                  AS transcript_id     -- YUK!! perhaps make optional in B:O:U:Script::Transcript?
+                -1                  AS transcript_id,     -- YUK!! perhaps make these optional in B:O:U:Script::Transcript?
+                 1                  AS transcript_start,
+                 1                  AS transcript_end,
+                'SCRIPT_ERROR'      AS gene_name
         FROM
                 transcript           t1
            JOIN gene                 g1  ON t1.gene_id = g1.gene_id
-           JOIN gene_attrib          gan ON g1.gene_id = gan.gene_id
-                                        AND gan.attrib_type_id = (
-                                              SELECT attrib_type_id
-                                              FROM   attrib_type
-                                              WHERE  code = 'name'
-                                            )
            JOIN transcript_attrib    tan ON t1.transcript_id = tan.transcript_id
                                         AND tan.attrib_type_id = (
                                               SELECT attrib_type_id
@@ -274,6 +271,7 @@ sub transcript_sql {
 
         WHERE
                 t1.is_current    = 0
+            AND g1.is_current    = 0
             AND t2.stable_id     IS NULL
 
             AND srh.value        = 0            -- not hidden
