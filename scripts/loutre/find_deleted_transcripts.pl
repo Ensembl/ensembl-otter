@@ -34,6 +34,9 @@ sub process_dataset {
 
     $dataset->iterate_transcripts( sub { my ($dataset, $ts) = @_; return $self->do_transcript($dataset, $ts); } );
 
+    my $sth = $self->_current_ts_by_name_sth($dataset);
+    $dataset->callback_data('current_ts_by_name_sth' => $sth);
+
     foreach my $gene ( sort {
 
         ace_sort($a->[0]->seq_region_name, $b->[0]->seq_region_name)
@@ -42,7 +45,7 @@ sub process_dataset {
 
                        } values %$genes ) {
 
-        $self->_process_gene($gene);
+        $self->_process_gene($dataset, $gene);
     }
     return;
 }
@@ -65,41 +68,125 @@ sub do_transcript {
     return ($msg, undef);  # $msg, $verbose_msg
 }
 
+my $current_sr_name = '';
+
 sub _process_gene {
-    my ($self, $gene) = @_;
+    my ($self, $dataset, $gene) = @_;
+
+    my $spec_ts = $gene->[0];
+    if ((my $sr_name = $spec_ts->seq_region_name) ne $current_sr_name) {
+        $current_sr_name = $sr_name;
+        say "\n$sr_name:";
+    }
 
     my @transcripts;
     my %gene_ids;
     foreach my $lost_ts (@$gene) {
-        my $ts = $lost_ts->dataset->transcript_adaptor->fetch_latest_by_stable_id($lost_ts->stable_id);
+        my $ts = $dataset->transcript_adaptor->fetch_latest_by_stable_id($lost_ts->stable_id);
         push @transcripts, $ts;
-        $gene_ids{$ts->get_Gene->dbID}++;
+
+        my $by_parent_gene = $gene_ids{$ts->get_Gene->dbID} //= [];
+        push @$by_parent_gene, $ts;
     }
 
-    my $spec_ts = $gene->[0];
-    say sprintf('%-10s %18s (%-25s) [%s, %s]: %d',
-                $spec_ts->seq_region_name,
+    say sprintf("  %18s (%s):",
                 $spec_ts->gene_stable_id,
                 $spec_ts->gene_name,
-                $spec_ts->current_gene ? '1' : '-',
-                scalar keys %gene_ids > 1 ? '!!': 'ok',
-                scalar(@$gene),
         );
-    foreach my $ts (sort { $a->stable_id cmp $b->stable_id } @transcripts) {
-        my $ts_gene = $ts->get_Gene;
-        my ($ts_name) = @{$ts->get_all_Attributes('name')};
-        say sprintf("\t%18s %s %s (%-25s) => %5d %s %s",
-                    $ts->stable_id,
-                    $ts->is_current,
-                    strftime('%F_%T', gmtime $ts->modified_date),
-                    $ts_name->value,
-                    $ts_gene->dbID,
-                    $ts_gene->is_current,
-                    strftime('%F_%T', gmtime $ts_gene->modified_date),
+
+    my $current_gene;
+    if ($spec_ts->current_gene) {
+        $current_gene = $dataset->gene_adaptor->fetch_by_stable_id($spec_ts->gene_stable_id);
+        my $cg_name = $self->_get_name($current_gene);
+        my $name_match = ($cg_name eq $spec_ts->gene_name);
+        say sprintf('    %s There is a current gene with this stable_id %s (gene_id %d, author %s).',
+                    $name_match ? '[i]'      : '[W]',
+                    $name_match ? "and name" : "BUT DIFFERENT NAME ${cg_name}",
+                    $current_gene->dbID,
+                    $current_gene->gene_author->name,
             );
+    }
+    if (scalar keys %gene_ids > 1) {
+        say '    [W] Deleted transcripts belong to more than one previous version of this gene';
+    }
+
+    my %ctsbn_map;
+    foreach my $ts ( @transcripts ) {
+        my $ts_name = $self->_get_name($ts);
+        my $current_ts_by_name = $self->_current_ts_by_name($dataset, $ts_name);
+        $ctsbn_map{$ts->stable_id} = $current_ts_by_name if $current_ts_by_name;
+    }
+
+    foreach my $gene_id (sort keys %gene_ids) {
+        my $gene = $dataset->gene_adaptor->fetch_by_dbID($gene_id);
+        say sprintf('     -  gene_id: %d, modified %s, author %s',
+                    $gene_id,
+                    $self->_mod_date_time($gene),
+                    $gene->gene_author->name,
+            );
+
+        foreach my $ts (sort { $a->stable_id cmp $b->stable_id } @{$gene_ids{$gene_id}}) {
+            my $ts_gene = $ts->get_Gene;
+            my $ts_name = $self->_get_name($ts);
+
+            say sprintf('          %18s %s %s (%-25s) %s => %5d %s %s',
+                        $ts->stable_id,
+                        $ts->is_current,
+                        $self->_mod_date_time($ts),
+                        $ts_name,
+                        $ctsbn_map{$ts->stable_id} ? 'CT!!' : '    ',
+                        $ts_gene->dbID,
+                        $ts_gene->is_current,
+                        $self->_mod_date_time($ts_gene),
+                );
+        }
+    }
+
+    if (scalar keys %ctsbn_map eq scalar @transcripts) {
+        say '    [i] All transcripts have current version by name - no further action.';
     }
 
     return;
+}
+
+sub _get_name {
+    my ($self, $ens_obj) = @_;
+    my ($name_attr) = @{$ens_obj->get_all_Attributes('name')};
+    return unless $name_attr;
+    return $name_attr->value;
+}
+
+sub _mod_date_time {
+    my ($self, $ens_obj) = @_;
+    return strftime('%F_%T', gmtime $ens_obj->modified_date),
+}
+
+sub _current_ts_by_name {
+    my ($self, $dataset, $name) = @_;
+    my $sth = $dataset->callback_data('current_ts_by_name_sth');
+    $sth->execute($name);
+    my $rows = $sth->fetchall_arrayref({});
+    return unless @$rows;
+    return $rows->[0]->{transcript_id};
+}
+
+sub _current_ts_by_name_sth {
+    my ($self, $dataset) = @_;
+
+    my $dbc = $dataset->otter_dba->dbc;
+    my $sth = $dbc->prepare(q{
+        SELECT
+          t.transcript_id as transcript_id
+        FROM
+               transcript        t
+          JOIN transcript_attrib ta  ON t.transcript_id = ta.transcript_id
+          JOIN attrib_type       at  ON ta.attrib_type_id = at.attrib_type_id
+                                    AND at.code = 'name'
+        WHERE
+              t.is_current = 1
+          AND ta.value     = ?
+    });
+    return $sth;
 }
 
 # End of module
