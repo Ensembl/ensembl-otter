@@ -32,6 +32,8 @@ sub process_dataset {
 
     my $genes = {};
     $dataset->callback_data('genes' => $genes);
+    my $ts_seen_on = {};
+    $dataset->callback_data('ts_seen_on' => $ts_seen_on);
 
     $dataset->iterate_transcripts( sub { my ($dataset, $ts) = @_; return $self->do_transcript($dataset, $ts); } );
     say "[i] Processed ${ts_count} transcripts.";
@@ -58,8 +60,12 @@ sub do_transcript {
     my ($self, $dataset, $lost_ts) = @_;
 
     my $genes = $dataset->callback_data('genes');
-    my $gene_ts = $genes->{$lost_ts->gene_stable_id} //= [];
-    push @$gene_ts, $lost_ts;
+    my $gene_ts_list = $genes->{$lost_ts->gene_stable_id} //= [];
+    push @$gene_ts_list, $lost_ts;
+
+    my $ts_seen_on = $dataset->callback_data('ts_seen_on');
+    my $ts_gene_list = $ts_seen_on->{$lost_ts->stable_id} //= [];
+    push @$ts_gene_list, $lost_ts->gene_stable_id;
 
     my $msg = sprintf('(%-25s) on %18s [%s] - %s',
                       $lost_ts->name,
@@ -131,6 +137,8 @@ sub _process_gene {
         $ctsbn_map{join '/', $ts->stable_id, $ts_name} = $current_ts_by_name if $current_ts_by_name;
     }
 
+    my $ts_seen_on = $dataset->callback_data('ts_seen_on');
+
     foreach my $gene_id (sort keys %parent_gene_ids) {
         my $gene = $dataset->gene_adaptor->fetch_by_dbID($gene_id);
         say sprintf('     -  Deleted gene_id: %d, modified %s, author %s',
@@ -143,7 +151,7 @@ sub _process_gene {
             my $ts_gene = $ts->get_Gene;
             my $ts_name = $self->_get_name($ts);
 
-            say sprintf('          %18s  %-25s - ts_id: %d, modified %s, author %s%s',
+            say sprintf('         -  %18s  %-25s - ts_id: %d, modified %s, author %s%s',
                         $ts->stable_id,
                         $ts_name,
                         $ts->dbID,
@@ -151,6 +159,13 @@ sub _process_gene {
                         $ts->transcript_author->name,
                         $ctsbn_map{join '/', $ts->stable_id, $ts_name} ? ', NAME EXISTS' : '',
                 );
+            my $ts_gene_list = $ts_seen_on->{$ts->stable_id};
+            if (scalar @$ts_gene_list > 1) {
+                say sprintf('        [W] %18s seen on multiple genes: %s',
+                            $ts->stable_id,
+                            join(', ', @$ts_gene_list),
+                    );
+            }
         }
     }
 
@@ -187,7 +202,12 @@ sub _process_gene {
         }
     }
     if (scalar keys %ctsbn_map eq scalar @transcripts) {
-        say '    [i] All transcripts have current version by name - no further action.';
+        say '    [d] All transcripts have current version by name - no further action.';
+    } else {
+        say sprintf('    [d] Will rename and recover %s and %s.',
+                    scalar keys %parent_gene_ids > 1 ? 'these genes' : 'this gene',
+                    scalar @transcripts > 1          ? 'transcripts' : 'transcript',
+            );
     }
 
     say '';
