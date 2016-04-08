@@ -15,6 +15,9 @@ use POSIX     qw( strftime );
 
 use Hum::Sort qw( ace_sort );
 use Bio::Otter::ServerAction::Script::Region;
+use Bio::Vega::Utils::Attribute qw( add_EnsEMBL_Attributes );
+
+use constant RECOVER_PREFIX => '00R_';
 
 sub ottscript_options {
     return (
@@ -118,9 +121,14 @@ sub _process_gene {
                 join(', ', sort keys %gene_names),
         );
 
-    my $current_gene;
+    my $recover_spec = {
+        gene_stable_id => $spec_ts->gene_stable_id,
+        gene_remarks   => [],
+        genes          => [],
+    };
+
     if ($spec_ts->current_gene) {
-        $current_gene = $dataset->gene_adaptor->fetch_by_stable_id($spec_ts->gene_stable_id);
+        my $current_gene = $dataset->gene_adaptor->fetch_by_stable_id($spec_ts->gene_stable_id);
         my $cg_name = $self->_get_name($current_gene);
         my $name_match = $gene_names{$cg_name};
         say sprintf('    %s There is a current gene with this stable_id %s (gene_id %d, author %s).',
@@ -129,9 +137,14 @@ sub _process_gene {
                     $current_gene->dbID,
                     $current_gene->gene_author->name,
             );
+        push @{$recover_spec->{gene_remarks}}, sprintf("CURRENT GENE %s (%s)",
+                                                       $spec_ts->gene_stable_id,
+                                                       $cg_name );
+        delete $recover_spec->{gene_stable_id};
     }
     if (scalar keys %parent_gene_ids > 1) {
         say '    [W] Deleted transcripts belong to more than one previous version of this gene';
+        delete $recover_spec->{gene_stable_id};
     }
 
     # look for current transcripts with same name as deleted transcript
@@ -153,6 +166,11 @@ sub _process_gene {
                     $gene->gene_author->name,
             );
 
+        my $gene_spec = {
+            gene       => $gene,
+            transcipts => [],
+        };
+
         foreach my $ts (sort { $a->stable_id cmp $b->stable_id } @{$parent_gene_ids{$gene_id}}) {
 
             ++$$ts_count_ref;
@@ -160,22 +178,37 @@ sub _process_gene {
             my $ts_gene = $ts->get_Gene;
             my $ts_name = $self->_get_name($ts);
 
+            my $name_exists = $ctsbn_map{join '/', $ts->stable_id, $ts_name};
+
             say sprintf('         -  %18s  %-25s - ts_id: %d, modified %s, author %s%s',
                         $ts->stable_id,
                         $ts_name,
                         $ts->dbID,
                         $self->_mod_date_time($ts),
                         $ts->transcript_author->name,
-                        $ctsbn_map{join '/', $ts->stable_id, $ts_name} ? ', NAME EXISTS' : '',
+                        $name_exists ? ', NAME EXISTS' : '',
                 );
+
+            my $transcript_spec = {
+                transcript => $ts,
+                remarks    => [],
+            };
+
             my $ts_gene_list = $ts_seen_on->{$ts->stable_id};
             if (scalar @$ts_gene_list > 1) {
                 say sprintf('        [W] %18s seen on multiple genes: %s',
                             $ts->stable_id,
                             join(', ', @$ts_gene_list),
                     );
+                push @{$transcript_spec->{remarks}}, sprintf("STABLE ID removed, %s existed on genes %s (see report)",
+                                                             $ts->stable_id,
+                                                             join(', ', @$ts_gene_list) );
+                $transcript_spec->{drop_stable_id} = 1;
             }
+            push @{$gene_spec->{transcripts}}, $transcript_spec;
         }
+
+        push @{$recover_spec->{genes}}, $gene_spec;
     }
 
     if (%ctsbn_map) {
@@ -216,7 +249,82 @@ sub _process_gene {
                 scalar @transcripts > 1          ? 'transcripts' : 'transcript',
         );
 
+    $self->_recover_genes($dataset, $recover_spec);
+
     say '';
+    return;
+}
+
+sub _recover_genes {
+    my ($self, $dataset, $recover_spec) = @_;
+
+    say "\n  RECOVER: ", $recover_spec->{gene_stable_id} || 'gene stable ID discarded';
+    foreach my $remark    (@{$recover_spec->{gene_remarks}}) {
+        say "    [r] ", $remark;
+    }
+    foreach my $gene_spec (@{$recover_spec->{genes}}) {
+        my $gene = $gene_spec->{gene};
+        say "     -  gene_id:", $gene->dbID;
+
+        my $new_gene = $gene->new_dissociated_copy;
+        $new_gene->stable_id(undef) unless ($recover_spec->{gene_stable_id});
+        $new_gene->flush_Transcripts;
+        $self->_process_attribs($new_gene, $gene, $recover_spec->{gene_remarks});
+
+        foreach my $transcript_spec (@{$gene_spec->{transcripts}}) {
+
+            my $transcript = $transcript_spec->{transcript};
+            say sprintf('         -  %d: %s',
+                        $transcript->dbID,
+                        $transcript_spec->{drop_stable_id} ? 'stable ID discarded' : $transcript->stable_id
+                );
+
+            my $new_ts = $transcript->new_dissociated_copy;
+            $new_ts->stable_id(undef) if $transcript_spec->{drop_stable_id};
+            $self->_process_attribs($new_ts, $transcript, $transcript_spec->{remarks});
+
+            foreach my $remark    (@{$transcript_spec->{remarks}}) {
+                say "        [r] ", $remark;
+            }
+
+            $new_gene->add_Transcript($new_ts);
+        }
+
+        # We cannot add 'not for VEGA' until after this:
+        $new_gene->set_biotype_status_from_transcripts;
+
+        add_EnsEMBL_Attributes($new_gene, 'remark' => 'not for VEGA');
+        foreach my $new_ts (@{$new_gene->get_all_Transcripts}) {
+            add_EnsEMBL_Attributes($new_ts, 'remark' => 'not for VEGA');
+        }
+
+        # NOW we need to actually store the new gene!
+    }
+}
+
+sub _process_attribs {
+    my ($self, $new_obj, $old_obj, $remarks) = @_;
+
+    delete $new_obj->{attributes};
+
+    add_EnsEMBL_Attributes($new_obj,
+                           'hidden_remark' => sprintf('created by find_deleted_transcripts.pl from dbID %d',
+                                                      $old_obj->dbID,
+                           )
+        );
+
+    foreach my $attrib (@{$old_obj->get_all_Attributes}) {
+        if (lc $attrib->code eq 'name') {
+            add_EnsEMBL_Attributes($new_obj, 'name' => RECOVER_PREFIX . $attrib->value);
+        } else {
+            $new_obj->add_Attributes($attrib);
+        }
+    }
+
+    foreach my $remark (@$remarks) {
+        add_EnsEMBL_Attributes($new_obj, 'hidden_remark' => $remark);
+    }
+
     return;
 }
 
