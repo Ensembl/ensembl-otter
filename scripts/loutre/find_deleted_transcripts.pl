@@ -36,12 +36,15 @@ sub process_dataset {
     $dataset->callback_data('ts_seen_on' => $ts_seen_on);
 
     $dataset->iterate_transcripts( sub { my ($dataset, $ts) = @_; return $self->do_transcript($dataset, $ts); } );
-    say "[i] Processed ${ts_count} transcripts.";
+    say "[i] Processed ${ts_count} raw lost transcripts.";
 
     my $c_sth = $self->_current_ts_by_name_sth($dataset);
     $dataset->callback_data('current_ts_by_name_sth' => $c_sth);
     my $l_sth = $self->_latest_ts_by_stable_id_and_name_sth($dataset);
     $dataset->callback_data('latest_ts_by_stable_id_and_name_sth' => $l_sth);
+
+    my $ts_count_proc_gene = 0;
+    $dataset->callback_data('ts_count_ref' => \$ts_count_proc_gene);
 
     foreach my $gene ( sort {
 
@@ -53,6 +56,8 @@ sub process_dataset {
 
         $self->_process_gene($dataset, $gene);
     }
+    say "[i] Processed ${ts_count_proc_gene} lost transcripts by gene.";
+
     return;
 }
 
@@ -75,7 +80,7 @@ sub do_transcript {
         );
 
     ++$ts_count;
-    return ($msg, undef);  # $msg, $verbose_msg
+    return (undef, $msg);  # $msg, $verbose_msg
 }
 
 my $current_sr_name = '';
@@ -137,7 +142,8 @@ sub _process_gene {
         $ctsbn_map{join '/', $ts->stable_id, $ts_name} = $current_ts_by_name if $current_ts_by_name;
     }
 
-    my $ts_seen_on = $dataset->callback_data('ts_seen_on');
+    my $ts_seen_on   = $dataset->callback_data('ts_seen_on');
+    my $ts_count_ref = $dataset->callback_data('ts_count_ref');
 
     foreach my $gene_id (sort keys %parent_gene_ids) {
         my $gene = $dataset->gene_adaptor->fetch_by_dbID($gene_id);
@@ -148,6 +154,9 @@ sub _process_gene {
             );
 
         foreach my $ts (sort { $a->stable_id cmp $b->stable_id } @{$parent_gene_ids{$gene_id}}) {
+
+            ++$$ts_count_ref;
+
             my $ts_gene = $ts->get_Gene;
             my $ts_name = $self->_get_name($ts);
 
