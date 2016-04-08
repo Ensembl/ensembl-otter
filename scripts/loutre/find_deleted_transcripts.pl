@@ -15,6 +15,8 @@ use POSIX     qw( strftime );
 
 use Hum::Sort qw( ace_sort );
 use Bio::Otter::ServerAction::Script::Region;
+use Bio::Vega::Author;
+use Bio::Vega::SliceLockBroker;
 use Bio::Vega::Utils::Attribute qw( add_EnsEMBL_Attributes );
 
 use constant RECOVER_PREFIX => '00R_';
@@ -145,6 +147,7 @@ sub _process_gene {
     if (scalar keys %parent_gene_ids > 1) {
         say '    [W] Deleted transcripts belong to more than one previous version of this gene';
         delete $recover_spec->{gene_stable_id};
+        $recover_spec->{'transcript_name_suffix'}++;
     }
 
     # look for current transcripts with same name as deleted transcript
@@ -259,12 +262,21 @@ sub _recover_genes {
     my ($self, $dataset, $recover_spec) = @_;
 
     say "\n  RECOVER: ", $recover_spec->{gene_stable_id} || 'gene stable ID discarded';
-    foreach my $remark    (@{$recover_spec->{gene_remarks}}) {
-        say "    [r] ", $remark;
+
+    my $author = (getpwuid($<))[0];
+    my $broker;
+
+    if ($dataset->may_modify) {
+        my $author_obj = Bio::Vega::Author->new(-name => $author, -email => $author);
+        $broker = Bio::Vega::SliceLockBroker->new
+            (-hostname => hostname(), -author => $author_obj, -adaptor => $dataset->otter_dba);
     }
+
+    my $gene_adaptor = $dataset->gene_adaptor;
+
     foreach my $gene_spec (@{$recover_spec->{genes}}) {
         my $gene = $gene_spec->{gene};
-        say "     -  gene_id:", $gene->dbID;
+        say "     -  gene_id: ", $gene->dbID;
 
         my $new_gene = $gene->new_dissociated_copy;
         $new_gene->stable_id(undef) unless ($recover_spec->{gene_stable_id});
@@ -283,10 +295,6 @@ sub _recover_genes {
             $new_ts->stable_id(undef) if $transcript_spec->{drop_stable_id};
             $self->_process_attribs($new_ts, $transcript, $transcript_spec->{remarks});
 
-            foreach my $remark    (@{$transcript_spec->{remarks}}) {
-                say "        [r] ", $remark;
-            }
-
             $new_gene->add_Transcript($new_ts);
         }
 
@@ -299,6 +307,52 @@ sub _recover_genes {
         }
 
         # NOW we need to actually store the new gene!
+        if ($dataset->may_modify) {
+            say '    [d] storing gene:';
+
+            my $lock_ok;
+            my $work = sub {
+                $lock_ok = 1;
+                $gene_adaptor->store($new_gene);
+                say '    -  STORED';
+                return;
+            };
+
+            try {
+                say sprintf('    -  locking gene slice %s <%d-%d>',
+                            $new_gene->seq_region_name,
+                            $new_gene->seq_region_start,
+                            $new_gene->seq_region_end,
+                    );
+                $broker->lock_create_for_objects
+                    ('find_deleted_transcripts.pl' => $new_gene);
+                $broker->exclusive_work($work, 1);
+            } catch {
+                if ($lock_ok) {
+                    say "   [E] problem storing gene: '$_'";
+                } else {
+                    say "   [E] problem locking gene slice with author name $author: '$_'";
+                }
+            } finally {
+                $broker->unlock_all;
+            };
+
+        } else {
+            say '    [i] would store new gene here';
+        }
+
+        say sprintf('    [i] stored gene: %6d %18s (%s)',
+                    $new_gene->dbID // -1,
+                    $new_gene->stable_id // 'stable-id-not-set',
+                    $self->_get_name($new_gene),
+            );
+        foreach my $new_ts (@{$new_gene->get_all_Transcripts}) {
+            say sprintf('        - stored ts: %6d %18s (%s)',
+                        $new_ts->dbID // -1,
+                        $new_ts->stable_id // 'stable-id-not-set',
+                        $self->_get_name($new_ts),
+                );
+        }
     }
 }
 
