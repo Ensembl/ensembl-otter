@@ -180,7 +180,7 @@ sub _process_gene {
 
     if (%ctsbn_map) {
         my %gene_map;
-        say '    [i] Current transcripts with same name as deleted transcript:';
+        say '    [W] Current transcripts exist with same name as deleted transcript:';
         foreach my $key (sort keys %ctsbn_map) {
             my $cts_id = $ctsbn_map{$key};
             my $cts = $dataset->transcript_adaptor->fetch_by_dbID($cts_id);
@@ -210,14 +210,11 @@ sub _process_gene {
                 );
         }
     }
-    if (scalar keys %ctsbn_map eq scalar @transcripts) {
-        say '    [d] All transcripts have current version by name - no further action.';
-    } else {
-        say sprintf('    [d] Will rename and recover %s and %s.',
-                    scalar keys %parent_gene_ids > 1 ? 'these genes' : 'this gene',
-                    scalar @transcripts > 1          ? 'transcripts' : 'transcript',
-            );
-    }
+
+    say sprintf('    [d] Will rename and recover %s and %s.',
+                scalar keys %parent_gene_ids > 1 ? 'these genes' : 'this gene',
+                scalar @transcripts > 1          ? 'transcripts' : 'transcript',
+        );
 
     say '';
     return;
