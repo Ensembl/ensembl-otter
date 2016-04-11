@@ -390,14 +390,11 @@ sub _recover_genes {
 
             try {
                 say sprintf('    -  locking gene slice %s <%d-%d>',
-                            $new_gene->seq_region_name,
-                            $new_gene->seq_region_start,
-                            $new_gene->seq_region_end,
+                            $gene->seq_region_name,
+                            $gene->seq_region_start,
+                            $gene->seq_region_end,
                     );
-                $broker->lock_create_for_Slice(
-                    -intent => 'find_deleted_transcripts.pl',
-                    -slice  => $new_gene->slice,
-                    );
+                $broker->lock_create_for_objects('find_deleted_transcripts.pl' => $gene);
                 $broker->exclusive_work($work, 1);
             } catch {
                 if ($lock_ok) {
@@ -407,6 +404,7 @@ sub _recover_genes {
                 }
             } finally {
                 $broker->unlock_all;
+                sleep 1;        # avoid overlapping lock expiry issues?
             };
 
         } else {
