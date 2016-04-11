@@ -17,7 +17,7 @@ use Hum::Sort qw( ace_sort );
 use Bio::Otter::ServerAction::Script::Region;
 use Bio::Vega::Author;
 use Bio::Vega::SliceLockBroker;
-use Bio::Vega::Utils::Attribute qw( add_EnsEMBL_Attributes );
+use Bio::Vega::Utils::Attribute qw( add_EnsEMBL_Attributes make_EnsEMBL_Attribute );
 
 use constant RECOVER_PREFIX => '00R_';
 
@@ -70,7 +70,7 @@ sub process_dataset {
         $self->_process_gene($dataset, $gene);
     }
     say "[i] Processed ${ts_count_proc_gene} lost transcripts by gene.";
-    say "[i] Stored    ${ts_count_stored_gene} lost transcripts.";
+    say "[i] Stored    ${ts_count_stored_gene} lost transcripts." if $dataset->may_modify;
 
     return;
 }
@@ -281,7 +281,8 @@ sub _recover_genes {
             (-hostname => hostname(), -author => $author_obj, -adaptor => $dataset->otter_dba);
     }
 
-    my $gene_adaptor = $dataset->gene_adaptor;
+    my $gene_adaptor   = $dataset->gene_adaptor;
+    my $attrib_adaptor = $dataset->otter_dba->get_AttributeAdaptor;
 
     my $ts_store_ref   = $dataset->callback_data('ts_store_ref');
     my $new_gene_names = $dataset->callback_data('new_gene_names');
@@ -291,17 +292,28 @@ sub _recover_genes {
         my $gene = $gene_spec->{gene};
 
         my $new_gene = $gene->new_dissociated_copy;
+        $new_gene->is_current(1);
         $new_gene->stable_id(undef) unless ($recover_spec->{gene_stable_id});
         $new_gene->flush_Transcripts;
-        $self->_process_attribs($new_gene, $gene, $recover_spec->{gene_remarks}, $new_gene_names);
+
+        my $gene_comment_attrib =
+            $self->_process_attribs($new_gene, $gene, $recover_spec->{gene_remarks}, $new_gene_names);
+
+        my @ts_comment_attribs;
 
         foreach my $transcript_spec (@{$gene_spec->{transcripts}}) {
 
             my $transcript = $transcript_spec->{transcript};
 
             my $new_ts = $transcript->new_dissociated_copy;
+            $new_ts->is_current(1);
             $new_ts->stable_id(undef) if $transcript_spec->{drop_stable_id};
-            $self->_process_attribs($new_ts, $transcript, $transcript_spec->{remarks}, $new_ts_names);
+
+            my $ts_comment_attrib =
+                $self->_process_attribs($new_ts, $transcript, $transcript_spec->{remarks}, $new_ts_names);
+            if ($ts_comment_attrib) {
+                push @ts_comment_attribs, { ts => $transcript, comment_attrib => $ts_comment_attrib };
+            }
 
             $new_gene->add_Transcript($new_ts);
             ++$$ts_store_ref;
@@ -321,8 +333,18 @@ sub _recover_genes {
 
             my $lock_ok;
             my $work = sub {
+
                 $lock_ok = 1;
                 $gene_adaptor->store_only($new_gene);
+
+                if ($gene_comment_attrib) {
+                    $attrib_adaptor->store_on_Gene($gene, [ $gene_comment_attrib ]);
+                }
+
+                foreach my $spec (@ts_comment_attribs) {
+                    $attrib_adaptor->store_on_Transcript($spec->{ts}, [ $spec->{comment_attrib} ]);
+                }
+
                 say '    -  STORED';
                 return;
             };
@@ -373,14 +395,17 @@ sub _process_attribs {
     delete $new_obj->{attributes};
 
     add_EnsEMBL_Attributes($new_obj,
-                           'hidden_remark' => sprintf('created by find_deleted_transcripts.pl from dbID %d',
+                           'hidden_remark' => sprintf('created from dbID %d by find_deleted_transcripts.pl on %s',
                                                       $old_obj->dbID,
+                                                      strftime('%F', gmtime),
                            )
         );
 
+    my $new_name;
+
     foreach my $attrib (@{$old_obj->get_all_Attributes}) {
         if (lc $attrib->code eq 'name') {
-            my $new_name = RECOVER_PREFIX . $attrib->value;
+            $new_name = RECOVER_PREFIX . $attrib->value;
             if (my $index = $name_used_cache->{$new_name}++) {
                 $new_name .= "_$index";
             }
@@ -394,7 +419,14 @@ sub _process_attribs {
         add_EnsEMBL_Attributes($new_obj, 'hidden_remark' => $remark);
     }
 
-    return;
+    my $comment_attrib;
+    if ($new_name) {
+        my $comment = sprintf(RECOVER_COMMENT_FMT,
+                              $new_name,
+                              strftime('%F', gmtime));
+        $comment_attrib = make_EnsEMBL_Attribute('hidden_remark', $comment);
+    }
+    return $comment_attrib;
 }
 
 sub _get_name {
