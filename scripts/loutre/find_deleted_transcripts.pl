@@ -312,12 +312,10 @@ sub _recover_genes {
     say "\n    RECOVER: ", $recover_spec->{gene_stable_id} || 'gene stable ID discarded';
 
     my $author = (getpwuid($<))[0];
-    my $broker;
+    my $author_obj;
 
     if ($dataset->may_modify) {
-        my $author_obj = Bio::Vega::Author->new(-name => $author, -email => $author);
-        $broker = Bio::Vega::SliceLockBroker->new
-            (-hostname => hostname(), -author => $author_obj, -adaptor => $dataset->otter_dba);
+        $author_obj = Bio::Vega::Author->new(-name => $author, -email => $author);
     }
 
     my $gene_adaptor   = $dataset->gene_adaptor;
@@ -370,6 +368,9 @@ sub _recover_genes {
         if ($dataset->may_modify) {
             say '    [d] storing gene:';
 
+            my $broker = Bio::Vega::SliceLockBroker->new
+                (-hostname => hostname(), -author => $author_obj, -adaptor => $dataset->otter_dba);
+
             my $lock_ok;
             my $work = sub {
 
@@ -404,7 +405,7 @@ sub _recover_genes {
                 }
             } finally {
                 $broker->unlock_all;
-                sleep 1;        # avoid overlapping lock expiry issues?
+                sleep 2;        # avoid overlapping lock expiry issues?
             };
 
         } else {
