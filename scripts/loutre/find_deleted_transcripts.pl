@@ -21,6 +21,9 @@ use Bio::Vega::Utils::Attribute qw( add_EnsEMBL_Attributes make_EnsEMBL_Attribut
 
 use constant RECOVER_PREFIX => '00R_';
 
+use constant RECOVER_COMMENT_FMT     => 'NB!! recovered to %s by find_deleted_transcripts.pl on %s';
+use constant RECOVER_COMMENT_PATTERN => qr/recovered to 00R_.+ by find_deleted_transcripts.pl on/;
+
 sub ottscript_options {
     return (
         dataset_mode          => 'only_one', # for now
@@ -113,10 +116,16 @@ sub _process_gene {
     my @transcripts;
     my %parent_gene_ids;
     my %gene_names;
-    foreach my $lost_ts (@$gene) {
+TS: foreach my $lost_ts (@$gene) {
 
         my $ts_id = $self->_latest_ts_by_stable_id_and_name($dataset, $lost_ts->stable_id, $lost_ts->name);
         my $ts = $dataset->transcript_adaptor->fetch_by_dbID($ts_id);
+
+        if (my $comment = $self->_already_stored($ts)) {
+            say sprintf("  skipping %s, already processed on previous run: '%s'", $lost_ts->stable_id, $comment);
+            next TS;
+        }
+
         push @transcripts, $ts;
 
         my $gene = $ts->get_Gene;
@@ -125,6 +134,11 @@ sub _process_gene {
 
         my $gene_name = $self->_get_name($gene);
         $gene_names{$gene_name}++;
+    }
+
+    unless (@transcripts) {
+        say sprintf("  %18s - all transcripts already processed.\n", $spec_ts->gene_stable_id);
+        return;
     }
 
     say sprintf("  %18s  %s:",
@@ -170,13 +184,19 @@ sub _process_gene {
     my $ts_seen_on   = $dataset->callback_data('ts_seen_on');
     my $ts_count_ref = $dataset->callback_data('ts_count_ref');
 
-    foreach my $gene_id (sort keys %parent_gene_ids) {
+GENE: foreach my $gene_id (sort keys %parent_gene_ids) {
         my $gene = $dataset->gene_adaptor->fetch_by_dbID($gene_id);
         say sprintf('     -  Deleted gene_id: %d, modified %s, author %s',
                     $gene_id,
                     $self->_mod_date_time($gene),
                     $gene->gene_author->name,
             );
+
+        if (my $comment = $self->_already_stored($gene)) {
+            say sprintf("  skipping, already processed on previous run: '%s'", $comment);
+            delete $parent_gene_ids{$gene_id};
+            next GENE;
+        }
 
         my $gene_spec = {
             gene       => $gene,
@@ -256,6 +276,11 @@ sub _process_gene {
         }
     }
 
+    unless (%parent_gene_ids) {
+        say '  all parent genes already recovered, no futher action.';
+        return;
+    }
+
     say sprintf('    [d] Will rename and recover %s and %s.',
                 scalar keys %parent_gene_ids > 1 ? 'these genes' : 'this gene',
                 scalar @transcripts > 1          ? 'transcripts' : 'transcript',
@@ -264,6 +289,20 @@ sub _process_gene {
     $self->_recover_genes($dataset, $recover_spec);
 
     say '';
+    return;
+}
+
+sub _already_stored {
+    my ($self, $ens_obj) = @_;
+
+    my $h_remarks = $ens_obj->get_all_Attributes('hidden_remark');
+    return unless $h_remarks;
+
+    foreach my $comment (map { $_->value } @$h_remarks) {
+        if ($comment =~ RECOVER_COMMENT_PATTERN) {
+            return $comment;
+        }
+    }
     return;
 }
 
