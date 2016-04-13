@@ -88,7 +88,7 @@ sub _iterate_something {
         my $obj = $obj_class->new(%$cols, dataset => $self);
         my ($msg, $verbose_msg) = $self->$obj_method($obj);
         ++$count;
-        my $stable_id = $obj->stable_id;
+        my $stable_id = $obj->stable_id // '<no_stable_id>';
         if ($self->verbose) {
             $verbose_msg ||= '.';
             my $name      = $obj->name;
