@@ -16,7 +16,7 @@ has 'transcript_id' => ( is => 'ro', isa => 'Int', required => 1 );
 #     );
 
 has 'gene_id'        => ( is => 'ro', isa => 'Int' );
-has 'gene_stable_id' => ( is => 'ro', isa => 'Str' );
+has 'gene_stable_id' => ( is => 'ro', isa => 'Maybe[Str]' );
 has 'gene_name'      => ( is => 'ro', isa => 'Str' );
 
 around BUILDARGS => sub {
