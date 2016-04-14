@@ -601,18 +601,25 @@ sub _finalise_config {
     sub _do_substitutions {
         my ($pkg, $value, $conf) = @_;
         return unless $value;
-        $value =~
-            s{
-              __           # substitutions look like __NAME__ ...
-                ($subsre)  # NAME is  $1
-                (?:        #   ...or optionally
-                   \(      #                    like __NAME(args)__
-                     (.+?) # args are $2
-                   \)
-                )?
-              __
-             }
-             { $subs{ $1 }->( $pkg, $conf, $2 ? split( /,/, $2 ) : () ) }egx;
+
+        my ($o_value, $recurs);
+        do {
+            croak("Recursion limit exceeded for '$value'") if ++$recurs > 20;
+            $o_value = $value;
+            $value =~
+                s{
+                  __           # substitutions look like __NAME__ ...
+                    ($subsre)  # NAME is  $1
+                    (?:        #   ...or optionally
+                       \(      #                    like __NAME(args)__
+                         (.+?) # args are $2
+                       \)
+                    )?
+                  __
+                 }
+                 { $subs{ $1 }->( $pkg, $conf, $2 ? split( /,/, $2 ) : () ) }egx;
+        } while ($value ne $o_value);
+
         return $value;
     }
 
