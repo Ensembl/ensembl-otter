@@ -79,7 +79,7 @@ Currently, these input formats are supported:
                    mgifile_uni_ref = ftp://ftp.informatics.jax.org/pub/reports/MRK_Sequence.rpt [links between marker symbols and TrEMBL / RefSeq])
                    mgifile_entrez = ftp://ftp.informatics.jax.org/pub/reports/MGI_Gene_Model_Coord.rpt [links between marker symbols and Entrezgene])
                    - use these URLs for manual download or just let LWP do it
-    rgd         => ftp://rgd.mcw.edu/pub/data_release/GENES_RAT.txt (lwp does it for you)
+    rgd         => ftp://ftp.rgd.mcw.edu/pub/data_release/GENES_RAT.txt (lwp does it for you)
     imgt_hla    => by email Steven Marsh <marsh@ebi.ac.uk>
     imgt_gdb    => use vega database
 
@@ -904,7 +904,7 @@ sub parse_rgd {
   my ($xrefs, $lcmap) = @_;
   $support->log_stamped("RGD...\n", 1);
 
-  my $url = "ftp://rgd.mcw.edu/pub/data_release/GENES_RAT.txt";
+  my $url = "ftp://ftp.rgd.mcw.edu/pub/data_release/GENES_RAT.txt";
 
   #try and download direct
   my $ua = LWP::UserAgent->new;
