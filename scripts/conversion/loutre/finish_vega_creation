@@ -740,7 +740,7 @@ push @sql_fixes, "DELETE from transcript_attrib where attrib_type_id = $hidden_r
 push @sql_fixes, "UPDATE transcript_attrib set attrib_type_id = $havana_cv where attrib_type_id = '$rem_at' and value in ($string);\n";
 
 # EnsEMBL/Havana differ on what they think is the correct biotype.
-push @sql_fixes, qq(UPDATE gene SET biotype = "3prime_overlapping_ncrna" where biotype = "3'_overlapping_ncrna";\n);
+push @sql_fixes, qq(UPDATE gene SET biotype = "3prime_overlapping_ncRNA" where biotype = "3'_overlapping_ncrna";\n);
 
 #analysis update for vega_update
 if ($support->param('live_update')) {
