@@ -5,7 +5,7 @@ package Bio::Otter::Lace::DB::Adaptor;
 
 use strict;
 use warnings;
-use Carp qw( confess );
+use Carp qw( carp confess );
 
 sub new {
     my ($pkg, $dbh) = @_;
@@ -171,6 +171,23 @@ sub fetch_state {
         $object->$key($value);
     }
     $object->is_stored(1);
+
+    return $object;
+}
+
+sub fetch_by {
+    my ($self, $sth, $multi_warn_fmt, @args) = @_;
+
+    $sth->execute(@args);
+    my $attribs = $sth->fetchrow_hashref;
+    return unless $attribs;
+
+    my $object = $self->new_object(%$attribs);
+    $object->is_stored(1);
+
+    if ($multi_warn_fmt and $sth->fetchrow_hashref) {
+        carp sprintf($multi_warn_fmt, @args);
+    }
 
     return $object;
 }

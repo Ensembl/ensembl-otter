@@ -119,16 +119,8 @@ sub fetch_by_logic_name_status {
     my ($self, $logic_name, $status) = @_;
 
     my $sth = $self->_fetch_by_logic_name_status_sth;
-    $sth->execute($logic_name, $status);
-    my $attribs = $sth->fetchrow_hashref;
-    return unless $attribs;
-
-    my $object = $self->new_object(%$attribs);
-    $object->is_stored(1);
-
-    if ($sth->fetchrow_hashref) {
-        carp "multiple requests for {logic name:'$logic_name', status:'$status'}";
-    }
+    my $object = $self->fetch_by($sth, "multiple requests for {logic name:'%s', status:'%s'}", $logic_name, $status);
+    return unless $object;
 
     $self->_fetch_args($object);
     $self->_fetch_missed_hits($object);
