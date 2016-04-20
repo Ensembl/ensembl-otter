@@ -5,7 +5,7 @@ package Bio::Otter::Lace::DB::Adaptor;
 
 use strict;
 use warnings;
-use Carp;
+use Carp qw( confess );
 
 sub new {
     my ($pkg, $dbh) = @_;
@@ -85,6 +85,11 @@ sub store {
     my ($self, $object) = @_;
     $self->check_object($object);
     confess "Object already stored" if $object->is_stored;
+    return $self->_store($object);
+}
+
+sub _store {
+    my ($self, $object) = @_;
 
     my $result = $self->_store_sth->execute(map { $object->$_() } $self->columns);
     $object->is_stored(1) if $result;
@@ -103,10 +108,24 @@ sub update {
     my ($self, $object) = @_;
     $self->check_object($object);
     confess "Object not stored" unless $object->is_stored;
+    return $self->_update($object);
+}
 
+sub _update {
+    my ($self, $object) = @_;
     my $key_column_name = $self->key_column_name;
     my $result = $self->_update_sth->execute((map { $object->$_() } $self->columns), $object->$key_column_name());
     return $result;
+}
+
+sub store_or_update {
+    my ($self, $object) = @_;
+    $self->check_object($object);
+    if ($object->is_stored) {
+        return $self->_update($object);
+    } else {
+        return $self->_store($object);
+    }
 }
 
 sub delete {
