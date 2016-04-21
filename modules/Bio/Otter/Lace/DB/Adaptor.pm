@@ -133,7 +133,8 @@ sub delete {
     $self->check_object($object);
     confess "Object not stored" unless $object->is_stored;
 
-    my $result = $self->_delete_sth->execute($object->name);
+    my $key_column_name = $self->key_column_name;
+    my $result = $self->_delete_sth->execute($object->$key_column_name);
     $object->is_stored(0) if $result;
 
     return $result;
