@@ -1,0 +1,69 @@
+#!/usr/bin/env perl
+
+### backfill_strain_input_id_analysis
+
+use strict;
+use warnings;
+
+use Readonly;
+
+use Bio::Otter::Lace::Defaults;
+use Bio::Otter::Server::Config;
+use Bio::Otter::Utils::Script::MouseStrains;
+
+Readonly my @logic_names => qw( dust RepeatMasker trf );
+
+{
+    my $usage = sub { exec('perldoc', $0) };
+    Bio::Otter::Lace::Defaults::do_getopt() or $usage->();
+
+    my $mouse_strains = Bio::Otter::Utils::Script::MouseStrains->new;
+    foreach my $code (@{$mouse_strains->new_codes}) {
+        my $str = $mouse_strains->by_code($code);
+        my $dataset = $str->dataset_name;
+
+        print STDERR "$dataset:\n";
+        my $ds = Bio::Otter::Server::Config->SpeciesDat->dataset($dataset);
+
+        backfill_strain_input_id_analysis($ds->pipeline_dba('pipe', 'rw'));
+    }
+    exit;
+}
+
+sub backfill_strain_input_id_analysis {
+    my ($dba) = @_;
+    my $sth = $dba->dbc->prepare(q{
+        INSERT INTO
+          input_id_analysis (
+            input_id,
+            input_id_type,
+            analysis_id,
+            created,
+            result
+          )
+        SELECT
+          input_id,
+          input_id_type,
+          (SELECT analysis_id FROM analysis WHERE logic_name = ?) AS analysis_id,
+          iia.created AS created,
+          0           AS result
+        FROM
+               input_id_analysis iia
+          JOIN analysis          a   USING (analysis_id)
+        WHERE
+          logic_name = 'Submit_Chr_Segment'
+    });
+    foreach my $ln ( @logic_names ) {
+        my $rows = $sth->execute($ln);
+        printf STDERR "\t%-12s: %d rows inserted\n", $ln, $rows;
+    }
+    return;
+}
+
+__END__
+
+=head1 NAME - backfill_strain_input_id_analysis
+
+=head1 AUTHOR
+
+Michael Gray B<email> mg13@sanger.ac.uk
