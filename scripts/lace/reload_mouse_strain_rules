@@ -1,0 +1,87 @@
+#!/usr/bin/env perl
+
+### reload_mouse_strain_rules
+
+use strict;
+use warnings;
+
+use Readonly;
+use Term::ReadKey qw{ ReadMode ReadLine };
+
+use Bio::Otter::Lace::Defaults;
+use Bio::Otter::Server::Config;
+use Bio::Otter::Utils::Script::MouseStrains;
+
+Readonly my $pipe_script_path => q(/software/anacode/pipeline/ensembl-pipeline/scripts);
+Readonly my $conf_dir_path    => q(/nfs/users/nfs_m/mg13/Work/Investigations/Pipeline/2015-07-mouse-strains/conf);
+{
+    my $usage = sub { exec('perldoc', $0) };
+    Bio::Otter::Lace::Defaults::do_getopt() or $usage->();
+
+    my $ottadmin_passwd = password_prompt('ottadmin');
+
+    my $mouse_strains = Bio::Otter::Utils::Script::MouseStrains->new;
+    foreach my $code (@{$mouse_strains->new_codes}) {
+        my $str = $mouse_strains->by_code($code);
+        my $dataset = $str->dataset_name;
+
+        print STDERR "$dataset:\n";
+        my $ds = Bio::Otter::Server::Config->SpeciesDat->dataset($dataset);
+
+        reload_mouse_strain_rules($str->db_name('pipe'), $ds->pipeline_dba('pipe', 'rw'), $ottadmin_passwd);
+    }
+    exit;
+}
+
+sub reload_mouse_strain_rules {
+    my ($db_name, $dba, $ottadmin_passwd) = @_;
+    my $sth_conds = $dba->dbc->prepare(q{
+        DELETE FROM rule_conditions
+    });
+    my $sth_goals = $dba->dbc->prepare(q{
+        DELETE FROM rule_goal
+    });
+
+    my $n_conds = $sth_conds->execute;
+    printf STDERR "\tdeleted %d rule_conditions\n", $n_conds;
+
+    my $n_goals = $sth_goals->execute;
+    printf STDERR "\tdeleted %d rule_goals\n", $n_goals;
+
+    my $pipe_param   = "--dbhost=mcs17 --dbport=3322 --dbuser=ottadmin --dbpass='${ottadmin_passwd}' --dbname=${db_name}";
+    system_do("cd ${pipe_script_path} && ./analysis_setup.pl -update -read -file ${conf_dir_path}/analysis.conf $pipe_param");
+    system_do("cd ${pipe_script_path} && ./rule_setup.pl             -read -file ${conf_dir_path}/rules.conf    $pipe_param");
+
+    return;
+}
+
+sub system_do {
+    my ($command) = @_;
+
+    my $echo_command = $command;
+    $echo_command =~ s/--dbpass=\S+/--dbpass=******/;
+    print STDERR "\t$echo_command\n";
+    system($command) == 0 or die "Error executing '$echo_command'; exit $?";
+}
+
+sub password_prompt {
+    my ($user) = @_;
+
+    print STDERR "Password for '$user': ";
+    ReadMode('noecho');
+    my $password = ReadLine(0);
+    print STDERR "\n";
+    chomp $password;
+    ReadMode('normal');
+    return $password;
+}
+
+__END__
+
+=head1 NAME - reload_mouse_strain_rules
+
+This should have been donein backfill_strain_input_id_analysis script!
+
+=head1 AUTHOR
+
+Michael Gray B<email> mg13@sanger.ac.uk
