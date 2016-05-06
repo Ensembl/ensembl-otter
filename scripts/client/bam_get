@@ -15,7 +15,7 @@ my $LOG = 1;
 use Bio::Otter::Log::Log4perl qw(:easy);
 use URI::Escape qw(uri_unescape);
 
-use Bio::DB::Sam;
+use Bio::DB::HTS;
 
 use Bio::Otter::Lace::Defaults;
 use Bio::Otter::Fetch::BAM;
@@ -37,13 +37,13 @@ sub do_it {
     my ($file, $dataset, $csver_remote, $chr, $start, $end) =
         $self->read_args(qw{ file dataset csver chr start end });
 
-    my $sam = Bio::DB::Sam->new(
+    my $sam = Bio::DB::HTS->new(
         -bam        => $file,
         -autoindex  => 0,   # Does setting this to zero trigger an error on calling bam_index if there is no .bai?
     );
 
-    # Get list of chromosomes so that a failure is triggered before GFF header is printed.
-    $sam->bam_index;
+    # Get list of chromosomes to make doubly sure that a failure is triggered before GFF header is printed.
+    $sam->hts_index;
     # print STDERR "Header: ", $sam->header->text, "\n";
 
     my $bam_fetch = Bio::Otter::Fetch::BAM->new(-sam => $sam);
