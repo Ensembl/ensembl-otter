@@ -10,6 +10,7 @@ use List::Util qw(max min);
 use base qw( Bio::Otter::Server::GFF Bio::Otter::Server::GFF::Utils );
 
 use Bio::Otter::Utils::Constants qw(intron_minimum_length);
+use Bio::Vega::Utils::UCSC_bins qw( all_bins_overlapping_range_string_for_sql );
 
 use Bio::Vega::DnaDnaAlignFeature;
 use Bio::Vega::HitDescription;
@@ -180,10 +181,46 @@ sub _psl_split_gapped_feature {
 }
 
 sub Bio::EnsEMBL::Slice::get_all_features_via_psl_sql {
-    my ($slice, $server, $sth, $chr_name) = @_;
+    my ($slice, $server, $dbh, $db_table, $chr_name) = @_;
 
     my $chr_start = $slice->start();
     my $chr_end   = $slice->end();
+
+    my $bin_list = all_bins_overlapping_range_string_for_sql($chr_start - 1, $chr_end);
+
+    my $sth = $dbh->prepare(qq{
+    SELECT
+        matches,
+        misMatches,
+        repMatches,
+        nCount,
+        qNumInsert,
+        qBaseInsert,
+        tNumInsert,
+        tBaseInsert,
+        strand,
+        qName,
+        qSize,
+        qStart,
+        qEnd,
+        tName,
+        tSize,
+        tStart,
+        tEnd,
+        blockCount,
+        blockSizes,
+        qStarts,
+        tStarts
+    FROM
+        $db_table
+    WHERE
+            tName in (?,?)
+        AND bin in ($bin_list)
+        AND tEnd   >= ?
+        AND tStart <= ?
+    ORDER BY
+        tStart ASC
+    });
 
     my @chr_name_list = ( $chr_name, "chr${chr_name}" );
     $sth->execute(@chr_name_list, $chr_start, $chr_end);
@@ -257,43 +294,10 @@ sub get_requested_features {
     my ($dbh, $db_table) = $self->db_connect;
     my $db_table_dna = $db_table . '_dna';
 
-    my $sth = $dbh->prepare(qq{
-    SELECT
-        matches,
-        misMatches,
-        repMatches,
-        nCount,
-        qNumInsert,
-        qBaseInsert,
-        tNumInsert,
-        tBaseInsert,
-        strand,
-        qName,
-        qSize,
-        qStart,
-        qEnd,
-        tName,
-        tSize,
-        tStart,
-        tEnd,
-        blockCount,
-        blockSizes,
-        qStarts,
-        tStarts
-    FROM
-        $db_table
-    WHERE
-            tName   in ( ? , ? )
-        AND tEnd   >= ?
-        AND tStart <= ?
-    ORDER BY
-        tStart ASC
-    });
-
     my $map = $self->make_map;
     my $features = $self->fetch_mapped_features_das(
         'get_all_features_via_psl_sql',
-        [$self, $sth, $chr_name],
+        [$self, $dbh, $db_table, $chr_name],
         $map);
 
     try {
