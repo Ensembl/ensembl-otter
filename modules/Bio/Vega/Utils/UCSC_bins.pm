@@ -147,7 +147,8 @@ clearer, and the numbers should be inlined as constants for speed.
 
 =head1 EXPORTED FUNCTIONS
 
-Note that 
+Note that the start is expected to be in UCSC 0-based coordinates, so the
+examples take 1 away from it:
 
   my $bin = smallest_bin_for_range($start - 1, $end);
 
