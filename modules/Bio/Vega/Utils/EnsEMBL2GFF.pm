@@ -330,7 +330,8 @@ my $_new_feature_id_sub = sub {
 
     package Bio::EnsEMBL::Transcript;
 
-    use Bio::Vega::Utils::Attribute qw( get_name_Attribute_value );
+    use Bio::Vega::Utils::Attribute qw( get_name_Attribute_value get_first_Attribute_value );
+    use Bio::Vega::Utils::ExonPhase qw( exon_phase_EnsEMBL_to_Ace );
 
     my $tsct_count = 0;
     sub _gff_hash {
@@ -385,6 +386,21 @@ my $_new_feature_id_sub = sub {
         my %args_super = ( %args );
         my $id = $_new_feature_id_sub->('transcript');
         $args_super{'extra_attrs'}->{'ID'} = $id;
+
+        my $tsl = $self->translation;
+        if ($tsl) {
+            # Look for start_not_found and end_not_found
+            if (get_first_Attribute_value($self, 'cds_start_NF')) {
+                my $first_exon_phase = $tsl->start_Exon->phase;
+                my $ace_phase = exon_phase_EnsEMBL_to_Ace($first_exon_phase);
+                $args_super{'extra_attrs'}->{'start_not_found'} = $ace_phase;
+            }
+
+            if (get_first_Attribute_value($self, 'cds_end_NF')) {
+                $args_super{'extra_attrs'}->{'end_not_found'} = 1;
+            }
+        }
+
         my $gff = $self->SUPER::to_gff(%args_super);
         my $gff_hash = $self->_gff_hash(%args);
 
@@ -394,7 +410,7 @@ my $_new_feature_id_sub = sub {
         my %args_exon = ( %args );
         $args_exon{'extra_attrs'} = { %{$args_exon{'extra_attrs'}} };
         my $extra_attrs = $args_exon{'extra_attrs'};
-        delete @{$extra_attrs}{qw( ID locus url )};
+        delete @{$extra_attrs}{qw( ID locus url start_not_found end_not_found )};
         @{$extra_attrs}{qw( Name Parent )} = ( $name, $id );
         foreach my $feat (@{ $self->get_all_Exons }) {
 
@@ -413,7 +429,7 @@ my $_new_feature_id_sub = sub {
 
         my $pg_fake_cds = ($args{pseudogene_fake_cds} and ($self->biotype =~ /pseudo/i));
 
-        if (my $tsl = $self->translation or $pg_fake_cds) {
+        if ($tsl or $pg_fake_cds) {
 
             # build up the CDS line - it's not really worth creating a
             # Translation->to_gff method, as most of the fields are
