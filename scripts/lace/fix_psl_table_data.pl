@@ -16,7 +16,7 @@ use Getopt::Long qw{ GetOptions };
     my $dbh = DBI->connect(
         "DBI:mysql:host=mcs17;port=3323;database=psl_data",
         ottroot => $passwd,
-        { RaiseError => 1 }
+        { RaiseError => 0, PrintError => 1 }
     );
     foreach my $table (get_tables($dbh)) {
         print STDERR "$table\n";
@@ -30,13 +30,24 @@ sub fix_table {
     # Add bin column
     $dbh->do(qq{ ALTER TABLE $table ADD COLUMN `bin` smallint(5) unsigned NOT NULL FIRST });
 
+    # Use max size of smallint to mark rows which need update.
+    my $max = 2**16 - 1;
+
     # Populate bin column
+    $dbh->do(qq{ UPDATE $table SET bin = $max WHERE bin = 0 });
     my $update = $dbh->prepare(qq{ UPDATE $table SET bin = ? WHERE tName = ? AND tStart = ? AND tEnd = ?});
-    my $select = $dbh->prepare(qq{ SELECT tName, tStart, tEnd FROM $table });
-    $select->execute;
-    while (my ($tName, $tStart, $tEnd) = $select->fetchrow) {
-        my $bin = smallest_bin_for_range($tStart - 1, $tEnd);
-        $update->execute($bin, $tName, $tStart, $tEnd);
+    while (1) {
+        # LIMIT in SQL statement in loop to prevents running out of memory on
+        # large tables.
+        my $select = $dbh->prepare(qq{ SELECT tName, tStart, tEnd FROM $table WHERE bin = $max LIMIT 10000 });
+        $select->execute;
+        last unless $select->rows;
+        my ($tName, $tStart, $tEnd);
+        $select->bind_columns(\$tName, \$tStart, \$tEnd);
+        while ($select->fetch) {
+            my $bin = smallest_bin_for_range($tStart, $tEnd);
+            $update->execute($bin, $tName, $tStart, $tEnd);
+        }
     }
 
     # Add bin index
