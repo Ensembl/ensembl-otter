@@ -2683,7 +2683,11 @@ sub _get_SubSeq_if_changed {
     }
 
     $new->validate;
+    if (my $err = $new->error_start_not_found) {
+        confess $err;
+    }
     $new->set_seleno_remark_from_translation;
+
     return $new;
 }
 
