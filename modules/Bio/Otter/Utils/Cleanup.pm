@@ -27,7 +27,6 @@ sub client {
 sub clean {
     my ($self) = @_;
     $self->cleanup_log_dir('otter');
-    $self->cleanup_log_dir('otterlace'); # UNLACE: can go in due course
     $self->cleanup_sessions;
     $self->cleanup_zmap_configs;
     return;
