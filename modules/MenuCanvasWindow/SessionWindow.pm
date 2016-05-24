@@ -3077,7 +3077,7 @@ sub _make_zmap_config_dir {
 
 sub zmap_configs_dirs {
     my ($called) = @_;
-    return ( $called->_zmap_configs_dir_otter, $called->_zmap_configs_dir_lace );
+    return ( $called->_zmap_configs_dir_otter );
 }
 
 sub _zmap_configs_dir_otter {
@@ -3085,13 +3085,6 @@ sub _zmap_configs_dir_otter {
     # we make a class method call as we might be called as a class method by cleanup
     my $vtod = Bio::Otter::Lace::Client->var_tmp_otter_dir;
     return sprintf '%s/ZMap', $vtod;
-}
-
-# UNLACE: can go in due course
-sub _zmap_configs_dir_lace {
-    my ($called) = @_;
-    my $user = getpwuid($<);
-    return "/var/tmp/otter_${user}/ZMap";
 }
 
 ### BEGIN: ZMap control interface
