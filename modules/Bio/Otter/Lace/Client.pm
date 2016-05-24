@@ -274,13 +274,6 @@ sub _session_root_otter {
     return sprintf '%s/v%s', $self->var_tmp_otter_dir, $version;
 }
 
-# UNLACE: can go in due course
-sub _session_root_lace {
-    my ($self, $version) = @_;
-    $version ||= Bio::Otter::Version->version;
-    return '/var/tmp/lace_'.$version;
-}
-
 sub _all_sessions {
     my ($self) = @_;
 
@@ -306,31 +299,13 @@ sub _session_from_dir {
 
 sub all_session_dirs {
     my ($self, $version_glob) = @_;
-    my @session_dirs = ( $self->_all_session_dirs_otter($version_glob),
-                         $self->_all_session_dirs_lace( $version_glob) );
-
-    # Skip if directory is not ours
-    my $uid = $<;
-    @session_dirs = grep { (stat($_))[4] == $uid } @session_dirs;
-
-    return @session_dirs;
-}
-
-sub _all_session_dirs_otter {
-    my ($self, $version_glob) = @_;
 
     my $session_dir_pattern = $self->_session_root_otter($version_glob) . ".*";
     my @session_dirs = glob($session_dir_pattern);
 
-    return @session_dirs;
-}
-
-# UNLACE: can go in due course
-sub _all_session_dirs_lace {
-    my ($self, $version_glob) = @_;
-
-    my $session_dir_pattern = $self->_session_root_lace($version_glob) . ".*";
-    my @session_dirs = glob($session_dir_pattern);
+    # Skip if directory is not ours
+    my $uid = $<;
+    @session_dirs = grep { (stat($_))[4] == $uid } @session_dirs;
 
     return @session_dirs;
 }
