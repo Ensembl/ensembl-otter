@@ -1,5 +1,5 @@
 #! /bin/sh
 
 export debian_chroot=otter_live
-. /software/anacode/otter/$debian_chroot/bin/otterlace_env.sh # UNLACE: fix when otter reaches live
+. /software/anacode/otter/$debian_chroot/bin/otter_env.sh
 exec bash -i
