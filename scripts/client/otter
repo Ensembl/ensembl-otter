@@ -1,15 +1,14 @@
 #!/bin/bash
 
-# UNLACE: fix when otter reaches old (otterlace_installed)
 # the installation script will append the proper values to these lines
-otterlace_installed=false
+otter_installed=false
 
 unset CDPATH
 
 # load the standard environment unless 
 # * this a checkout, not an installation
 # * $OTTER_HOME is set
-if $otterlace_installed || [ -z "$OTTER_HOME" ] ; then
+if $otter_installed || [ -z "$OTTER_HOME" ] ; then
     # Bear in mind,
     #   on Mac we have BSD readlink which takes no options
     #   on internal Linux we have a two-hop symlink
