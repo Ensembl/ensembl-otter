@@ -15,37 +15,132 @@ use Bio::EnsEMBL::Utils::Exception qw(warning);
 
 {
     my $dsname   = '';
+    my $sqlite   = '';
     my $notsets  = '';
     my $onlysets = '';
     my $change   = 0;    # dry run
 
     Bio::Otter::Lace::Defaults::do_getopt(
         'dataset=s'  => \$dsname,
+        'sqlite=s'   => \$sqlite,
         'notsets=s'  => \$notsets,
         'onlysets=s' => \$onlysets,
         'change!'    => \$change,
     );
 
+    if ($dsname and $sqlite) {
+        die "specify only one of --dataset <dsname> or --sqlite <path>\n";
+    }
+    unless ($dsname or $sqlite) {
+        die "must specify one of --dataset <dsname> or --sqlite <path>\n";
+    }
+
     my @not_sets  = $notsets  ? (split(/,/, $notsets))  : ();
     my @only_sets = $onlysets ? (split(/,/, $onlysets)) : ();
 
-    # Client communicates with otter HTTP server
-    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    my ($dbc, $change_sub, $group_concat_sub);
 
-    # DataSet interacts directly with an otter database
-    my $ds = Bio::Otter::Server::Config->SpeciesDat->dataset($dsname);
+    if ($dsname) {
 
-    my $loutre_dbc = $ds->otter_dba->dbc();
+        # Client communicates with otter HTTP server
+        my $cl = Bio::Otter::Lace::Defaults::make_Client();
+
+        # DataSet interacts directly with an otter database
+        my $ds = Bio::Otter::Server::Config->SpeciesDat->dataset($dsname);
+
+        $dbc = $ds->otter_dba->dbc();
+
+        $change_sub = sub {
+            my ($component, $stable_id, $change_sql, $change_to_this) = @_;
+
+            my $author_obj = Bio::Vega::Author->new(-name => $cl->author, -email => $cl->email);
+            my $object_ad =
+                $component eq 'gene'
+                ? $ds->otter_dba->get_GeneAdaptor()
+                : $ds->otter_dba->get_TranscriptAdaptor();
+            my $object = $object_ad->fetch_by_stable_id($stable_id);
+
+            my $broker = Bio::Vega::SliceLockBroker->new
+                (-hostname => hostname,
+                 -author => $author_obj,
+                 -adaptor => $object_ad);
+
+            my $locked_ok = 0;
+            my $work = sub {
+                $locked_ok = 1;
+                print "EXECUTING: $change_sql\n";
+                my $change_sth = $dbc->prepare($change_sql);
+                $change_sth->execute();
+                return;
+            };
+
+            my $ok = try {
+                print "Locking $component $stable_id\n";
+                $broker->lock_create_for_objects('repair_duplicate_names' => $object);
+                $broker->exclusive_work($work, 1);
+                1;
+            } catch {
+                warning(
+                    "Cannot rename $component $stable_id to $change_to_this (locked_ok=$locked_ok)\n$_\n"
+                    );
+
+                0;
+            } finally {
+                $broker->unlock_all;
+            };
+            return $ok;
+        };
+
+        $group_concat_sub = sub {
+            my ($component) = @_;
+            return qq{
+                GROUP_CONCAT(CONCAT(o.${component}_id,':',stable_id,':',sr.name,':',o.seq_region_start,':',o.seq_region_end)
+                             ORDER BY o.${component}_id DESC )
+            };
+        };
+
+    } elsif ($sqlite) {
+
+        unless ( -r $sqlite ) {
+            die "'$sqlite' not found or not readable.\n";
+        }
+
+        $dbc = DBI->connect("dbi:SQLite:dbname=$sqlite", undef, undef, { RaiseError => 1 });
+        $dbc or die "Couldn't connect to '$sqlite' [$DBI::errstr]\n";
+
+        $change_sub = sub {
+            my ($component, $stable_id, $change_sql, $change_to_this) = @_;
+            my $ok = try {
+                print "EXECUTING: $change_sql\n";
+                my $change_sth = $dbc->prepare($change_sql);
+                $change_sth->execute();
+            } catch {
+                warning(
+                    "Cannot rename $component $stable_id to $change_to_this\n$_\n"
+                    );
+
+                0;
+            };
+            return $ok;
+        };
+
+        $group_concat_sub = sub {
+            my ($component) = @_;
+            return qq{
+                GROUP_CONCAT(o.${component}_id ||':'|| COALESCE(stable_id, 'ID=' || o.${component}_id) ||':'|| sr.name ||':'|| o.seq_region_start ||':'|| o.seq_region_end)
+            };
+        };
+    }
 
     foreach my $component ('gene', 'transcript') { # would be neater to do them together, per gene, to fit under one slice_lock row
 
         print "------- $component ---------\n";
 
+        my $group_concat = $group_concat_sub->($component);
         my $sql = qq{
             SELECT oa.value
-              , COUNT(DISTINCT stable_id) cnt
-              , GROUP_CONCAT(CONCAT(o.${component}_id,':',stable_id,':',sr.name,':',o.seq_region_start,':',o.seq_region_end)
-                ORDER BY o.${component}_id DESC )
+              , COUNT(DISTINCT o.${component}_id) cnt
+              , ${group_concat}
             FROM ${component}_attrib oa
               , $component o
               , attrib_type at
@@ -67,7 +162,7 @@ use Bio::EnsEMBL::Utils::Exception qw(warning);
 
         # print "$sql;\n";  next;
 
-        my $sth = $loutre_dbc->prepare($sql);
+        my $sth = $dbc->prepare($sql);
         $sth->execute();
 
         my %name2stid = ();
@@ -107,41 +202,7 @@ use Bio::EnsEMBL::Utils::Exception qw(warning);
                     };
 
                     if ($change) {
-                        my $author_obj = Bio::Vega::Author->new(-name => $cl->author, -email => $cl->email);
-                        my $object_ad =
-                            $component eq 'gene'
-                          ? $ds->otter_dba->get_GeneAdaptor()
-                          : $ds->otter_dba->get_TranscriptAdaptor();
-                        my $object = $object_ad->fetch_by_stable_id($stable_id);
-
-                        my $broker = Bio::Vega::SliceLockBroker->new
-                          (-hostname => hostname,
-                           -author => $author_obj,
-                           -adaptor => $object_ad);
-
-                        my $locked_ok = 0;
-                        my $work = sub {
-                            $locked_ok = 1;
-                            print "EXECUTING: $change_sql\n";
-                            my $change_sth = $loutre_dbc->prepare($change_sql);
-                            $change_sth->execute();
-                            return;
-                        };
-
-                        my $ok = try {
-                            print "Locking $component $stable_id\n";
-                            $broker->lock_create_for_objects('repair_duplicate_names' => $object);
-                            $broker->exclusive_work($work, 1);
-                            1;
-                        } catch {
-                            warning(
-"Cannot rename $component $stable_id to $change_to_this (locked_ok=$locked_ok)\n$_\n"
-                            );
-
-                            0;
-                        } finally {
-                            $broker->unlock_all;
-                        };
+                        my $ok = $change_sub->($component, $stable_id, $change_sql, $change_to_this);
                         next VECTOR unless $ok;
                     }
                     else {
