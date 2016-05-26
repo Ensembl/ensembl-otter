@@ -9,7 +9,7 @@ use Bio::EnsEMBL::SimpleFeature;
 use Bio::EnsEMBL::Slice;
 use Bio::Otter::Lace::CloneSequence;
 use Bio::Vega::ContigInfo;
-use Bio::Vega::Utils::Attribute qw( get_first_Attribute_value );
+use Bio::Vega::Utils::Attribute qw( get_first_Attribute_value get_name_Attribute_value );
 
 =head1 NAME
 
@@ -242,6 +242,32 @@ sub fetch_Genes {
     $self->_gene_list($gene_list);
 
     return @$gene_list;
+}
+
+sub check_transcript_stable_ids {
+    my ($self) = @_;
+
+    my %stable_id_map;
+    my @errors;
+
+    foreach my $g ( $self->genes ) {
+        foreach my $t ( @{$g->get_all_Transcripts} ) {
+            my $stable_id = $t->stable_id;
+            my $dbID      = $t->dbID;
+            if (my $prev_t = $stable_id_map{$stable_id}) {
+                my $prev_dbID = $prev_t->dbID;
+                my $prev_name = get_name_Attribute_value($prev_t);
+                my $name      = get_name_Attribute_value($t);
+                push @errors, "  ${stable_id}:\n    ${prev_name} (${prev_dbID})\n    ${name} (${dbID})";
+            } else {
+                $stable_id_map{$stable_id} = $t;
+            }
+        }
+    }
+    return unless @errors;
+
+    my $details = join "\n", @errors;
+    die "Duplicate transcript stable IDs found:\n$details\n";
 }
 
 sub _clone_seq_list {

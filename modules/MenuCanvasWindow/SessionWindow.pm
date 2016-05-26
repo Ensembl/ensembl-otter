@@ -1282,10 +1282,10 @@ sub _save_data {
 
     my $busy = Tk::ScopedBusy->new($self->top_window());
 
-    my $xml_out = $adb->generate_XML_from_sqlite;
-    $adb->write_file('Out.xml', $xml_out);
-
     return try {
+        my $xml_out = $adb->generate_XML_from_sqlite;
+        $adb->write_file('Out.xml', $xml_out);
+
         my $xml = $adb->Client->save_otter_xml
           ($xml_out,
            $adb->DataSet->name,
