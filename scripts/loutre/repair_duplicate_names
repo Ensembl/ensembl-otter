@@ -165,9 +165,6 @@ use Bio::EnsEMBL::Utils::Exception qw(warning);
         my $sth = $dbc->prepare($sql);
         $sth->execute();
 
-        my %name2stid = ();
-        my %disambig  = ();
-
         while (my ($name, $cnt, $group) = $sth->fetchrow()) {
 
             # print "$name    $cnt    $group\n";
