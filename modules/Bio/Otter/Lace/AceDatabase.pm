@@ -817,6 +817,7 @@ sub generate_XML_from_sqlite {
 
     $self->DB->vega_dba->clear_caches;
     my $region = Bio::Vega::Region->new_from_otter_db( slice => $self->DB->session_slice );
+    $region->check_transcript_stable_ids;
     my $formatter = Bio::Vega::Transform::RegionToXML->new;
     $formatter->region($region);
     $formatter->squash_exon_phases_on_no_translation(1); # to match AceConverter
