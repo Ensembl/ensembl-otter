@@ -19,6 +19,7 @@ use Bio::EnsEMBL::Utils::Exception qw(warning);
     my $notsets  = '';
     my $onlysets = '';
     my $change   = 0;    # dry run
+    my $ignore_stable = 0;
 
     Bio::Otter::Lace::Defaults::do_getopt(
         'dataset=s'  => \$dsname,
@@ -26,6 +27,7 @@ use Bio::EnsEMBL::Utils::Exception qw(warning);
         'notsets=s'  => \$notsets,
         'onlysets=s' => \$onlysets,
         'change!'    => \$change,
+        'ignore_stable!' => \$ignore_stable,
     );
 
     if ($dsname and $sqlite) {
@@ -33,6 +35,9 @@ use Bio::EnsEMBL::Utils::Exception qw(warning);
     }
     unless ($dsname or $sqlite) {
         die "must specify one of --dataset <dsname> or --sqlite <path>\n";
+    }
+    if ($ignore_stable and not $sqlite) {
+        die "--ignore_stable only supported with --sqlite <path>\n";
     }
 
     my @not_sets  = $notsets  ? (split(/,/, $notsets))  : ();
@@ -183,13 +188,16 @@ use Bio::EnsEMBL::Utils::Exception qw(warning);
                 else {
                     my $change_to_this;
                     if ($change_to_this = $stid2name{$stable_id}) {
-                        print "name '$change_to_this' already created \n";
+                        print "name '$change_to_this' already exists for $stable_id\n";
+                        if ($ignore_stable) {
+                            print "WARNING: ensure one version is deleted from session.\n";
+                        } else {
+                            next VECTOR;
+                        }
                     }
-                    else {
-                        $change_to_this = $name . '_' . (1 + scalar(keys %stid2name));
 
-                        $stid2name{$stable_id} = $change_to_this;
-                    }
+                    $change_to_this = $name . '_' . (1 + scalar(keys %stid2name));
+                    $stid2name{$stable_id} = $change_to_this;
 
                     my $change_sql = qq{
                         UPDATE ${component}_attrib
