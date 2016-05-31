@@ -29,6 +29,7 @@ Options:
     --vega_release=NUM                  vega release number
     --release_type=STRING               type of release, External
     --no_feature=BOOLEAN                choose to dump *align_features or not
+    --live_update                       update mode, ignore unknown sources
 
     --prune
 
@@ -439,11 +440,15 @@ foreach my $chr (@chr_sorted) {
 	$gname = 'Unknown';
       }
       if ($source ne 'havana') {
-	$source = uc($source);
-	if ($gene->source ne $source) {
-	  $support->log_warning("Gene $gsid ($gname) has a source of \'".$gene->source."\', patching, but you might want to check the name\n",2);
-	  $ssth->execute($source,$gid);
-	}
+        $source = uc($source);
+        if($support->param('live_update') and !$used_logic_names{$source}) {
+          $support->log_warning("Skipping unknown source '$source' for update");
+          next;
+        }
+        if ($gene->source ne $source) {
+          $support->log_warning("Gene $gsid ($gname) has a source of \'".$gene->source."\', patching, but you might want to check the name\n",2);
+          $ssth->execute($source,$gid);
+        }
       }
       my $old_gln = $gene->analysis->logic_name;
       my $new_ln = $used_logic_names{$source};
