@@ -9,6 +9,8 @@ use Term::ReadKey qw{ ReadMode ReadLine };
 use File::Basename qw{ dirname };
 
 {
+    die "FIX ME to use otp[12]-db instead of mcs17, and otp[12]-db-ro instead of mcs18.\n";
+
     my ($species, $pipe_port, $ens_db_name);
     my $usage = sub{ exec('perldoc', $0) };
     GetOptions(

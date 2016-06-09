@@ -127,7 +127,7 @@ sub main {
     };
 
     subtest "cmdline, pipe" => sub {
-        cmdline_tt({qw{ host mcs17 database pipe_human }},
+        cmdline_tt({qw{ host otp1-db database pipe_human }},
                    [ 'pipe_human by netrc args', 'human', 'ensembl:pipe' ]);
     };
 
