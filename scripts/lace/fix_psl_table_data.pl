@@ -14,7 +14,7 @@ use Getopt::Long qw{ GetOptions };
         'password=s'    => \$passwd,
     );
     my $dbh = DBI->connect(
-        "DBI:mysql:host=mcs17;port=3323;database=psl_data",
+        "DBI:mysql:host=otp2-db;port=3323;database=psl_data",
         ottroot => $passwd,
         { RaiseError => 0, PrintError => 1 }
     );

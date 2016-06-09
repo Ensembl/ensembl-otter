@@ -48,7 +48,7 @@ sub reload_mouse_strain_rules {
     my $n_goals = $sth_goals->execute;
     printf STDERR "\tdeleted %d rule_goals\n", $n_goals;
 
-    my $pipe_param   = "--dbhost=mcs17 --dbport=3322 --dbuser=ottadmin --dbpass='${ottadmin_passwd}' --dbname=${db_name}";
+    my $pipe_param   = "--dbhost=otp1-db --dbport=3322 --dbuser=ottadmin --dbpass='${ottadmin_passwd}' --dbname=${db_name}";
     system_do("cd ${pipe_script_path} && ./analysis_setup.pl -update -read -file ${conf_dir_path}/analysis.conf $pipe_param");
     system_do("cd ${pipe_script_path} && ./rule_setup.pl             -read -file ${conf_dir_path}/rules.conf    $pipe_param");
 
