@@ -186,7 +186,7 @@ sub server_tt {
 
     # The server doesn't have ensembl-pipeline so its scripts want a
     # vanilla DBA
-    is(ref($dataset->pipeline_dba), 'Bio::EnsEMBL::DBSQL::DBAdaptor',
+    is(ref($dataset->pipeline_dba), 'Bio::Vega::DBSQL::DBAdaptor',
        "$dataset_name pipe: server needs vanilla");
 
     # Despite fixing a caching bug in BOS:DataSet, this is broken.
