@@ -14,16 +14,18 @@ use Bio::Otter::Server::Config;
 # The DBA team maintains (essentially) a registry of port numbers used
 # for databases and we are included.
 
-my %MASTER = (3322 => 'mcs17', 3323 => 'mcs17'); # otterlive:3324 is not relevant in this script
-my %SLAVE  = (3322 => 'mcs18', 3323 => 'mcs18'); # mcs14:3324 also exists
+# We should really look at the server-config databases.yaml for these, now.
+
+my %MASTER = (3322 => 'otp1-db',    3323 => 'otp2-db'   ); # otterlive:3324 is not relevant in this script
+my %SLAVE  = (3322 => 'otp1-db-ro', 3323 => 'otp2-db-ro'); # otlp-db-ro:3324 also exists
 # %SLAVE  = (3322 => 'mcs30', 3323 => 'mcs31'); # off-site
-my @other_hosts = qw( mcs30 mcs31 mcs18 );
+my @other_hosts = qw( mcs30 mcs31 mcs17 mcs18 );
 
 # Switching Otter Server's "otterlive" is done via species.dat
 # see http://mediawiki.internal.sanger.ac.uk/wiki/index.php/Anacode_Databases#Downtime
 
 # Build regexps
-my $HOSTS_RE = join "|", sort( uniq( values %MASTER, values %SLAVE, @other_hosts ));
+my $HOSTS_RE = join "|", values %SLAVE, values %MASTER, @other_hosts; # order important: <blah>-db-ro before <blah>-db
 my $PORTS_RE = join "|", keys %MASTER;
 $HOSTS_RE = qr{\b($HOSTS_RE)\b};
 $PORTS_RE = qr{\b($PORTS_RE)\b};
