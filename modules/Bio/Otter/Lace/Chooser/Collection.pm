@@ -35,12 +35,12 @@ sub new_from_Filter_list {
         $col->name($filter->name);
         $col->Filter($filter);
         $col->selected($filter->wanted);
-        unless ($filter->internal) {
-            my @new_bkt = __maintain_Bracket_array($bkt_path, [ $filter->classification ]);
-            foreach my $bkt (@new_bkt) {
-                $self->add_Item($bkt);
-            }
+
+        my @new_bkt = __maintain_Bracket_array($bkt_path, [ $filter->classification ]);
+        foreach my $bkt (@new_bkt) {
+            $self->add_Item($bkt);
         }
+
         $col->indent(@$bkt_path || 0);
         $self->add_Item($col);
     }
@@ -53,9 +53,16 @@ sub __maintain_Bracket_array {
     my ($bkt_path, $clss) = @_;
 
     my @new_bkt;
+    my $disabled;
     for (my $i = 0; $i < @$clss; $i++) {
+
         my $name =     $clss->[$i];
+        if ($name =~ /^~/) { # e.g. ~ Otter  - leading ~ denotes disabled, denotes system, and sorts after alphanum.
+            $disabled = 1;
+        }
+
         my $bkt  = $bkt_path->[$i];
+
         # Since shorter classification arrays sort before longer ones
         # we don't need to deal with shortening the array of Brackets
         # if the classification list is shorter than the array of
@@ -63,6 +70,7 @@ sub __maintain_Bracket_array {
         unless (($bkt && defined($name)) && lc($bkt->name) eq lc($name)) {
             $bkt = Bio::Otter::Lace::Chooser::Item::Bracket->new;
             $bkt->name($name);  # We use the capitalisation of the fist occurrence of this name
+            $bkt->disabled($disabled);
             $bkt->indent($i);
             # Clip array at this postion and replace with new Bracket
             splice(@$bkt_path, $i, @$bkt_path - $i, $bkt);
@@ -226,7 +234,6 @@ sub list_visible_Items {
     my @all = $self->list_Items;
     my @visible;
     while (my $item = shift @all) {
-        next if (not $item->is_Bracket and $item->Filter->internal);
         push @visible, $item;
         if ($self->is_collapsed($item)) {
             my $level = $item->indent;
@@ -267,7 +274,7 @@ sub get_Bracket_contents {
 
     confess "Not a Bracket: $bracket" unless $bracket->is_Bracket;
 
-    my @item_list = $self->list_Items_exclude_internal;
+    my @item_list = $self->list_Items;
     while (my $item = shift @item_list) {
         last if $item == $bracket;
     }
@@ -293,7 +300,7 @@ sub select_Bracket {
 sub update_all_Bracket_selection {
     my ($self) = @_;
 
-    my @item_list = $self->list_Items_exclude_internal;
+    my @item_list = $self->list_Items_exclude_internal; # should this be all??
     my @bracket_path;
     my $skip_to_next_bracket = 0;
     while (my $item = shift @item_list) {

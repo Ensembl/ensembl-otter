@@ -173,6 +173,64 @@ END_OF_PIXMAP
     return $canvas->Pixmap( -data => $data );    
 }
 
+sub off_checkbutton_disabled_xpm {
+    my ($canvas) = @_;
+
+        my $data = <<'END_OF_PIXMAP' ;
+/* XPM */
+static char * arrow_right[] = {
+"13 13 4 1",
+"     c None",
+".    c #bebebe",
+"+    c #cccccc",
+"o    c #666666",
+"             ",
+" +++++++++++ ",
+" +. . . . .o ",
+" + . . . . o ",
+" +. . . . .o ",
+" + . . . . o ",
+" +. . . . .o ",
+" + . . . . o ",
+" +. . . . .o ",
+" + . . . . o ",
+" +. . . . .o ",
+" +oooooooooo ",
+"             "};
+END_OF_PIXMAP
+
+    return $canvas->Pixmap( -data => $data );    
+}
+
+sub on_checkbutton_disabled_xpm {
+    my ($canvas) = @_;
+
+        my $data = <<'END_OF_PIXMAP' ;
+/* XPM */
+static char * arrow_right[] = {
+"13 13 4 1",
+"     c None",
+".    c gold",
+"o    c #cccccc",
+"+    c #666666",
+"             ",
+" +++++++++++ ",
+" +. . . . .o ",
+" + . . . . o ",
+" +. . . . .o ",
+" + . . . . o ",
+" +. . . . .o ",
+" + . . . . o ",
+" +. . . . .o ",
+" + . . . . o ",
+" +. . . . .o ",
+" +oooooooooo ",
+"             "};
+END_OF_PIXMAP
+
+    return $canvas->Pixmap( -data => $data );    
+}
+
 
 1;
 

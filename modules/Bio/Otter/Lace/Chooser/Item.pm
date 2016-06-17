@@ -48,6 +48,15 @@ sub selected {
     return $self->{'_selected'};
 }
 
+sub disabled {
+    my($self, $flag) = @_;
+
+    if (defined $flag) {
+        $self->{'_disabled'} = $flag ? 1 : 0;
+    }
+    return $self->{'_disabled'};
+}
+
 
 1;
 

@@ -566,6 +566,8 @@ sub update_status_indicator {
 {
     my $on_checkbutton_xpm;
     my $off_checkbutton_xpm;
+    my $on_checkbutton_disabled_xpm;
+    my $off_checkbutton_disabled_xpm;
 
     sub draw_checkbutton {
         my ($self, $item, $x, $y, $txt_id) = @_;
@@ -573,22 +575,43 @@ sub update_status_indicator {
         my $canvas = $self->canvas;
         $on_checkbutton_xpm  ||= Tk::Utils::CanvasXPMs::on_checkbutton_xpm($canvas);
         $off_checkbutton_xpm ||= Tk::Utils::CanvasXPMs::off_checkbutton_xpm($canvas);
+        $on_checkbutton_disabled_xpm  ||= Tk::Utils::CanvasXPMs::on_checkbutton_disabled_xpm($canvas);
+        $off_checkbutton_disabled_xpm ||= Tk::Utils::CanvasXPMs::off_checkbutton_disabled_xpm($canvas);
 
         my $is_selected = $item->selected;
         my ($img, $other_img);
-        if ($is_selected) {
-            $img       = $on_checkbutton_xpm;
-            $other_img = $off_checkbutton_xpm;
-        }
-        else {
-            $img       = $off_checkbutton_xpm;
-            $other_img = $on_checkbutton_xpm;
+
+        my $is_disabled = (
+               ( not($item->is_Bracket) and $item->internal_type )
+            or ( $item->disabled ) # for bracket
+            );
+
+        if ($is_disabled) {
+            if ($is_selected) {
+                $img       = $on_checkbutton_disabled_xpm;
+                $other_img = $off_checkbutton_disabled_xpm;
+            }
+            else {
+                $img       = $off_checkbutton_disabled_xpm;
+                $other_img = $on_checkbutton_disabled_xpm;
+            }
+        } else {
+            if ($is_selected) {
+                $img       = $on_checkbutton_xpm;
+                $other_img = $off_checkbutton_xpm;
+            }
+            else {
+                $img       = $off_checkbutton_xpm;
+                $other_img = $on_checkbutton_xpm;
+            }
         }
         my $img_id = $canvas->createImage(
             $x, $y,
             -anchor => 'nw',
             -image  => $img,
             );
+        return if $is_disabled;
+
         foreach my $id ($img_id, $txt_id) {
             $canvas->bind($id, '<Button-1>', sub {
                 # Update image immediately to provide feedback on slow connections
