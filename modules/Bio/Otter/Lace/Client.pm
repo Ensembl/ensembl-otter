@@ -435,6 +435,7 @@ sub password_problem{
 sub reauthorize_if_cookie_will_expire_soon {
     my ($self) = @_;
 
+    return 1;
     # Soon is if cookie expires less than half an hour from now
     my $soon = time + (30 * 60);
     my $expiry = $self->_cookie_expiry_time;
