@@ -53,7 +53,7 @@ my $by_start_end_strand = sub {
 sub _feature_name {
     my ($feature) = @_;
     my $name = get_name_Attribute_value($feature);
-    return $name // '';
+    return $name // $feature->display_id;
 }
 
 # get/set methods exposed on object interface
