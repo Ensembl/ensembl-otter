@@ -12,6 +12,7 @@ use Bio::Otter::Lace::Chooser::SearchHistory;
 use MenuCanvasWindow::SessionWindow;
 use Tk::Utils::CanvasXPMs;
 use Tk::ScopedBusy;
+use Tk::Balloon;
 
 use base qw{
     MenuCanvasWindow
