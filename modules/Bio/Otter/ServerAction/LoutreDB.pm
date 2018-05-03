@@ -74,21 +74,19 @@ sub get_meta {
 =head2 get_db_info
 =cut
 
-my $select_cs_sql = <<'SQL';
-    SELECT coord_system_id, species_id, name, version, rank, attrib
-      FROM coord_system
-     WHERE name = 'chromosome' AND version = 'Otter'
-SQL
-
 my $select_at_sql = <<'SQL';
     SELECT attrib_type_id, code, name, description
       FROM attrib_type
 SQL
 
 sub get_db_info {
-    my ($self) = @_;
+    my ($self, $coord_system_name, $coord_system_version) = @_;
 
     my %results;
+
+    my $select_cs_sql = 'SELECT coord_system_id, species_id, name, version, rank, attrib'.
+      ' FROM coord_system'.
+      " WHERE name = '$coord_system_name' AND version = '$coord_system_version'";
 
     my $dbc = $self->server->otter_dba()->dbc();
 
@@ -96,7 +94,22 @@ sub get_db_info {
     $cs_sth->execute;
     my $cs_chromosome = $cs_sth->fetchrow_hashref;
     $results{'coord_system.chromosome'} = $cs_chromosome;
-
+    foreach my $coord_system (@{$self->server->otter_dba->get_CoordSystemAdaptor->fetch_all_by_version($coord_system_version)}) {
+      $results{'coord_systems'}->{$coord_system->name} = {
+        '-version' => $coord_system_version,
+        '-rank' => $coord_system->rank,
+        '-default' => $coord_system->is_default,
+        '-sequence_level' => $coord_system->is_sequence_level
+      };
+    }
+    if (!exists $results{'coord_systems'}->{contig}) {
+      my $contig_cs = $self->server->otter_dba->get_CoordSystemAdaptor->fetch_by_name('contig');
+      $results{'coord_systems'}->{contig} = {
+        '-rank' => $contig_cs->rank,
+        '-default' => $contig_cs->is_default,
+        '-sequence_level' => $contig_cs->is_sequence_level
+      };
+    }
     my $at_sth = $dbc->prepare($select_at_sql);
     $at_sth->execute;
     my $at_rows = $at_sth->fetchall_arrayref({});

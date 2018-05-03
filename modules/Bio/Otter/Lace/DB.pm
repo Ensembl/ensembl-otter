@@ -289,15 +289,6 @@ sub load_dataset_info {
 
     # I'm not really sure we need to do this - we could just use a local version
     #
-    my $cs_chr  = $dataset->get_db_info_item('coord_system.chromosome');
-    my $local_cs_spec = {
-        $cs_chr->{name} => {
-            '-version'        => $cs_chr->{version},
-            '-rank'           => $cs_chr->{rank},
-            '-default'        => $cs_chr =~ m/default_version/,
-            '-sequence_level' => $cs_chr =~ m/sequence_level/,
-        },
-    };
 
     my @at_cols = qw(                                       attrib_type_id  code  name  description );
     my $at_sth  = $dbh->prepare(q{ INSERT INTO attrib_type (attrib_type_id, code, name, description)
@@ -309,24 +300,15 @@ sub load_dataset_info {
     my $cs_factory = Bio::Vega::CoordSystemFactory->new(
         dba           => $_dba,
         create_in_db  => 1,
-        override_spec => $local_cs_spec,
+        override_spec => $dataset->get_db_info_item('coord_systems'),
         );
 
-    my %local_meta = (
-        'assembly.mapping' => {
-            species_id => 1,
-            values     => [
-                $cs_factory->assembly_mappings,
-            ],
-        },
-        );
 
     $dbh->begin_work;
 
     # Meta first, so that CoordSystemAdaptor doesn't complain about missing schema_version
     #
     while (my ($key, $details) = each %$meta_hash) {
-        next if $key eq 'assembly.mapping'; # we do our own mapping, below...
         foreach my $value (@{$details->{values}}) {
             $meta_sth->execute($details->{species_id}, $key, $value);
         }
@@ -340,22 +322,14 @@ sub load_dataset_info {
 
     $dbh->commit;
 
-    $dbh->begin_work;
 
     # Coord systems via factory
     #
+    $cs_factory->known;
     $cs_factory->instantiate_all;
 
     # Mappings
     #
-    my $mca = $_dba->get_MetaContainer;
-    while (my ($key, $details) = each %local_meta) {
-        foreach my $value (@{$details->{values}}) {
-            $mca->store_key_value($key, $value);
-        }
-    }
-
-    $dbh->commit;
 
     $self->_is_loaded('dataset_info', 1);
 
