@@ -137,7 +137,7 @@ use URI::Escape;
             $set_name = $slice->seq_region_name;
         }
         else {
-            $slice = $slice_Ad->fetch_by_region('chromosome', $set_name, undef, undef, undef, 'Otter');
+            $slice = $slice_Ad->fetch_by_region('chromosome', $set_name, undef, undef, undef, __PACKAGE__.' '.__LINE__);
         }
 
         my $genes;

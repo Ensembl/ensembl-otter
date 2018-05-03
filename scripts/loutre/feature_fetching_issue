@@ -36,7 +36,7 @@ use Bio::Otter::Lace::SatelliteDB;
     my $pipe_dba = Bio::Otter::Lace::SatelliteDB::get_DBAdaptor($otter_dba, 'pipeline_db_head')
         or die "Can't fetch pipeline_db";
     my $sa = $pipe_dba->get_SliceAdaptor;
-    my $slice = $sa->fetch_by_region('chromosome', $set_name, 1, 352278, 1, 'Otter');
+    my $slice = $sa->fetch_by_region('chromosome', $set_name, 1, 352278, 1, __PACKAGE__.' '.__LINE__);
     my $r_list = $slice->get_all_RepeatFeatures;
     foreach my $repeat (@$r_list) {
         printf "  %7d - %7d\n", $repeat->start, $repeat->end;

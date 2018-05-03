@@ -222,7 +222,7 @@ foreach my $chrom (@$chroms) {
 
 
 #get all chromosomes
-my $all_chromosomes = $sa->fetch_all('Chromosome','Otter');
+my $all_chromosomes = $sa->fetch_all('Chromosome',__PACKAGE__.' '.__LINE__);
 
 # see which of the non hidden chromosomes best match to what we want
 my $regions_wanted = { %$regions_wanted_details, %$patch_regions_wanted_details } ;
@@ -383,7 +383,7 @@ my %final_attribs = map {$_=> 1} qw(
 				    toplevel
 				    hidden
 				    vega_release);
-foreach my $chrom ( @{$sa->fetch_all('Chromosome','Otter')}) {
+foreach my $chrom ( @{$sa->fetch_all('Chromosome',__PACKAGE__.' '.__LINE__)}) {
   my $attribs = $aa->fetch_all_by_Slice($chrom);
   my $name = $chrom->seq_region_name;
 

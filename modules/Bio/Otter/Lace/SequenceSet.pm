@@ -199,7 +199,7 @@ sub selected_CloneSequences_as_Slice {
     my ($dsname, $ssname, $chr_name, $chr_start, $chr_end) = $self->selected_CloneSequences_parameters;
     return Bio::Otter::Lace::Slice->new(
       $client, $dsname, $ssname,
-      'chromosome', 'Otter',     # Should these be defaults, or can we fetch them from another object?
+      'chromosome', __PACKAGE__.' '.__LINE__,     # Should these be defaults, or can we fetch them from another object?
       $chr_name, $chr_start, $chr_end,
       );
 }

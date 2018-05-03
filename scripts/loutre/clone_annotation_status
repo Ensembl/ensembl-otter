@@ -88,7 +88,7 @@ sub set_clone_annotation_status {
         WHERE chr.seq_region_id = chr_asm.asm_seq_region_id
           AND chr_asm.cmp_seq_region_id = ctg_asm.cmp_seq_region_id
           AND ctg_asm.asm_seq_region_id = clone.seq_region_id
-          AND chr.coord_system_id = (SELECT coord_system_id FROM coord_system WHERE name = 'chromosome' AND version = 'Otter')
+          AND chr.coord_system_id = (SELECT coord_system_id FROM coord_system WHERE name = 'chromosome' AND version = __PACKAGE__.' '.__LINE__)
           AND clone.coord_system_id = (SELECT coord_system_id FROM coord_system WHERE name = 'clone')
           AND chr.name = ?
         ORDER BY chr.seq_region_id, chr_asm.asm_start
@@ -138,7 +138,7 @@ sub get_clone_annotation_status {
           AND chr_asm.cmp_seq_region_id = ctg_asm.cmp_seq_region_id
           AND ctg_asm.asm_seq_region_id = clone.seq_region_id
           AND chr.seq_region_id = atr.seq_region_id
-          AND chr.coord_system_id = (SELECT coord_system_id FROM coord_system WHERE name = 'chromosome' AND version = 'Otter')
+          AND chr.coord_system_id = (SELECT coord_system_id FROM coord_system WHERE name = 'chromosome' AND version = __PACKAGE__.' '.__LINE__)
           AND clone.coord_system_id = (SELECT coord_system_id FROM coord_system WHERE name = 'clone')
           AND atr.attrib_type_id = (SELECT attrib_type_id FROM attrib_type WHERE code = 'hidden')
           AND atr.value = '0'
