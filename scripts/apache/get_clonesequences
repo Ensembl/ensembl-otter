@@ -14,6 +14,8 @@ sub get_clonesequences {
 
 my $dataset     = $server->require_argument('dataset');
 my $sequenceset = $server->require_argument('sequenceset');
+my $coord_system_name = $server->require_argument('coord_system_name');
+my $coord_system_version = $server->require_argument('coord_system_version');
 
 my $dbc = $server->otter_dba->dbc;
 
@@ -116,6 +118,8 @@ while (
         contig_start  => $ctg_start,
         contig_end    => $ctg_end,
         contig_strand => $ctg_strand,
+        coord_system_name => $coord_system_name,
+        coord_system_version => $coord_system_version,
     };
 
     if (my $prev = $cs_list[-1]) {
@@ -144,6 +148,7 @@ foreach my $cs (@cs_list) {
     foreach my $tag (
         qw{ clone_name accession sv contig_name length
         chr chr_start chr_end
+        coord_system_name coord_system_version
         contig_start contig_end contig_strand }
       )
     {

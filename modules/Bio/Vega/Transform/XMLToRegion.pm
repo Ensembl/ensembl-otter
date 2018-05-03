@@ -165,7 +165,7 @@ sub _create_or_extend_chr_slice {
            ."assembly_type='$assembly_type' start='$start' end='$end'";
     }
 
-    my $chr_coord_system = $self->coord_system_factory->coord_system('chromosome');
+    my $chr_coord_system = $self->coord_system_factory->coord_system($data->{coord_system_name});
 
     if (my $chr_slice = $self->_chr_slice) {
         # Extend the cached version of the slice:

@@ -749,9 +749,9 @@ sub open_SequenceSet {
     my ($self, $name) = @_;
 
         # using Lace::Slice instead of Lace::SequenceSet is encouraged wherever possible
-    my ($dsname, $ssname, $chr_name, $chr_start, $chr_end) = $self->SequenceSet->selected_CloneSequences_parameters;
+    my ($dsname, $ssname, $chr_name, $chr_start, $chr_end, $cs_name, $cs_version) = $self->SequenceSet->selected_CloneSequences_parameters;
     my $slice = Bio::Otter::Lace::Slice->new($self->Client, $dsname, $ssname,
-        'chromosome', 'Otter', $chr_name, $chr_start, $chr_end);
+        $cs_name, $cs_version, $chr_name, $chr_start, $chr_end);
 
     return $self->Bio::Otter::Utils::OpenSliceMixin::open_Slice(
         slice        => $slice,

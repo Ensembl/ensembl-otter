@@ -140,6 +140,8 @@ sub generate_SequenceFragment {
     $sf->attribvals($self->prettyprint('fragment_ori',      $cs->contig_strand  ));
     $sf->attribvals($self->prettyprint('fragment_offset',   $cs->contig_start   ));
     $sf->attribvals($self->prettyprint('clone_length',      $cs->length         ));
+    $sf->attribvals($self->prettyprint('coord_system_name', $self->region->slice->coord_system->name));
+    $sf->attribvals($self->prettyprint('coord_system_version', $self->region->slice->coord_system->version));
 
     # write_region requires that the client describe the region, to
     # ensure it is the correct one, but then ignores ContigInfo.
