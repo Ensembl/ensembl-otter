@@ -174,16 +174,32 @@ sub fetch_CloneSeq {
 
     my $cs = Bio::Otter::Lace::CloneSequence->new;
     $cs->chromosome(get_first_Attribute_value($self->slice, 'chr', confess_if_multiple => 1));
+    if (!$cs->chromosome) {
+      $cs->chromosome($contig_slice->seq_region_name);
+    }
     $cs->contig_name($contig_slice->seq_region_name);
 
-    my $clone_slice = $contig_slice->project('clone')->[0]->to_Slice;
-    $cs->accession(     get_first_Attribute_value($clone_slice, 'embl_acc'    , confess_if_multiple => 1) );
-    $cs->sv(            get_first_Attribute_value($clone_slice, 'embl_version', confess_if_multiple => 1) );
+    if ($contig_slice->coord_system->adaptor->fetch_by_name('clone')) {
+      my $clone_slice = $contig_slice->project('clone')->[0]->to_Slice;
+      $cs->accession(     get_first_Attribute_value($clone_slice, 'embl_acc'    , confess_if_multiple => 1) );
+      $cs->sv(            get_first_Attribute_value($clone_slice, 'embl_version', confess_if_multiple => 1) );
 
-    if (my $cn = get_first_Attribute_value($clone_slice,'intl_clone_name')) {
-        $cs->clone_name($cn);
-    } else {
-        $cs->clone_name($cs->accession_dot_sv);
+      if (my $cn = get_first_Attribute_value($clone_slice,'intl_clone_name')) {
+          $cs->clone_name($cn);
+      } else {
+          $cs->clone_name($cs->accession_dot_sv);
+      }
+    }
+    else {
+      my $synonym = $contig_slice->get_all_synonyms('insdc');
+      my $accession_version = $contig_slice->seq_region_name;
+      if (@$synonym) {
+        $accession_version = $synonym->[0]->name;
+      }
+      my ($accession, $sv) = $accession_version =~ /^(\S+)\.(\d+)$/;
+      $cs->accession($accession);
+      $cs->sv($sv);
+      $cs->clone_name($accession_version);
     }
 
     my $assembly_offset = $self->slice->start - 1;
