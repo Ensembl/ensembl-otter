@@ -17,6 +17,18 @@ sub new {
   return $self;
 }
 
+sub status {
+  my ($self) = @_;
+
+  return 'KNOWN';
+}
+
+sub is_known {
+  my ($self) = @_;
+
+  return 1;
+}
+
 sub new_dissociated_copy {
     my ($self) = @_;
 
