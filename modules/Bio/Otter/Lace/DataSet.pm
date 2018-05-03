@@ -463,8 +463,9 @@ sub get_meta_value {
 sub db_info_hash {
     my ($self) = @_;
     # Get all db_info in one call
+    my $ss = $self->sequence_sets_cached->[0];
     return $self->{'_db_info_hash'} ||=
-        $self->Client->get_db_info($self->name);
+        $self->Client->get_db_info($self->name, $ss);
 }
 
 sub get_db_info_item {
