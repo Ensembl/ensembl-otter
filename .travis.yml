@@ -1,0 +1,110 @@
+language: "perl"
+
+perl:
+  - "5.14"
+
+sudo: true
+
+addons:
+  apt:
+    packages:
+    - git
+    - libtry-tiny-perl
+    - perl-tk
+    - libproc-processtable-perl
+    - libdbi-perl
+    - libreadonly-perl
+    - liblog-log4perl-perl
+    - libterm-readkey-perl
+    - libxml-simple-perl
+    - libtext-sprintfn-perl
+    - libjson-perl
+    - libconfig-inifiles-perl
+    - liblingua-en-inflect-perl
+    - libio-stringy-perl
+    - libdata-rmap-perl
+    - libnamespace-autoclean-perl
+    - libyaml-perl
+    - libhash-merge-simple-perl
+    - libfile-slurp-perl
+    - libmoosex-role-strict-perl
+    - libmoosex-log-log4perl-perl
+    - liblog-any-adapter-screencoloredlevel-perl
+    - cpanminus
+    - libzeromq-perl
+    - libzmqpp-dev
+    - libanyevent-perl
+    - libconst-fast-perl
+    - libtest-mockobject-perl
+    - libapache2-mod-perl2
+    - mysql-client apache2
+    - sqlite3
+    - libcurl3
+    - libcurl4-openssl-dev
+    - libsqlite3-dev
+    - libgtk2.0-dev
+    - libmysqlclient-dev
+    - libconfig-dev
+    - libhts-dev
+    - libreadline6-dev
+    - libssl-dev
+    - libgnutls-dev
+    - exonerate
+    - hmmer2
+    - libdbd-sqlite3-perl
+    - libdbd-mysql-perl
+    - uuid-dev
+    - libbz2-dev
+    - liblzma-dev
+
+before_install:
+    - git clone --branch master --depth 1 https://github.com/Ensembl/team_tools.git
+    - git clone --branch master --depth 1 https://github.com/Ensembl/server-config.git
+    - git clone --branch master --depth 1 https://github.com/Ensembl/webvm.git
+    - git clone --branch master --depth 1 https://github.com/Ensembl/webvm-deps.git
+    - cpanm Try::Tiny Test::Class::Most Tk Proc::ProcessTable DBI Readonly Log::Log4perl Term::ReadKey XML::Simple Text::sprintfn JSON Config::IniFiles Lingua::EN::Inflect IO::Scalar Data::Rmap namespace::autoclean YAML Hash::Merge::Simple File::Slurp Moose::Role MooseX::Log::Log4perl Log::Log4perl::Appender XML::Entities Const::Fast Crypt::CBC App::Cmd::Simple Mac::PropertyList Bio::DB::HTS XML::Entities ZMQ::LibZMQ3 Crypt::CBC App::Cmd::Simple Mac::PropertyList
+    - git clone git://genome-source.soe.ucsc.edu/kent.git
+    - cd kent
+    - export KENT_SRC=$PWD
+    - sed -i -- 's/-DUCSC_CRAM/-DUCSC_CRAM -fPIC/g' ./src/htslib/Makefile
+    - sed -i -- 's/CC=gcc/CC=gcc -fPIC/g' ./src/inc/common.mk
+    - cd src
+    - CFLAGS=-fPIC make userApps
+    - cd ../../
+    - wget https://cpan.metacpan.org/authors/id/L/LD/LDS/Bio-BigFile-1.01.tar.gz
+    - tar -zxvf Bio-BigFile-1.01.tar.gz
+    - cd Bio-BigFile-1.01
+    - perl -pi -e 's/.*extra_linker_flags.*/extra_linker_flags => ["\$jk_lib\/\$LibFile","\$jk_lib\/..\/..\/htslib\/libhts.a","-lz", "-lssl"],/g' Build.PL
+    - export MACHTYPE=`uname -p`
+    - perl Build.PL
+    - ./Build
+    - ./Build test
+    - ./Build install
+    - cd ../
+    - wget "ftp://ftp.sanger.ac.uk/pub/resources/software/zmap/production/seqtools-4.44.1.tar.gz"
+    - tar -zxvf seqtools-4.44.1.tar.gz
+    - cd seqtools-4.44.1/
+    - ./configure
+    - make
+    - make install
+    - cd ../
+    - wget "ftp://ftp.sanger.ac.uk/pub/resources/software/zmap/production/zmap-2.12.0.tar.gz"
+    - tar -zxvf zmap-2.12.0.tar.gz
+    - cd zmap-2.12.0
+    - sed -i 's/opensslv\.h/openssl\/opensslv.h/' ./configure
+    - ./configure
+    - make
+    - make install
+    - cd ../
+    - wget https://github.com/Annosoft/zircon/archive/master.zip
+    - unzip master.zip
+    - cp -r zircon-master loutre/zircon
+    - cd ../
+    - export PERL5LIB=$PWD/ensembl-otter/modules:$PWD/ensembl/modules:$PWD/PerlModules:$PWD/zircon/lib
+    - export PATH=$PATH:$PWD/ensembl-otter/scripts/client
+
+install:
+    - cpanm DBD::SQLite
+    - mysql -u root -h localhost -e 'GRANT ALL PRIVILEGES ON *.* TO "travis"@"%"'
+
+script: "./travisci.sh"
