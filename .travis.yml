@@ -6,7 +6,7 @@ os:
   - linux
 dist:
   - xenial
-  
+
 sudo: true
 
 addons:
@@ -63,7 +63,6 @@ addons:
 
 before_install:
     - travis_wait git clone --branch master --depth 1 https://github.com/Ensembl/team_tools.git
-    - travis_wait git clone --branch master --depth 1 https://github.com/Ensembl/server-config.git
     - travis_wait git clone --branch master --depth 1 https://github.com/Ensembl/webvm.git
     - travis_wait git clone --branch master --depth 1 https://github.com/Ensembl/webvm-deps.git
     - travis_wait cpanm Try::Tiny Test::Class::Most Tk Proc::ProcessTable DBI Readonly Log::Log4perl Term::ReadKey XML::Simple Text::sprintfn JSON Config::IniFiles Lingua::EN::Inflect IO::Scalar Data::Rmap namespace::autoclean YAML Hash::Merge::Simple File::Slurp Moose::Role MooseX::Log::Log4perl Log::Log4perl::Appender XML::Entities Const::Fast Crypt::CBC App::Cmd::Simple Mac::PropertyList Bio::DB::HTS XML::Entities ZMQ::LibZMQ3 Crypt::CBC App::Cmd::Simple Mac::PropertyList
