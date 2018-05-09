@@ -62,39 +62,39 @@ before_install:
     - git clone --branch master --depth 1 https://github.com/Ensembl/server-config.git
     - git clone --branch master --depth 1 https://github.com/Ensembl/webvm.git
     - git clone --branch master --depth 1 https://github.com/Ensembl/webvm-deps.git
-    - cpanm Try::Tiny Test::Class::Most Tk Proc::ProcessTable DBI Readonly Log::Log4perl Term::ReadKey XML::Simple Text::sprintfn JSON Config::IniFiles Lingua::EN::Inflect IO::Scalar Data::Rmap namespace::autoclean YAML Hash::Merge::Simple File::Slurp Moose::Role MooseX::Log::Log4perl Log::Log4perl::Appender XML::Entities Const::Fast Crypt::CBC App::Cmd::Simple Mac::PropertyList Bio::DB::HTS XML::Entities ZMQ::LibZMQ3 Crypt::CBC App::Cmd::Simple Mac::PropertyList
+    - travis_wait cpanm Try::Tiny Test::Class::Most Tk Proc::ProcessTable DBI Readonly Log::Log4perl Term::ReadKey XML::Simple Text::sprintfn JSON Config::IniFiles Lingua::EN::Inflect IO::Scalar Data::Rmap namespace::autoclean YAML Hash::Merge::Simple File::Slurp Moose::Role MooseX::Log::Log4perl Log::Log4perl::Appender XML::Entities Const::Fast Crypt::CBC App::Cmd::Simple Mac::PropertyList Bio::DB::HTS XML::Entities ZMQ::LibZMQ3 Crypt::CBC App::Cmd::Simple Mac::PropertyList
     - git clone git://genome-source.soe.ucsc.edu/kent.git
     - cd kent
     - export KENT_SRC=$PWD
     - sed -i -- 's/-DUCSC_CRAM/-DUCSC_CRAM -fPIC/g' ./src/htslib/Makefile
     - sed -i -- 's/CC=gcc/CC=gcc -fPIC/g' ./src/inc/common.mk
     - cd src
-    - CFLAGS=-fPIC make userApps
+    - travis_wait CFLAGS=-fPIC make userApps
     - cd ../../
     - wget https://cpan.metacpan.org/authors/id/L/LD/LDS/Bio-BigFile-1.01.tar.gz
     - tar -zxvf Bio-BigFile-1.01.tar.gz
     - cd Bio-BigFile-1.01
     - perl -pi -e 's/.*extra_linker_flags.*/extra_linker_flags => ["\$jk_lib\/\$LibFile","\$jk_lib\/..\/..\/htslib\/libhts.a","-lz", "-lssl"],/g' Build.PL
     - export MACHTYPE=`uname -p`
-    - perl Build.PL
-    - ./Build
-    - ./Build test
-    - ./Build install
+    - travis_wait perl Build.PL
+    - travis_wait ./Build
+    - travis_wait ./Build test
+    - travis_wait ./Build install
     - cd ../
     - wget "ftp://ftp.sanger.ac.uk/pub/resources/software/zmap/production/seqtools-4.44.1.tar.gz"
     - tar -zxvf seqtools-4.44.1.tar.gz
     - cd seqtools-4.44.1/
     - ./configure
-    - make
-    - make install
+    - travis_wait make
+    - travis_wait make install
     - cd ../
     - wget "ftp://ftp.sanger.ac.uk/pub/resources/software/zmap/production/zmap-2.12.0.tar.gz"
     - tar -zxvf zmap-2.12.0.tar.gz
     - cd zmap-2.12.0
     - sed -i 's/opensslv\.h/openssl\/opensslv.h/' ./configure
-    - ./configure
-    - make
-    - make install
+    - travis_wait ./configure
+    - travis_wait make
+    - travis_wait make install
     - cd ../
     - wget https://github.com/Annosoft/zircon/archive/master.zip
     - unzip master.zip
