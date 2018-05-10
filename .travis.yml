@@ -65,6 +65,14 @@ before_install:
     - git clone --branch master --depth 1 https://github.com/Ensembl/team_tools.git
     - git clone --branch master --depth 1 https://github.com/Ensembl/webvm.git
     - git clone --branch master --depth 1 https://github.com/Ensembl/webvm-deps.git
+    - wget https://github.com/samtools/htslib/releases/download/1.8/htslib-1.8.tar.bz2
+    - tar xvf htslib-1.8.tar.bz2
+    - cd htslib-1.8
+    - ./configure
+    - make
+    - sudo make install
+    - cd ../
+    - sudo cpanm --force Bio::Das::Lite
     - travis_wait cpanm --sudo Try::Tiny Test::Class::Most Tk Proc::ProcessTable DBI Readonly Log::Log4perl Term::ReadKey XML::Simple Text::sprintfn JSON Config::IniFiles Lingua::EN::Inflect IO::Scalar Data::Rmap namespace::autoclean YAML Hash::Merge::Simple File::Slurp Moose::Role MooseX::Log::Log4perl Log::Log4perl::Appender XML::Entities Const::Fast Crypt::CBC App::Cmd::Simple Mac::PropertyList Bio::DB::HTS XML::Entities ZMQ::LibZMQ3 Crypt::CBC App::Cmd::Simple Mac::PropertyList
     - git clone git://genome-source.soe.ucsc.edu/kent.git
     - cd kent
