@@ -65,6 +65,8 @@ addons:
     - libzmq5
     - libzmq3-dev
     - libzmq1
+    - libzmq3-dbg 
+    - libzmq3
 
 before_install:
     - git clone --branch master --depth 1 https://github.com/Ensembl/team_tools.git
