@@ -12,40 +12,15 @@ sudo: true
 addons:
   apt:
     packages:
-    - git
-    - libtry-tiny-perl
-    - perl-tk
-    - libproc-processtable-perl
-    - libdbi-perl
-    - libreadonly-perl
-    - liblog-log4perl-perl
-    - libterm-readkey-perl
-    - libxml-simple-perl
-    - libtext-sprintfn-perl
-    - libjson-perl
-    - libconfig-inifiles-perl
-    - liblingua-en-inflect-perl
-    - libio-stringy-perl
-    - libdata-rmap-perl
-    - libnamespace-autoclean-perl
-    - libyaml-perl
-    - libhash-merge-simple-perl
-    - libfile-slurp-perl
-    - libmoosex-role-strict-perl
-    - libmoosex-log-log4perl-perl
-    - liblog-any-adapter-screencoloredlevel-perl
-    - cpanminus
-    - libzeromq-perl
-    - libzmqpp-dev
-    - libanyevent-perl
-    - libconst-fast-perl
-    - libtest-mockobject-perl
-    - libapache2-mod-perl2
-    - mysql-client
 
 before_install:
 
     - sudo apt-get update
+    - sudo apt-get install -y git libtry-tiny-perl perl-tk libproc-processtable-perl libdbi-perl libreadonly-perl liblog-log4perl-perl
+    - sudo apt-get install -y libterm-readkey-perl libxml-simple-perl libtext-sprintfn-perl libjson-perl libconfig-inifiles-perl
+    - sudo apt-get install -y liblingua-en-inflect-perl libio-stringy-perl libdata-rmap-perl libnamespace-autoclean-perl libyaml-perl
+    - sudo apt-get install -y libhash-merge-simple-perl libfile-slurp-perl libmoosex-role-strict-perl libmoosex-log-log4perl-perl liblog-any-adapter-screencoloredlevel-perl
+    - sudo apt-get install -y cpanminus libzeromq-perl libzmqpp-dev libanyevent-perl libconst-fast-perl libtest-mockobject-perl libapache2-mod-perl2 mysql-client
     - sudo apt-get install -y sqlite3 libcurl3 libcurl4-openssl-dev libsqlite3-dev libgtk2.0-dev libmysqlclient-dev apache2
     - sudo apt-get install -y libconfig-dev libhts-dev libreadline6-dev libssl-dev libgnutls-dev exonerate hmmer2
     - sudo apt-get install -y libdbd-sqlite3-perl libdbd-mysql-perl uuid-dev libbz2-dev liblzma-devlib zmqpp-dev libzmqpp3
