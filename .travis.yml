@@ -41,7 +41,8 @@ addons:
     - libconst-fast-perl
     - libtest-mockobject-perl
     - libapache2-mod-perl2
-    - mysql-client apache2
+    - mysql-client
+    - apache2
     - sqlite3
     - libcurl3
     - libcurl4-openssl-dev
