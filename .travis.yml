@@ -61,7 +61,11 @@ addons:
     - libbz2-dev
     - liblzma-dev
     - libzmqpp-dev
-
+    - libzmqpp3
+    - libzmq5
+    - libzmq3-dev
+    - libzmq1
+    
 before_install:
     - git clone --branch master --depth 1 https://github.com/Ensembl/team_tools.git
     - git clone --branch master --depth 1 https://github.com/Ensembl/webvm.git
