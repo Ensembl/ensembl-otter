@@ -60,6 +60,7 @@ addons:
     - uuid-dev
     - libbz2-dev
     - liblzma-dev
+    - libzmqpp-dev
 
 before_install:
     - git clone --branch master --depth 1 https://github.com/Ensembl/team_tools.git
