@@ -45,6 +45,7 @@ addons:
 
 before_install:
 
+    - sudo apt-get update
     - sudo apt-get install -y apache2 sqlite3 libcurl3 libcurl4-openssl-dev libsqlite3-dev libgtk2.0-dev libmysqlclient-dev
     - sudo apt-get install -y  libconfig-dev libhts-dev libreadline6-dev libssl-dev libgnutls-dev exonerate hmmer2
     - sudo apt-get install -y libdbd-sqlite3-perl libdbd-mysql-perl uuid-dev libbz2-dev liblzma-devlibzmqpp-dev libzmqpp3
