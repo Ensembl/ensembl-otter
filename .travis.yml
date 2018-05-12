@@ -30,10 +30,10 @@ install:
     - travis_wait cpanm --sudo Crypt::CBC App::Cmd::Simple Mac::PropertyList
     - git clone git://genome-source.soe.ucsc.edu/kent.git
     - cd kent
-    - export KENT_SRC=$PWD
     - sed -i -- 's/-DUCSC_CRAM/-DUCSC_CRAM -fPIC/g' ./src/htslib/Makefile
     - sed -i -- 's/CC=gcc/CC=gcc -fPIC/g' ./src/inc/common.mk
     - cd src
+    - export KENT_SRC=$PWD
     - travis_wait sudo CFLAGS=-fPIC make userApps
     - cd ../../
     - travis_wait wget https://cpan.metacpan.org/authors/id/L/LD/LDS/Bio-BigFile-1.01.tar.gz
