@@ -69,4 +69,4 @@ install:
     - export PATH=$PATH:$PWD/ensembl-otter/scripts/client
     - mysql -u root -h localhost -e 'GRANT ALL PRIVILEGES ON *.* TO "travis"@"%"'
 
-script: "./travisci.sh"
+script: "ensembl-otter/travisci.sh"
