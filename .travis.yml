@@ -63,7 +63,7 @@ install:
     - cd ../
     - travis_wait wget https://github.com/Annosoft/zircon/archive/master.zip
     - travis_wait unzip master.zip
-    - cp -r zircon-master loutre/zircon
+    - cp -r zircon-master zircon
     - cd ../
     - export PERL5LIB=$PWD/ensembl-otter/modules:$PWD/ensembl/modules:$PWD/PerlModules:$PWD/zircon/lib
     - export PATH=$PATH:$PWD/ensembl-otter/scripts/client
