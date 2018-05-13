@@ -1,1 +1,1 @@
-perl -Ilib t/classes.t 
+perl -Ilib ./t/classes.t 
