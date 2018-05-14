@@ -6,12 +6,65 @@ os:
   - linux
 dist:
   - xenial
+addons:
+  apt:
+    packages:
+    - git
+    - libtry-tiny-perl
+    - perl-tk
+    - libproc-processtable-perl
+    - libdbi-perl
+    - libreadonly-perl
+    - liblog-log4perl-perl
+    - libterm-readkey-perl
+    - libxml-simple-perl
+    - libtext-sprintfn-perl
+    - libjson-perl
+    - libconfig-inifiles-perl
+    - liblingua-en-inflect-perl
+    - libio-stringy-perl
+    - libdata-rmap-perl
+    - libnamespace-autoclean-perl
+    - libyaml-perl
+    - libhash-merge-simple-perl
+    - libfile-slurp-perl
+    - libmoosex-role-strict-perl
+    - libmoosex-log-log4perl-perl
+    - liblog-any-adapter-screencoloredlevel-perl
+    - cpanminus libzeromq-perl
+    - libzmqpp-dev
+    - libanyevent-perl
+    - libconst-fast-perl
+    - libtest-mockobject-perl
+    - mysql-client
+    - apache2
+    - sqlite3
+    - libcurl3
+    - libcurl4-openssl-dev
+    - libsqlite3-dev
+    - libgtk2.0-dev
+    - libmysqlclient-dev
+    - libconfig-dev
+    - libhts-dev
+    - libreadline6-dev
+    - libssl-dev
+    - libgnutls-dev
+    - exonerate
+    - hmmer2
+    - libdbd-sqlite3-perl
+    - libdbd-mysql-perl
+    - uuid-dev
+    - libbz2-dev
+    - liblzma-dev
+    - libzmqpp-dev
+    - libzmqpp3
+    - libzmq5
+    - libzmq3-dev
+    - libzmq1
 
 sudo: true
 
 install:
-    - sudo apt-get update
-    - sudo apt-get install -y git libtry-tiny-perl perl-tk libproc-processtable-perl libdbi-perl libreadonly-perl liblog-log4perl-perl libterm-readkey-perl libxml-simple-perl libtext-sprintfn-perl libjson-perl libconfig-inifiles-perl liblingua-en-inflect-perl libio-stringy-perl libdata-rmap-perl libnamespace-autoclean-perl libyaml-perl libhash-merge-simple-perl libfile-slurp-perl libmoosex-role-strict-perl libmoosex-log-log4perl-perl liblog-any-adapter-screencoloredlevel-perl cpanminus libzeromq-perl libzmqpp-dev libanyevent-perl libconst-fast-perl libtest-mockobject-perl mysql-client apache2 sqlite3 libcurl3 libcurl4-openssl-dev libsqlite3-dev libgtk2.0-dev libmysqlclient-dev libconfig-dev libhts-dev libreadline6-dev libssl-dev libgnutls-dev exonerate hmmer2 libdbd-sqlite3-perl libdbd-mysql-perl uuid-dev libbz2-dev liblzma-dev libzmqpp-dev libzmqpp3 libzmq5 libzmq3-dev libzmq1
     - git clone --branch master --depth 1 https://github.com/Ensembl/team_tools.git
     - git clone --branch master --depth 1 https://github.com/Ensembl/webvm.git
     - git clone --branch master --depth 1 https://github.com/Ensembl/webvm-deps.git
