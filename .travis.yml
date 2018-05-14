@@ -71,4 +71,4 @@ install:
     - chmod 777 ensembl-otter/travisci.sh
     - chmod +x ensembl-otter/travisci.sh
 
-script: "ensembl-otter/travisci.sh"
+script: "perl -Ilib ensembl-otter/t/classes.t" 
