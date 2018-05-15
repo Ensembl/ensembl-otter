@@ -119,12 +119,12 @@ install:
     - travis_wait unzip master.zip
     - cp -r zircon-master zircon
     - cd ../
-    - export PERL5LIB=$PWD/ensembl-otter/modules:$PWD/ensembl/modules:$PWD/PerlModules:$PWD/zircon/lib
+    - export PERL5LIB=$PWD/ensembl-otter/modules:$PWD/ensembl/modules:$PWD/PerlModules:$PWD/zircon/lib:$PWD/team_tools/t/tlib:$PWD/ensemb-otter
     - export PATH=$PATH:$PWD/ensembl-otter/scripts/client
     - mysql -u root -h localhost -e 'GRANT ALL PRIVILEGES ON *.* TO "travis"@"%"'
     - chmod 777 ensembl-otter/travisci.sh
     - chmod +x ensembl-otter/travisci.sh
-    - export ANACODE_TEAM_TOOLS=team_tools
+    - export ANACODE_TEAM_TOOLS=$PWD/team_tools/
     - export DOCUMENT_ROOT=webvm/ServerRoot
 
-script: "perl -Ilib ensembl-otter/t/classes.t"
+script: "cd ensembl-otter && perl -Ilib ./t/classes.t"
