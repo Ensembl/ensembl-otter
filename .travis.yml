@@ -6,7 +6,7 @@ os:
   - linux
 dist:
   - xenial
-  
+
 addons:
   apt:
     packages:
@@ -78,7 +78,7 @@ install:
     - cd ../
     - cpanm --sudo --force Bio::Das::Lite
     - travis_wait cpanm -n --sudo Try::Tiny Test::Class::Most Tk Proc::ProcessTable DBI Readonly Log::Log4perl Term::ReadKey XML::Simple Text::sprintfn JSON Config::IniFiles Lingua::EN::Inflect IO::Scalar Data::Rmap namespace::autoclean YAML Hash::Merge::Simple File::Slurp Moose::Role MooseX::Log::Log4perl Log::Log4perl::Appender XML::Entities Const::Fast Crypt::CBC App::Cmd::Simple Mac::PropertyList
-    - travis_wait cpanm -n --sudo Bio::DB::HTS
+    - travis_wait cpanm -n --sudo Bio::DB::HTS Test::Perl::Critic
     - travis_wait cpanm -n --sudo XML::Entities Test::Class::Most
     - travis_wait cpanm -n --sudo ZMQ::LibZMQ3
     - travis_wait cpanm --sudo Crypt::CBC App::Cmd::Simple Mac::PropertyList
