@@ -124,7 +124,8 @@ install:
     - mysql -u root -h localhost -e 'GRANT ALL PRIVILEGES ON *.* TO "travis"@"%"'
     - chmod 777 ensembl-otter/travisci.sh
     - chmod +x ensembl-otter/travisci.sh
-    - export ANACODE_TEAM_TOOLS=$PWD/team_tools/
+    - export ANACODE_TEAM_TOOLS=$PWD/team_tools
+    - ls ANACODE_TEAM_TOOLS
     - export DOCUMENT_ROOT=webvm/ServerRoot
 
 script: "cd ensembl-otter && perl -Ilib ./t/classes.t"
