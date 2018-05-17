@@ -129,4 +129,4 @@ install:
     - ls
     - export DOCUMENT_ROOT=webvm/ServerRoot
 
-script: "cd ensembl-otter && perl -Ilib ./t/classes.t"
+script: "cd ensembl-otter/t && perl -Ilib ./classes.t"
