@@ -100,7 +100,7 @@ install:
     - travis_wait ./Build test
     - travis_wait sudo ./Build install
     - cd ../
-    - travis_wait git clone --branch master --depth 1 https://github.com/Ensembl/seqtools.git
+    - travis_wait git clone --branch production --depth 1 https://github.com/Ensembl/seqtools.git
     - cd seqtools/
     - travis_wait ./configure
     - travis_wait make
