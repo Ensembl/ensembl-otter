@@ -100,14 +100,16 @@ install:
     - travis_wait ./Build test
     - travis_wait sudo ./Build install
     - cd ../
-    - travis_wait git clone --branch production --depth 1 https://github.com/Ensembl/seqtools.git
-    - cd seqtools/
+    - travis_wait wget "ftp://ftp.sanger.ac.uk/pub/resources/software/zmap/production/seqtools-4.44.1.tar.gz"
+    - tar -zxvf seqtools-4.44.1.tar.gz
+    - cd seqtools-4.44.1/
     - travis_wait ./configure
     - travis_wait make
     - travis_wait sudo make install
     - cd ../
-    - travis_wait git clone --branch master --depth 1 https://github.com/Ensembl/zmap.git
-    - cd zmap
+    - travis_wait wget "ftp://ftp.sanger.ac.uk/pub/resources/software/zmap/production/zmap-2.12.0.tar.gz"
+    - tar -zxvf zmap-2.12.0.tar.gz
+    - cd zmap-2.12.0
     - travis_wait sed -i 's/opensslv\.h/openssl\/opensslv.h/' ./configure
     - travis_wait ./configure
     - travis_wait make
