@@ -9,8 +9,8 @@ dist:
 
 install:
     - cd ../
-    - export PERL5LIB=./ensembl-otter/modules:./ensembl/modules:PerlModules:./zircon/lib:./team_tools/t/tlib:./ensembl-otter:./ensembl-otter/t/lib
-    - export PATH=$PATH:./ensembl-otter/scripts/client,
+    - export PERL5LIB=$PWD/ensembl-otter/modules:$PWD/ensembl/modules:PerlModules:$PWD/zircon/lib:$PWD/team_tools/t/tlib:$PWD/ensembl-otter:$PWD/ensembl-otter/t/lib
+    - export PATH=$PATH:$PWD/ensembl-otter/scripts/client,
 
 
 script: "cd ./ensembl-otter/t && perl -Ilib ./classes.t"
