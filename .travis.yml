@@ -9,4 +9,5 @@ dist:
 
 install:
     - ls
-script: "cd ensembl-otter/t && perl -Ilib ./classes.t"
+
+script: "cd /loutre/ensembl-otter/t && perl -Ilib ./classes.t"
