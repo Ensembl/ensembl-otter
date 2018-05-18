@@ -8,6 +8,9 @@ dist:
   - miralum/otterserver
 
 install:
-    - ls
+    - cd ../
+    - export PERL5LIB=./ensembl-otter/modules:./ensembl/modules:PerlModules:./zircon/lib:./team_tools/t/tlib:./ensembl-otter:./ensembl-otter/t/lib
+    - export PATH=$PATH:./ensembl-otter/scripts/client,
 
-script: "cd t && perl -Ilib ./classes.t"
+
+script: "cd t && perl -Ilib ./ensembl-otter/classes.t"
