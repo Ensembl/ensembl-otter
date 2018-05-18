@@ -9,10 +9,14 @@ dist:
 
 install:
     - cd ../
+    - git clone --branch master --depth 1 https://github.com/Ensembl/team_tools.git
+    - git clone --branch master --depth 1 https://github.com/Ensembl/webvm.git
+    - git clone --branch master --depth 1 https://github.com/Ensembl/webvm-deps.git
+    - git clone --branch master --depth 1 https://github.com/Ensembl/ensembl-otter.git
+    - git clone --branch master --depth 1 https://github.com/Ensembl/zircon.git
     - cpanm --sudo Test::Class::Most
     - export ANACODE_TEAM_TOOLS=$PWD/team_tools/
     - export PERL5LIB=$PWD/ensembl-otter/modules:$PWD/ensembl/modules:PerlModules:$PWD/zircon/lib:$PWD/team_tools/t/tlib/Test:$PWD/ensembl-otter:$PWD/ensembl-otter/t/lib
-    - sudo find / -type d -name 'team_tools'
     - export PATH=$PATH:$PWD/ensembl-otter/scripts/client,
 
 
