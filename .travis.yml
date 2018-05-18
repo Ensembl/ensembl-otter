@@ -15,7 +15,7 @@ install:
     - git clone --branch master --depth 1 https://github.com/Ensembl/zircon.git
     - cpanm --sudo Test::Class::Most Test::Perl::Critic
     - export ANACODE_TEAM_TOOLS=$PWD/team_tools/
-    - export PERL5LIB=$PWD/webvm-deps/ensembl-branch-78/ensembl/modules/Bio/EnsEMBL:$PWD/ensembl-otter/modules:$PWD/ensembl/modules:PerlModules:$PWD/zircon/lib:$PWD/team_tools/t/tlib/Test:$PWD/ensembl-otter:$PWD/ensembl-otter/t/lib
+    - export PERL5LIB=$PWD/webvm-deps/ensembl-branch-78/ensembl/modules:$PWD/ensembl-otter/modules:$PWD/ensembl/modules:PerlModules:$PWD/zircon/lib:$PWD/team_tools/t/tlib/Test:$PWD/ensembl-otter:$PWD/ensembl-otter/t/lib
     - ls $PWD/team_tools/t/tlib/Test
     - export PATH=$PATH:$PWD/ensembl-otter/scripts/client,
 
