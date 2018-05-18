@@ -7,4 +7,6 @@ os:
 dist:
   - miralum/otterserver
 
+install:
+    - ls
 script: "cd ensembl-otter/t && perl -Ilib ./classes.t"
