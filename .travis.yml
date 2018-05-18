@@ -4,8 +4,8 @@ perl:
   - "5.22"
 os:
   - linux
-dist:
-  - miralum/otterserver
+image:
+  - otterserver
 
 install:
     - cd ../
