@@ -13,4 +13,4 @@ install:
     - export PATH=$PATH:./ensembl-otter/scripts/client,
 
 
-script: "cd t && perl -Ilib ./ensembl-otter/classes.t"
+script: "cd /ensembl-otter/t && perl -Ilib ./classes.t"
