@@ -12,7 +12,7 @@ install:
     - cpanm --sudo Test::Class::Most
     - export ANACODE_TEAM_TOOLS=$PWD/team_tools/
     - export PERL5LIB=$PWD/ensembl-otter/modules:$PWD/ensembl/modules:PerlModules:$PWD/zircon/lib:$PWD/team_tools/t/tlib/Test:$PWD/ensembl-otter:$PWD/ensembl-otter/t/lib
-    - ls $PWD/team_tools/t/tlib/Test
+    - ls
     - export PATH=$PATH:$PWD/ensembl-otter/scripts/client,
 
 
