@@ -9,6 +9,8 @@ dist:
 
 install:
     - cd ../
+    - cpanm --sudo Test::Class::Most
+    - export ANACODE_TEAM_TOOLS=$PWD/team_tools/
     - export PERL5LIB=$PWD/ensembl-otter/modules:$PWD/ensembl/modules:PerlModules:$PWD/zircon/lib:$PWD/team_tools/t/tlib:$PWD/ensembl-otter:$PWD/ensembl-otter/t/lib
     - export PATH=$PATH:$PWD/ensembl-otter/scripts/client,
 
