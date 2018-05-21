@@ -22,4 +22,4 @@ install:
 
 
 
-script: "docker run -d --name devtest -v $ROOT_PATH/app:/loutre otterserver:latest"
+script: "docker run -d --name devtest -v $ROOT_PATH/app:/loutre mira/otterserver:latest"
