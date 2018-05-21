@@ -19,4 +19,4 @@ install:
     - git clone --branch master --depth 1 https://github.com/Ensembl/webvm-deps.git
     - git clone --branch master --depth 1 https://github.com/Ensembl/zircon.git
 
-script: "docker run -d --name devtest -v $ROOT_PATH/app:/loutre miralum/otterserver:latest"
+script: "docker run -i --name devtest -v $ROOT_PATH/app:/loutre miralum/otterserver:latest"
