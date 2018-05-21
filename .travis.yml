@@ -12,7 +12,7 @@ install:
     - cd ../
     - export ROOT_PATH=$PWD
     - mkdir app
-    - cp -r ROOT_PATH/ensembl-ottter ./app
+    - cp -r $ROOT_PATH/ensembl-ottter ./app
     - cd app
     - git clone --branch master --depth 1 https://github.com/Ensembl/team_tools.git
     - git clone --branch master --depth 1 https://github.com/Ensembl/webvm.git
