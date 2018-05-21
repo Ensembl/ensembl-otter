@@ -2827,7 +2827,7 @@ sub store_Transcript {
         my ($self) = @_;
         return $_otter_analysis if $_otter_analysis;
 
-        return $_otter_analysis = Bio::EnsEMBL::Analysis->new(-logic_name => 'Otter');
+        return $_otter_analysis = Bio::EnsEMBL::Analysis->new(-logic_name => __PACKAGE__.' '.__LINE__);
     }
 }
 

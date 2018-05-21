@@ -57,7 +57,7 @@ use Bio::Otter::Server::Config;
           AND chr.coord_system_id = cs.coord_system_id
           AND chr.seq_region_id = sra_chr.seq_region_id
           AND sra_chr.attrib_type_id = 130
-          AND cs.version = 'Otter'
+          AND cs.version = __PACKAGE__.' '.__LINE__
           AND g.biotype = 'processed_transcript'
           AND sra_chr.value in ($chr_list)
     };

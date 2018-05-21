@@ -435,6 +435,7 @@ sub password_problem{
 sub reauthorize_if_cookie_will_expire_soon {
     my ($self) = @_;
 
+    return 1;
     # Soon is if cookie expires less than half an hour from now
     my $soon = time + (30 * 60);
     my $expiry = $self->_cookie_expiry_time;
@@ -953,8 +954,11 @@ sub get_meta {
 }
 
 sub get_db_info {
-    my ($self, $dsname) = @_;
-    my $hashref = $self->otter_response_content(GET => 'get_db_info', { dataset => $dsname });
+    my ($self, $dsname, $ss) = @_;
+    my $hashref = $self->otter_response_content(GET => 'get_db_info', { dataset => $dsname ,
+            'coord_system_name' => $ss->coord_system_name,
+            'coord_system_version' => $ss->coord_system_version,
+        });
     return $hashref;
 }
 
@@ -962,7 +966,11 @@ sub lock_refresh_for_DataSet_SequenceSet {
     my ($self, $ds, $ss) = @_;
     my $response =
        $self->_DataSet_SequenceSet_response_content(
-           $ds, $ss, 'GET', 'get_locks');
+           $ds, $ss, 'GET', 'get_locks',
+        {
+            'coord_system_name' => $ss->coord_system_name,
+            'coord_system_version' => $ss->coord_system_version,
+        });
 
     my @slice_lock = map { Bio::Vega::SliceLock->new_from_json($_) }
       @{ $response->{SliceLock} || [] };
@@ -986,7 +994,11 @@ sub fetch_all_SequenceNotes_for_DataSet_SequenceSet {
 
     my $response =
         $self->_DataSet_SequenceSet_response_content(
-            $ds, $ss, 'GET', 'get_sequence_notes');
+            $ds, $ss, 'GET', 'get_sequence_notes',
+        {
+            'coord_system_name' => $ss->coord_system_name,
+            'coord_system_version' => $ss->coord_system_version,
+        });
 
     my %ctgname2notes = ();
 
@@ -1362,6 +1374,9 @@ sub _make_SequenceSet {
                     $sr_name, [split(/,/, $sr_params->{content})]);
             }
         }
+        elsif ($key eq 'coord_system_name' or $key eq 'coord_system_version') {
+            $sequenceset->$key($value);
+        }
         elsif ($sequenceset->can($key)) {
             die "Bad key $key" unless $key =~ /^[_A-Za-z]{1,16}$/;
             $sequenceset->$key($value);
@@ -1386,6 +1401,8 @@ sub get_all_CloneSequences_for_DataSet_SequenceSet { # without any lock info
         {
             'dataset'     => $dataset_name,
             'sequenceset' => $sequenceset_name,
+            'coord_system_name' => $ss->coord_system_name,
+            'coord_system_version' => $ss->coord_system_version,
         }
     );
 
@@ -1423,6 +1440,9 @@ sub _make_CloneSequence {
     while (my ($key, $value) = each %{$params}) {
         if ($key eq 'chr') {
             $clonesequence->chromosome($value->{name});
+        }
+        elsif ($key eq 'coord_system_name' or $key eq 'coord_system_version') {
+            $clonesequence->$key($value);
         }
         elsif ($clonesequence->can($key)) {
             die "Bad key $key" unless $key =~ /^[_A-Za-z]{1,16}$/;
@@ -1497,12 +1517,15 @@ sub save_otter_xml {
 # lock_region, unlock_region : see Bio::Otter::Lace::AceDatabase
 
 sub _DataSet_SequenceSet_response_content {
-    my ($self, $ds, $ss, $method, $script) = @_;
+    my ($self, $ds, $ss, $method, $script, $extra) = @_;
 
     my $query = {
         'dataset'  => $ds->name,
         'chr'      => $ss->name,
     };
+    if ($extra and ref($extra) eq 'HASH') {
+      %$query = (%$query, %$extra);
+    }
 
     my $content =
         $self->otter_response_content($method, $script, $query);

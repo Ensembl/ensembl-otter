@@ -13,6 +13,24 @@ sub new {
     return bless {}, $pkg;
 }
 
+sub coord_system_name {
+    my ($self, $coord_system_name) = @_;
+
+    if ($coord_system_name) {
+        $self->{'_coord_system_name'} = $coord_system_name;
+    }
+    return $self->{'_coord_system_name'};
+}
+
+sub coord_system_version {
+    my ($self, $coord_system_version) = @_;
+
+    if ($coord_system_version) {
+        $self->{'_coord_system_version'} = $coord_system_version;
+    }
+    return $self->{'_coord_system_version'};
+}
+
 sub accession {
     my ($self, $accession) = @_;
 

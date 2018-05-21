@@ -380,8 +380,17 @@ sub fetch_all_by_Slice {
         for (my $i = 0; $i < @$tsct_list;) {
             my $transcript = $tsct_list->[$i];
             my $t_name = get_name_Attribute_value($transcript);
+            if (!$t_name) {
+              my $xref = $transcript->display_xref;
+              if ($xref) {
+                $t_name = $xref->primary_id;
+              }
+              else {
+                $t_name = $transcript->display_id;
+              }
+            }
             $t_name or die sprintf("Error getting name of %s %s (%d):\n$@",
-                                   ref($transcript), $transcript->stable_id, $transcript->dbID);
+                            ref($transcript), $transcript->stable_id, $transcript->dbID);
             my $exons_truncated = $transcript->truncate_to_Slice($slice);
             my $ex_list         = $transcript->get_all_Exons;
             my $message;
@@ -897,7 +906,7 @@ sub fetch_all_genes_on_reference_slice {
 
     my $transformed_genes = $mfetcher->fetch_and_export(
         'get_all_Genes', [ 'otter', undef, 1 ], 'chromosome', $ncbi_chr,
-        $otter_chr, $start, $end, 'Otter',
+        $otter_chr, $start, $end, __PACKAGE__.' '.__LINE__,
         $assembly
     );
 

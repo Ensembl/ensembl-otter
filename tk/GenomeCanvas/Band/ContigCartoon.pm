@@ -51,7 +51,7 @@ sub render {
         $self->DataSet->name,
         $slice->assembly_type,
         'chromosome',
-        'Otter',
+        __PACKAGE__.' '.__LINE__,
         $slice->chr_name,
         $slice->chr_start,
         $slice->chr_end,

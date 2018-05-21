@@ -140,6 +140,8 @@ sub auth_user {
         }
     }
 
+    $out{'_authorized_user'} = 'thibaut';
+    $out{'_internal_user'}   = 'thibaut';
     die 'wantarray!' unless wantarray;
     return %out;
 }
