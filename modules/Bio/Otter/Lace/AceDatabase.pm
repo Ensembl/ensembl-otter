@@ -948,7 +948,7 @@ sub _add_transcript_filters {
             priority            => 1,
             script_name         => 'localdb_get',
             resource_bin        => 'local',
-            analysis            => 'Otter',
+            analysis            => __PACKAGE__.' '.__LINE__,
             feature_kind        => 'Gene',
             zmap_column         => $top_level->name,
             description         => $top_level->remark,

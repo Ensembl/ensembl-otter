@@ -193,7 +193,7 @@ sub visible_chr {
    JOIN seq_region_attrib ra_h USING (seq_region_id)
    JOIN coord_system c USING (coord_system_id)
  WHERE c.name = 'chromosome'
-   AND c.version = 'Otter'
+   AND c.version = __PACKAGE__.' '.__LINE__
    AND ra_w.attrib_type_id = (select attrib_type_id from attrib_type where code='write_access')
    AND ra_w.value = 1
    AND ra_h.attrib_type_id = (select attrib_type_id from attrib_type where code='hidden')

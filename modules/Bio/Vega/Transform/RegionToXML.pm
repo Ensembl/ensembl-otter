@@ -53,7 +53,7 @@ my $by_start_end_strand = sub {
 sub _feature_name {
     my ($feature) = @_;
     my $name = get_name_Attribute_value($feature);
-    return $name // '';
+    return $name // $feature->display_id;
 }
 
 # get/set methods exposed on object interface
@@ -140,6 +140,8 @@ sub generate_SequenceFragment {
     $sf->attribvals($self->prettyprint('fragment_ori',      $cs->contig_strand  ));
     $sf->attribvals($self->prettyprint('fragment_offset',   $cs->contig_start   ));
     $sf->attribvals($self->prettyprint('clone_length',      $cs->length         ));
+    $sf->attribvals($self->prettyprint('coord_system_name', $self->region->slice->coord_system->name));
+    $sf->attribvals($self->prettyprint('coord_system_version', $self->region->slice->coord_system->version));
 
     # write_region requires that the client describe the region, to
     # ensure it is the correct one, but then ignores ContigInfo.

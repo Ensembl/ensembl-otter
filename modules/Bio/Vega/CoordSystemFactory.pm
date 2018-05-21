@@ -54,9 +54,6 @@ sub coord_system {
     return $cs if $cs;
 
     # Not cached yet
-    unless ($_COORD_SYSTEM_SPEC{$name}) {
-        croak "CoordSystemFactory doesn't know about '$name'";
-    }
 
     if ($self->dba) {
         $cs = $self->_dba_cs($name);
@@ -68,8 +65,10 @@ sub coord_system {
 }
 
 sub known {
-    my @known = sort { $_COORD_SYSTEM_SPEC{$a}->{'-rank'} <=> $_COORD_SYSTEM_SPEC{$b}->{'-rank'} } keys %_COORD_SYSTEM_SPEC;
-    return @known;
+  my ($self) = @_;
+
+  my $_coord_system_specs = $self->_coord_system_specs;
+  return sort { $_coord_system_specs->{$a}->{'-rank'} <=> $_coord_system_specs->{$b}->{'-rank'} } keys %$_coord_system_specs;
 }
 
 sub instantiate_all {
@@ -90,7 +89,7 @@ sub _dba_cs {
 
     # Try the DB first
     my $cs_a = $self->dba->get_CoordSystemAdaptor;
-    my $spec = $_COORD_SYSTEM_SPEC{$name};
+    my $spec = $self->_coord_system_specs->{$name};
     my $cs   = $cs_a->fetch_by_name($name, $spec->{'-version'});
     return $cs if $cs;
 
@@ -104,8 +103,7 @@ sub _dba_cs {
 sub _local_cs {
     my ($self, $name) = @_;
 
-    my $override = $self->override_spec || {};
-    my $spec = $override->{$name} || $_COORD_SYSTEM_SPEC{$name};
+    my $spec = $self->override_spec->{$name};
 
     my $cs = Bio::EnsEMBL::CoordSystem->new('-name' => $name, %$spec);
     return $cs;
@@ -142,6 +140,12 @@ sub _cached_cs {
     ($cache->{$name}) = @args if @args;
     my $_cached_cs = $cache->{$name};
     return $_cached_cs;
+}
+
+sub _coord_system_specs {
+  my ($self) = @_;
+
+  return $self->override_spec || \%_COORD_SYSTEM_SPEC;
 }
 
 1;

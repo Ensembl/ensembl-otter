@@ -45,7 +45,7 @@ use Hum::Sort 'ace_sort';
 
         if ($sequence_set) {
             if ($show_agp) {
-                $agp_cs_version ||= 'Otter';
+                $agp_cs_version ||= __PACKAGE__.' '.__LINE__;
                 print_agp($ds, $sequence_set, $agp_cs_version);
             } else {
                 print_sequence_set($ds, $sequence_set, $acc_only, $acc_sv);
@@ -211,7 +211,7 @@ will print out the same set in AGP format.
   ./show_sequence_set -dataset human -set 21 -agp -agp_cs_ver NCBI36
 
 will print out the set named "21" with coord system version NCBI36.
-(-agp_cs_ver defaults to "Otter".)
+(-agp_cs_ver defaults to __PACKAGE__." ".__LINE__.)
 
 =head1 AUTHOR
 

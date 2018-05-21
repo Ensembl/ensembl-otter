@@ -165,7 +165,7 @@ sub _create_or_extend_chr_slice {
            ."assembly_type='$assembly_type' start='$start' end='$end'";
     }
 
-    my $chr_coord_system = $self->coord_system_factory->coord_system('chromosome');
+    my $chr_coord_system = $self->coord_system_factory->coord_system($data->{coord_system_name});
 
     if (my $chr_slice = $self->_chr_slice) {
         # Extend the cached version of the slice:
@@ -413,7 +413,7 @@ sub _build_Transcript {         ## no critic (Subroutines::ProhibitUnusedPrivate
     } else {
         $logic_name = $data->{'analysis'};
     }
-    my $ana = $self->_get_Analysis($logic_name || 'Otter');
+    my $ana = $self->_get_Analysis($logic_name || __PACKAGE__.' '.__LINE__);
 
     my $transcript = Bio::Vega::Transcript->new(
         -stable_id => $data->{'stable_id'},
@@ -569,7 +569,7 @@ sub _build_Locus {              ## no critic (Subroutines::ProhibitUnusedPrivate
     ## transcript author group has been temporarily set to 'anything' ??
 
     my $chr_slice = $self->_chr_slice;
-    my $ana = $self->_get_Analysis($data->{'analysis'} || 'Otter');
+    my $ana = $self->_get_Analysis($data->{'analysis'} || __PACKAGE__.' '.__LINE__);
     my $gene = Bio::Vega::Gene->new(
         -stable_id => $data->{'stable_id'},
         -slice => $chr_slice,
@@ -634,7 +634,7 @@ sub _build_Locus {              ## no critic (Subroutines::ProhibitUnusedPrivate
         $transcript->end(  $transcript->end   - $slice_offset);
 
         my $logic_name = $transcript->analysis->logic_name;
-        if ($self->analysis_from_transcript_class and $source ne 'havana' and $logic_name ne 'Otter') {
+        if ($self->analysis_from_transcript_class and $source ne 'havana' and $logic_name ne __PACKAGE__.' '.__LINE__) {
             $logic_name = sprintf('%s:%s', $source, $logic_name);
         }
         if ($truncated) {

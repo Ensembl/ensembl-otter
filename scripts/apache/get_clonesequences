@@ -8,12 +8,15 @@ use SangerPaths qw{ core bioperl123 otter };
 use Bio::Otter::Git qw{ :server_ensembl :match };
 
 use Bio::Otter::Server::Support::Web;
+use Bio::EnsEMBL::Utils::Slice qw(split_Slices);
 
 sub get_clonesequences {
     my ($server) = @_;
 
 my $dataset     = $server->require_argument('dataset');
 my $sequenceset = $server->require_argument('sequenceset');
+my $coord_system_name = $server->require_argument('coord_system_name');
+my $coord_system_version = $server->require_argument('coord_system_version');
 
 my $dbc = $server->otter_dba->dbc;
 
@@ -116,6 +119,8 @@ while (
         contig_start  => $ctg_start,
         contig_end    => $ctg_end,
         contig_strand => $ctg_strand,
+        coord_system_name => $coord_system_name,
+        coord_system_version => $coord_system_version,
     };
 
     if (my $prev = $cs_list[-1]) {
@@ -133,6 +138,39 @@ while (
     }
     push(@cs_list, $cs);
 }
+if (!@cs_list) {
+  my $slice_adaptor = $server->otter_dba->get_SliceAdaptor;
+  my $slice = $slice_adaptor->fetch_by_region('toplevel', $sequenceset);
+  my $accession_attrib = $slice->get_all_synonyms('insdc');
+  my $chr_name = $slice->seq_region_name;
+  my $chr_length = $slice->length;
+  my $chr_start = $slice->start;
+  my $chr_end = $slice->end;
+  my ($acc, $sv) = $chr_name =~ /^(\S+)\.(\d+)$/;
+  if (@$accession_attrib) {
+    ($acc, $sv) = $accession_attrib->[0]->value =~ /^(\S+)\.(\d+)$/;
+  }
+  foreach my $sub_slice (@{split_Slices([$slice], 1000000)}) {
+    push(@cs_list, {
+        clone_name  => $sub_slice->seq_region_name,
+        accession   => $acc,
+        sv          => $sv,
+        contig_name => $sub_slice->seq_region_name,
+        length      => $sub_slice->length,
+        chr         => {
+            name   => $chr_name,
+            length => $chr_length,
+        },
+        chr_start     => $chr_start,
+        chr_end       => $chr_end,
+        contig_start  => $sub_slice->start,
+        contig_end    => $sub_slice->end,
+        contig_strand => $sub_slice->strand,
+        coord_system_name => $coord_system_name,
+        coord_system_version => $coord_system_version,
+    });
+  }
+}
 
 my $xml = '';
 $xml .= qq{  <dataset name="$dataset">\n};
@@ -144,6 +182,7 @@ foreach my $cs (@cs_list) {
     foreach my $tag (
         qw{ clone_name accession sv contig_name length
         chr chr_start chr_end
+        coord_system_name coord_system_version
         contig_start contig_end contig_strand }
       )
     {
