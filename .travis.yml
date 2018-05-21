@@ -4,20 +4,22 @@ perl:
   - "5.22"
 os:
   - linux
-image:
-  - otterserver
+services: docker
 
+before_install:
+    - docker pull miralum/otterserver
 install:
     - cd ../
+    - export ROOT_PATH=$PWD
+    - mkdir app
+    - cp -r ROOT_PATH/ensembl-ottter ./app
+    - cd app
     - git clone --branch master --depth 1 https://github.com/Ensembl/team_tools.git
     - git clone --branch master --depth 1 https://github.com/Ensembl/webvm.git
     - git clone --branch master --depth 1 https://github.com/Ensembl/webvm-deps.git
     - git clone --branch master --depth 1 https://github.com/Ensembl/zircon.git
-    - cpanm --sudo Test::Class::Most Test::Perl::Critic
-    - export ANACODE_TEAM_TOOLS=$PWD/team_tools/
-    - export PERL5LIB=$PWD/webvm-deps/ensembl-branch-78/ensembl/modules:$PWD/ensembl-otter/modules:$PWD/ensembl/modules:PerlModules:$PWD/zircon/lib:$PWD/team_tools/t/tlib/Test:$PWD/ensembl-otter:$PWD/ensembl-otter/t/lib
-    - ls $PWD/team_tools/t/tlib/Test
-    - export PATH=$PATH:$PWD/ensembl-otter/scripts/client,
 
 
-script: "cd ./ensembl-otter && perl -Ilib ./t/classes.t"
+
+
+script: "docker run -d --name devtest -v $ROOT_PATH/app:/loutre otterserver:latest"
