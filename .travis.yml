@@ -18,8 +18,9 @@ install:
     - git clone --branch master --depth 1 https://github.com/Ensembl/webvm.git
     - git clone --branch master --depth 1 https://github.com/Ensembl/webvm-deps.git
     - git clone --branch master --depth 1 https://github.com/Ensembl/zircon.git
+    - docker images
 
 
 
 
-script: "docker run -d --name devtest -v $ROOT_PATH/app:/loutre mira/otterserver:latest"
+script: "docker run -d --name devtest -v $ROOT_PATH/app:/loutre otterserver"
