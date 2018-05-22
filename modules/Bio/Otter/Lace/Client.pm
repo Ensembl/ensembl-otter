@@ -923,6 +923,7 @@ sub find_clones {
         {
             'dataset'  => $dsname,
             'qnames'   => $qnames_string,
+            'author' => $self->author
         },
     );
 
@@ -949,7 +950,7 @@ sub _find_clone_result {
 
 sub get_meta {
     my ($self, $dsname) = @_;
-    my $hashref = $self->otter_response_content(GET => 'get_meta', { dataset => $dsname });
+    my $hashref = $self->otter_response_content(GET => 'get_meta', { dataset => $dsname, 'author' => $self->author });
     return $hashref;
 }
 
@@ -958,6 +959,7 @@ sub get_db_info {
     my $hashref = $self->otter_response_content(GET => 'get_db_info', { dataset => $dsname ,
             'coord_system_name' => $ss->coord_system_name,
             'coord_system_version' => $ss->coord_system_version,
+            'author' => $self->author
         });
     return $hashref;
 }
@@ -1070,6 +1072,7 @@ sub _sequence_note_action {
             'contig'    => $contig_name,
             'timestamp' => $seq_note->timestamp(),
             'text'      => $seq_note->text(),
+            'author'    => $self->author
         },
     );
 
@@ -1101,7 +1104,7 @@ sub _get_DataSets_hash {
     my ($self) = @_;
 
     my $datasets_hash = $self->otter_response_content
-        ('GET', 'get_datasets', {});
+        ('GET', 'get_datasets', {'author' => $self->author});
 
     return $datasets_hash;
 }
@@ -1160,7 +1163,7 @@ sub _get_config_file {
     return $self->http_response_content(
         'GET',
         'get_config',
-        { 'key' => $key },
+        { 'key' => $key, 'author' => $self->author },
         );
 }
 
@@ -1197,7 +1200,7 @@ sub get_server_ensembl_version {
 # same as Bio::Otter::Server::Config->designations (fresh every time)
 sub _get_designations {
     my ($self) = @_;
-    my $hashref = $self->otter_response_content(GET => 'get_config', { key => 'designations' });
+    my $hashref = $self->otter_response_content(GET => 'get_config', { key => 'designations', 'author' => $self->author });
     return $hashref;
 }
 
@@ -1285,7 +1288,7 @@ sub designate_this {
 sub get_slice_DE {
     my ($self, $slice) = @_;
     my $resp = $self->otter_response_content
-      ('GET', 'DE_region', { $self->slice_query($slice) });
+      ('GET', 'DE_region', { $self->slice_query($slice), 'author' => $self->author });
     return $resp->{description};
 }
 
@@ -1310,7 +1313,7 @@ sub do_authentication {
     my $user = $self->http_response_content(
         'GET',
         'authenticate_me',
-        {},
+        {'author' => $self->author},
     );
     return $user
 }
@@ -1325,6 +1328,7 @@ sub get_all_SequenceSets_for_DataSet {
       $self->http_response_content(
           'GET', 'get_sequencesets', {
               'dataset' => $dataset_name,
+              'author' => $self->author
           });
 
   local $XML::Simple::PREFERRED_PARSER = 'XML::Parser';
@@ -1403,6 +1407,7 @@ sub get_all_CloneSequences_for_DataSet_SequenceSet { # without any lock info
             'sequenceset' => $sequenceset_name,
             'coord_system_name' => $ss->coord_system_name,
             'coord_system_version' => $ss->coord_system_version,
+            'author' => $self->author
         }
     );
 
@@ -1476,7 +1481,8 @@ sub get_accession_types {
     my $hashref = $self->otter_response_content(
         'POST',
         'get_accession_types',
-        {accessions => join ',', @accessions},
+        {accessions => join ',', @accessions,
+         'author' => $self->author},
         );
 
     return $hashref;
@@ -1488,7 +1494,8 @@ sub get_taxonomy_info {
     my $response = $self->otter_response_content(
         'POST',
         'get_taxonomy_info',
-        {id => join ',', @ids},
+        {id => join ',', @ids,
+         'author' => $self->author},
         );
     return $response;
 }
@@ -1508,6 +1515,7 @@ sub save_otter_xml {
             'dataset'  => $dsname,
             'data'     => $xml,
             'locknums' => $lock_token,
+            'author'   => $self->author
         }
     );
 
@@ -1522,6 +1530,7 @@ sub _DataSet_SequenceSet_response_content {
     my $query = {
         'dataset'  => $ds->name,
         'chr'      => $ss->name,
+        'author'   => $self->author
     };
     if ($extra and ref($extra) eq 'HASH') {
       %$query = (%$query, %$extra);
@@ -1674,7 +1683,7 @@ sub get_region_xml {
     my $xml = $self->http_response_content(
         'GET',
         'get_region',
-        { $self->slice_query($slice) },
+        { $self->slice_query($slice), 'author' => $self->author },
         );
     return $xml;
 }
@@ -1685,7 +1694,7 @@ sub get_assembly_dna {
     my $response = $self->otter_response_content(
         'GET',
         'get_assembly_dna',
-        { $self->slice_query($slice) },
+        { $self->slice_query($slice), 'author' => $self->author },
         );
     return $response->{dna};
 }
@@ -1698,6 +1707,7 @@ sub lock_region {
         {
             $self->slice_query($slice),
             hostname => $self->client_hostname,
+            'author' => $self->author
         },
         );
     return $hash;
@@ -1711,6 +1721,7 @@ sub unlock_region {
         {
             dataset  => $dataset_name,
             locknums => $locknums,
+            'author' => $self->author
         },
         );
     return $hash;

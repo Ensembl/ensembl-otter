@@ -42,8 +42,10 @@ use Bio::Vega::Utils::GeneTranscriptBiotypeStatus 'biotype_status2method';
     #                'chromosome', $chr_name, undef, undef, undef, __PACKAGE__.' '.__LINE__)->length();
 
         # let's try and get the whole chromosome into slice:
+    #my $otter_slice = $otter_dba->get_SliceAdaptor()
+    #    ->fetch_by_region('chromosome', $chr_name, $chr_start, $chr_end, 1, __PACKAGE__.' '.__LINE__);
     my $otter_slice = $otter_dba->get_SliceAdaptor()
-        ->fetch_by_region('chromosome', $chr_name, $chr_start, $chr_end, 1, __PACKAGE__.' '.__LINE__);
+        ->fetch_by_region('chromosome', $chr_name, $chr_start, $chr_end, 1, 'Otter');
 
     my $len = $otter_slice->length();
     print STDERR "Slice length = $len\n\n";

@@ -386,7 +386,8 @@ sub _gene_from_Locus {
     my @synonyms = map { ('synonym' => $_) } $locus->list_aliases;
     add_EnsEMBL_Attributes($gene, @synonyms);
 
-    $gene->analysis   ($self->_get_Analysis(__PACKAGE__.' '.__LINE__));
+    #$gene->analysis   ($self->_get_Analysis(__PACKAGE__.' '.__LINE__));
+    $gene->analysis   ($self->_get_Analysis('Otter'));
     $gene->gene_author($self->_author_object );
 
     $self->logger->debug(

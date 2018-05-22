@@ -247,12 +247,12 @@ sub LaceSlice_from_vc {
         $band->DataSet->name,
         $vc->seq_region_name,
         'chromosome',
-        __PACKAGE__.' '.__LINE__,
+        'Otter',
         $vc->get_all_Attributes('chr')->[0]->value,
         $vc->start,
         $vc->end,
         );
-}
+}#__PACKAGE__.' '.__LINE__,
 
 sub Client {
     my( $self, $Client ) = @_;
@@ -483,7 +483,7 @@ sub next_sub_VirtualContig {
             $band->DataSet->name,
             $big_vc->assembly_type,
             'chromosome',
-            __PACKAGE__.' '.__LINE__,
+            'Otter',
             $chr_name,
             $chr_start,
             $chr_end,
@@ -498,7 +498,7 @@ sub next_sub_VirtualContig {
     }
 
     return ($vc, $i);
-}
+}#__PACKAGE__.' '.__LINE__,
 
 sub merge_sort_Features {
     my $band = shift;

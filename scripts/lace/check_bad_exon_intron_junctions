@@ -44,7 +44,8 @@ use Bio::Vega::DBSQL::DBAdaptor;
     #next if $setname ne '129_IDD3.1-02';
     $setcount++;
 
-    my $slice = $slice_Ad->fetch_by_region('chromosome', $setname, undef, undef, undef, __PACKAGE__.' '.__LINE__);
+    #my $slice = $slice_Ad->fetch_by_region('chromosome', $setname, undef, undef, undef, __PACKAGE__.' '.__LINE__);
+    my $slice = $slice_Ad->fetch_by_region('chromosome', $setname, undef, undef, undef, 'Otter');
     my $genes = $gene_Ad->Bio::EnsEMBL::DBSQL::GeneAdaptor::fetch_all_by_Slice($slice);
     my $geneNum = scalar @$genes;
 

@@ -46,7 +46,8 @@ use Hum::Sort qw{ ace_sort };
           AND sra.attrib_type_id = at.attrib_type_id
           AND sr.coord_system_id = cs.coord_system_id
           AND cs.name = 'chromosome'
-          AND cs.version = __PACKAGE__.' '.__LINE__
+          #AND cs.version = __PACKAGE__.' '.__LINE__
+          AND cs.version = 'Otter'
           AND at.code = 'hidden'
           AND sra.value = 0
           AND g.is_current = 1

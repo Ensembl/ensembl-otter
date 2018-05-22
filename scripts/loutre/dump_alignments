@@ -60,7 +60,7 @@ use Bio::Otter::Lace::Defaults;
                 client      => 'dump_alignments',
                 dataset     => $ds->name,
                 cs          => 'chromosome',
-                csver       => __PACKAGE__.' '.__LINE__,
+                csver       => 'Otter',
                 name        => $cs->chromosome,
                 start       => $cs->chr_start,
                 end         => $cs->chr_end,
@@ -85,6 +85,6 @@ __END__
 =head1 NAME - dump_alignments
 
 =head1 AUTHOR
-
+csver       => __PACKAGE__.' '.__LINE__,
 James Gilbert B<email> jgrg@sanger.ac.uk
 
