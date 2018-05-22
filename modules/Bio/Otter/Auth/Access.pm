@@ -136,7 +136,7 @@ configuration file.
 
 sub user {
     my ($self, $email) = @_;
-    $email = 'thibaut';
+    #$email = 'thibaut';
     return $self->all_users->{lc($email)};
 }
 

@@ -18,7 +18,7 @@ WHERE g.gene_id = t.gene_id
   AND sra.attrib_type_id = at.attrib_type_id
   AND sr.coord_system_id = cs.coord_system_id
   AND cs.name = 'chromosome'
-  AND cs.version = __PACKAGE__.' '.__LINE__
+  AND cs.version = 'Otter'
   AND at.code = 'hidden'
   AND sra.value = 0
   AND g.is_current = 1
@@ -78,7 +78,7 @@ GROUP BY sr.name, g.biotype
     chr7-03  protein_coding             35
     chr7-03  unprocessed_pseudogene      4
 
-
+--AND cs.version = __PACKAGE__.' '.__LINE__
 
 SELECT sr.name chr
   , t.biotype

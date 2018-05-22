@@ -1,6 +1,6 @@
 
 package Bio::Otter::Server::Support::Web;
-
+use Data::Dumper;
 use strict;
 use warnings;
 
@@ -60,7 +60,7 @@ sub new {
     $self->compression($options{-compression});
     $self->content_type($options{-content_type});
 
-    $self->_authenticate_user;
+    #$self->_authenticate_user;
     if ($self->show_restricted_datasets || ! $self->local_user) {
         $self->authorized_user;
     }
@@ -216,10 +216,10 @@ sub sangerweb {
 
 
 sub _authenticate_user {
-    my ($self) = @_;
+    my ($self, $unauthorized_user) = @_;
 
-    my $sw = $self->sangerweb;
-    my %set = Bio::Otter::Auth::SSO->auth_user($sw, $self->Access);
+    #my $sw = $self->sangerweb;
+    my %set = Bio::Otter::Auth::SSO->auth_user($self->Access, $unauthorized_user);
 
     # Merge properties (_authorized_user, _internal_user, _local_user) into %$self
     @{ $self }{ keys %set } = values %set;
@@ -229,6 +229,8 @@ sub _authenticate_user {
 
 sub authorized_user { # deprecated, because of hard exit()
     my ($self) = @_;  # but also a setter in ::Local
+    my $unauthorized_user = $self->param('author');
+    $self->_authenticate_user($unauthorized_user);
 
     my $user = try {
         $self->authorized_user__catchable;

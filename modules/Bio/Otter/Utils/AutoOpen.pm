@@ -174,7 +174,8 @@ sub parse_path {
         $slice->start($region->{'start'});
         $slice->end($region->{'end'});
         $slice->csname('chromosome');
-        $slice->csver(__PACKAGE__.' '.__LINE__);
+        #$slice->csver(__PACKAGE__.' '.__LINE__);
+        $slice->csver('Otter');
         push @$work, ['open_slice', $slice, $want_write];
     }
     else {

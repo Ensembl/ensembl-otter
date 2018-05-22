@@ -81,7 +81,9 @@ sub get_sequencesets {
 
     my $author  = '';
     if($server->show_restricted_datasets) {
-        $author = $server->authorized_user;
+        #$author = $server->authorized_user;
+        $author = $server->{'_authorized_user'};
+        
     }
 
     my $odba = $server->otter_dba();

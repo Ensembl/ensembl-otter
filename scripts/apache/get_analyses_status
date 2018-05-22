@@ -77,7 +77,7 @@ SQL
 sub get_analyses_status {
     my ($server) = @_;
 
-    return $server->otter_wrap_response('');
+    #return $server->otter_wrap_response('');
 my $assembly = $server->require_argument('chr');
 my $component_cs = $server->param('component_cs') || 'contig';
 

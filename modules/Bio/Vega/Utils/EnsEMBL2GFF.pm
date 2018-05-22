@@ -378,7 +378,8 @@ my $_new_feature_id_sub = sub {
         return '' unless $self->get_all_Exons && @{ $self->get_all_Exons };
 
         ### hack to help differentiate the various otter transcripts
-        if ($self->analysis && $self->analysis->logic_name eq __PACKAGE__.' '.__LINE__) {
+        #if ($self->analysis && $self->analysis->logic_name eq __PACKAGE__.' '.__LINE__) {
+        if ($self->analysis && $self->analysis->logic_name eq 'Otter') {
             $self->analysis->gff_source('Otter_' . $self->biotype);
         }
 

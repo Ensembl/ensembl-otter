@@ -413,7 +413,8 @@ sub _build_Transcript {         ## no critic (Subroutines::ProhibitUnusedPrivate
     } else {
         $logic_name = $data->{'analysis'};
     }
-    my $ana = $self->_get_Analysis($logic_name || __PACKAGE__.' '.__LINE__);
+    #my $ana = $self->_get_Analysis($logic_name || __PACKAGE__.' '.__LINE__);
+    my $ana = $self->_get_Analysis($logic_name || 'Otter');
 
     my $transcript = Bio::Vega::Transcript->new(
         -stable_id => $data->{'stable_id'},
@@ -569,7 +570,8 @@ sub _build_Locus {              ## no critic (Subroutines::ProhibitUnusedPrivate
     ## transcript author group has been temporarily set to 'anything' ??
 
     my $chr_slice = $self->_chr_slice;
-    my $ana = $self->_get_Analysis($data->{'analysis'} || __PACKAGE__.' '.__LINE__);
+    #my $ana = $self->_get_Analysis($data->{'analysis'} || __PACKAGE__.' '.__LINE__);
+    my $ana = $self->_get_Analysis($data->{'analysis'} || 'Otter');
     my $gene = Bio::Vega::Gene->new(
         -stable_id => $data->{'stable_id'},
         -slice => $chr_slice,
@@ -634,6 +636,7 @@ sub _build_Locus {              ## no critic (Subroutines::ProhibitUnusedPrivate
         $transcript->end(  $transcript->end   - $slice_offset);
 
         my $logic_name = $transcript->analysis->logic_name;
+        #if ($self->analysis_from_transcript_class and $source ne 'havana' and $logic_name ne __PACKAGE__.' '.__LINE__) {
         if ($self->analysis_from_transcript_class and $source ne 'havana' and $logic_name ne __PACKAGE__.' '.__LINE__) {
             $logic_name = sprintf('%s:%s', $source, $logic_name);
         }

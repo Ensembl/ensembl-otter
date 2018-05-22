@@ -2,7 +2,7 @@ package Bio::Otter::Server::Support;
 
 use strict;
 use warnings;
-
+use Data::Dumper;
 =head1 NAME
 
 Bio::Otter::Server::Support - common parent for MappingFetcher/B:O:Server::Support::{Local,Web}
@@ -32,12 +32,12 @@ sub new { # just to make it possible to instantiate an object
 # Error text like m{^(\d{3}) (.*)$} is an HTTP status code
 sub dataset {
     my ($self, $dataset) = @_;
-
+    
     if($dataset) {
         $self->{'_dataset'} = $dataset;
     }
 
-    return $self->{'_dataset'} ||= $self->_guarded_dataset;
+    return $self->{'_dataset'} ||= $self->_guarded_dataset($self->{'_authorized_user'});
 }
 
 # Return if user may write the dataset, or give a clear failure.
@@ -61,14 +61,15 @@ sub Access {
 }
 
 sub AccessUser {
-    my ($self) = @_;
-    my $user = $self->Access->user($self->authenticated_username);
+    my ($self, $unauthorized_user) = @_;
+    my $user = $self->Access->user($unauthorized_user);
+    #my $user = $self->Access->user($self->authenticated_username);
     return $user;
 }
 
 sub allowed_datasets {
-    my ($self) = @_;
-    my $user = $self->AccessUser;
+    my ($self, $unauthorized_user) = @_;
+    my $user = $self->AccessUser($unauthorized_user);
     if (!defined $user) {
         # Provoke a login?
         my $username = $self->authorized_user; # may generate (real) 403 and exit
@@ -80,10 +81,11 @@ sub allowed_datasets {
 }
 
 sub _guarded_dataset {
-    my ($self) = @_;
+    my ($self, $unauthorized_user) = @_;
     my ($user, $dataset_name);
     return try {
-        $user = $self->AccessUser || die "user unknown\n";
+        $user = $self->AccessUser($unauthorized_user) || die "user unknown\n";
+        #$user = $self->{'_authorized_user'} || die "user unknown\n";
         $dataset_name = $self->dataset_name;
         $user->all_datasets->{$dataset_name} || die "not in access.yaml\n";
     } catch {
@@ -94,7 +96,8 @@ sub _guarded_dataset {
         # (real) 403 and then hard exit; our 403 below is munged to a
         # 412 in ::Web to circumvent re-login in the case of not
         # having access to a dataset.
-        my $username = $self->authorized_user;
+        #my $username = $self->authorized_user;
+        my $username = $self->{'_authorized_user'};
 
         $dataset_name = '(none)' unless defined $dataset_name;
         warn "Rejected user $username request for dataset $dataset_name: $err";
