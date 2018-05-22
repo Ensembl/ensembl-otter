@@ -1,0 +1,282 @@
+{
+   "schema_version" : {
+      "species_id" : null,
+      "values" : [
+         "83"
+      ]
+   },
+   "species.scientific_name" : {
+      "species_id" : "1",
+      "values" : [
+         "Homo sapiens"
+      ]
+   },
+   "assembly.mapping" : {
+      "species_id" : "1",
+      "values" : [
+         "clone#contig",
+         "subregion#contig",
+         "chromosome:Otter#chromosome:NCBI36",
+         "chromosome:Otter#contig",
+         "chromosome:NCBI36#contig",
+         "chromosome:Otter#contig#clone",
+         "chromosome:NCBI36#contig#clone",
+         "chromosome:OtterArchive#contig",
+         "chromosome:OtterArchive#contig#clone",
+         "chromosome:GRCh37#contig",
+         "chromosome:GRCh37#contig#clone",
+         "chromosome:Otter#chromosome:GRCh37",
+         "chromosome:Otter#chromosome:OtterArchive"
+      ]
+   },
+   "schema_type" : {
+      "species_id" : null,
+      "values" : [
+         "core"
+      ]
+   },
+   "species.classification" : {
+      "species_id" : "1",
+      "values" : [
+         "sapiens",
+         "Homo",
+         "Hominidae",
+         "Catarrhini",
+         "Haplorrhini",
+         "Primates",
+         "Euarchontoglires",
+         "Eutheria",
+         "Mammalia",
+         "Euteleostomi",
+         "Vertebrata",
+         "Craniata",
+         "Chordata",
+         "Metazoa",
+         "Eukaryota"
+      ]
+   },
+   "patch" : {
+      "species_id" : null,
+      "values" : [
+         "patch_40_41_a.sql|analysis_description_displayable",
+         "patch_40_41_b.sql|info_type_enum",
+         "patch_40_41_c.sql|xref_priority",
+         "patch_40_41_d.sql|ditag_primary_key_type",
+         "patch_40_41_e.sql|schema_version",
+         "patch_40_41_f.sql|attrib_indices",
+         "patch_41_42_a.sql|remove_xref_priority",
+         "patch_41_42_c.sql|analysis_description_unique",
+         "patch_41_42_d.sql|schema_version",
+         "patch_41_42_e.sql|ditag_autoincrement",
+         "patch_41_42_f.sql|analysis_description_web_data",
+         "patch_41_42_g.sql|genebuild_version_format_change",
+         "patch_41_42_b.sql|unconventional_transcripts",
+         "patch_42_43_a.sql|unmapped_object.parent",
+         "patch_42_43_b.sql|unmapped_object_probe2transcript",
+         "patch_42_43_c.sql|info_type_probe_unmapped",
+         "patch_42_43_d.sql|unmapped_object_external_db_id",
+         "patch_42_43_e.sql|gene_archive.peptide_archive_id.index",
+         "patch_42_43_f.sql|schema_version",
+         "patch_43_44_a.sql|rationalise_key_columns",
+         "patch_43_44_b.sql|optimise_ditag_tables",
+         "patch_43_44_c.sql|external_db_type",
+         "patch_43_44_d.sql|translation_stable_id_unique",
+         "patch_43_44_e.sql|schema_version",
+         "patch_43_44_f.sql|external_db_type_syn",
+         "patch_44_45_a.sql|schema_version",
+         "patch_44_45_b.sql|marker_index",
+         "patch_44_45_c.sql|db_release_not_null",
+         "patch_45_46_a.sql|schema_version",
+         "patch_45_46_b.sql|go_xref.source_xref_id",
+         "patch_45_46_c.sql|unmapped_object.external_db_id",
+         "patch_45_46_d.sql|meta_unique_key",
+         "patch_45_46_e.sql|external_db_new_cols",
+         "patch_45_46_f.sql|stable_id_event.uni_idx",
+         "patch_45_46_g.sql|object_xref_linkage_annotation",
+         "patch_46_47_a.sql|schema_version",
+         "patch_46_47_b.sql|new_align_columns",
+         "patch_46_47_c.sql|extend_db_release",
+         "patch_47_48_a.sql|schema_version",
+         "patch_48_49_a.sql|schema_version",
+         "patch_48_49_b.sql|new_canonical_transcript_column",
+         "patch_48_49_c.sql|regulatory_support_removal",
+         "patch_48_49_d.sql|new_info_type_enum",
+         "patch_48_49_e.sql|ensembl_object_type_not_null",
+         "patch_49_50_a.sql|schema_version",
+         "patch_49_50_b.sql|coord_system_version_default",
+         "patch_49_50_c.sql|canonical_transcript",
+         "patch_49_50_d.sql|seq_region_indices",
+         "patch_49_50_e.sql|mapping_seq_region",
+         "patch_50_51_a.sql|schema_version",
+         "patch_50_51_b.sql|protein_feature_hit_name",
+         "patch_50_51_c.sql|meta_coord_index",
+         "patch_50_51_d.sql|multispecies",
+         "patch_50_51_e.sql|feature_external_data",
+         "patch_50_51_f.sql|meta_species_id_values",
+         "patch_50_51_g.sql|protein_feature_score",
+         "patch_50_51_h.sql|external_db_db_name",
+         "patch_50_51_i.sql|meta_value_binary",
+         "patch_51_52_a.sql|schema_version",
+         "patch_51_52_b.sql|widen_columns",
+         "patch_51_52_c.sql|pair_dna_align_feature_id",
+         "patch_51_52_d.sql|external_db_description",
+         "patch_52_53_a.sql|schema_version",
+         "patch_52_53_b.sql|external_db_type_enum",
+         "patch_52_53_d.sql|drop_go_xref_index",
+         "patch_52_53_c.sql|identity_xref_rename",
+         "patch_53_54_a.sql|schema_version",
+         "patch_53_54_b.sql|widen_columns",
+         "patch_53_54_c.sql|identity_object_analysis_move",
+         "patch_54_55_a.sql|schema_version",
+         "patch_54_55_b.sql|add_go_xrefs_types",
+         "patch_54_55_c.sql|add_splicing_event_tables",
+         "patch_54_55_d.sql|add_dependent_xref_table",
+         "patch_54_55_e.sql|add_is_constitutive_column",
+         "patch_54_55_f.sql|coord_system.version_null",
+         "patch_54_55_g.sql|analysis_description.display_label_NOT_NULL",
+         "patch_54_55_h.sql|gene_archive.allow_for_NULLs",
+         "patch_55_56_a.sql|schema_version",
+         "patch_55_56_b.sql|add_index_names",
+         "patch_55_56_c.sql|drop_oligo_tables_and_xrefs",
+         "patch_55_56_d.sql|add_index_to_splicing_event_feature",
+         "patch_56_57_a.sql|schema_version",
+         "patch_56_57_b.sql|unmapped_object.typ_enum_tidy",
+         "patch_56_57_c.sql|external_db_type_enum",
+         "patch_56_57_d.sql|allow_meta_null",
+         "patch_56_57_e.sql|canonical_translations",
+         "patch_56_57_f.sql|simple_feature.display_label",
+         "patch_57_58_a.sql|schema_version",
+         "patch_58_59_a.sql|schema_version",
+         "patch_58_59_b.sql|assembly_exception_exc_type_enum",
+         "patch_58_59_c.sql|splicing_event_attrib_type_id",
+         "patch_58_59_d.sql|object_xref_extend_index",
+         "patch_58_59_e.sql|meta_schema_type",
+         "patch_59_60_a.sql|schema_version",
+         "patch_59_60_b.sql|rename_go_xref_table",
+         "patch_59_60_c.sql|QC_fixes",
+         "patch_60_61_a.sql|schema_version",
+         "patch_60_61_b.sql|create_seq_region_synonym_table",
+         "patch_60_61_c.sql|rejig_object_xref_indexes",
+         "patch_61_62_a.sql|schema_version",
+         "patch_61_62_b.sql|synonym_field_extension",
+         "patch_61_62_c.sql|db_name_db_release_idx",
+         "patch_61_62_d.sql|remove_display_label_linkable",
+         "patch_61_62_e.sql|seq_region_synonym_seq_region_idx",
+         "patch_62_63_a.sql|schema_version",
+         "patch_62_63_b.sql|indexing_changes",
+         "patch_62_63_c.sql|remove_dbprimary_acc_linkable",
+         "patch_63_64_a.sql|schema_version",
+         "patch_63_64_b.sql|add_operons",
+         "patch_63_64_c.sql|is_ref_added_to_alt_allele",
+         "patch_63_64_d.sql|linkage_type change in ontology_xref",
+         "patch_64_65_a.sql|schema_version",
+         "patch_64_65_b.sql|merge_stable_id_with_object",
+         "patch_64_65_c.sql|add_data_file",
+         "patch_64_65_d.sql|add_checksum_info_type",
+         "patch_65_66_a.sql|schema_version",
+         "patch_65_66_b.sql|fix_external_db_id",
+         "patch_65_66_c.sql|reorder_unmapped_obj_index",
+         "patch_65_66_d.sql|add_index_to_ontology_xref_table",
+         "patch_65_66_e.sql|fix_external_db_id_in_xref",
+         "patch_65_66_f.sql|drop_default_values",
+         "patch_66_67_a.sql|schema_version",
+         "patch_66_67_b.sql|drop_stable_id_views",
+         "patch_66_67_c.sql|adding_intron_supporting_evidence",
+         "patch_66_67_d.sql|adding_gene_transcript_annotated",
+         "patch_66_67_e.sql|index_canonical_transcript_id",
+         "patch_67_68_a.sql|schema_version",
+         "patch_67_68_b.sql|xref_uniqueness",
+         "patch_67_68_c.sql|altering_intron_supporting_evidence",
+         "patch_67_68_d.sql|add_is_splice_canonical_and_seq_index",
+         "patch_67_68_e.sql|fix_67_68_e_xref_index",
+         "patch_68_69_a.sql|schema_version",
+         "patch_69_70_a.sql|schema_version",
+         "patch_69_70_b.sql|add_mapping_set_history",
+         "patch_69_70_c.sql|column_datatype_consistency",
+         "patch_69_70_d.sql|data_file_id_auto_increment",
+         "patch_69_70_e.sql|protein_feature_hit_description",
+         "patch_70_71_a.sql|schema_version",
+         "patch_70_71_b.sql|mapping_set_index",
+         "patch_71_72_a.sql|schema_version",
+         "patch_71_72_b.sql|associated_xref",
+         "patch_72_73_a.sql|schema_version",
+         "patch_72_73_b.sql|alt_allele_type",
+         "patch_72_73_c.sql|add_object_type_marker",
+         "patch_73_74_a.sql|schema_version",
+         "patch_73_74_b.sql|remove_dnac",
+         "patch_73_74_c.sql|remove_unconventional_transcript_association",
+         "patch_73_74_d.sql|remove_qtl",
+         "patch_73_74_e.sql|remove_canonical_annotation",
+         "patch_73_74_f.sql|remove_pair_dna_align",
+         "patch_73_74_g.sql|add_transcript_idx_tise",
+         "patch_73_74_h.sql|alt_allele_unique_gene_idx",
+         "patch_74_75_a.sql|schema_version",
+         "patch_74_75_b.sql|transcript_source",
+         "patch_74_75_c.sql|add_genome_statistics",
+         "patch_74_75_d.sql|default_transcript_source",
+         "patch_74_75_e.sql|unique_attrib_key",
+         "patch_74_75_f.sql|longer_code",
+         "patch_75_76_a.sql|schema_version",
+         "patch_75_76_b.sql|allow_null_karyotype",
+         "patch_75_76_c.sql|remove_alternative_splicing",
+         "patch_76_77_a.sql|schema_version",
+         "patch_77_78_a.sql|schema_version",
+         "patch_77_78_b.sql|source_column_increase",
+         "patch_77_78_c.sql|Change unmapped_reason_id from smallint to int",
+         "patch_78_79_a.sql|schema_version",
+         "patch_78_79_b.sql|bamcov support",
+         "patch_79_80_a.sql|schema_version",
+         "patch_79_80_b.sql|xref_dbprimary_acc_longer",
+         "patch_79_80_c.sql|seq_region_synonym_longer",
+         "patch_79_80_d.sql|genome_statistics_value_longer",
+         "patch_80_81_a.sql|schema_version",
+         "patch_80_81_b.sql|xref_width",
+         "patch_81_82_a.sql|schema_version",
+         "patch_81_82_b.sql|xref_width",
+         "patch_81_82_c.sql|seq_synonym_key",
+         "patch_82_83_a.sql|schema_version"
+      ]
+   },
+   "species.common_name" : {
+      "species_id" : "1",
+      "values" : [
+         "human"
+      ]
+   },
+   "prefix.primary" : {
+      "values" : [
+         "OTT"
+      ],
+      "species_id" : "1"
+   },
+   "species.taxonomy_id" : {
+      "values" : [
+         "9606"
+      ],
+      "species_id" : "1"
+   },
+   "prefix.species" : {
+      "values" : [
+         "HUM"
+      ],
+      "species_id" : "1"
+   },
+   "species.display_name" : {
+      "species_id" : "1",
+      "values" : [
+         "Human"
+      ]
+   },
+   "species.production_name" : {
+      "species_id" : "1",
+      "values" : [
+         "homo_sapiens"
+      ]
+   },
+   "species.url" : {
+      "values" : [
+         "Homo_sapiens"
+      ],
+      "species_id" : "1"
+   }
+}
