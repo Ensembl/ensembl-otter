@@ -20,4 +20,4 @@ install:
     - git clone --branch master --depth 1 https://github.com/Ensembl/zircon.git
     - git clone --branch master --depth 1 https://github.com/Ensembl/PerlModules.git
 
-after_success: "docker run -i --name devtest -v $ROOT_PATH/app:/loutre miralum/ottertest:latest"
+script: "docker run -i --name devtest -v $ROOT_PATH/app:/loutre miralum/ottertest:latest"
