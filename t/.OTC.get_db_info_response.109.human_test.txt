@@ -1,0 +1,1932 @@
+{
+   "attrib_type" : [
+      {
+         "attrib_type_id" : "1",
+         "name" : "European Nucleotide Archive (was EMBL) accession",
+         "code" : "embl_acc",
+         "description" : null
+      },
+      {
+         "description" : null,
+         "code" : "status",
+         "name" : "Status",
+         "attrib_type_id" : "2"
+      },
+      {
+         "code" : "synonym",
+         "description" : null,
+         "attrib_type_id" : "3",
+         "name" : "Synonym"
+      },
+      {
+         "code" : "name",
+         "description" : "Alternative/long name",
+         "attrib_type_id" : "4",
+         "name" : "Name"
+      },
+      {
+         "code" : "type",
+         "description" : null,
+         "attrib_type_id" : "5",
+         "name" : "Type of feature"
+      },
+      {
+         "code" : "toplevel",
+         "description" : "Top Level Non-Redundant Sequence Region",
+         "attrib_type_id" : "6",
+         "name" : "Top Level"
+      },
+      {
+         "code" : "GeneCount",
+         "description" : "Total Number of Genes",
+         "attrib_type_id" : "7",
+         "name" : "Gene Count"
+      },
+      {
+         "code" : "KnownGeneCount",
+         "description" : "Total Number of Known Genes",
+         "attrib_type_id" : "8",
+         "name" : "Known Gene Count"
+      },
+      {
+         "name" : "PseudoGene Count",
+         "attrib_type_id" : "9",
+         "description" : "Total Number of PseudoGenes",
+         "code" : "PseudoGeneCount"
+      },
+      {
+         "code" : "SNPCount",
+         "description" : "Total Number of SNPs",
+         "attrib_type_id" : "10",
+         "name" : "Short Variants"
+      },
+      {
+         "name" : "Codon Table",
+         "attrib_type_id" : "11",
+         "description" : "Alternate codon table",
+         "code" : "codon_table"
+      },
+      {
+         "description" : null,
+         "code" : "_selenocysteine",
+         "name" : "Selenocysteine",
+         "attrib_type_id" : "12"
+      },
+      {
+         "name" : "bacend",
+         "attrib_type_id" : "13",
+         "description" : null,
+         "code" : "bacend"
+      },
+      {
+         "code" : "htg",
+         "description" : "High Throughput phase attribute",
+         "attrib_type_id" : "14",
+         "name" : "htg"
+      },
+      {
+         "attrib_type_id" : "15",
+         "name" : "Micro RNA",
+         "code" : "miRNA",
+         "description" : "Coordinates of the mature miRNA"
+      },
+      {
+         "attrib_type_id" : "16",
+         "name" : "Non Reference",
+         "code" : "non_ref",
+         "description" : "Non Reference Sequence Region"
+      },
+      {
+         "attrib_type_id" : "17",
+         "name" : "Sanger Project name",
+         "code" : "sanger_project",
+         "description" : null
+      },
+      {
+         "name" : "Clone name",
+         "attrib_type_id" : "18",
+         "description" : null,
+         "code" : "clone_name"
+      },
+      {
+         "description" : null,
+         "code" : "fish",
+         "name" : "FISH location",
+         "attrib_type_id" : "19"
+      },
+      {
+         "code" : "org",
+         "description" : null,
+         "attrib_type_id" : "21",
+         "name" : "Sequencing centre"
+      },
+      {
+         "description" : null,
+         "code" : "method",
+         "name" : "Method",
+         "attrib_type_id" : "22"
+      },
+      {
+         "name" : "Super contig id",
+         "attrib_type_id" : "23",
+         "description" : null,
+         "code" : "superctg"
+      },
+      {
+         "code" : "inner_start",
+         "description" : null,
+         "attrib_type_id" : "24",
+         "name" : "Max start value"
+      },
+      {
+         "name" : "Min end value",
+         "attrib_type_id" : "25",
+         "description" : null,
+         "code" : "inner_end"
+      },
+      {
+         "code" : "state",
+         "description" : null,
+         "attrib_type_id" : "26",
+         "name" : "Current state of clone"
+      },
+      {
+         "code" : "organisation",
+         "description" : null,
+         "attrib_type_id" : "27",
+         "name" : "Organisation sequencing clone"
+      },
+      {
+         "attrib_type_id" : "28",
+         "name" : "Accession length",
+         "code" : "seq_len",
+         "description" : null
+      },
+      {
+         "description" : null,
+         "code" : "fp_size",
+         "name" : "FP size",
+         "attrib_type_id" : "29"
+      },
+      {
+         "description" : null,
+         "code" : "BACend_flag",
+         "name" : "BAC end flags",
+         "attrib_type_id" : "30"
+      },
+      {
+         "name" : "fpc clone",
+         "attrib_type_id" : "31",
+         "description" : null,
+         "code" : "fpc_clone_id"
+      },
+      {
+         "description" : "Number of Known Protein Coding",
+         "code" : "KnwnPCCount",
+         "name" : "protein_coding_KNOWN",
+         "attrib_type_id" : "32"
+      },
+      {
+         "attrib_type_id" : "33",
+         "name" : "protein_coding_NOVEL",
+         "code" : "NovPCCount",
+         "description" : "Number of Novel Protein Coding"
+      },
+      {
+         "name" : "processed_transcript_NOVEL",
+         "attrib_type_id" : "34",
+         "description" : "Number of Novel Processed Transcripts",
+         "code" : "NovPTCount"
+      },
+      {
+         "description" : "Number of Putative Processed Transcripts",
+         "code" : "PutPTCount",
+         "name" : "processed_transcript_PUTATIVE",
+         "attrib_type_id" : "35"
+      },
+      {
+         "attrib_type_id" : "36",
+         "name" : "protein_coding_PREDICTED",
+         "code" : "PredPCCount",
+         "description" : "Number of Predicted Protein Coding"
+      },
+      {
+         "attrib_type_id" : "37",
+         "name" : "IG_gene",
+         "code" : "IGGeneCount",
+         "description" : "Number of IG Genes"
+      },
+      {
+         "attrib_type_id" : "38",
+         "name" : "IG_pseudogene",
+         "code" : "IGPsGenCount",
+         "description" : "Number of IG Pseudogenes"
+      },
+      {
+         "attrib_type_id" : "39",
+         "name" : "total_pseudogene",
+         "code" : "TotPsCount",
+         "description" : "Total Number of Pseudogenes"
+      },
+      {
+         "name" : "protein_coding_in_progress_KNOWN",
+         "attrib_type_id" : "42",
+         "description" : "Number of Known Protein Coding in progress",
+         "code" : "KnwnPCProgCount"
+      },
+      {
+         "code" : "NovPCProgCount",
+         "description" : "Number of Novel Protein Coding in progress",
+         "attrib_type_id" : "43",
+         "name" : "protein_coding_in_progress_NOVEL"
+      },
+      {
+         "name" : "Annotated sequence length",
+         "attrib_type_id" : "44",
+         "description" : "Annotated Sequence",
+         "code" : "AnnotSeqLength"
+      },
+      {
+         "attrib_type_id" : "45",
+         "name" : "Total number of clones",
+         "code" : "TotCloneNum",
+         "description" : "Total Number of Clones"
+      },
+      {
+         "description" : "Number of Fully Annotated Clones",
+         "code" : "NumAnnotClone",
+         "name" : "Fully annotated clones",
+         "attrib_type_id" : "46"
+      },
+      {
+         "attrib_type_id" : "47",
+         "name" : "Acknowledgement",
+         "code" : "ack",
+         "description" : "Acknowledgement for manual annotation"
+      },
+      {
+         "name" : "High throughput phase",
+         "attrib_type_id" : "48",
+         "description" : "High throughput genomic sequencing phase",
+         "code" : "htg_phase"
+      },
+      {
+         "attrib_type_id" : "49",
+         "name" : "Description",
+         "code" : "description",
+         "description" : "A general descriptive text attribute"
+      },
+      {
+         "code" : "chromosome",
+         "description" : "Chromosomal location for supercontigs that are not assembled",
+         "attrib_type_id" : "50",
+         "name" : "Chromosome"
+      },
+      {
+         "code" : "nonsense",
+         "description" : "Strain specific nonesense mutation",
+         "attrib_type_id" : "51",
+         "name" : "Nonsense Mutation"
+      },
+      {
+         "code" : "author",
+         "description" : "Group resonsible for Vega annotation",
+         "attrib_type_id" : "52",
+         "name" : "Author"
+      },
+      {
+         "description" : "Author email address",
+         "code" : "author_email",
+         "name" : "Author email address",
+         "attrib_type_id" : "53"
+      },
+      {
+         "description" : "Annotation remark",
+         "code" : "remark",
+         "name" : "Remark",
+         "attrib_type_id" : "54"
+      },
+      {
+         "code" : "transcr_class",
+         "description" : "Transcript class",
+         "attrib_type_id" : "55",
+         "name" : "Transcript class"
+      },
+      {
+         "code" : "KnwnPTCount",
+         "description" : "Number of Known Processed Transcripts",
+         "attrib_type_id" : "56",
+         "name" : "processed_transcript_KNOWN"
+      },
+      {
+         "code" : "ccds",
+         "description" : "CCDS identifier",
+         "attrib_type_id" : "57",
+         "name" : "CCDS"
+      },
+      {
+         "attrib_type_id" : "58",
+         "name" : "CCDS Public Note",
+         "code" : "CCDS_PublicNote",
+         "description" : "Public Note for CCDS identifier, provided by http://www.ncbi.nlm.nih.gov/CCDS"
+      },
+      {
+         "description" : "Frameshift modelled as intron",
+         "code" : "Frameshift",
+         "name" : "Frameshift",
+         "attrib_type_id" : "59"
+      },
+      {
+         "attrib_type_id" : "60",
+         "name" : "processed_transcript",
+         "code" : "PTCount",
+         "description" : "Number of Processed Transcripts"
+      },
+      {
+         "code" : "PredPTCount",
+         "description" : "Number of Predicted Processed Transcripts",
+         "attrib_type_id" : "61",
+         "name" : "processed_transcript_PREDICTED"
+      },
+      {
+         "name" : "Structure",
+         "attrib_type_id" : "62",
+         "description" : "RNA secondary structure line",
+         "code" : "ncRNA"
+      },
+      {
+         "description" : null,
+         "code" : "skip_clone",
+         "name" : "skip clone  Skip clone in align_by_clone_identity.pl",
+         "attrib_type_id" : "63"
+      },
+      {
+         "attrib_type_id" : "64",
+         "name" : "Coding genes",
+         "code" : "coding_cnt",
+         "description" : "Number of protein coding Genes"
+      },
+      {
+         "code" : "GeneNo_novCod",
+         "description" : "Number of novel protein_coding Genes",
+         "attrib_type_id" : "65",
+         "name" : "novel protein_coding Gene Count"
+      },
+      {
+         "description" : "Number of rRNA Genes",
+         "code" : "GeneNo_rRNA",
+         "name" : "rRNA Gene Count",
+         "attrib_type_id" : "66"
+      },
+      {
+         "description" : "Number of pseudogenes",
+         "code" : "pseudogene_cnt",
+         "name" : "Pseudogenes",
+         "attrib_type_id" : "67"
+      },
+      {
+         "code" : "GeneNo_snRNA",
+         "description" : "Number of snRNA Genes",
+         "attrib_type_id" : "68",
+         "name" : "snRNA Gene Count"
+      },
+      {
+         "attrib_type_id" : "69",
+         "name" : "snoRNA Gene Count",
+         "code" : "GeneNo_snoRNA",
+         "description" : "Number of snoRNA Genes"
+      },
+      {
+         "name" : "miRNA Gene Count",
+         "attrib_type_id" : "70",
+         "description" : "Number of miRNA Genes",
+         "code" : "GeneNo_miRNA"
+      },
+      {
+         "attrib_type_id" : "71",
+         "name" : "misc_RNA Gene Count",
+         "code" : "GeneNo_mscRNA",
+         "description" : "Number of misc_RNA Genes"
+      },
+      {
+         "description" : "Number of scRNA Genes",
+         "code" : "GeneNo_scRNA",
+         "name" : "scRNA Gene Count",
+         "attrib_type_id" : "72"
+      },
+      {
+         "description" : "Number of Mt_rRNA Genes",
+         "code" : "GeneNo_MTrRNA",
+         "name" : "Mt_rRNA Gene Count",
+         "attrib_type_id" : "73"
+      },
+      {
+         "description" : "Number of Mt_tRNA Genes",
+         "code" : "GeneNo_MTtRNA",
+         "name" : "Mt_tRNA Gene Count",
+         "attrib_type_id" : "74"
+      },
+      {
+         "attrib_type_id" : "75",
+         "name" : "RNA_pseudogene Gene Count",
+         "code" : "GeneNo_RNA_pseu",
+         "description" : "Number of RNA_pseudogene Genes"
+      },
+      {
+         "attrib_type_id" : "76",
+         "name" : "tRNA Gene Count",
+         "code" : "GeneNo_tRNA",
+         "description" : "Number of tRNA Genes"
+      },
+      {
+         "code" : "GeneNo_rettran",
+         "description" : "Number of retrotransposed Genes",
+         "attrib_type_id" : "77",
+         "name" : "retrotransposed Gene Count"
+      },
+      {
+         "code" : "GeneNo_snlRNA",
+         "description" : "Number of snlRNA Genes",
+         "attrib_type_id" : "78",
+         "name" : "snlRNA Gene Count"
+      },
+      {
+         "name" : "processed_transcript Gene Count",
+         "attrib_type_id" : "79",
+         "description" : "Number of processed transcript Genes",
+         "code" : "GeneNo_proc_tr"
+      },
+      {
+         "code" : "supercontig",
+         "description" : null,
+         "attrib_type_id" : "80",
+         "name" : "SuperContig name"
+      },
+      {
+         "description" : null,
+         "code" : "well_name",
+         "name" : "Well plate name",
+         "attrib_type_id" : "81"
+      },
+      {
+         "code" : "bacterial",
+         "description" : null,
+         "attrib_type_id" : "82",
+         "name" : "Bacterial"
+      },
+      {
+         "name" : "Novel CDS Count",
+         "attrib_type_id" : "83",
+         "description" : null,
+         "code" : "NovelCDSCount"
+      },
+      {
+         "name" : "Novel Transcript Count",
+         "attrib_type_id" : "84",
+         "description" : null,
+         "code" : "NovelTransCount"
+      },
+      {
+         "attrib_type_id" : "85",
+         "name" : "Putative Transcript Count",
+         "code" : "PutTransCount",
+         "description" : null
+      },
+      {
+         "description" : null,
+         "code" : "PredTransCount",
+         "name" : "Predicted Transcript Count",
+         "attrib_type_id" : "86"
+      },
+      {
+         "code" : "UnclassPsCount",
+         "description" : null,
+         "attrib_type_id" : "87",
+         "name" : "Unclass Ps count"
+      },
+      {
+         "attrib_type_id" : "88",
+         "name" : "Known prog Count",
+         "code" : "KnwnprogCount",
+         "description" : null
+      },
+      {
+         "description" : null,
+         "code" : "NovCDSprogCount",
+         "name" : "Novel CDS prog count",
+         "attrib_type_id" : "89"
+      },
+      {
+         "name" : "BACend well name",
+         "attrib_type_id" : "90",
+         "description" : null,
+         "code" : "bacend_well_nam"
+      },
+      {
+         "description" : null,
+         "code" : "alt_well_name",
+         "name" : "Alt well name",
+         "attrib_type_id" : "91"
+      },
+      {
+         "name" : "Transcript Edge",
+         "attrib_type_id" : "92",
+         "description" : null,
+         "code" : "TranscriptEdge"
+      },
+      {
+         "name" : "Alt European Nucleotide Archive (was EMBL) acc",
+         "attrib_type_id" : "93",
+         "description" : null,
+         "code" : "alt_embl_acc"
+      },
+      {
+         "name" : "Alt org",
+         "attrib_type_id" : "94",
+         "description" : null,
+         "code" : "alt_org"
+      },
+      {
+         "attrib_type_id" : "95",
+         "name" : "International Clone Name",
+         "code" : "intl_clone_name",
+         "description" : null
+      },
+      {
+         "name" : "European Nucleotide Archive (was EMBL) Version",
+         "attrib_type_id" : "96",
+         "description" : null,
+         "code" : "embl_version"
+      },
+      {
+         "name" : "Chromosome Name",
+         "attrib_type_id" : "97",
+         "description" : "Chromosome Name Contained in the Assembly",
+         "code" : "chr"
+      },
+      {
+         "name" : "Equivalent EnsEMBL assembly",
+         "attrib_type_id" : "98",
+         "description" : "For full chromosomes made from NCBI AGPs",
+         "code" : "equiv_asm"
+      },
+      {
+         "name" : "ncRNA Gene Count",
+         "attrib_type_id" : "99",
+         "description" : "Number of ncRNA Genes",
+         "code" : "GeneNo_ncRNA"
+      },
+      {
+         "name" : "Ig Gene Count",
+         "attrib_type_id" : "100",
+         "description" : "Number of Ig Genes",
+         "code" : "GeneNo_Ig"
+      },
+      {
+         "name" : "hit similarity",
+         "attrib_type_id" : "109",
+         "description" : "percentage id to parent transcripts",
+         "code" : "HitSimilarity"
+      },
+      {
+         "name" : "hit coverage",
+         "attrib_type_id" : "110",
+         "description" : "coverage of parent transcripts",
+         "code" : "HitCoverage"
+      },
+      {
+         "code" : "PropNonGap",
+         "description" : "proportion non gap",
+         "attrib_type_id" : "111",
+         "name" : "proportion non gap"
+      },
+      {
+         "attrib_type_id" : "112",
+         "name" : "number of stops",
+         "code" : "NumStops",
+         "description" : null
+      },
+      {
+         "attrib_type_id" : "113",
+         "name" : "gap exons",
+         "code" : "GapExons",
+         "description" : "number of gap exons"
+      },
+      {
+         "code" : "SourceTran",
+         "description" : "source transcript",
+         "attrib_type_id" : "114",
+         "name" : "source transcript"
+      },
+      {
+         "name" : "end not found",
+         "attrib_type_id" : "115",
+         "description" : "end not found",
+         "code" : "EndNotFound"
+      },
+      {
+         "description" : "start not found",
+         "code" : "StartNotFound",
+         "name" : "start not found",
+         "attrib_type_id" : "116"
+      },
+      {
+         "description" : null,
+         "code" : "Frameshift Fra",
+         "name" : "Frameshift modelled as intron",
+         "attrib_type_id" : "117"
+      },
+      {
+         "name" : "Ensembl name",
+         "attrib_type_id" : "118",
+         "description" : "Name of equivalent Ensembl chromosome",
+         "code" : "ensembl_name"
+      },
+      {
+         "name" : "NoAnnotation",
+         "attrib_type_id" : "119",
+         "description" : "Clones without manual annotation",
+         "code" : "NoAnnotation"
+      },
+      {
+         "description" : "Contig present on a haplotype",
+         "code" : "hap_contig",
+         "name" : "Haplotype contig",
+         "attrib_type_id" : "120"
+      },
+      {
+         "code" : "annotated",
+         "description" : null,
+         "attrib_type_id" : "121",
+         "name" : "Clone Annotation Status"
+      },
+      {
+         "code" : "keyword",
+         "description" : null,
+         "attrib_type_id" : "122",
+         "name" : "Clone Keyword"
+      },
+      {
+         "description" : null,
+         "code" : "hidden_remark",
+         "name" : "Hidden Remark",
+         "attrib_type_id" : "123"
+      },
+      {
+         "description" : null,
+         "code" : "mRNA_start_NF",
+         "name" : "mRNA start not found",
+         "attrib_type_id" : "124"
+      },
+      {
+         "description" : null,
+         "code" : "mRNA_end_NF",
+         "name" : "mRNA end not found",
+         "attrib_type_id" : "125"
+      },
+      {
+         "name" : "CDS start not found",
+         "attrib_type_id" : "126",
+         "description" : null,
+         "code" : "cds_start_NF"
+      },
+      {
+         "attrib_type_id" : "127",
+         "name" : "CDS end not found",
+         "code" : "cds_end_NF",
+         "description" : null
+      },
+      {
+         "description" : "1 for writable , 0 for read-only",
+         "code" : "write_access",
+         "name" : "Write access for Sequence Set",
+         "attrib_type_id" : "128"
+      },
+      {
+         "name" : "Hidden Sequence Set",
+         "attrib_type_id" : "129",
+         "description" : null,
+         "code" : "hidden"
+      },
+      {
+         "attrib_type_id" : "130",
+         "name" : "Vega name",
+         "code" : "vega_name",
+         "description" : "Vega seq_region.name"
+      },
+      {
+         "attrib_type_id" : "131",
+         "name" : "Export mode",
+         "code" : "vega_export_mod",
+         "description" : "E (External), I (Internal) etc"
+      },
+      {
+         "name" : "Vega release",
+         "attrib_type_id" : "132",
+         "description" : "Vega release number",
+         "code" : "vega_release"
+      },
+      {
+         "name" : "Clone_left_end",
+         "attrib_type_id" : "133",
+         "description" : "Clone_lef_end feature marked in GAP database",
+         "code" : "atag_CLE"
+      },
+      {
+         "name" : "Clone_right_end",
+         "attrib_type_id" : "134",
+         "description" : "Clone_right_end feature marked in GAP database",
+         "code" : "atag_CRE"
+      },
+      {
+         "code" : "atag_Misc",
+         "description" : "miscellaneous feature marked in GAP database",
+         "attrib_type_id" : "135",
+         "name" : "Misc"
+      },
+      {
+         "description" : "region of uncertain DNA sequence marked in GAP database",
+         "code" : "atag_Unsure",
+         "name" : "Unsure",
+         "attrib_type_id" : "136"
+      },
+      {
+         "code" : "MultAssem",
+         "description" : "Part of Seq Region is part of more than one assembly",
+         "attrib_type_id" : "137",
+         "name" : "Multiple Assembled seq region"
+      },
+      {
+         "name" : "WGS contig",
+         "attrib_type_id" : "140",
+         "description" : "WGS contig integrated into the map",
+         "code" : "wgs"
+      },
+      {
+         "code" : "bac",
+         "description" : "tiling path of clones",
+         "attrib_type_id" : "141",
+         "name" : "AGP clones"
+      },
+      {
+         "attrib_type_id" : "142",
+         "name" : "Gene GC",
+         "code" : "GeneGC",
+         "description" : "Percentage GC content for this gene"
+      },
+      {
+         "code" : "TotAssemblyLeng",
+         "description" : "Length of the assembly not counting sequence gaps",
+         "attrib_type_id" : "143",
+         "name" : "Finished sequence length"
+      },
+      {
+         "code" : "amino_acid_sub",
+         "description" : "Some translations have been manually curated for amino acid substitiutions. For example a stop codon may be changed to an amino acid in order to prevent premature truncation, or one amino acid can be substituted for another.",
+         "attrib_type_id" : "144",
+         "name" : "Amino acid substitution"
+      },
+      {
+         "code" : "_rna_edit",
+         "description" : "RNA edit",
+         "attrib_type_id" : "145",
+         "name" : "rna_edit"
+      },
+      {
+         "description" : "Reason why a transcript has been killed",
+         "code" : "kill_reason",
+         "name" : "Kill Reason",
+         "attrib_type_id" : "146"
+      },
+      {
+         "code" : "strip_UTR",
+         "description" : "Transcript needs bad UTR removing",
+         "attrib_type_id" : "147",
+         "name" : "Strip UTR"
+      },
+      {
+         "description" : "Finished Sequence",
+         "code" : "TotAssLength",
+         "name" : "Finished sequence length",
+         "attrib_type_id" : "148"
+      },
+      {
+         "code" : "PsCount",
+         "description" : "Number of Pseudogenes",
+         "attrib_type_id" : "149",
+         "name" : "pseudogene"
+      },
+      {
+         "attrib_type_id" : "152",
+         "name" : "total_processed_transcript",
+         "code" : "TotPTCount",
+         "description" : "Total Number of Processed Transcripts"
+      },
+      {
+         "name" : "total_protein_coding",
+         "attrib_type_id" : "153",
+         "description" : "Total Number of Protein Coding",
+         "code" : "TotPCCount"
+      },
+      {
+         "attrib_type_id" : "154",
+         "name" : "novel_non_coding",
+         "code" : "NovNcCount",
+         "description" : "Number of Novel Non Coding"
+      },
+      {
+         "description" : "Number of Known Polymorphic Pseudogenes",
+         "code" : "KnwnPolyPsCount",
+         "name" : "known_polymorphic",
+         "attrib_type_id" : "155"
+      },
+      {
+         "attrib_type_id" : "156",
+         "name" : "polymorphic_pseudogene",
+         "code" : "PolyPsCount",
+         "description" : "Number of Polymorphic Pseudogenes"
+      },
+      {
+         "attrib_type_id" : "157",
+         "name" : "total_IG_gene",
+         "code" : "TotIGGeneCount",
+         "description" : "Total Number of IG Genes"
+      },
+      {
+         "description" : "Number of Processed Pseudogenes",
+         "code" : "ProcPsCount",
+         "name" : "proc_pseudogene",
+         "attrib_type_id" : "158"
+      },
+      {
+         "code" : "UnPsCount",
+         "description" : "Number of Unprocessed Pseudogenes",
+         "attrib_type_id" : "159",
+         "name" : "unproc_pseudogene"
+      },
+      {
+         "description" : "Number of Transcribed Pseudogenes",
+         "code" : "TPsCount",
+         "name" : "transcribed_pseudogene",
+         "attrib_type_id" : "160"
+      },
+      {
+         "description" : "Number of TEC Genes",
+         "code" : "TECCount",
+         "name" : "TEC",
+         "attrib_type_id" : "161"
+      },
+      {
+         "description" : "Number of Known IG Genes",
+         "code" : "KnwnIGGeneCount",
+         "name" : "IG_gene_KNOWN",
+         "attrib_type_id" : "162"
+      },
+      {
+         "description" : "Number of Known IG Pseudogenes",
+         "code" : "KnwnIGPsGeCount",
+         "name" : "IG_pseudogene_KNOWN",
+         "attrib_type_id" : "163"
+      },
+      {
+         "attrib_type_id" : "164",
+         "name" : "Isoelectric point",
+         "code" : "IsoPoint",
+         "description" : "Pepstats attributes"
+      },
+      {
+         "description" : "Pepstats attributes",
+         "code" : "Charge",
+         "name" : "Charge",
+         "attrib_type_id" : "165"
+      },
+      {
+         "description" : "Pepstats attributes",
+         "code" : "MolecularWeight",
+         "name" : "Molecular weight",
+         "attrib_type_id" : "166"
+      },
+      {
+         "code" : "NumResidues",
+         "description" : "Pepstats attributes",
+         "attrib_type_id" : "167",
+         "name" : "Number of residues"
+      },
+      {
+         "attrib_type_id" : "168",
+         "name" : "Ave. residue weight",
+         "code" : "AvgResWeight",
+         "description" : "Pepstats attributes"
+      },
+      {
+         "attrib_type_id" : "170",
+         "name" : "Initial methionine",
+         "code" : "initial_met",
+         "description" : "Set first amino acid to methionine"
+      },
+      {
+         "code" : "NonGapHCov",
+         "description" : null,
+         "attrib_type_id" : "171",
+         "name" : "NonGapHCov"
+      },
+      {
+         "attrib_type_id" : "172",
+         "name" : "otter support",
+         "code" : "otter_support",
+         "description" : "Evidence ID that was used as supporting feature for building a gene in Vega"
+      },
+      {
+         "name" : "enst link",
+         "attrib_type_id" : "173",
+         "description" : "Code to link a OTTT with an ENST when they both share the CDS of ENST",
+         "code" : "enst_link"
+      },
+      {
+         "name" : "upstream ATG",
+         "attrib_type_id" : "174",
+         "description" : "Alternative ATG found upstream of the defined as start ATG for the transcript",
+         "code" : "upstream_ATG"
+      },
+      {
+         "code" : "TPPsCount",
+         "description" : "Number of Transcribed Processed Pseudogenes",
+         "attrib_type_id" : "175",
+         "name" : "transcribed_processed_pseudogene"
+      },
+      {
+         "description" : "Number of Transcribed Unprocessed Pseudogenes",
+         "code" : "TUPsCount",
+         "name" : "transcribed_unprocessed_pseudogene",
+         "attrib_type_id" : "176"
+      },
+      {
+         "name" : "unitary_pseudogene",
+         "attrib_type_id" : "177",
+         "description" : "Number of Unitary Pseudogenes",
+         "code" : "UniPsCount"
+      },
+      {
+         "name" : "TEC_KNOWN",
+         "attrib_type_id" : "178",
+         "description" : "Number of Known TEC genes",
+         "code" : "KnwnTECCount"
+      },
+      {
+         "description" : "Total number of TEC genes",
+         "code" : "TotTECGeneCount",
+         "name" : "TEC_all",
+         "attrib_type_id" : "179"
+      },
+      {
+         "name" : "transcribed_unitary_pseudogene",
+         "attrib_type_id" : "180",
+         "description" : "Number of Transcribed Unitary Pseudogenes",
+         "code" : "TUyPsCount"
+      },
+      {
+         "name" : "polymorphic",
+         "attrib_type_id" : "181",
+         "description" : "Number of Polymorphic Genes",
+         "code" : "PolyCount"
+      },
+      {
+         "name" : "polymorphic",
+         "attrib_type_id" : "182",
+         "description" : "Number of Known Polymorphic Genes",
+         "code" : "KnwnPolyCount"
+      },
+      {
+         "attrib_type_id" : "183",
+         "name" : "TR_gene_known",
+         "code" : "KnwnTRCount",
+         "description" : "Number of Known TR Genes"
+      },
+      {
+         "attrib_type_id" : "184",
+         "name" : "TR_gene",
+         "code" : "TRGeneCount",
+         "description" : "Number of TR Genes"
+      },
+      {
+         "attrib_type_id" : "185",
+         "name" : "TR_pseudo",
+         "code" : "TRPsCount",
+         "description" : "Number of TR Pseudogenes"
+      },
+      {
+         "code" : "tp_ott_support",
+         "description" : "Evidence ID that was used as supporting feature for building a gene in Vega",
+         "attrib_type_id" : "186",
+         "name" : "otter protein transcript support"
+      },
+      {
+         "code" : "td_ott_support",
+         "description" : "Evidence ID that was used as supporting feature for building a gene in Vega",
+         "attrib_type_id" : "187",
+         "name" : "otter dna transcript support"
+      },
+      {
+         "name" : "otter protein exon support",
+         "attrib_type_id" : "188",
+         "description" : "Evidence ID that was used as supporting feature for building a gene in Vega",
+         "code" : "ep_ott_support"
+      },
+      {
+         "attrib_type_id" : "189",
+         "name" : "otter dna exon support",
+         "code" : "ed_ott_support",
+         "description" : "Evidence ID that was used as supporting feature for building a gene in Vega"
+      },
+      {
+         "code" : "GeneNo_lincRNA",
+         "description" : "Number of lincRNA Genes",
+         "attrib_type_id" : "190",
+         "name" : "lincRNA Gene Count"
+      },
+      {
+         "description" : "This transcript has a variant that causes a stop codon to be gained in at least 10 percent of a HapMap population",
+         "code" : "StopGained",
+         "name" : "SNP causes stop codon to be gained",
+         "attrib_type_id" : "191"
+      },
+      {
+         "description" : "This transcript has a variant that causes a stop codon to be lost in at least 10 percent of a HapMap population",
+         "code" : "StopLost",
+         "name" : "SNP causes stop codon to be lost",
+         "attrib_type_id" : "192"
+      },
+      {
+         "attrib_type_id" : "193",
+         "name" : "class_I_RNA Gene Count",
+         "code" : "GeneNo_class_I_",
+         "description" : "Number of class_I_RNA Genes"
+      },
+      {
+         "code" : "GeneNo_SRP_RNA",
+         "description" : "Number of SRP_RNA Genes",
+         "attrib_type_id" : "194",
+         "name" : "SRP_RNA Gene Count"
+      },
+      {
+         "name" : "class_II_RNA Gene Count",
+         "attrib_type_id" : "195",
+         "description" : "Number of class_II_RNA Genes",
+         "code" : "GeneNo_class_II"
+      },
+      {
+         "attrib_type_id" : "196",
+         "name" : "RNase_P_RNA Gene Count",
+         "code" : "GeneNo_P_RNA",
+         "description" : "Number of RNase_P_RNA Genes"
+      },
+      {
+         "name" : "RNase_MRP_RNA Gene Count",
+         "attrib_type_id" : "197",
+         "description" : "Number of RNase_MRP_RNA Genes",
+         "code" : "GeneNo_RNase_MR"
+      },
+      {
+         "description" : "Frameshift on the query sequence is lost in the target sequence",
+         "code" : "lost_frameshift",
+         "name" : "lost_frameshift",
+         "attrib_type_id" : "198"
+      },
+      {
+         "description" : "The position of other possible three prime ends for the transcript",
+         "code" : "AltThreePrime",
+         "name" : "Alternate three prime end",
+         "attrib_type_id" : "199"
+      },
+      {
+         "attrib_type_id" : "216",
+         "name" : "Gene in LRG",
+         "code" : "GeneInLRG",
+         "description" : "This gene is contained within an LRG region"
+      },
+      {
+         "code" : "GeneOverlapLRG",
+         "description" : "This gene is partially overlapped by a LRG region (start or end outside LRG)",
+         "attrib_type_id" : "217",
+         "name" : "Gene overlaps LRG"
+      },
+      {
+         "name" : "readthrough transcript",
+         "attrib_type_id" : "218",
+         "description" : "Havana readthrough transcripts",
+         "code" : "readthrough_tra"
+      },
+      {
+         "name" : "Constitutive exon",
+         "attrib_type_id" : "300",
+         "description" : "An exon that is always included in the mature mRNA, even in different mRNA isoforms",
+         "code" : "CNE"
+      },
+      {
+         "code" : "CE",
+         "description" : "One exon is spliced out of the primary transcript together with its flanking introns",
+         "attrib_type_id" : "301",
+         "name" : "Cassette exon"
+      },
+      {
+         "code" : "IR",
+         "description" : "A sequence is spliced out as an intron or remains in the mature mRNA transcript",
+         "attrib_type_id" : "302",
+         "name" : "Intron retention"
+      },
+      {
+         "name" : "Mutually exclusive exons",
+         "attrib_type_id" : "303",
+         "description" : "In the simpliest case, one or two consecutive exons are retained but not both",
+         "code" : "MXE"
+      },
+      {
+         "name" : "Alternative 3' sites",
+         "attrib_type_id" : "304",
+         "description" : "Two or more splice sites are recognized at the 5' end of an exon. An alternative 3' splice junction (acceptor site) is used, changing the 5' boundary of the downstream exon",
+         "code" : "A3SS"
+      },
+      {
+         "attrib_type_id" : "305",
+         "name" : "Alternative 5' sites",
+         "code" : "A5SS",
+         "description" : "Two or more splice sites are recognized at the 3' end of an exon. An alternative 5' splice junction (donor site) is used, changing the 3' boundary of the upstream exon"
+      },
+      {
+         "code" : "AFE",
+         "description" : "The second exons of each variant have identical boundaries, but the first exons do not overlap",
+         "attrib_type_id" : "306",
+         "name" : "Alternative first exon"
+      },
+      {
+         "attrib_type_id" : "307",
+         "name" : "Alternative last exon",
+         "code" : "ALE",
+         "description" : "Penultimate exons of each splice variant have identical boundaries, but the last exons do not overlap"
+      },
+      {
+         "attrib_type_id" : "308",
+         "name" : "Intron isoform",
+         "code" : "II",
+         "description" : "Alternative donor or acceptor splice sites lead to truncation or extension of introns, respectively"
+      },
+      {
+         "description" : "Alternative donor or acceptor splice sites leads to truncation or extension of exons, respectively",
+         "code" : "EI",
+         "name" : "Exon isoform",
+         "attrib_type_id" : "309"
+      },
+      {
+         "attrib_type_id" : "310",
+         "name" : "Alternative initiation",
+         "code" : "AI",
+         "description" : "Alternative choice of promoters"
+      },
+      {
+         "description" : "Alternative choice of polyadenylation sites",
+         "code" : "AT",
+         "name" : "Alternative termination",
+         "attrib_type_id" : "311"
+      },
+      {
+         "name" : "Assembly Patch Fix",
+         "attrib_type_id" : "312",
+         "description" : "Assembly patch that will, in the next assembly release, replace the corresponding sequence found in the current assembly",
+         "code" : "patch_fix"
+      },
+      {
+         "description" : "Assembly patch that will, in the next assembly release, be retained as an alternate non-reference sequence in a similar way to haplotypes",
+         "code" : "patch_novel",
+         "name" : "Assembly Patch Novel",
+         "attrib_type_id" : "313"
+      },
+      {
+         "code" : "LRG",
+         "description" : "Locus Reference Genomic sequence",
+         "attrib_type_id" : "314",
+         "name" : "Locus Reference Genomic"
+      },
+      {
+         "name" : "Evidence for transcript removed",
+         "attrib_type_id" : "315",
+         "description" : "Supporting evidence for this projected transcript has been removed",
+         "code" : "NoEvidence"
+      },
+      {
+         "name" : "Circular sequence",
+         "attrib_type_id" : "316",
+         "description" : "Circular chromosome or plasmid molecule",
+         "code" : "circular_seq"
+      },
+      {
+         "code" : "external_db",
+         "description" : "External database to which seq_region name may be linked",
+         "attrib_type_id" : "317",
+         "name" : "External database"
+      },
+      {
+         "attrib_type_id" : "318",
+         "name" : "split_tscript",
+         "code" : "split_tscript",
+         "description" : "split_tscript"
+      },
+      {
+         "code" : "Threep",
+         "description" : "Alternate three prime end",
+         "attrib_type_id" : "319",
+         "name" : "Three prime end"
+      },
+      {
+         "code" : "gene_cluster",
+         "description" : "Havana annotated gene cluster",
+         "attrib_type_id" : "320",
+         "name" : "Gene cluster"
+      },
+      {
+         "attrib_type_id" : "328",
+         "name" : "Ribosomal Frameshift",
+         "code" : "_rib_frameshift",
+         "description" : "Position and magnitude of frameshift"
+      },
+      {
+         "description" : "Haplotypes reference a regular chromosome (indicated in the value of the attribute)",
+         "code" : "vega_ref_chrom",
+         "name" : "Vega reference chromosome",
+         "attrib_type_id" : "345"
+      },
+      {
+         "description" : "Number of Putative Protein Coding",
+         "code" : "PutPCCount",
+         "name" : "protein_coding_PUTATIVE",
+         "attrib_type_id" : "346"
+      },
+      {
+         "code" : "proj_alt_seq",
+         "description" : "Projected sequence differs from original",
+         "attrib_type_id" : "347",
+         "name" : "Projection altered sequence"
+      },
+      {
+         "description" : "Gene biotype assigned by Havana",
+         "code" : "hav_gene_type",
+         "name" : "Havana gene biotype",
+         "attrib_type_id" : "348"
+      },
+      {
+         "code" : "GeneNo_antisense",
+         "description" : "Number of antisense Genes",
+         "attrib_type_id" : "349",
+         "name" : "antisense Gene Count"
+      },
+      {
+         "code" : "GeneNo_sense_in",
+         "description" : "Number of sense_intronic Genes",
+         "attrib_type_id" : "350",
+         "name" : "sense_intronic Gene Count"
+      },
+      {
+         "description" : "Number of ambiguous_orf Genes",
+         "code" : "GeneNo_amb_orf",
+         "name" : "ambiguous_orf Gene Count",
+         "attrib_type_id" : "351"
+      },
+      {
+         "attrib_type_id" : "352",
+         "name" : "retained_intron Gene Count",
+         "code" : "GeneNo_ret_int",
+         "description" : "Number of retained_intron Genes"
+      },
+      {
+         "attrib_type_id" : "353",
+         "name" : "Non coding gene count",
+         "code" : "noncoding_cnt",
+         "description" : "Number of non coding genes"
+      },
+      {
+         "code" : "GeneNo_ncrna_h",
+         "description" : "Number of ncrna_host Genes",
+         "attrib_type_id" : "354",
+         "name" : "ncrna_host Gene Count"
+      },
+      {
+         "attrib_type_id" : "355",
+         "name" : "sense_overlapping Gene Count",
+         "code" : "GeneNo_sens_ov",
+         "description" : "Number of sense_overlapping Genes"
+      },
+      {
+         "name" : "3prime_overlapping Gene Count",
+         "attrib_type_id" : "356",
+         "description" : "Number of 3prime_overlapping Genes",
+         "code" : "GeneNo_3prime"
+      },
+      {
+         "description" : "Number of tmRNA Genes",
+         "code" : "GeneNo_tmRNA",
+         "name" : "tmRNA Gene Count",
+         "attrib_type_id" : "357"
+      },
+      {
+         "code" : "PHIbase_mutant",
+         "description" : "PHI-base phenotype of the mutants",
+         "attrib_type_id" : "358",
+         "name" : "PHI-base mutant"
+      },
+      {
+         "description" : "Number of ribozyme Genes",
+         "code" : "GeneNo_ribozyme",
+         "name" : "ribozyme Gene Count",
+         "attrib_type_id" : "359"
+      },
+      {
+         "name" : "ncrna_host",
+         "attrib_type_id" : "360",
+         "description" : "Havana ncrna_host gene",
+         "code" : "ncrna_host"
+      },
+      {
+         "description" : "The classification of the gene or transcript based on alignment to NR (values: TE WH NH)",
+         "code" : "peptide-class",
+         "name" : "Peptide classification",
+         "attrib_type_id" : "361"
+      },
+      {
+         "description" : "High-confidence set of genes, composed of evidence-based genes and non-overlapping protein-coding ab initio gene models",
+         "code" : "working-set",
+         "name" : "Working Gene Set",
+         "attrib_type_id" : "362"
+      },
+      {
+         "name" : "Filtered Gene Set v1",
+         "attrib_type_id" : "363",
+         "description" : "Working genes that are screened for TE content and orthology with sorghum and rice.",
+         "code" : "filtered-set"
+      },
+      {
+         "code" : "super-set",
+         "description" : "Set of all working gene set loci from both Builds 4a and 5a",
+         "attrib_type_id" : "364",
+         "name" : "Super Working Gene Set"
+      },
+      {
+         "description" : "Temporary (Monday, August 23, 2010)",
+         "code" : "projected4a2",
+         "name" : "Projected by alignment",
+         "attrib_type_id" : "365"
+      },
+      {
+         "description" : null,
+         "code" : "merged",
+         "name" : "Merged species",
+         "attrib_type_id" : "366"
+      },
+      {
+         "name" : "Rank in the karyotype",
+         "attrib_type_id" : "367",
+         "description" : "For a given seq_region, if it is part of the species karyotype, will indicate its rank",
+         "code" : "karyotype_rank"
+      },
+      {
+         "name" : "Alternate non coding gene count",
+         "attrib_type_id" : "368",
+         "description" : "Number of non coding genes on alternate sequences",
+         "code" : "noncoding_acnt"
+      },
+      {
+         "name" : "Coding genes",
+         "attrib_type_id" : "369",
+         "description" : "Number of protein coding genes on alternate sequences",
+         "code" : "coding_acnt"
+      },
+      {
+         "code" : "pseudogene_acnt",
+         "description" : "Number of pseudogenes on alternate sequences",
+         "attrib_type_id" : "370",
+         "name" : "Pseudogenes"
+      },
+      {
+         "attrib_type_id" : "371",
+         "name" : "Clone end",
+         "code" : "clone_end",
+         "description" : "Side of the contig on which a vector lies (enum:RIGHT, LEFT)."
+      },
+      {
+         "description" : "Scaffold that contains mutually ordered contigs.",
+         "code" : "contig_scaffold",
+         "name" : "Contig Scaffold",
+         "attrib_type_id" : "372"
+      },
+      {
+         "code" : "current_version",
+         "description" : "Identifies the most recent version of an accession.",
+         "attrib_type_id" : "373",
+         "name" : "Current Accession Version"
+      },
+      {
+         "attrib_type_id" : "374",
+         "name" : "Sequence Status",
+         "code" : "seq_status",
+         "description" : "Sequence status."
+      },
+      {
+         "attrib_type_id" : "375",
+         "name" : "Vector sequence",
+         "code" : "clone_vector",
+         "description" : "A clone-end vector associated with a contig (enum:SP6, T7)."
+      },
+      {
+         "code" : "creation_date",
+         "description" : "Creation date of annotation",
+         "attrib_type_id" : "376",
+         "name" : "Creation date"
+      },
+      {
+         "code" : "update_date",
+         "description" : "Last update date of annotation",
+         "attrib_type_id" : "377",
+         "name" : "Update date"
+      },
+      {
+         "code" : "seq_date",
+         "description" : "Sequence date",
+         "attrib_type_id" : "378",
+         "name" : "Sequence date"
+      },
+      {
+         "attrib_type_id" : "379",
+         "name" : "Contains stop codon",
+         "code" : "has_stop_codon",
+         "description" : "Translation attribute"
+      },
+      {
+         "description" : "Controlled vocabulary terms from Havana",
+         "code" : "havana_cv",
+         "name" : "Havana CV term",
+         "attrib_type_id" : "380"
+      },
+      {
+         "attrib_type_id" : "381",
+         "name" : "translated_processed_pseudogene",
+         "code" : "TlPPsCount",
+         "description" : "Number of Translated Processed Pseudogenes"
+      },
+      {
+         "attrib_type_id" : "382",
+         "name" : "No translations due to reference error",
+         "code" : "NoTransRefError",
+         "description" : "This gene is believed to include protein coding transcripts, but no transcript has a translation due to a reference assembly error making specifying the translation impossible."
+      },
+      {
+         "code" : "parent_exon_key",
+         "description" : "The exon key to identify a projected transcript's parent transcript.",
+         "attrib_type_id" : "383",
+         "name" : "parent_exon_key"
+      },
+      {
+         "code" : "parent_sid",
+         "description" : "The parent stable ID to identify a projected transcript's parent transcript. For internal statistics use only since this method does not work in all cases.",
+         "attrib_type_id" : "386",
+         "name" : "parent_sid"
+      },
+      {
+         "code" : "noncoding_acnt_s",
+         "description" : "Number of small non coding genes on alternate sequences",
+         "attrib_type_id" : "387",
+         "name" : "Small non coding genes"
+      },
+      {
+         "code" : "noncoding_acnt_m",
+         "description" : "Number of unclassified (miscellaneous) non coding genes on alternate sequences",
+         "attrib_type_id" : "388",
+         "name" : "Misc non coding genes"
+      },
+      {
+         "name" : "Small non coding genes",
+         "attrib_type_id" : "389",
+         "description" : "Number of small non coding genes",
+         "code" : "noncoding_cnt_s"
+      },
+      {
+         "name" : "Long non coding genes",
+         "attrib_type_id" : "390",
+         "description" : "Number of long non coding genes",
+         "code" : "noncoding_cnt_l"
+      },
+      {
+         "code" : "TlUPsCount",
+         "description" : "Number of Translated Unprocessed Pseudogenes",
+         "attrib_type_id" : "391",
+         "name" : "translated_unprocessed_pseudogene"
+      },
+      {
+         "description" : "Total Number of AFFYMETRIX features",
+         "code" : "AFFYMETRIXCount",
+         "name" : "AFFYMETRIX Count",
+         "attrib_type_id" : "393"
+      },
+      {
+         "attrib_type_id" : "394",
+         "name" : "RFLP Count",
+         "code" : "RFLPCount",
+         "description" : "Total Number of RFLP features"
+      },
+      {
+         "description" : "ID of associated database reference",
+         "code" : "xref_id",
+         "name" : "Xref ID",
+         "attrib_type_id" : "395"
+      },
+      {
+         "attrib_type_id" : "396",
+         "name" : "Vega chrom type",
+         "code" : "vega_chr_type",
+         "description" : "Type of chromosome - haplotype, other, etc"
+      },
+      {
+         "code" : "GeneNo_MRP_RNA",
+         "description" : "Number of MRP_RNA Genes",
+         "attrib_type_id" : "397",
+         "name" : "MRP_RNA Gene Count"
+      },
+      {
+         "description" : "Number of prediction genes generated by Genscan",
+         "code" : "genscan",
+         "name" : "Genscan gene predictions",
+         "attrib_type_id" : "398"
+      },
+      {
+         "code" : "gsc",
+         "description" : "Number of prediction genes generated by gsc",
+         "attrib_type_id" : "399",
+         "name" : "GSC gene prediction"
+      },
+      {
+         "attrib_type_id" : "400",
+         "name" : "Snap gene prediction",
+         "code" : "snap",
+         "description" : "Number of prediction genes generated by Snap"
+      },
+      {
+         "name" : "FGENESH gene prediction",
+         "attrib_type_id" : "401",
+         "description" : "Number of prediction genes generated by FGENESH",
+         "code" : "fgenesh"
+      },
+      {
+         "attrib_type_id" : "402",
+         "name" : "Genefinder gene prediction",
+         "code" : "genefinder",
+         "description" : "Number of prediction genes generated by Genefinder"
+      },
+      {
+         "code" : "transcript_cnt",
+         "description" : "Number of transcripts",
+         "attrib_type_id" : "403",
+         "name" : "Gene transcripts"
+      },
+      {
+         "attrib_type_id" : "404",
+         "name" : "Gene transcripts",
+         "code" : "transcript_acnt",
+         "description" : "Number of transcripts on the alternate sequences"
+      },
+      {
+         "description" : "Length of the primary assembly",
+         "code" : "ref_length",
+         "name" : "Golden Path Length",
+         "attrib_type_id" : "405"
+      },
+      {
+         "code" : "total_length",
+         "description" : "Total length of the assembly",
+         "attrib_type_id" : "406",
+         "name" : "Base Pairs"
+      },
+      {
+         "code" : "refseq_compare",
+         "description" : "This attribute can be applied to both gene and transcript. It is supposed to give an indication of whether the annotation in the ensembl database is matched by annotation that we have imported from refseq. At the gene level, the match is unlikely to be an exact match because all or some of the transcripts may differ. Also, the biotype e.g. coding potential may differ. therefore, matching is a bit fuzzy and is done primarily on genomic location and then also takes gene length and gene name into consideration.",
+         "attrib_type_id" : "407",
+         "name" : "refseq_compare"
+      },
+      {
+         "attrib_type_id" : "408",
+         "name" : "Readthrough coding genes",
+         "code" : "coding_rcnt",
+         "description" : "Number of readthrough coding genes"
+      },
+      {
+         "attrib_type_id" : "409",
+         "name" : "Readthrough coding genes",
+         "code" : "coding_racnt",
+         "description" : "Number of readthrough coding genes on alternate sequences"
+      },
+      {
+         "name" : "Readthrough long non coding genes",
+         "attrib_type_id" : "410",
+         "description" : "Number of readthrough long non coding genes on alternate sequences",
+         "code" : "noncoding_racnt_l"
+      },
+      {
+         "attrib_type_id" : "411",
+         "name" : "Readthrough small non coding genes",
+         "code" : "noncoding_racnt_s",
+         "description" : "Number of readthrough small non coding genes on alternate sequences"
+      },
+      {
+         "description" : "Number of readthrough small non coding genes",
+         "code" : "noncoding_rcnt_s",
+         "name" : "Readthrough small non coding genes",
+         "attrib_type_id" : "412"
+      },
+      {
+         "name" : "Readthrough long non coding genes",
+         "attrib_type_id" : "413",
+         "description" : "Number of readthrough long non coding genes",
+         "code" : "noncoding_rcnt_l"
+      },
+      {
+         "name" : "Readthrough pseudogenes",
+         "attrib_type_id" : "414",
+         "description" : "Number of readthrough pseudogenes",
+         "code" : "pseudogene_rcnt"
+      },
+      {
+         "code" : "pseudogene_racnt",
+         "description" : "Number of readthrough pseudogenes on alternate sequences",
+         "attrib_type_id" : "415",
+         "name" : "Readthrough pseudogenes"
+      },
+      {
+         "code" : "gencode_level",
+         "description" : "level 1 (verified loci), level 2 (manually annotated loci), level 3 (automatically annotated loci)",
+         "attrib_type_id" : "416",
+         "name" : "GENCODE annotation level"
+      },
+      {
+         "description" : "GENCODE Basic is a view provided by UCSC for users. It includes a subset of the GENCODE transcripts. In general, for protein coding genes it will show only the full length models (unless a protein coding genes has no full-length models, in which case other rules apply). For noncoding genes, it will also only show the full-length (mRNA start and end found) models (unless there are no full-length models, in which case other rules apply).",
+         "code" : "gencode_basic",
+         "name" : "GENCODE basic annotation",
+         "attrib_type_id" : "417"
+      },
+      {
+         "description" : "Total Number of structural variants",
+         "code" : "struct_var",
+         "name" : "Structural variants",
+         "attrib_type_id" : "418"
+      },
+      {
+         "attrib_type_id" : "419",
+         "name" : "GenBlastG gene predictions",
+         "code" : "genblast",
+         "description" : "Number of prediction genes generated by GenBlastG"
+      },
+      {
+         "code" : "syn_gene_pairs",
+         "description" : "Syntenic gene relationship from Gramene pipeline",
+         "attrib_type_id" : "420",
+         "name" : "Syntenic gene pairs"
+      },
+      {
+         "attrib_type_id" : "421",
+         "name" : "VectorBase gene predictions",
+         "code" : "vectorbase_adar",
+         "description" : "Number of prediction genes generated with MAKER, by VectorBase."
+      },
+      {
+         "name" : "tRNAscan-SE predictions",
+         "attrib_type_id" : "422",
+         "description" : "Number of predicted tRNA genes generated by tRNAscan-SE",
+         "code" : "trnascan"
+      },
+      {
+         "code" : "tgac_pred_supp7",
+         "description" : "Number of T. turgidum RNA-seq alignments from Krasileva et al.",
+         "attrib_type_id" : "423",
+         "name" : "T. turgidum RNA-seq alignments"
+      },
+      {
+         "name" : "T. aestivum RNA-seq alignments",
+         "attrib_type_id" : "424",
+         "description" : "Number of T. aestivum RNA-seq alignments from Krasileva et al.",
+         "code" : "tgac_pred_supp17"
+      },
+      {
+         "description" : "For polyploid genome, the genome component name the seq_region belongs to.",
+         "code" : "genome_component",
+         "name" : "Genome Component Name",
+         "attrib_type_id" : "425"
+      },
+      {
+         "description" : "RNA-seq transcripts from EchinoBase",
+         "code" : "transcript_whl",
+         "name" : "RNA-seq transcripts",
+         "attrib_type_id" : "426"
+      },
+      {
+         "description" : "Transcription Support Level (TSL) is a method to highlight the well-supported and poorly-supported transcript models for users. The method relies on the primary data that can support full-length transcript structure and data are provided by UCSC.  The following categories are assigned to each of the evaluated annotations. tsl1 - all splice junctions of the transcript are supported by at least one non-suspect mRNA. tsl2 - the best supporting mRNA is flagged as suspect or the support is from multiple ESTs. tsl3 - the only support is from a single EST. tsl4 - the best supporting EST is flagged as suspect. tsl5 - no single transcript supports the model structure. tslNA - the transcript was not analyzed for one of the following reasons: pseudogene annotation, including transcribed pseudogenes.Human leukocyte antigen (HLA) transcript. Immunoglobin gene transcript.  T-cell receptor transcript. Single-exon transcript (will be included in a future version)",
+         "code" : "TSL",
+         "name" : "Transcript Support Level",
+         "attrib_type_id" : "428"
+      },
+      {
+         "description" : "Protein coverage for this gene derived from geneTree in compara",
+         "code" : "protein_coverage",
+         "name" : "Protein Coverage",
+         "attrib_type_id" : "429"
+      },
+      {
+         "code" : "consensus_coverage",
+         "description" : "Consensus coverage for this gene derived from geneTree in compara",
+         "attrib_type_id" : "430",
+         "name" : "Consensus Coverage"
+      },
+      {
+         "description" : "Translation attribute",
+         "code" : "has_start_codon",
+         "name" : "Contains start codon",
+         "attrib_type_id" : "431"
+      },
+      {
+         "attrib_type_id" : "432",
+         "name" : "APPRIS principal isoform",
+         "code" : "appris_pi",
+         "description" : "Transcript expected to code for the main functional isoform based on a range of protein features. APPRIS is a system that deploys a range of computational methods to provide value to the annotations of the human genome. http://appris.bioinfo.cnio.es/ http://nar.oxfordjournals.org/content/41/D1/D110.long. Icon is {APPRIS} in green."
+      },
+      {
+         "code" : "appris_ci",
+         "description" : "APPRIS candidate principal isoform: Where there is no single 'appris_principal' variant the main functional isoform will be translated from one of the 'appris_candidate' genes. APPRIS is a system that deploys a range of computational methods to provide value to the annotations of the human genome. http://appris.bioinfo.cnio.es/ http://nar.oxfordjournals.org/content/41/D1/D110.long. Icon is {APPRIS} in amber.",
+         "attrib_type_id" : "433",
+         "name" : "APPRIS candidate principal isoform"
+      },
+      {
+         "name" : "APPRIS candidate principal isoform (longest coding sequence)",
+         "attrib_type_id" : "434",
+         "description" : "APPRIS candidate principal isoform (longest coding sequence): Where there is no single 'appris_principal' variant the main functional isoform will be translated from one of the 'appris_candidate' genes. Where there is no 'appris_candidate_ccd' or 'appris_candidate_longest_ccds' variant, the longest protein of the 'appris_candidate' variants is selected as the primary variant. APPRIS is a system that deploys a range of computational methods to provide value to the annotations of the human genome. http://appris.bioinfo.cnio.es/ http://nar.oxfordjournals.org/content/41/D1/D110.long. Icon is {APPRIS*} in amber.",
+         "code" : "appris_ci1"
+      },
+      {
+         "description" : "APPRIS candidate principal isoform (longest CCDS): Where there is no single 'appris_principal' variant the main functional isoform will be translated from one of the 'appris_candidate' genes. When there are several 'appris_candidate' transcripts in CCDS, APPRIS labels the longest CCDS. APPRIS is a system that deploys a range of computational methods to provide value to the annotations of the human genome. http://appris.bioinfo.cnio.es/ http://nar.oxfordjournals.org/content/41/D1/D110.long. Icon is {APPRIS**} in amber.",
+         "code" : "appris_ci2",
+         "name" : "APPRIS candidate principal isoform (longest CCDS)",
+         "attrib_type_id" : "435"
+      },
+      {
+         "attrib_type_id" : "436",
+         "name" : "APPRIS candidate principal isoform (CCDS)",
+         "code" : "appris_ci3",
+         "description" : "APPRIS candidate principal isoform (CCDS): Where there is no single 'appris_principal' variant the main functional isoform will be translated from one of the 'appris_candidate' genes. This 'appris_candidate' transcript is unique in being part of CCDS. APPRIS is a system that deploys a range of computational methods to provide value to the annotations of the human genome. http://appris.bioinfo.cnio.es/ http://nar.oxfordjournals.org/content/41/D1/D110.long. Icon is {APPRIS***} in amber."
+      },
+      {
+         "attrib_type_id" : "437",
+         "name" : "lncRNA_Count",
+         "code" : "lncRNACount",
+         "description" : "Number of lncRNAs"
+      },
+      {
+         "code" : "ncRNACount",
+         "description" : "Number of ncRNAs",
+         "attrib_type_id" : "438",
+         "name" : "ncRNA_Count"
+      },
+      {
+         "attrib_type_id" : "439",
+         "name" : "UnclassPT_Count",
+         "code" : "UnclassPTCount",
+         "description" : "Number of Unclassified Processed Transcripts"
+      },
+      {
+         "code" : "GeneNo_scaRNA",
+         "description" : "Number of scaRNA Genes",
+         "attrib_type_id" : "440",
+         "name" : "scaRNA Gene Count"
+      },
+      {
+         "code" : "GeneNo_sRNA",
+         "description" : "Number of sRNA Genes",
+         "attrib_type_id" : "441",
+         "name" : "sRNA Gene Count"
+      },
+      {
+         "attrib_type_id" : "442",
+         "name" : "CRISPR Gene Count",
+         "code" : "GeneNo_CRISPR",
+         "description" : "Number of CRISPR Genes"
+      },
+      {
+         "code" : "GeneNo_antitoxin",
+         "description" : "Number of antitoxin Genes",
+         "attrib_type_id" : "443",
+         "name" : "antitoxin Gene Count"
+      },
+      {
+         "attrib_type_id" : "444",
+         "name" : "Misc non coding genes",
+         "code" : "noncoding_cnt_m",
+         "description" : "Number of unclassified (miscellaneous) non coding genes"
+      },
+      {
+         "code" : "noncoding_rcnt_m",
+         "description" : "Number of readthrough unclassified (miscellaneous) non coding genes",
+         "attrib_type_id" : "445",
+         "name" : "Readthrough misc non coding genes"
+      },
+      {
+         "name" : "Readthrough misc non coding genes",
+         "attrib_type_id" : "446",
+         "description" : "Number of readthrough unclassified (miscellaneous) non coding genes on alternate sequences",
+         "code" : "noncoding_racnt_m"
+      },
+      {
+         "description" : "Number of long non coding genes on alternate sequences",
+         "code" : "noncoding_acnt_l",
+         "name" : "Long non coding genes",
+         "attrib_type_id" : "447"
+      },
+      {
+         "code" : "noncoding_racnt",
+         "description" : "Number of readthrough non coding genes on alternate sequences",
+         "attrib_type_id" : "448",
+         "name" : "Readthrough non coding genes"
+      },
+      {
+         "attrib_type_id" : "449",
+         "name" : "Readthrough non coding genes",
+         "code" : "noncoding_rcnt",
+         "description" : "Number of readthrough non coding genes"
+      },
+      {
+         "description" : "This is a transcript attribute that signifies an exact match between the underlying genomic sequence of the RefSeq transcript with the corresponding RefSeq mRNA sequence the model was built from (based on a match between the transcript stable id and an accession in the RefSeq mRNA file). An exact match occurs when the underlying genomic sequence of the model can be perfectly aligned to the mRNA sequence post polyA clipping.",
+         "code" : "rseq_mrna_match",
+         "name" : "RefSeq model genomic seq to mRNA match",
+         "attrib_type_id" : "450"
+      },
+      {
+         "code" : "rseq_mrna_mismatch",
+         "description" : "This is a transcript attribute that signifies a mismatch between the underlying genomic sequence of the RefSeq transcript with the corresponding RefSeq mRNA sequence the model was built from. A mismatch is deemed to have occurred if the underlying genomic sequence does not have a perfect alignment to the mRNA sequence post polyA clipping. It can also signify that no comparison was possible as the model stable id may not have had a corresponding entry in the RefSeq mRNA file (sometimes happens when accessions are retired or changed). When a mismatch occurs one or several of the following transcript attributes will also be present to provide more detail on the nature of the mismatch: rseq_5p_mismatch, rseq_cds_mismatch, rseq_3p_mismatch, rseq_nctran_mismatch, rseq_no_comparison",
+         "attrib_type_id" : "451",
+         "name" : "RefSeq model genomic seq to mRNA mismatch"
+      },
+      {
+         "code" : "rseq_5p_mismatch",
+         "description" : "This is a transcript attribute that signifies a mismatch between the underlying genomic sequence of the RefSeq transcript with the corresponding RefSeq mRNA sequence the model was built from. Specifically, there is a mismatch in the 5' UTR of the RefSeq model. Information about the mismatch can be found in the value field of the transcript attribute.",
+         "attrib_type_id" : "452",
+         "name" : "RefSeq model genomic seq (5' UTR) to mRNA mismatch"
+      },
+      {
+         "description" : "This is a transcript attribute that signifies a mismatch between the underlying genomic sequence of the RefSeq transcript with the corresponding RefSeq mRNA sequence the model was built from. Specifically, there is a mismatch in the CDS of the RefSeq model. Information about the mismatch can be found in the value field of the transcript attribute.",
+         "code" : "rseq_cds_mismatch",
+         "name" : "RefSeq model genomic seq (CDS) to mRNA mismatch",
+         "attrib_type_id" : "453"
+      },
+      {
+         "attrib_type_id" : "454",
+         "name" : "RefSeq model genomic seq (3' UTR) to mRNA mismatch",
+         "code" : "rseq_3p_mismatch",
+         "description" : "This is a transcript attribute that signifies a mismatch between the underlying genomic sequence of the RefSeq transcript with the corresponding RefSeq mRNA sequence the model was built from. Specifically, there is a mismatch in the 3' UTR of the RefSeq model. Information about the mismatch can be found in the value field of the transcript attribute."
+      },
+      {
+         "name" : "RefSeq model genomic seq (non-coding) to mRNA mismatch",
+         "attrib_type_id" : "455",
+         "description" : "This is a transcript attribute that signifies a mismatch between the underlying genomic sequence of the RefSeq transcript with the corresponding RefSeq mRNA sequence the model was built from. This is a comparison between the entire underlying genomic sequence of the RefSeq model to the mRNA in the case of RefSeq models that are non-coding. Information about the mismatch can be found in the value field of the transcript attribute.",
+         "code" : "rseq_nctran_mismatch"
+      },
+      {
+         "name" : "RefSeq model no comparison made to mRNA",
+         "attrib_type_id" : "456",
+         "description" : "This is a transcript attribute that signifies that no alignment was carried out between the underlying genomic sequence of RefSeq model and a corresponding RefSeq mRNA. The reason for this is generally that no corresponding, unversioned accession was found in the RefSeq mRNA file for the transcript stable id. This sometimes happens when accessions are retired or replaced. A second possibility is that the sequences were too long and problematic to align (though this is rare). The value field gives more information about the reason no comparison was possible.",
+         "code" : "rseq_no_comparison"
+      },
+      {
+         "name" : "RefSeq model to overlapping Ensembl model whole transcript match",
+         "attrib_type_id" : "457",
+         "description" : "This is a transcript attribute that signifies that for the RefSeq transcript there is an overlapping Ensembl model that is identical across the whole transcript. A whole transcript match is defined as follows: 1) In the case that both models are coding, the transcript, CDS and peptide sequences are all identical and the genomic coordinates of every exon match. 2) In the case that both transcripts are non-coding the transcript sequences and the genomic coordinates of every exon are identical. No comparison is made between a coding and a non-coding transcript. Useful related attributes are: rseq_ens_match_cds and rseq_ens_no_match.",
+         "code" : "rseq_ens_match_wt"
+      },
+      {
+         "description" : "This is a transcript attribute that signifies that for the RefSeq transcript there is an overlapping Ensembl model that is identical across the CDS region only. A CDS match is defined as follows: the CDS and peptide sequences are identical and the genomic coordinates of every translatable exon match. Useful related attributes are: rseq_ens_match_wt and rseq_ens_no_match.",
+         "code" : "rseq_ens_match_cds",
+         "name" : "RefSeq model to overlapping Ensembl model CDS match",
+         "attrib_type_id" : "458"
+      },
+      {
+         "code" : "rseq_ens_no_match",
+         "description" : "This is a transcript attribute that signifies that for the RefSeq transcript there is no overlapping Ensembl model that is identical across either the whole transcript or the CDS. This is caused by differences between the transcript, CDS or peptide sequences or between the exon genomic coordinates. Useful related attributes are: rseq_ens_match_wt and rseq_ens_match_cds.",
+         "attrib_type_id" : "459",
+         "name" : "RefSeq model to overlapping Ensembl model no match"
+      },
+      {
+         "code" : "otter_truncated",
+         "description" : "This feature extends beyond the slice, but has been trimmed. (For use in otter client-server communications.)",
+         "attrib_type_id" : "502",
+         "name" : "Otter truncated feature"
+      }
+   ],
+   "coord_system.chromosome" : {
+      "name" : "chromosome",
+      "attrib" : "default_version",
+      "version" : "Otter",
+      "rank" : "2",
+      "species_id" : "1",
+      "coord_system_id" : "2"
+   }
+}
