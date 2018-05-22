@@ -18,5 +18,6 @@ install:
     - git clone --branch master --depth 1 https://github.com/Ensembl/webvm.git
     - git clone --branch master --depth 1 https://github.com/Ensembl/webvm-deps.git
     - git clone --branch master --depth 1 https://github.com/Ensembl/zircon.git
+    - git clone --branch master --depth 1 https://github.com/Ensembl/PerlModules.git
 
 script: "docker run -i --name devtest -v $ROOT_PATH/app:/loutre miralum/ottertest:latest"
