@@ -1,6 +1,6 @@
 
 package Bio::Otter::Server::Support::Web;
-use Data::Dumper;
+
 use strict;
 use warnings;
 

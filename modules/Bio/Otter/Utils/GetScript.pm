@@ -10,7 +10,6 @@ use IO::Handle;
 use Scalar::Util qw(weaken);
 use Time::HiRes qw( time gettimeofday );
 use URI::Escape  qw(uri_escape uri_unescape);
-
 use Bio::Otter::Utils::TimeDiff;
 
 use constant _DEBUG_INCS => $ENV{OTTER_DEBUG_INCS}; ## no critic(ValuesAndExpressions::ProhibitConstantPragma)
@@ -76,7 +75,7 @@ sub new {
 
 sub run {
     my ($self) = @_;
-
+    
     my $args = $self->_parse_uri_style_args;
 
     $self->show_version if exists $args->{'version'};   # exits

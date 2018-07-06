@@ -665,7 +665,7 @@ sub get_cached_DBAdaptor {
         $self->_attach_DNA_DBAdaptor($tmp) if $self->DNA_DBNAME;
         $self->{'_dba_cache'} = $tmp;
     }
-    #warn "OTTER DBADAPTOR = '$dba'";
+    
     return $self->{'_dba_cache'};
 }
 

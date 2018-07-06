@@ -39,6 +39,7 @@ sub login {
     my $user  = uri_escape($orig_user); # possibly not worth it...
     
     my $req = HTTP::Request->new;
+    
     $req->method('GET');
     $req->uri("https://explore.api.aai.ebi.ac.uk/auth");
     $req->content_type('application/json;charset=UTF-8');
