@@ -110,6 +110,16 @@ sub get_db_info {
         '-sequence_level' => $contig_cs->is_sequence_level
       };
     }
+  
+    if (!exists $results{'coord_systems'}->{clone}) {
+      my $clone_cs = $self->server->otter_dba->get_CoordSystemAdaptor->fetch_by_name('clone');
+      $results{'coord_systems'}->{clone} = {
+        '-rank' => $clone_cs->rank,
+        '-default' => $clone_cs->is_default,
+        '-sequence_level' => $clone_cs->is_sequence_level
+      };
+    }
+
     my $at_sth = $dbc->prepare($select_at_sql);
     $at_sth->execute;
     my $at_rows = $at_sth->fetchall_arrayref({});

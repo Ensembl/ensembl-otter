@@ -258,7 +258,7 @@ sub init_db {
 
 sub create_tables {
     my ($self, $schema, $name) = @_;
-
+    
     $self->logger->debug("create_tables for '$name'");
 
     my $dbh = $dbh{$self};
@@ -296,13 +296,31 @@ sub load_dataset_info {
     my $at_list = $dataset->get_db_info_item('attrib_type');
 
     my $_dba = $self->_dba('_coords');     # we throw this one away
-
+    my $override_specs = $dataset->get_db_info_item('coord_systems');
+    my $dna_cs_rank;
+    foreach my $value (values %$override_specs) {
+      if ($value->{'-sequence_level'}) {
+        $value->{'-sequence_level'} = 0;
+        $dna_cs_rank = $value->{'-rank'}+1;
+      }
+    }
+    
     my $cs_factory = Bio::Vega::CoordSystemFactory->new(
         dba           => $_dba,
         create_in_db  => 1,
-        override_spec => $dataset->get_db_info_item('coord_systems'),
+        override_spec => $override_specs,
         );
+    my $toplevel_cs = $dataset->get_db_info_item('coord_system.chromosome');
 
+    
+    $override_specs->{dna_contig} = {
+      '-rank' => $dna_cs_rank,
+      '-sequence_level' => 1,
+      '-default' => 1,
+      'version'  => $toplevel_cs->{version},
+    };
+    push(@{$meta_hash->{'assembly.mapping'}->{values}}, $toplevel_cs->{name}.':'.$toplevel_cs->{version}.'|dna_contig:'.$toplevel_cs->{version});
+    
 
     $dbh->begin_work;
 

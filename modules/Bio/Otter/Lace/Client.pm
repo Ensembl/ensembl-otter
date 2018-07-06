@@ -5,7 +5,6 @@ package Bio::Otter::Lace::Client;
 use strict;
 use warnings;
 use Carp;
-
 use Try::Tiny;
 
 use Net::Domain qw{ hostname hostfqdn };
@@ -95,7 +94,6 @@ sub new {
     warn "Debug from config: $debug_show\n";
     Bio::Otter::Debug->set($debug) if defined $debug;
     # nb. no loggers yet, because this object configures them
-
     return $new;
 }
 
@@ -114,10 +112,11 @@ sub write_access {
 
 sub author {
     my ($self, $author) = @_;
-
+    
     $self->logger->error('Set using the Config file please.') if $author;
-
+    
     return $self->config_value('author') || (getpwuid($<))[0];
+    
 }
 
 sub email {
@@ -435,7 +434,6 @@ sub password_problem{
 sub reauthorize_if_cookie_will_expire_soon {
     my ($self) = @_;
 
-    return 1;
     # Soon is if cookie expires less than half an hour from now
     my $soon = time + (30 * 60);
     my $expiry = $self->_cookie_expiry_time;
@@ -486,7 +484,6 @@ sub config_set {
 
 sub _authorize {
     my ($self) = @_;
-
     my $user = $self->author;
     my $password = $self->password_prompt()->($self)
       or $self->logger->logdie("No password given");
@@ -681,7 +678,6 @@ sub _setup_pfetch_env {
     my $blix_cfg = __user_home()."/.blixemrc";
     my $blix_cfg_exist = -f $blix_cfg ? "exists" : "not present";
     $self->_client_logger->info("setup_pfetch_env: PFETCH_WWW now $new_PW; $blix_cfg $blix_cfg_exist");
-
     return;
 }
 
@@ -744,14 +740,16 @@ sub _general_http_dialog {
 
     my $password_attempts = $self->_password_attempts;
     my ($response, $content);
-
+    
     REQUEST: while (1) {
         $response = $self->_do_http_request($method, $scriptname, $params);
+        
         $content = $response->decoded_content;
         if ($response->is_success) {
             last REQUEST;
         }
         my $code = $response->code;
+        
         if ($code == 401 || $code == 403) {
             # 401 = unauthorized
             # 403 = forbidden
@@ -840,7 +838,6 @@ sub _escaped_param_string {
 
 sub _do_http_request {
     my ($self, $method, $scriptname, $params) = @_;
-
     my $url = $self->url_root.'/'.$scriptname;
     my $paramstring = $self->_escaped_param_string($params);
 
@@ -858,7 +855,6 @@ sub _do_http_request {
         $request->content($paramstring);
 
         $self->_client_logger->debug("POST  $url");
-        # $self->_client_logger->debug("paramstring: $paramstring");
     }
     else {
         $self->logger->logconfess("method '$method' is not supported");
@@ -874,7 +870,7 @@ sub status_refresh_for_DataSet_SequenceSet{
 
     my $response =
         $self->_DataSet_SequenceSet_response_content(
-            $ds, $ss, 'GET', 'get_analyses_status');
+            $ds, $ss, 'GET', 'get_analyses_status', {'author' => $self->author});
 
     my %status_hash = ();
     for my $line (split(/\n/,$response)) {
@@ -922,8 +918,7 @@ sub find_clones {
         'find_clones',
         {
             'dataset'  => $dsname,
-            'qnames'   => $qnames_string,
-            'author' => $self->author
+            'qnames'   => $qnames_string, 'author' => $self->author
         },
     );
 
@@ -956,11 +951,8 @@ sub get_meta {
 
 sub get_db_info {
     my ($self, $dsname, $ss) = @_;
-    my $hashref = $self->otter_response_content(GET => 'get_db_info', { dataset => $dsname ,
-            'coord_system_name' => $ss->coord_system_name,
-            'coord_system_version' => $ss->coord_system_version,
-            'author' => $self->author
-        });
+    my $hashref = $self->otter_response_content(GET => 'get_db_info', { dataset => $dsname,  'coord_system_name' => $ss->coord_system_name,
+                                                                         'coord_system_version' => $ss->coord_system_version,'author' => $self->author });
     return $hashref;
 }
 
@@ -972,8 +964,8 @@ sub lock_refresh_for_DataSet_SequenceSet {
         {
             'coord_system_name' => $ss->coord_system_name,
             'coord_system_version' => $ss->coord_system_version,
+            'author' => $self->author
         });
-
     my @slice_lock = map { Bio::Vega::SliceLock->new_from_json($_) }
       @{ $response->{SliceLock} || [] };
 
@@ -996,11 +988,7 @@ sub fetch_all_SequenceNotes_for_DataSet_SequenceSet {
 
     my $response =
         $self->_DataSet_SequenceSet_response_content(
-            $ds, $ss, 'GET', 'get_sequence_notes',
-        {
-            'coord_system_name' => $ss->coord_system_name,
-            'coord_system_version' => $ss->coord_system_version,
-        });
+            $ds, $ss, 'GET', 'get_sequence_notes',{'author' => $self->author});
 
     my %ctgname2notes = ();
 
@@ -1072,7 +1060,7 @@ sub _sequence_note_action {
             'contig'    => $contig_name,
             'timestamp' => $seq_note->timestamp(),
             'text'      => $seq_note->text(),
-            'author'    => $self->author
+            'author' => $self->author
         },
     );
 
@@ -1144,6 +1132,7 @@ sub _ensure_authorised {
 
     # Is user associated with the cookiejar the one configured?
     # Done here because it's the first action of Otter.
+    
     my $who_am_i = $self->do_authentication;
     if ($who_am_i ne $self->author) {
         my $a = $self->author;
@@ -1163,7 +1152,7 @@ sub _get_config_file {
     return $self->http_response_content(
         'GET',
         'get_config',
-        { 'key' => $key, 'author' => $self->author },
+        { 'key' => $key,'author' => $self->author },
         );
 }
 
@@ -1200,7 +1189,7 @@ sub get_server_ensembl_version {
 # same as Bio::Otter::Server::Config->designations (fresh every time)
 sub _get_designations {
     my ($self) = @_;
-    my $hashref = $self->otter_response_content(GET => 'get_config', { key => 'designations', 'author' => $self->author });
+    my $hashref = $self->otter_response_content(GET => 'get_config', { key => 'designations','author' => $self->author });
     return $hashref;
 }
 
@@ -1298,12 +1287,12 @@ sub slice_query {
     die unless wantarray;
     return ('dataset' => $slice->dsname(),
             'chr'     => $slice->ssname(),
-
             'cs'      => $slice->csname(),
             'csver'   => $slice->csver(),
             'name'    => $slice->seqname(),
             'start'   => $slice->start(),
             'end'     => $slice->end());
+            'author'  => $self->author
 }
 
 
@@ -1327,8 +1316,7 @@ sub get_all_SequenceSets_for_DataSet {
   my $sequencesets_xml =
       $self->http_response_content(
           'GET', 'get_sequencesets', {
-              'dataset' => $dataset_name,
-              'author' => $self->author
+              'dataset' => $dataset_name, 'author' => $self->author
           });
 
   local $XML::Simple::PREFERRED_PARSER = 'XML::Parser';
@@ -1409,7 +1397,7 @@ sub get_all_CloneSequences_for_DataSet_SequenceSet { # without any lock info
             'coord_system_version' => $ss->coord_system_version,
             'author' => $self->author
         }
-    );
+  );
 
   local $XML::Simple::PREFERRED_PARSER = 'XML::Parser';
   # configure expat for speed, also used in Bio::Vega::XML::Parser
@@ -1469,7 +1457,9 @@ sub get_accession_info {
     my $hashref = $self->otter_response_content(
         'POST',
         'get_accession_info',
-        {accessions => join ',', @accessions},
+        {accessions => join ',', @accessions,
+         'author'      => $self->author
+        },
         );
 
     return $hashref;
@@ -1482,7 +1472,8 @@ sub get_accession_types {
         'POST',
         'get_accession_types',
         {accessions => join ',', @accessions,
-         'author' => $self->author},
+         'author'      => $self->author
+        },
         );
 
     return $hashref;
@@ -1495,7 +1486,8 @@ sub get_taxonomy_info {
         'POST',
         'get_taxonomy_info',
         {id => join ',', @ids,
-         'author' => $self->author},
+         'author'      => $self->author
+        },
         );
     return $response;
 }
@@ -1532,10 +1524,10 @@ sub _DataSet_SequenceSet_response_content {
         'chr'      => $ss->name,
         'author'   => $self->author
     };
+    
     if ($extra and ref($extra) eq 'HASH') {
       %$query = (%$query, %$extra);
     }
-
     my $content =
         $self->otter_response_content($method, $script, $query);
 
@@ -1721,7 +1713,7 @@ sub unlock_region {
         {
             dataset  => $dataset_name,
             locknums => $locknums,
-            'author' => $self->author
+            'author' => $self->author 
         },
         );
     return $hash;

@@ -11,7 +11,6 @@ use Bio::Vega::Enrich::SliceGetSplicedAlignFeatures;
 use Bio::Vega::Utils::Detaint qw( detaint_sprintfn_url_fmt );
 use Bio::Vega::Utils::GFF;
 use Bio::Vega::Utils::EnsEMBL2GFF;
-
 use base qw( Bio::Otter::Server::Support::Web );
 
 my @gff_keys = qw(
@@ -19,6 +18,7 @@ my @gff_keys = qw(
     gff_source
     gff_seqname
     url_string
+    author
     );
 
 my $SUBCLASS = {
@@ -34,11 +34,11 @@ my $SUBCLASS = {
 
 sub send_requested_features {
     my ($pkg) = @_;
-
+    
     my $specific_pkg = $pkg;
-
+    
     if (my $path_info = $pkg->path_info) {
-
+        
         my ($key) = $path_info =~ m{^/(\w+)$};
         die "Subclass key not found in '$path_info'\n" unless $key;
 
@@ -54,13 +54,13 @@ sub send_requested_features {
 
 sub do_send_features {
     my ($pkg) = @_;
-
+    
     $pkg->send_response(
         -compression => 1,
         sub {
             my ($self) = @_;
             my $features = $self->get_requested_features;
-
+            
             my $fasta_gff = '';
             my $accession_info;
             if (my $seq_db_list = $self->sequence_database_list) {
@@ -79,7 +79,7 @@ sub do_send_features {
                     }
                 }
             }
-
+           
             return $self->gff_header . $self->_features_gff($features, $accession_info) . $fasta_gff;
         });
 
@@ -101,7 +101,7 @@ sub sequence_database_list {
 sub get_requested_features {
 
     my ($self) = @_;
-
+    
     my @feature_kinds  = split(/,/, $self->require_argument('feature_kind'));
     foreach (@feature_kinds) {
         die "bad feature_kind $_" unless /^[_A-Za-z][_A-Za-z0-9]{1,63}$/;

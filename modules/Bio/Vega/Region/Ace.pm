@@ -14,7 +14,6 @@ use Hum::Ace::Exon;
 use Hum::Ace::Locus;
 use Hum::Ace::SubSeq;
 use Hum::Ace::SeqFeature::Simple;
-
 use Bio::Vega::Utils::ExonPhase                   'exon_phase_EnsEMBL_to_Ace';
 use Bio::Vega::Utils::GeneTranscriptBiotypeStatus 'biotype_status2method';
 
@@ -321,7 +320,13 @@ sub _add_genes {
             my $method_name = sprintf('%s%s',
                                       biotype_status2method($tsct->biotype, $tsct->status),
                                       $gene->truncated_flag ? '_trunc' : '');
+            
+            if($method_name eq 'Processed_transcript' or 'Novel_Transcript'){
+               $method_name = 'Transcript';
+            }
+
             my $method = $name_method{$method_name};
+
             unless ($method) {
                 confess "No transcript Method called '$method_name'";
             }

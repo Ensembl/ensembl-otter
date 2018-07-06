@@ -1,8 +1,8 @@
 package Bio::Otter::Server::Support;
 
-use strict;
+#use strict;
 use warnings;
-use Data::Dumper;
+
 =head1 NAME
 
 Bio::Otter::Server::Support - common parent for MappingFetcher/B:O:Server::Support::{Local,Web}

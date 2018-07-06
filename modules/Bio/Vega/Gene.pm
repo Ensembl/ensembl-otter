@@ -17,17 +17,17 @@ sub new {
   return $self;
 }
 
-sub status {
-  my ($self) = @_;
+#sub status {
+#  my ($self) = @_;
 
-  return 'KNOWN';
-}
+#  return 'KNOWN';
+#}
 
-sub is_known {
-  my ($self) = @_;
+#sub is_known {
+#  my ($self) = @_;
 
-  return 1;
-}
+#  return 1;
+#}
 
 sub new_dissociated_copy {
     my ($self) = @_;

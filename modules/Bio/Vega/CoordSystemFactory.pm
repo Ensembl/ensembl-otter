@@ -5,26 +5,45 @@ use warnings;
 
 use Carp;
 use Readonly;
-
 use Bio::EnsEMBL::CoordSystem;
 
 # Our canned coordinate systems
 #
-Readonly my %_COORD_SYSTEM_SPEC => (
-    'chromosome' => { '-version' => 'Otter', '-rank' => 2, '-default' => 1,                         },
-    'clone'      => {                        '-rank' => 4, '-default' => 1,                         },
-    'contig'     => {                        '-rank' => 5, '-default' => 1,                         },
-    'dna_contig' => { '-version' => 'Otter', '-rank' => 6, '-default' => 1, '-sequence_level' => 1, },
-    );
+#Readonly my %_COORD_SYSTEM_SPEC => (
+#    'chromosome' => { '-version' => 'Otter', '-rank' => 2, '-default' => 1,                         },
+#    #'clone'      => { '-version' => 'Otter', '-rank' => 4, '-default' => 1,                         },
+#    'clone'      => {                         '-rank' => 4, '-default' => 1,                         },
+#    #'contig'     => { '-version' => 'Otter', '-rank' => 5, '-default' => 1, '-sequence_level' => 1, },
+#    'contig'     => {                        '-rank' => 5, '-default' => 1,                         },
+#    'dna_contig' => { '-version' => 'Otter', '-rank' => 6, '-default' => 1, '-sequence_level' => 1, },
+#    );
 
 # Our canned mappings - kept here for consistency with our canned coordinate systems
 #
 no warnings 'qw';               ## no critic (TestingAndDebugging::ProhibitNoWarnings)
-Readonly my @_MAPPINGS_SPEC => qw(
-    chromosome:Otter#dna_contig:Otter
-    chromosome:Otter#contig
-    clone#contig
-    );
+#Readonly my @_MAPPINGS_SPEC => qw(
+#    chromosome:Otter#dna_contig:Otter
+#    chromosome:Otter#contig
+#    clone#contig
+#    );
+#Readonly my @_MAPPINGS_SPEC => qw(
+#    														     clone#contig
+#                                                                                                                     subregion#contig
+#                                                                                                                     chromosome:Otter#chromosome
+#                                                                                                                     chromosome:Otter#dna_contig:Otter
+#                                                                                                                     chromosome:Otter#clone
+#                                                                                                                     chromosome:Otter#chromosome:NCBI36
+#                                                                                                                     chromosome:Otter#contig
+#                                                                                                                     chromosome:NCBI36#contig
+#                                                                                                                     chromosome:Otter#contig#clone
+#                                                                                                                     chromosome:NCBI36#contig#clone
+#                                                                                                                     chromosome:OtterArchive#contig
+#                                                                                                                     chromosome:OtterArchive#contig#clone
+#                                                                                                                     chromosome:GRCh37#contig
+#                                                                                                                     chromosome:GRCh37#contig#clone
+#                                                                                                                     chromosome:Otter#chromosome:GRCh37
+#                                                                                                                     chromosome:Otter#chromosome:OtterArchive
+#    );
 use warnings 'qw';
 
 sub new {
@@ -49,18 +68,20 @@ sub new {
 
 sub coord_system {
     my ($self, $name) = @_;
-
+  
     my $cs = $self->_cached_cs($name);
     return $cs if $cs;
 
     # Not cached yet
+#    unless ($_COORD_SYSTEM_SPEC{$name}) {
+#        croak "CoordSystemFactory doesn't know about '$name'";
+#    }
 
     if ($self->dba) {
         $cs = $self->_dba_cs($name);
     } else {
         $cs = $self->_local_cs($name);
     }
-
     return $self->_cached_cs($name, $cs);
 }
 
@@ -68,7 +89,18 @@ sub known {
   my ($self) = @_;
 
   my $_coord_system_specs = $self->_coord_system_specs;
-  return sort { $_coord_system_specs->{$a}->{'-rank'} <=> $_coord_system_specs->{$b}->{'-rank'} } keys %$_coord_system_specs;
+  my @sorted_array = sort { $_coord_system_specs->{$a}->{'-rank'} <=> $_coord_system_specs->{$b}->{'-rank'} } keys %$_coord_system_specs;
+  if (! exists $_coord_system_specs->{$sorted_array[-1]}->{'-sequence_level'}){
+      if (! exists $_coord_system_specs->{$sorted_array[-1]}->{'-default'}){
+          my $cs = pop(@sorted_array);
+          unshift(@sorted_array, $cs);
+      }
+      else {
+            croak "Last element not seq_level but default version";
+      }
+  }
+  return @sorted_array;
+#  return sort { $_coord_system_specs->{$a}->{'-rank'} <=> $_coord_system_specs->{$b}->{'-rank'} } keys %$_coord_system_specs;
 }
 
 sub instantiate_all {
@@ -80,9 +112,9 @@ sub instantiate_all {
     return;
 }
 
-sub assembly_mappings {
-    return @_MAPPINGS_SPEC;
-}
+#sub assembly_mappings {
+#    return @_MAPPINGS_SPEC;
+#}
 
 sub _dba_cs {
     my ($self, $name) = @_;
@@ -144,8 +176,8 @@ sub _cached_cs {
 
 sub _coord_system_specs {
   my ($self) = @_;
-
-  return $self->override_spec || \%_COORD_SYSTEM_SPEC;
+  return $self->override_spec || {};
+#  return $self->override_spec || \%_COORD_SYSTEM_SPEC;
 }
 
 1;
