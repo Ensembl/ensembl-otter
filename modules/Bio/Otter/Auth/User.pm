@@ -4,7 +4,6 @@ use warnings;
 use Try::Tiny;
 use Scalar::Util 'weaken';
 
-
 =head1 NAME
 
 Bio::Otter::Auth::User - an author, dataset independent
@@ -28,7 +27,7 @@ after all other data is loaded.
 
 
 sub new {
-    my ($pkg, $access, $hashref_or_name) = @_;
+    my ($pkg, $access, $hashref_or_name) = @_; 
     my $self = bless { _access => $access }, $pkg;
     weaken $self->{'_access'};
 
@@ -178,7 +177,7 @@ sub all_datasets {
 
 # Returns {name => $dataset_object}
 sub write_datasets {
-    my ($self) = @_;
+    my ($self) = @_; 
     return Bio::Otter::Auth::DsList->datasets( $self->write_lists );
 }
 
@@ -193,7 +192,7 @@ sub read_datasets {
 
 # Returns $dataset_object or undef
 sub write_dataset {
-    my ($self, $dataset_name) = @_;
+    my ($self, $dataset_name) = @_; 
     return $self->write_datasets->{$dataset_name};
 }
 

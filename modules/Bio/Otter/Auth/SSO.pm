@@ -4,7 +4,7 @@ use warnings;
 
 use URI::Escape qw{ uri_escape };
 use HTTP::Request;
-
+use Bio::Otter::Auth::Access;
 
 =head1 NAME
 
@@ -43,10 +43,11 @@ sub login {
     $req->method('GET');
     $req->uri("https://explore.api.aai.ebi.ac.uk/auth");
     $req->content_type('application/json;charset=UTF-8');
-    $req->authorization_basic($user,$password);
+    $req->authorization_basic($user, $password);
 
     my $response = $fetcher->request($req);
     my $content = $response->decoded_content;
+#    my $decoded_jwt = Bio::Otter::Server::Auth::Access->_jwt_verify($content);
     my $failed;
 
     if ($response->is_success || $response->is_redirect) {

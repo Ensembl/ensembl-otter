@@ -78,7 +78,8 @@ sub run_gui {
 
     try {
         $client->get_server_otter_config;
-        $client->reauthorize_if_cookie_will_expire_soon;
+        $client->_authorize;
+#        $client->reauthorize_if_cookie_will_expire_soon;
         $SpeciesListWindow->draw;
         $getpass->running(1);
     } catch {

@@ -5,7 +5,6 @@ use Try::Tiny;
 use Carp;
 use Scalar::Util 'weaken';
 
-
 =head1 NAME
 
 Bio::Otter::Auth::DsList - a list of datasets
@@ -101,9 +100,9 @@ sub datasets {
 
     my %ds;
     foreach my $list (@dslist) {
-        my $species_dat = $list->_access->species_dat;
+        my $species_dat = $list->_access->species_dat;        
         foreach my $name ($list->expanded_names) {
-            $ds{$name} = $species_dat->dataset($name)
+              $ds{$name} = $species_dat->dataset($name)
               or die "Unknown dataset '$name'";
         }
     }

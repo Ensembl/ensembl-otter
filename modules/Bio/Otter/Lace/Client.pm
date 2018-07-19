@@ -492,7 +492,7 @@ sub _authorize {
       Bio::Otter::Auth::SSO->login($self->get_UserAgent, $user, $password);
 
     if (!$failed) {
-        # Cookie will have been given to UserAgent
+#         Cookie will have been given to UserAgent
         $self->logger->info(sprintf("Authenticated as %s: %s\n", $self->author, $status));
         $self->_save_CookieJar;
         return 1;
@@ -918,7 +918,8 @@ sub find_clones {
         'find_clones',
         {
             'dataset'  => $dsname,
-            'qnames'   => $qnames_string, 'author' => $self->author
+            'qnames'   => $qnames_string, 
+            'author'   => $self->author
         },
     );
 
@@ -951,8 +952,13 @@ sub get_meta {
 
 sub get_db_info {
     my ($self, $dsname, $ss) = @_;
-    my $hashref = $self->otter_response_content(GET => 'get_db_info', { dataset => $dsname,  'coord_system_name' => $ss->coord_system_name,
-                                                                         'coord_system_version' => $ss->coord_system_version,'author' => $self->author });
+    my $hashref = $self->otter_response_content(GET => 'get_db_info', 
+    { 
+         dataset => $dsname,  
+         'coord_system_name' => $ss->coord_system_name,
+         'coord_system_version' => $ss->coord_system_version, 
+         'author' => $self->author 
+    });
     return $hashref;
 }
 
@@ -1060,7 +1066,7 @@ sub _sequence_note_action {
             'contig'    => $contig_name,
             'timestamp' => $seq_note->timestamp(),
             'text'      => $seq_note->text(),
-            'author' => $self->author
+            'author'    => $self->author
         },
     );
 
@@ -1152,7 +1158,7 @@ sub _get_config_file {
     return $self->http_response_content(
         'GET',
         'get_config',
-        { 'key' => $key,'author' => $self->author },
+        { 'key' => $key, 'author' => $self->author },
         );
 }
 
@@ -1189,7 +1195,7 @@ sub get_server_ensembl_version {
 # same as Bio::Otter::Server::Config->designations (fresh every time)
 sub _get_designations {
     my ($self) = @_;
-    my $hashref = $self->otter_response_content(GET => 'get_config', { key => 'designations','author' => $self->author });
+    my $hashref = $self->otter_response_content(GET => 'get_config', { key => 'designations', 'author' => $self->author });
     return $hashref;
 }
 
@@ -1486,7 +1492,7 @@ sub get_taxonomy_info {
         'POST',
         'get_taxonomy_info',
         {id => join ',', @ids,
-         'author'      => $self->author
+         'author' => $self->author
         },
         );
     return $response;

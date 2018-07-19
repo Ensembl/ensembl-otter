@@ -4,11 +4,11 @@ use warnings;
 use Try::Tiny;
 use Carp;
 use Scalar::Util 'weaken';
+#use Crypt::JWT qw(decode_jwt);
 
 use Bio::Otter::Auth::DsList;
 use Bio::Otter::Auth::UserGroup;
 use Bio::Otter::Auth::User;
-
 
 =head1 NAME
 
@@ -84,7 +84,7 @@ sub new {
         $err =~ s{\.?\s*\Z}{, under $$self{_ptr}};
         croak $err;
     };
-
+    
     return $self;
 }
 
@@ -194,12 +194,12 @@ sub all_users {
 sub _flatten_users {
     my ($self) = @_;
     my %out;
-    while (my ($name, $ugroup) = each %{ $self->_user_groups }) {
+    while (my ($name, $ugroup) = each %{ $self->_user_groups }) {        
         $self->{'_ptr'} = "user_groups/$name";
         foreach my $u ($ugroup->users) {
-            my $e = $u->email;
+            my $e = $u->email;  
             die "Duplicate user $e" if $out{lc($e)}; # see $u->in_group comment
-            $out{lc($e)} = $u;
+            $out{$e} = $u;
         }
     }
     $self->{'_users'} = \%out;
@@ -264,6 +264,15 @@ sub _build_alias_map {
     }
     return \%by_provider;
 }
+
+#sub _jwt_verify {
+#    my($self, $token) = @_;
+#    my $data = decode_jwt(token=>$token, key=>Crypt::PK::RSA->new('otterkey.pem'));
+
+
+
+
+#}
 
 =head1 AUTHOR
 

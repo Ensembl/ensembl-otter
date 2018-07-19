@@ -4,7 +4,6 @@ use warnings;
 use Try::Tiny;
 use Scalar::Util 'weaken';
 
-
 =head1 NAME
 
 Bio::Otter::Auth::UserGroup - a group of author, sharing some dataset names
@@ -57,8 +56,8 @@ sub users {
 }
 
 sub _build_users {
-    my ($self, $userlist) = @_;
-    my @out = map { Bio::Otter::Auth::User->new($self->_access, $_) } @$userlist;
+    my ($self, $userlist) = @_; 
+    my @out = map { Bio::Otter::Auth::User->new($self->_access, $_) } $userlist; 
     foreach my $u (@out) {
         $u->in_group($self);
     }
@@ -76,7 +75,7 @@ sub _read {
 }
 
 sub write_list {
-    my ($self) = @_;
+    my ($self) = @_; 
     return $self->{'_write_dslist'} ||=
       Bio::Otter::Auth::DsList->new($self->_access, $self->_write);
 }
