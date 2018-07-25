@@ -55,13 +55,13 @@ sub login {
 
     # need to url-encode these
     my $user  = uri_escape($orig_user); # possibly not worth it...
-    $password = uri_escape($password);  # definitely worth it!
+
 
     my $req = HTTP::Request->new;
-    $req->method('POST');
-    $req->uri("https://enigma.sanger.ac.uk/LOGIN");
-    $req->content_type('application/x-www-form-urlencoded');
-    $req->content("credential_0=$user&credential_1=$password&destination=/");
+    $req->method('GET');
+    $req->uri("https://explore.api.aai.ebi.ac.uk/auth");
+    $req->content_type('application/json;charset=UTF-8');
+    $req->authorization_basic($user, $password);
 
     my $response = $fetcher->request($req);
     my $content = $response->decoded_content;
@@ -130,7 +130,7 @@ Note that this rolls authentication and authorisation into one lump.
 =cut
 
 sub auth_user {
-    my ($called, $sangerweb, $Access) = @_;
+    my ($called, $Access, $unauthorized_user) = @_;
     my %out = (_authenticated_user => undef,
                _authorized_user => undef,
                _internal_user => 0);
@@ -139,24 +139,24 @@ sub auth_user {
       ? 1 : 0;
     # ...from the HTTP header added by front end proxy
 
-    if (my $user = lc($sangerweb->username)) {
+
         my $auth_flag     = 0;
         my $internal_flag = 0;
 
-        if ($user =~ /^[a-z0-9]+$/) {   # Internal users (simple user name)
+        if ($unauthorized_user =~ /^[a-z0-9]+$/) {   # Internal users (simple user name)
             $auth_flag = 1;
             $internal_flag = 1;
-        } elsif ($Access->user($user)) {  # Check configured users (email address)
+        } elsif ($Access->user($unauthorized_user)) {  # Check configured users (email address)
             $auth_flag = 1;
         } # else not auth
 
-        $out{_authenticated_user} = $user; # not used by B:O:SSS
+        $out{_authenticated_user} = $unauthorized_user; # not used by B:O:SSS
 
         if ($auth_flag) {
-            $out{'_authorized_user'} = $user;
+            $out{'_authorized_user'} = $unauthorized_user;
             $out{'_internal_user'}   = $internal_flag;
         }
-    }
+    
 
     die 'wantarray!' unless wantarray;
     return %out;
