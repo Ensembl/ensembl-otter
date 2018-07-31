@@ -57,6 +57,7 @@ use Bio::Otter::Lace::DB;
 use Bio::Otter::LogFile;
 use Bio::Otter::Auth::SSO;
 use Bio::Vega::Utils::MacProxyConfig qw{ mac_os_x_set_proxy_vars };
+use Bio::Otter::Auth::Access;
 
 use 5.009001; # for stacked -f -r which returns false under 5.8.8
 
@@ -510,6 +511,11 @@ sub _authorize {
 
     my ($status, $failed, $detail) =
       Bio::Otter::Auth::SSO->login($self->get_UserAgent, $user, $password);
+
+    my $decoded_jwt = Bio::Otter::Auth::Access->_jwt_verify($detail);
+    if  ($decoded_jwt->{'nickname'} ne ($self->author)) {
+       die ('Username does not match token name');
+    }
 
     if (!$failed) {
         # Cookie will have been given to UserAgent
