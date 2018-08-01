@@ -51,10 +51,11 @@ authenticated requests.
 =cut
 
 sub login {
-    my ($called, $fetcher, $orig_user, $password) = @_;
+    my ($called, $fetcher, $orig_user, $orig_password) = @_;
 
     # need to url-encode these
     my $user  = uri_escape($orig_user); # possibly not worth it...
+    my $password = uri_escape($orig_password);  # definitely worth it!
 
 
     my $req = HTTP::Request->new;
