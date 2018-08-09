@@ -7,7 +7,7 @@ os:
 services: docker
 
 before_install:
-    - docker pull smmebi/test_otter
+    - docker pull smmebi/otter_test_update
 install:
     - cd ../
     - export ROOT_PATH=$PWD
@@ -20,4 +20,4 @@ install:
     - git clone --branch master --depth 1 https://github.com/Ensembl/zircon.git
     - git clone --branch master --depth 1 https://github.com/Ensembl/PerlModules.git
 
-script: "docker run -i --name devtest -v $ROOT_PATH/app:/loutre smmebi/test_otter:latest"
+script: "docker run -i --name devtest -v $ROOT_PATH/app:/loutre smmebi/otter_test_update:latest"
