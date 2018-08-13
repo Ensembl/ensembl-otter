@@ -35,7 +35,7 @@ sub query_links{
  my %data_group;
  
   # Query the database
-  my $sql_user_group = "SELECT username, species_write, species_read FROM otter_user";
+  my $sql_user_group = "SELECT username, species_write, species_read FROM otter_species_access";
   my $sth_user_group = $dbh->prepare($sql_user_group)
                        or die "Could not prepare statement: " . $dbh->errstr;
   $sth_user_group->execute()
