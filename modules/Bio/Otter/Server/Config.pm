@@ -33,6 +33,7 @@ use Bio::Otter::SpeciesDat;
 use Bio::Otter::SpeciesDat::Database;
 use Bio::Otter::Version;
 use Bio::Otter::Auth::Access;
+use Bio::Otter::Server::UserSpecies;
 
 
 =head1 NAME
@@ -510,7 +511,7 @@ Currently freshly loaded.  Maybe should be cached.
 my $_access;
 sub Access {
     my ($pkg) = @_;
-    my $acc = $pkg->_get_yaml('/access.yaml');
+    my $acc = Bio::Otter::Server::UserSpecies->species_group();
     # this is not caching (like a singleton), it prevents weak refs to
     # the B:O:A:Access vanishing during multi-statement method chains
     $_access = Bio::Otter::Auth::Access->new($acc, $pkg->_SpeciesDat);

@@ -76,7 +76,7 @@ sub users {
 
 sub _build_users {
     my ($self, $userlist) = @_;
-    my @out = map { Bio::Otter::Auth::User->new($self->_access, $_) } @$userlist;
+    my @out = map { Bio::Otter::Auth::User->new($self->_access, $_) } $userlist;
     foreach my $u (@out) {
         $u->in_group($self);
     }
