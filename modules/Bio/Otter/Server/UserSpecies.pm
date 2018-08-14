@@ -8,8 +8,8 @@ sub species_group{
 
  # MySQL database configurations
  my $dsn = "DBI:mysql:otter_registration";
- my $username = '****';
- my $password = '****';
+ my $username = 'root';
+ my $password = 'sorciers';
 
  my %attr = (PrintError=>0, RaiseError=>1);
 
@@ -40,6 +40,11 @@ sub query_links{
                        or die "Could not prepare statement: " . $dbh->errstr;
   $sth_user_group->execute()
                        or die "Could not execute statement: " . $dbh->errstr;
+
+  my $array_ref_temp = $sth_user_group->fetchrow_arrayref();
+  if(! $array_ref_temp){
+     die('Database fetch error')
+  }
   while(my $array_ref = $sth_user_group->fetchrow_arrayref()){
         
         # Setting up read and write species for each user
@@ -51,10 +56,6 @@ sub query_links{
         $data_group{'user_groups'}{$username.'.data'}{'users'} = $username; 
         $data_group{'user_groups'}{$username.'.data'}{'write'} = \@species_write_array; 
 #        $data_group{'user_groups'}{$username.'.data'}{'read'} = \@species_read_array; #Uncomment this line when READONLY datasets are available
-  }
-
-  if(! $sth_user_group->fetchrow_arrayref())){
-    die('Database fetch error')
   }
 
   $sth_user_group->finish();            
