@@ -53,6 +53,10 @@ sub query_links{
 #        $data_group{'user_groups'}{$username.'.data'}{'read'} = \@species_read_array; #Uncomment this line when READONLY datasets are available
   }
 
+  if(! $sth_user_group->fetchrow_arrayref())){
+    die('Database fetch error')
+  }
+
   $sth_user_group->finish();            
 
   return %data_group;      
