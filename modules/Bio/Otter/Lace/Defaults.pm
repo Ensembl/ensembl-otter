@@ -686,8 +686,8 @@ __DATA__
 # disable.
 
 [client]
-url=https://otter.sanger.ac.uk/cgi-bin/otter
-write_access=0
+url=http://localhost:8004/cgi-bin/otter
+write_access=1
 gff_version=3
 acedb_version=4.9.61
 debug=Client,Zircon,XRemote

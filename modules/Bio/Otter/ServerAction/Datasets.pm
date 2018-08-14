@@ -53,9 +53,10 @@ sub get_datasets {
     my $show_details = $server->local_user;
 
     my $is_local = $server->isa('Bio::Otter::Server::Support::Local');
+    my $unauth_user = $self->{'_server'}->{'_authenticated_user'};
 
     my %datasets;
-    foreach my $dataset (@{$server->allowed_datasets}) {
+    foreach my $dataset (@{$server->allowed_datasets($unauth_user)}) {
         my $name   = $dataset->name;
         my $params = $dataset->ds_all_params;
 
