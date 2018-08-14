@@ -40,7 +40,7 @@ sub query_links{
                        or die "Could not prepare statement: " . $dbh->errstr;
   $sth_user_group->execute()
                        or die "Could not execute statement: " . $dbh->errstr;
-  if(my $array_ref = $sth_user_group->fetchrow_arrayref()){
+  while(my $array_ref = $sth_user_group->fetchrow_arrayref()){
         
         # Setting up read and write species for each user
         my $username = $array_ref->[0];
@@ -51,9 +51,6 @@ sub query_links{
         $data_group{'user_groups'}{$username.'.data'}{'users'} = $username; 
         $data_group{'user_groups'}{$username.'.data'}{'write'} = \@species_write_array; 
 #        $data_group{'user_groups'}{$username.'.data'}{'read'} = \@species_read_array; #Uncomment this line when READONLY datasets are available
-  }
-  else{
-     die "Database fetch statement failed";
   }
 
   $sth_user_group->finish();            
