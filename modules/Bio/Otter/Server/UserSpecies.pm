@@ -40,23 +40,33 @@ sub query_links{
                        or die "Could not prepare statement: " . $dbh->errstr;
   $sth_user_group->execute()
                        or die "Could not execute statement: " . $dbh->errstr;
-
-  my $array_ref_temp = $sth_user_group->fetchrow_arrayref();
-  if(! $array_ref_temp){
-     die('Database fetch error')
-  }
+  my (@species_write_array, @species_read_array);
   while(my $array_ref = $sth_user_group->fetchrow_arrayref()){
         
         # Setting up read and write species for each user
         my $username = $array_ref->[0];
+        $data_group{'user_groups'}{$username.'.data'}{'users'} = $username;
+ 
         my $species_write_string = $array_ref->[1];  
-        my @species_write_array = split ',', $species_write_string; 
-        my $species_read_string = $array_ref->[2];  
-        my @species_read_array = split ',', $species_read_string; 
-        $data_group{'user_groups'}{$username.'.data'}{'users'} = $username; 
+        if ($species_write_string){
+            @species_write_array = split ',', $species_write_string;
+        }
+        else{
+            @species_write_array = ();
+        }        
         $data_group{'user_groups'}{$username.'.data'}{'write'} = \@species_write_array; 
+
+        my $species_read_string = $array_ref->[2]; 
+        if ($species_read_string){
+             @species_read_array = split ',', $species_read_string; 
+        }
+        else{
+            @species_read_array = (); 
+        } 
 #        $data_group{'user_groups'}{$username.'.data'}{'read'} = \@species_read_array; #Uncomment this line when READONLY datasets are available
   }
+  die "Error in fetchrow_array(): ", $sth_user_group->errstr(), "\n"
+        if $sth_user_group->err();
 
   $sth_user_group->finish();            
 
