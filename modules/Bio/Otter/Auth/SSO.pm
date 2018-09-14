@@ -22,6 +22,7 @@ use warnings;
 
 use URI::Escape qw{ uri_escape };
 use HTTP::Request;
+use LWP::UserAgent;
 
 
 =head1 NAME
@@ -57,14 +58,14 @@ sub login {
     my $user  = uri_escape($orig_user); # possibly not worth it...
     my $password = uri_escape($orig_password);  # definitely worth it!
 
-
+    my $ua    = LWP::UserAgent->new();
     my $req = HTTP::Request->new;
     $req->method('GET');
     $req->uri("https://explore.api.aai.ebi.ac.uk/auth");
     $req->content_type('application/json;charset=UTF-8');
     $req->authorization_basic($user, $password);
 
-    my $response = $fetcher->request($req);
+    my $response = $ua->request($req);
     my $content = $response->decoded_content;
     my $failed;
 

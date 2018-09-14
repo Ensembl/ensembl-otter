@@ -8,8 +8,8 @@ sub species_group{
 
  # MySQL database configurations
  my $dsn = "DBI:mysql:otter_registration";
- my $username = 'root';
- my $password = 'sorciers';
+ my $username = '****';
+ my $password = '****';
 
  my %attr = (PrintError=>0, RaiseError=>1);
 
