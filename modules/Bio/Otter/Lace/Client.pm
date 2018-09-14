@@ -512,12 +512,11 @@ sub _authorize {
     my ($status, $failed, $detail) =
       Bio::Otter::Auth::SSO->login($self->get_UserAgent, $user, $password);
 
-    my $decoded_jwt = Bio::Otter::Auth::Access->_jwt_verify($detail);
-    if  ($decoded_jwt->{'nickname'} ne ($self->author)) {
-       die ('Username does not match token name');
-    }
-
     if (!$failed) {
+        my $decoded_jwt = Bio::Otter::Auth::Access->_jwt_verify($detail);
+        if  ($decoded_jwt->{'nickname'} ne ($self->author)) {
+             die ('Username does not match token name');
+        }
         # Cookie will have been given to UserAgent
         $self->logger->info(sprintf("Authenticated as %s: %s\n", $self->author, $status));
         $self->_save_CookieJar;
@@ -1472,7 +1471,7 @@ sub get_accession_info {
     my $hashref = $self->otter_response_content(
         'POST',
         'get_accession_info',
-        {accessions => join ',', @accessions, 'author' => $self->author },
+        {'author' => $self->author, accessions => join ',', @accessions },
         );
 
     return $hashref;
@@ -1484,7 +1483,7 @@ sub get_accession_types {
     my $hashref = $self->otter_response_content(
         'POST',
         'get_accession_types',
-        {accessions => join ',', @accessions, 'author' => $self->author },
+        {'author' => $self->author, accessions => join ',', @accessions },
         );
 
     return $hashref;
@@ -1496,7 +1495,7 @@ sub get_taxonomy_info {
     my $response = $self->otter_response_content(
         'POST',
         'get_taxonomy_info',
-        {id => join ',', @ids, 'author' => $self->author},
+        {'author' => $self->author, id => join ',', @ids },
         );
     return $response;
 }
