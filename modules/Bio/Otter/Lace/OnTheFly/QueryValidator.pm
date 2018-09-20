@@ -28,6 +28,7 @@ use List::MoreUtils qw{ uniq };
 
 use Bio::Otter::Lace::OnTheFly::Utils::SeqList;
 use Bio::Otter::Lace::OnTheFly::Utils::Types;
+use Bio::Otter::Lace::Client;
 
 use Bio::Vega::Evidence::Types qw{ new_evidence_type_valid seq_is_protein };
 
@@ -82,19 +83,18 @@ sub _build_confirmed_seqs {     ## no critic (Subroutines::ProhibitUnusedPrivate
         return Bio::Otter::Lace::OnTheFly::Utils::SeqList->new( seqs => [] ) unless @accessions; # nothing to do
 
         $self->logger->debug('n(accessions) = ', scalar @accessions);
-
         # identify the types of all the accessions supplied
-        my $cache = $self->accession_type_cache;
+
         # The populate method will fetch the latest version of
         # any accessions which are supplied without a SV into
         # the cache object.
         &{$self->progress_cb}('Fetching accession info') if $self->progress_cb;
-        $cache->populate(\@accessions);
+
     }
 
     $self->_augment_supplied_sequences;
     my @to_fetch = $self->_check_augment_supplied_accessions;
-    $self->_fetch_sequences(@to_fetch);
+    $self->_fetch_sequences($self->accessions);
 
     # tell the user about any missing sequences or remapped accessions
 
@@ -222,25 +222,34 @@ sub _check_augment_supplied_accessions {
     return @to_fetch;
 }
 
+sub Client {
+    my ($self, $client) = @_;
+
+    if ($client) {
+        $self->{'_Client'} = $client;
+        $self->colour( $self->next_session_colour );
+    }
+    return $self->{'_Client'};
+}
+
 # Adds sequences to $self->seqs
 #
 sub _fetch_sequences {
     my ($self, @to_fetch) = @_;
-
-    my $cache = $self->accession_type_cache;
+$self->logger->warn("FACE YOUR DECTINY0");
 
     @to_fetch = uniq @to_fetch;
     $self->logger->debug('Need seq for: ', join(',', @to_fetch) || '<none>');
-
     foreach my $acc (@to_fetch) {
-
-        my ($type, $full) = @{$self->_acc_type_full($acc)};
+        my $client = Bio::Otter::Lace::Defaults::make_Client();
+        my $alignmnet = $client->fetch_fasta_seqence($acc);
+        my $type = "";
+        my $info = "TTF";
+        my $full = "Name";
         unless ($type) {
             $self->_add_missing_warning($acc => 'illegal evidence type');
             next;
         }
-
-        my $info = $cache->feature_accession_info($acc);
         unless ($info) {
             $self->logger->error("No info for '$acc' - this should not happen");
             $self->_add_missing_warning($acc => 'internal error');
