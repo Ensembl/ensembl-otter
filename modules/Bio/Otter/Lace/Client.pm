@@ -1119,6 +1119,15 @@ sub _get_DataSets_hash {
     return $datasets_hash;
 }
 
+sub fetch_fasta_seqence {
+    my ($self, $acc) = @_;
+
+    my $datasets_hash = $self->otter_response_content
+        ('GET', 'get_sequence', {'id'=>$acc->[0], 'author' => $self->author});
+
+    return $datasets_hash;
+}
+
 sub _make_DataSet {
     my ($self, $name, $params) = @_;
 
@@ -1529,7 +1538,7 @@ sub _DataSet_SequenceSet_response_content {
     my $query = {
         'dataset'  => $ds->name,
         'chr'      => $ss->name,
-        'author'   => $self->author        
+        'author'   => $self->author
     };
 
     my $content =
@@ -1766,4 +1775,3 @@ An ordinary constructor, making instances as requested.
 =head1 AUTHOR
 
 Ana Code B<email> anacode@sanger.ac.uk
-
