@@ -243,21 +243,10 @@ $self->logger->warn("FACE YOUR DECTINY0");
     #$self->logger->warn('Need seq for: ', @$tofetch);
 
         my $client = Bio::Otter::Lace::Defaults::make_Client();
-        my $alignmnet = $client->fetch_fasta_seqence(join('+', @tofetch));
-        my $type = "";
-        my $info = "TTF";
-        my $full = "Name";
-
-
-        my $seq = Hum::Sequence->new;
-        $seq->name($full);
-        $seq->type($type);
-        $seq->sequence_string($info->{sequence});
-
-        # Will this ever get hit?
-
-        push(@{$self->seqs}, $seq);
-
+        foreach my $acc (@tofetch) {
+          my $seq = $client->fetch_fasta_seqence($acc);
+          push(@{$self->seqs}, $seq);
+        }
     return;
 }
 
