@@ -235,36 +235,19 @@ sub Client {
 # Adds sequences to $self->seqs
 #
 sub _fetch_sequences {
-    my ($self, @to_fetch) = @_;
+    my ($self, $to_fetch) = @_;
 $self->logger->warn("FACE YOUR DECTINY0");
+    use Data::Dumper;
+    warn(Dumper(@$to_fetch));
+    my @tofetch = uniq @$to_fetch;
+    #$self->logger->warn('Need seq for: ', @$tofetch);
 
-    @to_fetch = uniq @to_fetch;
-    $self->logger->debug('Need seq for: ', join(',', @to_fetch) || '<none>');
-    foreach my $acc (@to_fetch) {
         my $client = Bio::Otter::Lace::Defaults::make_Client();
-        my $alignmnet = $client->fetch_fasta_seqence($acc);
+        my $alignmnet = $client->fetch_fasta_seqence(join('+', @tofetch));
         my $type = "";
         my $info = "TTF";
         my $full = "Name";
-        unless ($type) {
-            $self->_add_missing_warning($acc => 'illegal evidence type');
-            next;
-        }
-        unless ($info) {
-            $self->logger->error("No info for '$acc' - this should not happen");
-            $self->_add_missing_warning($acc => 'internal error');
-            next;
-        }
 
-        unless ($info->{currency} and $info->{currency} eq 'current') {
-            $self->_add_missing_warning($acc => 'obsolete SV');
-            next;
-        }
-
-        unless ($info->{sequence}) {
-            $self->_add_missing_warning($acc => 'no sequence');
-            next;
-        }
 
         my $seq = Hum::Sequence->new;
         $seq->name($full);
@@ -272,13 +255,8 @@ $self->logger->warn("FACE YOUR DECTINY0");
         $seq->sequence_string($info->{sequence});
 
         # Will this ever get hit?
-        if ($full ne $acc) {
-            $self->logger->error("_fetch_sequences called with partial acc.sv for '$acc','$full'");
-            $self->_add_remap_warning($acc => $full);
-        }
 
         push(@{$self->seqs}, $seq);
-    }
 
     return;
 }
