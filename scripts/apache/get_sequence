@@ -19,165 +19,28 @@ use warnings;
 
 BEGIN { use lib ($ENV{OTTER_PERL_INC} || q{}) =~ m{([^:]+)}g }
 use SangerPaths qw{ core bioperl123 otter };
-use SangerWeb;
-use CGI;
-use Bio::Otter::Utils::AccessionInfo;
+use Bio::Otter::Git qw{ :server_ensembl :match };
 
-{
-    my $q;
+use Bio::Otter::Server::Support::Web;
 
-    eval {
-        $q = CGI->new;
+sub get_sequence {
+    my ($server) = @_;
 
-        my $sw = SangerWeb->new({ cgi => $q });
-        die "Not authorized\n"
-          unless $sw->username;
-    };
+    my $id = $server->require_argument('id');
+    my $query = 'http://www.ebi.ac.uk/Tools/dbfetch/dbfetch?format=fasta&style=raw&db=refseqn&id=NM_001271285.1';
+  #    . $id;
+    my $result = web_fetch($query);
+    return $server->otter_wrap_response($result);
 
-    if ($@) {
-        print $q->header(
-            -status => 403,
-            -type   => 'text/plain',
-            );
-        print $@;
-        exit(1);
-    }
-
-    my ($info, $args, %switches, $reply_content);
-    eval {
-        # Get request string and de-taint
-        my $req = $q->param('request');
-        $req =~ s/\s+/ /g;
-        $req =~ s/[^\w\-\.\: ]//g;
-
-        die "Empty request\n" unless $req =~ /\S/;
-
-        $args = [ split /\s+/, $req ];
-        for (my $i = 0; $i < @$args;) {
-            my $this = $args->[$i];
-            if ($this =~ /^-/) {
-                $switches{$this} = 1;
-                splice(@$args, $i, 1);
-            }
-            else {
-                $i++;
-            }
-        }
-
-        my $fetcher = Bio::Otter::Utils::AccessionInfo->new;
-        my ($info);
-        if ($switches{'-F'}) {
-            $reply_content = ebi_web_fetch_full_entry($args);
-        }
-        else {
-            $info = $fetcher->get_accession_info($args);
-        }
-    };
-
-    if ($@) {
-        print $q->header(
-            -status => 500,
-            -type   => 'text/plain',
-            );
-        print $@;
-        exit(1);
-    } else {
-        print $q->header(
-            -status => 200,
-            -type   => 'text/plain',
-            );
-
-        if ($switches{'-F'}) {
-            print $reply_content;
-        }
-        elsif ($switches{'-q'}) {
-            foreach my $acc (@$args) {
-                if (my $data = $info->{$acc}) {
-                    print $data->{'sequence'}, "\n";
-                }
-                else {
-                    print "no match\n";
-                }
-            }
-        }
-        else {
-            foreach my $acc (@$args) {
-                if (my $data = $info->{$acc}) {
-                    print_fasta($data);
-                }
-                else {
-                    print "no match\n";
-                }
-            }
-        }
-
-        exit(0);
-    }
-}
-
-sub print_fasta {
-    my ($data) = @_;
-
-    print ">", $data->{'acc_sv'};
-    if (my $desc = $data->{'description'}) {
-        print "  ", $desc;
-    }
-    print "\n";
-    while ($data->{'sequence'} =~ /(.{1,60})/g) {
-        print $1, "\n";
-    }
-}
-
-sub ebi_web_fetch_full_entry {
-    my ($args) = @_;
-    use Data::Dumper;
-    print ("WE GOT HERE");
-    print Dumper(\$args)
-    # Doing a separate request for each looks inefficient, but most -F requests are for a single sequence.
-
-    my $full_txt = '';
-    foreach my $acc (@$args) {
-        my $data = $info->{$acc};
-        unless ($data) {
-            $full_txt .= "no match\n";
-            next;
-        }
-        my $acc_sv = $data->{'acc_sv'};
-        my $query;
-        if ($data->{'source'} eq 'RefSeq') {
-            $query = 'http://www.ebi.ac.uk/Tools/dbfetch/dbfetch?format=default&style=raw&db=refseqn&id='
-              . $acc_sv;
-        }
-        elsif ($data->{'molecule_type'} eq 'protein') {
-            if ($data->{'data_class'} eq 'ISO') {
-                # Remove dash and number from VARSPLIC entries, or the fetch will fail.
-                $acc_sv =~ s/-\d+//;
-            }
-            $query = 'http://www.ebi.ac.uk/Tools/dbfetch/dbfetch?format=default&style=raw&db=uniprotkb&id='
-              . $acc_sv;
-        }
-        else {
-            $query = sprintf 'http://www.ebi.ac.uk/ena/data/view/%s&display=text', $acc_sv;
-        }
-        $full_txt .= web_fetch($query);
-    }
-    return $full_txt;
 }
 
 {
-    my( $ua );
-
     sub web_fetch {
         my ($query) = @_;
 
-        unless ($ua) {
-            require LWP::UserAgent;
-            $ua = LWP::UserAgent->new(
-                env_proxy => 1,
-                agent     => 'nfetch',
-            );
-        }
-
+        use LWP::UserAgent;
+        use HTTP::Request;
+        my $ua = LWP::UserAgent->new;
         my $req = HTTP::Request->new('GET', $query);
         my $response = $ua->request($req);
         if ($response->is_success) {
@@ -189,36 +52,5 @@ sub ebi_web_fetch_full_entry {
     }
 }
 
-__END__
 
-=head1 NAME - nfetch
-
-=head1 DESCRIPTION
-
-CGI script to replace pfetch functionallity. The pfetch contract is:
-
-Any number of accession[.sv] can be fetched. They are listed separated by
-spaces in the request, and are returned in the same order that they are listed.
-Any entries that couldn't be fetched are replaced with "no match\n", regardless
-of format. The default format is FASTA. Other supported formats, which modify
-the entire result, are added to the request string, are:
-
-=over 4
-
-=item -q
-
-B<Quick> format, where each sequence is returned one per line, with no
-accession or description data.
-
-=item -F
-
-B<Full> format, where the original entry in the database's format is returned.
-
-=back
-
-Supported databases are: B<EMBL>, B<UniprotKB> and B<RefSeq>. All the databases
-are searched in this order, so accessions from different sources can be mixed
-in the same request.
-
-The current implementation fetches information from the mfetch database, but
-uses EBI website facilities to fetch B<full> entries.
+Bio::Otter::Server::Support::Web->send_response(\&get_sequence);

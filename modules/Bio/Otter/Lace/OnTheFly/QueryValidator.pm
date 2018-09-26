@@ -237,14 +237,14 @@ sub Client {
 sub _fetch_sequences {
     my ($self, $to_fetch) = @_;
 $self->logger->warn("FACE YOUR DECTINY0");
-    use Data::Dumper;
-    warn(Dumper(@$to_fetch));
     my @tofetch = uniq @$to_fetch;
     #$self->logger->warn('Need seq for: ', @$tofetch);
 
         my $client = Bio::Otter::Lace::Defaults::make_Client();
         foreach my $acc (@tofetch) {
           my $seq = $client->fetch_fasta_seqence($acc);
+          use  Data::Dumper;
+          $self->logger->warn(Dumper($seq));
           push(@{$self->seqs}, $seq);
         }
     return;
