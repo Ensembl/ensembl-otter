@@ -27,11 +27,29 @@ sub get_sequence {
     my ($server) = @_;
 
     my $id = $server->require_argument('id');
-    my $query = 'http://www.ebi.ac.uk/Tools/dbfetch/dbfetch?format=fasta&style=raw&db=refseqn&id=NM_001271285.1';
-  #    . $id;
-    my $result = web_fetch($query);
-    return $server->otter_wrap_response($result);
+    my @queries;
+    my $query = 'http://www.ebi.ac.uk/Tools/dbfetch/dbfetch?format=fasta&style=raw&db=refseqn&id='
+          . $id;
+    push @queries, $query;
+    $query = 'http://www.ebi.ac.uk/Tools/dbfetch/dbfetch?db=ena_sequence&format=fasta&style=raw&Retrieve=Retrieve&id='
+      . $id;
+    push @queries, $query;
+    $id =~ s/-\d+//;
+    $query = 'http://www.ebi.ac.uk/Tools/dbfetch/dbfetch?format=fasta&style=raw&db=uniprotkb&id='
+        . $id;
+    push @queries, $query;
+    my $result;
 
+    for my $current_query (@queries) {
+      $result = web_fetch($current_query);
+
+      if ($result->is_success && substr($result->decoded_content, 0, 1) eq ">") {
+        warn "WE ARE SUCSEED" . $result->decoded_content;
+        return $server->otter_wrap_response($result->decoded_content);
+      }
+    }
+
+    die sprintf("Error %d from: %s", $result->decoded_content, $query);
 }
 
 {
@@ -42,13 +60,8 @@ sub get_sequence {
         use HTTP::Request;
         my $ua = LWP::UserAgent->new;
         my $req = HTTP::Request->new('GET', $query);
-        my $response = $ua->request($req);
-        if ($response->is_success) {
-            return $response->decoded_content;
-        }
-        else {
-            die sprintf("Error %d from: %s", $response->code, $query);
-        }
+        warn 'WE ARE FETCHING!' . $query;
+        return $ua->request($req);
     }
 }
 
