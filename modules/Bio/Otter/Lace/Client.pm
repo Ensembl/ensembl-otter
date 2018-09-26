@@ -1122,8 +1122,6 @@ sub _get_DataSets_hash {
 sub fetch_fasta_seqence {
     my ($self, $acc) = @_;
     use Data::Dumper;
-    $self->logger->warn('ARRAY DUMP:');
-    $self->logger->warn(Dumper($acc)); 
     my $datasets_hash = $self->otter_response_content
         ('GET', 'get_sequence', {'id'=>$acc, 'author' => $self->author});
 
