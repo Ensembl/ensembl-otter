@@ -29,7 +29,7 @@ use List::MoreUtils qw{ uniq };
 use Bio::Otter::Lace::OnTheFly::Utils::SeqList;
 use Bio::Otter::Lace::OnTheFly::Utils::Types;
 use Bio::Otter::Lace::Client;
-
+use Hum::FastaFileIO;
 use Bio::Vega::Evidence::Types qw{ new_evidence_type_valid seq_is_protein };
 
 has accession_type_cache => ( is => 'ro', isa => 'Bio::Otter::Lace::AccessionTypeCache', required => 1 );
@@ -93,14 +93,13 @@ sub _build_confirmed_seqs {     ## no critic (Subroutines::ProhibitUnusedPrivate
     }
 
     $self->_augment_supplied_sequences;
-    my @to_fetch = $self->_check_augment_supplied_accessions;
+    # legacy:  my @to_fetch = $self->_check_augment_supplied_accessions;
     $self->_fetch_sequences($self->accessions);
 
     # tell the user about any missing sequences or remapped accessions
 
     # might it be better to pass the unprocessed warning lists to the callback and let
     # them be processed according to the context and graphics framework?
-
     if (%{$self->_warnings}) {
         my $formatted_msgs = $self->_format_warnings;
         &{$self->problem_report_cb}( $formatted_msgs );
@@ -109,7 +108,6 @@ sub _build_confirmed_seqs {     ## no critic (Subroutines::ProhibitUnusedPrivate
     # check for unusually long query sequences
 
     my @confirmed_seqs;
-
     for my $seq (@{$self->seqs}) {
         if ($seq->sequence_length > $self->max_query_length) {
             my $okay = &{$self->long_query_cb}( {
@@ -132,7 +130,6 @@ sub _build_confirmed_seqs {     ## no critic (Subroutines::ProhibitUnusedPrivate
             $seq->sequence_string($s);
         }
     }
-
     return Bio::Otter::Lace::OnTheFly::Utils::SeqList->new( seqs => \@confirmed_seqs );
 }
 
@@ -243,13 +240,54 @@ $self->logger->warn("FACE YOUR DECTINY0");
         my $client = Bio::Otter::Lace::Defaults::make_Client();
         foreach my $acc (@tofetch) {
           my $seq = $client->fetch_fasta_seqence($acc);
-          use  Data::Dumper;
-          $self->logger->warn(Dumper($seq));
+          $seq = $self->parse_fasta_sequence($seq);
           push(@{$self->seqs}, $seq);
         }
     return;
 }
 
+sub parse_fasta_sequence {
+    my ($self, $raw_seq) = @_;
+
+      my @seqs;
+      $raw_seq = $self->_tidy_sequence($raw_seq);
+      push @seqs, Hum::FastaFileIO->new(\$raw_seq)->read_all_sequences;
+        # Make sure entered seqs are distinct from seqs fetched by accession.
+    # (We could try to lookup and compare, as a future feature.)
+    foreach my $seq (@seqs) {
+        my $name = $seq->name;
+        unless ($name =~ /^otf[_:]/i) {
+            $seq->name($name);
+        }
+        $seq->type(seq_is_protein($seq->sequence_string) ? 'Protein' : 'DNA');
+    }
+
+      use Data::Dumper;
+      $self->logger->warn("We are here: QueryValidator, parse_fasta_seq");
+      $self->logger->warn(Dumper(@seqs));
+      return @seqs[0];
+}
+
+sub _tidy_sequence {
+    my ($self, $seq) = @_;
+    open my $fh, '<', \$seq or $self->logger->logdie('open stringref failed');
+    my @stripped;
+    while (my $line = <$fh>) {
+        chomp $line;
+        unless ($line =~ /^>/) {
+            $line =~ s{       # strip leading line numbers:
+                          ^   #   start of line
+                          \s* #   optional leading whitespace
+                          \d+ #   line number
+                          \s+ #   at least some whitespace
+                      }{}x;
+            $line =~ s/\s+//g; # strip whitespace
+        }
+        push @stripped, $line if $line;
+    }
+    push @stripped, '';         # ensure trailing newline
+    return join("\n", @stripped);
+}
 # implements the local micro-cache - including caching misses
 
 sub _acc_type_full {
