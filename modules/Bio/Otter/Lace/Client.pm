@@ -1538,7 +1538,7 @@ sub _DataSet_SequenceSet_response_content {
     my $query = {
         'dataset'  => $ds->name,
         'chr'      => $ss->name,
-        'author'   => $self->author
+        'author'   => $self->author 
     };
 
     my $content =
