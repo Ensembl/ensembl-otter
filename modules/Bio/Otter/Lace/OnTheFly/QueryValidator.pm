@@ -100,6 +100,7 @@ sub _build_confirmed_seqs {     ## no critic (Subroutines::ProhibitUnusedPrivate
 
     # might it be better to pass the unprocessed warning lists to the callback and let
     # them be processed according to the context and graphics framework?
+
     if (%{$self->_warnings}) {
         my $formatted_msgs = $self->_format_warnings;
         &{$self->problem_report_cb}( $formatted_msgs );
@@ -108,6 +109,7 @@ sub _build_confirmed_seqs {     ## no critic (Subroutines::ProhibitUnusedPrivate
     # check for unusually long query sequences
 
     my @confirmed_seqs;
+
     for my $seq (@{$self->seqs}) {
         if ($seq->sequence_length > $self->max_query_length) {
             my $okay = &{$self->long_query_cb}( {
@@ -130,6 +132,7 @@ sub _build_confirmed_seqs {     ## no critic (Subroutines::ProhibitUnusedPrivate
             $seq->sequence_string($s);
         }
     }
+
     return Bio::Otter::Lace::OnTheFly::Utils::SeqList->new( seqs => \@confirmed_seqs );
 }
 
@@ -291,6 +294,7 @@ sub _tidy_sequence {
     push @stripped, '';         # ensure trailing newline
     return join("\n", @stripped);
 }
+
 # implements the local micro-cache - including caching misses
 
 sub _acc_type_full {
