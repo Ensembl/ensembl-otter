@@ -390,7 +390,7 @@ sub Databases {
           die "no dbspec in databases.yaml";
     } catch {
         die "Database passwords not available: $_";
-    };
+    }; 
     return $_DBS = Bio::Otter::SpeciesDat::Database->new_many_from_dbspec($dbs);
 }
 
@@ -511,7 +511,14 @@ Currently freshly loaded.  Maybe should be cached.
 my $_access;
 sub Access {
     my ($pkg) = @_;
-    my $acc = Bio::Otter::Server::UserSpecies->species_group();
+    my $db = $pkg->Databases->{'otter_authentication'};
+    my $host = $db->{'_params'}->{'host'};
+    my $port = $db->{'_params'}->{'port'};
+    my $user = $db->{'_params'}->{'user'};
+    my $pass = $db->{'_params'}->{'pass'};
+    my $database = 'otter_user_registration';
+    my $dsn = "DBI:mysql:$database:$host:$port"; 
+    my $acc = Bio::Otter::Server::UserSpecies->species_group($dsn, $user, $pass);
     # this is not caching (like a singleton), it prevents weak refs to
     # the B:O:A:Access vanishing during multi-statement method chains
     $_access = Bio::Otter::Auth::Access->new($acc, $pkg->_SpeciesDat);
