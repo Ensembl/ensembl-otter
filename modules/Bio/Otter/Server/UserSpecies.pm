@@ -5,12 +5,7 @@ use warnings;
 use DBI;
 
 sub species_group{
-
- # MySQL database configurations
- my $dsn = "DBI:mysql:otter_registration";
- my $username = '****';
- my $password = '****';
-
+ my ($self, $dsn, $username, $password) = @_;
  my %attr = (PrintError=>0, RaiseError=>1);
 
  # Connect to MySQL database
@@ -20,10 +15,10 @@ sub species_group{
  my %final_species_groups = query_links($dbh);
  
  # Setting up 'dev','main', 'restricted' and 'mouse_strain' species groups
- $final_species_groups{'species_groups'}{'dev'} = ['human_dev', 'human_test'];
- $final_species_groups{'species_groups'}{'main'} = ['c_elegans', 'cat', 'chicken', 'chimp', 'cow', 'dog', 'drosophila', 'gibbon', 'gorilla', 'human', 'lemur', 'marmoset', 'medicago', 'mouse', 'mus_spretus', 'opossum', 'pig', 'platypus', 'rat', 'sheep', 'sordaria', 'tas_devil', 'tomato', 'tropicalis', 'wallaby', 'zebrafish']; 
+ $final_species_groups{'species_groups'}{'dev'} = [ 'human_test'];
+ $final_species_groups{'species_groups'}{'main'} = ['c_elegans', 'cat', 'chicken', 'chimp', 'cow', 'dog', 'drosophila', 'gibbon', 'gorilla', 'human', 'lemur', 'marmoset', 'medicago', 'mouse', 'mus_spretus', 'opossum', 'pig', 'platypus', 'rat', 'sheep', 'sordaria', 'tas_devil', 'tomato', 'tropicalis', 'wallaby', 'wheat', 'zebrafish']; 
  $final_species_groups{'species_groups'}{'mouse_strains'} = ['mouse-SPRET-EiJ', 'mouse-PWK-PhJ', 'mouse-CAST-EiJ', 'mouse-WSB-EiJ', 'mouse-NZO-HlLtJ', 'mouse-C57BL-6NJ', 'mouse-NOD-ShiLtJ', 'mouse-FVB-NJ', 'mouse-DBA-2J', 'mouse-CBA-J', 'mouse-C3H-HeJ', 'mouse-AKR-J', 'mouse-BALB-cJ', 'mouse-A-J', 'mouse-LP-J', 'mouse-129S1-SvImJ', 'mouse-C57BL-6NJ_v1_test'];
- $final_species_groups{'species_groups'}{'restricted'} =['human_dev','human_test','mouse_test'];
+ $final_species_groups{'species_groups'}{'restricted'} =['human_test','mouse_test'];
  
  # Disconnect from the MySQL database
  $dbh->disconnect();
