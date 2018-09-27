@@ -14,8 +14,9 @@
 # limitations under the License.
 
 
-use strict;
 use warnings;
+use LWP::UserAgent;
+use HTTP::Request;
 
 BEGIN { use lib ($ENV{OTTER_PERL_INC} || q{}) =~ m{([^:]+)}g }
 use SangerPaths qw{ core bioperl123 otter };
@@ -29,41 +30,33 @@ sub get_sequence {
     my $id = $server->require_argument('id');
     my @queries;
     my $query = 'http://www.ebi.ac.uk/Tools/dbfetch/dbfetch?format=fasta&style=raw&db=refseqn&id='
-          . $id;
+      . $id;
     push @queries, $query;
     $query = 'http://www.ebi.ac.uk/Tools/dbfetch/dbfetch?db=ena_sequence&format=fasta&style=raw&Retrieve=Retrieve&id='
       . $id;
     push @queries, $query;
     $id =~ s/-\d+//;
     $query = 'http://www.ebi.ac.uk/Tools/dbfetch/dbfetch?format=fasta&style=raw&db=uniprotkb&id='
-        . $id;
+      . $id;
     push @queries, $query;
     my $result;
 
     for my $current_query (@queries) {
       $result = web_fetch($current_query);
-
       if ($result->is_success && substr($result->decoded_content, 0, 1) eq ">") {
-        warn "WE ARE SUCSEED" . $result->decoded_content;
         return $server->otter_wrap_response($result->decoded_content);
       }
     }
-
-    die sprintf("Error %d from: %s", $result->decoded_content, $query);
+    warn $result->decoded_content;
+    return $server->otter_wrap_response($result->decoded_content);
 }
 
-{
-    sub web_fetch {
-        my ($query) = @_;
+sub web_fetch {
+  my ($query) = @_;
 
-        use LWP::UserAgent;
-        use HTTP::Request;
-        my $ua = LWP::UserAgent->new;
-        my $req = HTTP::Request->new('GET', $query);
-        warn 'WE ARE FETCHING!' . $query;
-        return $ua->request($req);
-    }
+  my $ua = LWP::UserAgent->new;
+  my $req = HTTP::Request->new('GET', $query);
+  return $ua->request($req);
 }
-
 
 Bio::Otter::Server::Support::Web->send_response(\&get_sequence);

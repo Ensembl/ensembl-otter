@@ -233,16 +233,19 @@ sub Client {
 #
 sub _fetch_sequences {
     my ($self, $to_fetch) = @_;
-$self->logger->warn("FACE YOUR DECTINY0");
     my @tofetch = uniq @$to_fetch;
     #$self->logger->warn('Need seq for: ', @$tofetch);
 
-        my $client = Bio::Otter::Lace::Defaults::make_Client();
-        foreach my $acc (@tofetch) {
-          my $seq = $client->fetch_fasta_seqence($acc);
+    my $client = Bio::Otter::Lace::Defaults::make_Client();
+      foreach my $acc (@tofetch) {
+        my $seq = $client->fetch_fasta_seqence($acc);
+        if (substr($seq, 0, 1) eq ">") {
           $seq = $self->parse_fasta_sequence($seq);
           push(@{$self->seqs}, $seq);
+        } else {
+          $self->_add_missing_warning($acc, "unknown accession or illegal evidence type");
         }
+      }
     return;
 }
 
@@ -253,8 +256,8 @@ sub parse_fasta_sequence {
       $raw_seq = $self->_tidy_sequence($raw_seq);
       push @seqs, Hum::FastaFileIO->new(\$raw_seq)->read_all_sequences;
         # Make sure entered seqs are distinct from seqs fetched by accession.
-    # (We could try to lookup and compare, as a future feature.)
-    foreach my $seq (@seqs) {
+        # (We could try to lookup and compare, as a future feature.)
+      foreach my $seq (@seqs) {
         my $name = $seq->name;
         unless ($name =~ /^otf[_:]/i) {
             $seq->name($name);
