@@ -58,7 +58,7 @@ sub login {
     my $user  = uri_escape($orig_user); # possibly not worth it...
     my $password = uri_escape($orig_password);  # definitely worth it!
 
-    my $ua    = LWP::UserAgent->new();
+    my $ua  = LWP::UserAgent->new();
     my $req = HTTP::Request->new;
     $req->method('GET');
     $req->uri("https://explore.api.aai.ebi.ac.uk/auth");

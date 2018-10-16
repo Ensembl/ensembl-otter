@@ -63,7 +63,7 @@ my @CLIENT_OPTIONS = qw(
     url=s
     author=s
     email=s
-    write_access!
+    write_access=s
     gene_type_prefix=s
     debug=s
     ); # a "constant"
