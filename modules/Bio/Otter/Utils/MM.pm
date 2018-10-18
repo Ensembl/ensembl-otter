@@ -63,9 +63,9 @@ Readonly my %CLASS_TO_SOURCE => (
     );
 
 Readonly my %DEFAULT_OPTIONS => (
-    host => 'cbi5d',
+    host => '192.168.0.21',
     port => 3306,
-    user => 'genero',
+    user => 'mmreadonly',
     name => 'mm_ini',
     db_categories => [ @DEFAULT_DB_CATEGORIES ],
     );
