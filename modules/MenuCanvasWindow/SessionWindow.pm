@@ -885,7 +885,7 @@ sub _populate_menus {
 
 
     # Show dialog for renaming the locus attached to this subseq
-    my $re_authorize = sub { $self->AceDatabase->Client->do_authentication; };
+    my $re_authorize = sub { $self->AceDatabase->Client->_authorize };
     $tools_menu->add('command',
         -label          => 'Re-authorize',
         -command        => $re_authorize,

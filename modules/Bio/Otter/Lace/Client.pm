@@ -456,7 +456,7 @@ sub reauthorize_if_cookie_will_expire_soon {
 
     # Soon is if cookie expires less than half an hour from now
     my $soon = time + (30 * 60);
-    my $expiry = $self->_cookie_expiry_time;
+    my $expiry = $self->{'_cookie_jar'}{'expiry'} || time;
     if ($expiry < $soon) {
         $self->logger->warn(
             sprintf("reauthorize_if_cookie_will_expire_soon: expiry expected at %s", scalar localtime($expiry)));
@@ -475,7 +475,6 @@ sub reauthorize_if_cookie_will_expire_soon {
 # Generates errors when rejecting config changes
 sub config_set {
     my ($self, $section, $param, $value) = @_;
-
     # Be conservative.  Most code still assumes the config is static
     # after initialisation.
     my $target = qq{[$section]$param};
@@ -508,10 +507,11 @@ sub _authorize {
     my $user = $self->author;
     my $password = $self->password_prompt()->($self)
       or $self->logger->logdie("No password given");
+    my $password_attempts = $self->_password_attempts;
 
     my ($status, $failed, $detail) =
       Bio::Otter::Auth::SSO->login($self->get_UserAgent, $user, $password);
-
+    $self->{'_cookie_jar'}{'expiry'} = time + (24 * 60 * 60);
     if (!$failed) {
         my $decoded_jwt = Bio::Otter::Auth::Access->_jwt_verify($detail);
         if  ($decoded_jwt->{'nickname'} ne ($self->author)) {
@@ -522,9 +522,16 @@ sub _authorize {
         $self->_save_CookieJar;
         return 1;
     } else {
-        $self->logger->warn(sprintf("Authentication as %s failed: %s (((%s)))\n", $self->author, $status, $detail));
-        $self->password_problem()->($self, $failed);
-        return 0;
+        if($password_attempts > 2){
+             $self->logger->warn(sprintf("Authentication as %s failed: %s (((%s)))\n", $self->author, $status, $detail));
+             $password_attempts--;
+             $self->{'_password_attempts'} = $password_attempts;
+             $self->password_problem()->($self, $failed);
+             return 0;
+        }
+        else{
+             die ('Unauthorized user');
+        }
     }
 }
 

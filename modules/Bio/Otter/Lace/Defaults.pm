@@ -63,7 +63,7 @@ my @CLIENT_OPTIONS = qw(
     url=s
     author=s
     email=s
-    write_access!
+    write_access=s
     gene_type_prefix=s
     debug=s
     ); # a "constant"
@@ -687,7 +687,7 @@ __DATA__
 
 [client]
 url=http://193.62.52.185:82/cgi-bin/otter
-write_access=1
+#write_access=1
 gff_version=3
 acedb_version=4.9.61
 debug=Client,Zircon,XRemote
