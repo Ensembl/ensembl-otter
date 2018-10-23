@@ -58,7 +58,7 @@ sub query_links{
                        or die "Could not execute statement: " . $dbh->errstr;
   my (@species_write_array, @species_read_array);
   while(my $array_ref = $sth_user_group->fetchrow_arrayref()){
-        
+
         # Setting up read and write species for each user
         my $username = $array_ref->[0];
         $data_group{'user_groups'}{$username.'.data'}{'users'} = $username;
@@ -70,7 +70,7 @@ sub query_links{
         else{
             @species_write_array = ();
         }        
-        $data_group{'user_groups'}{$username.'.data'}{'write'} = \@species_write_array; 
+        $data_group{'user_groups'}{$username.'.data'}{'write'} = [@species_write_array]; 
 
         my $species_read_string = $array_ref->[2]; 
         if ($species_read_string){
@@ -79,7 +79,7 @@ sub query_links{
         else{
             @species_read_array = (); 
         } 
-#        $data_group{'user_groups'}{$username.'.data'}{'read'} = \@species_read_array; #Uncomment this line when READONLY datasets are available
+#        $data_group{'user_groups'}{$username.'.data'}{'read'} = [@species_read_array]; #Uncomment this line when READONLY datasets are available
   }
   die "Error in fetchrow_array(): ", $sth_user_group->errstr(), "\n"
         if $sth_user_group->err();
