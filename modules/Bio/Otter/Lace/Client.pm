@@ -1522,6 +1522,7 @@ sub save_otter_xml {
             'dataset'  => $dsname,
             'data'     => $xml,
             'locknums' => $lock_token,
+            'author'   => $self->author,
         }
     );
 
