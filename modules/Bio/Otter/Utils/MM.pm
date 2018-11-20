@@ -63,9 +63,9 @@ Readonly my %CLASS_TO_SOURCE => (
     );
 
 Readonly my %DEFAULT_OPTIONS => (
-    host => '192.168.0.21',
+    host => '192.168.0.13',
     port => 3306,
-    user => 'mmreadonly',
+    user => 'mm_readonly',
     name => 'mm_ini',
     db_categories => [ @DEFAULT_DB_CATEGORIES ],
     );
@@ -545,4 +545,3 @@ __END__
 =head1 AUTHOR
 
 Ana Code B<email> anacode@sanger.ac.uk
-
