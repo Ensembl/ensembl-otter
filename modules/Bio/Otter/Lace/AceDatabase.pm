@@ -1124,6 +1124,7 @@ sub script_arguments {
         %{$self->core_script_arguments},
         %{$self->_query_hash},
         gff_version => $self->DataSet->gff_version,
+        author      => $self->Client->author,
     };
 
     return $arguments;
