@@ -247,16 +247,18 @@ sub _authenticate_user {
 
 sub authorized_user { # deprecated, because of hard exit()
     my ($self) = @_;  # but also a setter in ::Local
-    my $unauthorized_user = $self->param('author');
-    $self->_authenticate_user($unauthorized_user);
+    if (defined $self){
+        my $unauthorized_user = $self->param('author');
+        $self->_authenticate_user($unauthorized_user);
 
-    my $user = try {
-        $self->authorized_user__catchable;
-    } catch {
-        $self->_unauth_exit('User not authorized');
-    };
+        my $user = try {
+          $self->authorized_user__catchable;
+        } catch {
+          $self->_unauth_exit('User not authorized');
+        };
 
-    return $user;
+        return $user;
+    }
 }
 
 sub authorized_user__catchable {
