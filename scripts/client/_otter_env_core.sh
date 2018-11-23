@@ -42,7 +42,7 @@ case "$( hostname -f 2>/dev/null || hostname )" in
     *.sanger.ac.uk)
         # On wired network.  Need proxy to fetch external resources,
         # but not to reach the Otter Server or a local Apache
-        http_proxy=http://webcache.sanger.ac.uk:3128
+        #http_proxy=http://webcache.sanger.ac.uk:3128
         export http_proxy
         no_proxy=.sanger.ac.uk,localhost
         export no_proxy
