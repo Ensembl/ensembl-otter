@@ -565,7 +565,7 @@ sub _create_UserAgent {
 # Call it early, but after loggers are ready
 sub env_config {
     my ($self) = @_;
-    $self->_ua_tell_hostinfo;
+    #$self->_ua_tell_hostinfo;
     $self->_setup_pfetch_env;
     return;
 }
