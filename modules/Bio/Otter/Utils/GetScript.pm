@@ -54,6 +54,7 @@ sub do_requires {
     require DBI;
     require Bio::Otter::Lace::DB;
     require Bio::Otter::Lace::DB::ColumnAdaptor;
+    require Bio::Otter::Lace::Client;
     return;
 }
 
@@ -346,10 +347,11 @@ sub get_mapping {
         chr     => $chr,
         start   => $start,
         end     => $end,
+        'author' => Bio::Otter::Lace::Client->author,
     });
     if ($dataset and defined($csver_remote)) {
-        my $mapping_xml = Bio::Otter::Mapping->new_from_otter($dataset, $csver_remote, $chr, $start, $end);
-        return $mapping_xml;
+        my $mapping_xml = $self->do_http_request('GET', 'get_mapping', $params);
+        return Bio::Otter::Mapping->new_from_xml($mapping_xml);
     }
     else {
         return Bio::Otter::Mapping::_equiv_new(-chr => $chr); 
