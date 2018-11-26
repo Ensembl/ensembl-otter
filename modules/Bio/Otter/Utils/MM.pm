@@ -39,21 +39,22 @@ All cells in the entry.accession columns match
 # NB: databases will be searched in the order in which they appear in this list
 
 Readonly my @ALL_DB_CATEGORIES => qw(
-    emblnew
-    emblrelease
-    uniprot
-    uniprot_archive
-    refseq
-    mushroom
+    emnew_20160426
+    embl_132
+    uniprot_2018_01
+    uniprot_2018_01
+    refseq_80
+    mushroom_201512
 );
 
 Readonly my $UNIPARC => 'uniprot_archive';
 
 Readonly my @DEFAULT_DB_CATEGORIES => qw(
-    emblnew
-    emblrelease
-    uniprot
-    uniprot_archive
+    emnew_20160426
+    embl_132
+    uniprot_2018_01
+    uniprot_2018_01
+    refseq_80
 );
 
 Readonly my %CLASS_TO_SOURCE => (
@@ -63,9 +64,9 @@ Readonly my %CLASS_TO_SOURCE => (
     );
 
 Readonly my %DEFAULT_OPTIONS => (
-    host => '192.168.0.21',
-    port => 3306,
-    user => 'mmreadonly',
+    host => '193.62.52.185',
+    port => 3310,
+    user => 'mm_readonly',
     name => 'mm_ini',
     db_categories => [ @DEFAULT_DB_CATEGORIES ],
     );
