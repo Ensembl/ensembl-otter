@@ -37,11 +37,11 @@ All cells in the entry.accession columns match
 # NB: databases will be searched in the order in which they appear in this list
 
 Readonly my @SEQ_DB_CATEGORIES => qw(
-    emnew_20160426
-    embl_132
-    uniprot_2018_01
-    uniprot_2018_01
-    refseq_80
+    emblnew
+    emblrelease
+    uniprot_archive
+    refseq
+    uniprot
 );
 
 Readonly my $UNIPARC => 'uniprot_archive';
