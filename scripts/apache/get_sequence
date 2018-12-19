@@ -1,0 +1,62 @@
+#!/usr/bin/perl -Tw
+# Copyright [2018] EMBL-European Bioinformatics Institute
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+
+use warnings;
+use LWP::UserAgent;
+use HTTP::Request;
+
+BEGIN { use lib ($ENV{OTTER_PERL_INC} || q{}) =~ m{([^:]+)}g }
+use SangerPaths qw{ core bioperl123 otter };
+use Bio::Otter::Git qw{ :server_ensembl :match };
+
+use Bio::Otter::Server::Support::Web;
+
+sub get_sequence {
+    my ($server) = @_;
+
+    my $id = $server->require_argument('id');
+    my @queries;
+    my $query = 'http://www.ebi.ac.uk/Tools/dbfetch/dbfetch?format=fasta&style=raw&db=refseqn&id='
+      . $id;
+    push @queries, $query;
+    $query = 'http://www.ebi.ac.uk/Tools/dbfetch/dbfetch?db=ena_sequence&format=fasta&style=raw&Retrieve=Retrieve&id='
+      . $id;
+    push @queries, $query;
+    $id =~ s/-\d+//;
+    $query = 'http://www.ebi.ac.uk/Tools/dbfetch/dbfetch?format=fasta&style=raw&db=uniprotkb&id='
+      . $id;
+    push @queries, $query;
+    my $result;
+
+    for my $current_query (@queries) {
+      $result = web_fetch($current_query);
+      if ($result->is_success && substr($result->decoded_content, 0, 1) eq ">") {
+        return $server->otter_wrap_response($result->decoded_content);
+      }
+    }
+    warn $result->decoded_content;
+    return $server->otter_wrap_response($result->decoded_content);
+}
+
+sub web_fetch {
+  my ($query) = @_;
+
+  my $ua = LWP::UserAgent->new;
+  my $req = HTTP::Request->new('GET', $query);
+  return $ua->request($req);
+}
+
+Bio::Otter::Server::Support::Web->send_response(\&get_sequence);
