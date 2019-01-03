@@ -147,6 +147,15 @@ sub email {
     return $self->config_value('email') || (getpwuid($<))[0];
 }
 
+sub fetch_seqence {
+    my ($self, $acc) = @_;
+    use Data::Dumper;
+    my $datasets_hash = $self->otter_response_content
+        ('GET', 'get_sequence', {'id'=>$acc, 'author' => $self->author});
+
+    return $datasets_hash;
+}
+
 sub _client_name {
     my ($self) = @_;
     return $self->{'_client_name'};
@@ -1537,7 +1546,7 @@ sub _DataSet_SequenceSet_response_content {
     my $query = {
         'dataset'  => $ds->name,
         'chr'      => $ss->name,
-        'author'   => $self->author        
+        'author'   => $self->author
     };
 
     my $content =
@@ -1774,4 +1783,3 @@ An ordinary constructor, making instances as requested.
 =head1 AUTHOR
 
 Ana Code B<email> anacode@sanger.ac.uk
-
