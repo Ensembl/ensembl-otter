@@ -29,14 +29,14 @@ sub get_sequence {
 
     my $id = $server->require_argument('id');
     my @queries;
-    my $query = 'http://www.ebi.ac.uk/Tools/dbfetch/dbfetch?format=fasta&style=raw&db=refseqn&id='
+    my $query = 'http://www.ebi.ac.uk/Tools/dbfetch/dbfetch?format=default&style=raw&db=refseqn&id=s'
       . $id;
     push @queries, $query;
-    $query = 'http://www.ebi.ac.uk/Tools/dbfetch/dbfetch?db=ena_sequence&format=fasta&style=raw&Retrieve=Retrieve&id='
+    $query = 'http://www.ebi.ac.uk/Tools/dbfetch/dbfetch?format=default&style=raw&db=uniprotkb&id='
       . $id;
     push @queries, $query;
     $id =~ s/-\d+//;
-    $query = 'http://www.ebi.ac.uk/Tools/dbfetch/dbfetch?format=fasta&style=raw&db=uniprotkb&id='
+    $query = 'http://www.ebi.ac.uk/Tools/dbfetch/dbfetch?format=default&style=raw&db=ena_sequence&id='
       . $id;
     push @queries, $query;
     my $result;
