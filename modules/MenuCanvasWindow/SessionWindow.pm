@@ -888,7 +888,7 @@ sub _populate_menus {
     my $run_fetchDb_command = sub { $self->run_fetchDb };
         $tools_menu->add('command',
             -label          => 'Fetch Db',
-            -command        => $run_fetchDb_command,
+            -command        =>  $run_fetchDb_command,
             -accelerator    => 'Ctrl+X',
             -underline      => 0,
             );
