@@ -17,7 +17,7 @@ limitations under the License.
 =cut
 
 
-### EditWindow::Exonerate
+### EditWindow::FetchDB
 
 package EditWindow::FetchDb;
 
@@ -30,8 +30,6 @@ use Try::Tiny;
 use Bio::Otter::Lace::Client;
 use Bio::Otter::Lace::OnTheFly::Genomic;
 use Bio::Vega::Evidence::Types qw( evidence_is_sra_sample_accession seq_is_protein );
-use Bio::Otter::Lace::Client;
-use Hum::FastaFileIO;
 use Hum::ClipboardUtils qw{ accessions_from_text };
 use Hum::Sort qw{ ace_sort };
 use Tk::LabFrame;
@@ -128,17 +126,17 @@ sub initialise {
         }
         $doing_launch = 1;
         try {
-            $self->launch_exonerate;
+            $self->launch_fetchdb;
         }
         catch {
             my $err = $_;
             $self->top->messageBox(
                 -title   => $Bio::Otter::Lace::Client::PFX.'Error',
                 -icon    => 'warning',
-                -message => 'Error running exonerate: ' . $err,
+                -message => 'Error running fetchDb: ' . $err,
                 -type    => 'OK',
             );
-            $self->logger->error('Error running exonerate: ', $err);
+            $self->logger->error('Error running fetchDb: ', $err);
         };
         $doing_launch = 0;
     };
@@ -278,26 +276,24 @@ sub SessionWindow {
     return $self->{'_SessionWindow'};
 }
 
-sub launch_exonerate {
+sub launch_fetchdb {
     my ($self) = @_;
     my $accessions = $self->entered_accessions;
 
     use Data::Dumper;
-    $self->_fetch_sequences($accessions);
-
     warn Dumper($accessions);
+    $self->_fetch_sequences($accessions);
     return 1;
 }
 
 sub _fetch_sequences {
   my ($self, $to_fetch) = @_;
-    #$self->logger->warn('Need seq for: ', @$tofetch);
 
-    my $client = Bio::Otter::Lace::Defaults::make_Client();
-    my $seq = $client->fetch_seqence("CV311243.1");
-   $self->set_entry('sequence_txt', join ' ', $seq);
-    warn Dumper($seq);
-    return;
+  my $client = Bio::Otter::Lace::Defaults::make_Client();
+  my $seq = $client->fetch_seqence($to_fetch);
+  $self->set_entry('sequence_txt', join ' ', $seq);
+
+  return;
 }
 
 sub Client {
