@@ -47,7 +47,6 @@ sub get_sequence {
         return $server->otter_wrap_response($result->decoded_content);
       }
     }
-    warn $result->decoded_content;
     return $server->otter_wrap_response($result->decoded_content);
 }
 
