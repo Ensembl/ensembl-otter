@@ -281,15 +281,16 @@ sub launch_fetchdb {
     my $accessions = $self->entered_accessions;
 
     use Data::Dumper;
+    warn Dumper($accessions);
     $self->_fetch_sequences($accessions);
     return 1;
 }
 
 sub _fetch_sequences {
   my ($self, $to_fetch) = @_;
-  
+
   my $client = Bio::Otter::Lace::Defaults::make_Client();
-  my $seq = $client->fetch_seqence("CV311243.1");
+  my $seq = $client->fetch_seqence($to_fetch);
   $self->set_entry('sequence_txt', join ' ', $seq);
 
   return;
