@@ -280,8 +280,6 @@ sub launch_fetchdb {
     my ($self) = @_;
     my $accessions = $self->entered_accessions;
 
-    use Data::Dumper;
-    warn Dumper($accessions);
     $self->_fetch_sequences($accessions);
     return 1;
 }
