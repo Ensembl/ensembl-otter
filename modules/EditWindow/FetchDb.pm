@@ -243,7 +243,7 @@ sub set_entry {
         $entry->configure(-state => 'normal');
         $reset = 1;
     }
-
+    $entry->delete('1.0','end');
     $entry->insert('end', $txt);
 
     $entry->configure(-state => 'readonly') if $reset;
