@@ -265,6 +265,7 @@ sub get_entry {
 sub clear_accessions {
     my ($self) = @_;
     $self->set_entry('match', '');
+    $self->set_entry('sequence_txt', "");
     return;
 }
 
