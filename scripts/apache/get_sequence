@@ -29,25 +29,29 @@ sub get_sequence {
 
     my $id = $server->require_argument('id');
     my @queries;
-    my $query = 'http://www.ebi.ac.uk/Tools/dbfetch/dbfetch?format=default&style=raw&db=refseqn&id=s'
-      . $id;
-    push @queries, $query;
+
+
     $query = 'http://www.ebi.ac.uk/Tools/dbfetch/dbfetch?format=default&style=raw&db=uniprotkb&id='
       . $id;
     push @queries, $query;
-    $id =~ s/-\d+//;
+
     $query = 'http://www.ebi.ac.uk/Tools/dbfetch/dbfetch?format=default&style=raw&db=ena_sequence&id='
+      . $id;
+    push @queries, $query;
+
+    $id =~  s/\.\d+//;
+    my $query = 'http://www.ebi.ac.uk/Tools/dbfetch/dbfetch?format=default&style=raw&db=refseqn&id='
       . $id;
     push @queries, $query;
     my $result;
 
     for my $current_query (@queries) {
       $result = web_fetch($current_query);
-      if ($result->is_success && substr($result->decoded_content, 0, 1) eq ">") {
+      if ($result->is_success && !(substr($result->decoded_content, 0, 5) eq "ERROR")) {
         return $server->otter_wrap_response($result->decoded_content);
       }
     }
-    return $server->otter_wrap_response($result->decoded_content);
+    return $server->otter_wrap_response(@queries[2]);
 }
 
 sub web_fetch {
