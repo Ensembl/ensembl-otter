@@ -50,9 +50,9 @@ Readonly my @ALL_DB_CATEGORIES => qw(
 Readonly my $UNIPARC => 'uniprot_archive';
 
 Readonly my @DEFAULT_DB_CATEGORIES => qw(
-    emblnew
-    emblrelease
-    uniprot
+    emnew_20160426
+    embl_132
+    uniprot_2018_01
     uniprot_archive
 );
 
@@ -63,9 +63,9 @@ Readonly my %CLASS_TO_SOURCE => (
     );
 
 Readonly my %DEFAULT_OPTIONS => (
-    host => 'cbi5d',
-    port => 3306,
-    user => 'genero',
+    host => '193.62.52.185',
+    port => 3310,
+    user => 'mm_readonly',
     name => 'mm_ini',
     db_categories => [ @DEFAULT_DB_CATEGORIES ],
     );
@@ -545,4 +545,3 @@ __END__
 =head1 AUTHOR
 
 Ana Code B<email> anacode@sanger.ac.uk
-
