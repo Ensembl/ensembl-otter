@@ -1139,7 +1139,7 @@ sub fetch_fasta_seqence {
     my ($self, $acc) = @_;
     use Data::Dumper;
     my $datasets_hash = $self->otter_response_content
-        ('GET', 'get_sequence', {'id'=>$acc, 'author' => $self->author});
+        ('GET', 'get_fasta_sequence', {'id'=>$acc, 'author' => $self->author});
 
     return $datasets_hash;
 }
