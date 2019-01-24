@@ -23,9 +23,9 @@ package Bio::Otter::Fetch::BigWig;
 
 use strict;
 use warnings;
-
+use Try::Tiny;
 use Carp;
-
+use Data::Dumper;
 use Bio::DB::BigWig qw( binMean );
 
 use Bio::Otter::Fetch::BigWig::Feature;
@@ -39,7 +39,6 @@ sub new {
 
 sub features {
     my ($self, $chr, $start, $end) = @_;
-
     my $bigwig = $self->bigwig;
     my $seq_id = $self->seq_id_from_chr($chr);
 
@@ -57,22 +56,25 @@ sub features {
 
     my $features = [ ];
     my $index = 0;
-    for my $bin ( @{$summary->statistical_summary($bin_count)} ) {
-        if ($bin->{validCount} > 0) {
-            my $score = binMean($bin);
-            my $feature_start =
-                $start + ( $index * ( $end + 1 - $start ) ) / $bin_count;
-            my $feature_end = 
-                ( $start + ( ( $index + 1 ) * ( $end + 1 - $start ) ) / $bin_count ) - 1;
-            my $feature = Bio::Otter::Fetch::BigWig::Feature->new(
-                start  => $feature_start,
-                end    => $feature_end,
-                score  => $score,
-                );
-            push @{$features}, $feature;
-        }
+
+    try{
+        for my $bin (@{$summary->statistical_summary($bin_count)} ) {
+            if ($bin->{validCount} > 0) {
+               my $score = binMean($bin);
+               my $feature_start =
+                   $start + ( $index * ( $end + 1 - $start ) ) / $bin_count;
+               my $feature_end =
+                   ( $start + ( ( $index + 1 ) * ( $end + 1 - $start ) ) / $bin_count ) - 1;
+               my $feature = Bio::Otter::Fetch::BigWig::Feature->new(
+                   start  => $feature_start,
+                   end    => $feature_end,
+                   score  => $score,
+                   );
+               push @{$features}, $feature;
+            }
         $index++;
-    }
+        }
+    };
 
     return $features;
 }

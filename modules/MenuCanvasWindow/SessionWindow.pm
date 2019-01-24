@@ -33,6 +33,7 @@ use Scalar::Util 'weaken';
 use Try::Tiny;
 use File::Path (); # for make_path;
 use Readonly;
+use EditWindow::FetchDb;
 
 require Tk::Dialog;
 
@@ -259,6 +260,7 @@ sub get_all_mutable_GeneMethods {
 
     return $self->Assembly->MethodCollection->get_all_mutable_GeneMethods;
 }
+
 
 sub get_default_mutable_GeneMethod {
     my ($self) = @_;
@@ -883,9 +885,18 @@ sub _populate_menus {
         );
     $top->bind('<Control-Shift-L>', $rename_locus);
 
+    my $run_fetchDb_command = sub { $self->run_fetchDb };
+        $tools_menu->add('command',
+            -label          => 'Fetch Db',
+            -command        =>  $run_fetchDb_command,
+            -accelerator    => 'Ctrl+X',
+            -underline      => 0,
+            );
+        $top->bind('<Control-x>', $run_fetchDb_command);
+        $top->bind('<Control-X>', $run_fetchDb_command);
 
     # Show dialog for renaming the locus attached to this subseq
-    my $re_authorize = sub { $self->AceDatabase->Client->do_authentication; };
+    my $re_authorize = sub { $self->AceDatabase->Client->_authorize };
     $tools_menu->add('command',
         -label          => 'Re-authorize',
         -command        => $re_authorize,
@@ -978,6 +989,27 @@ sub _show_subseq {
 
     return;
 }
+
+sub run_fetchDb {
+    my ($self, %options) = @_;
+
+    my $ew = EditWindow::FetchDb->init_or_reuse_Toplevel
+      (-title => 'Fetch Db',
+       { reuse_ref => \$self->{'_fetchDb_window'},
+         transient => 1,
+         init => { SessionWindow => $self },
+         from => $self->top_window });
+
+    if ($options{clear_accessions}) {
+        $ew->clear_accessions;
+    }
+    $ew->update_from_SessionWindow;
+    $ew->progress('');
+
+    return 1;
+}
+
+
 
 sub _bind_events {
     my ($self) = @_;
@@ -3484,4 +3516,3 @@ __END__
 =head1 AUTHOR
 
 Ana Code B<email> anacode@sanger.ac.uk
-

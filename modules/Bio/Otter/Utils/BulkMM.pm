@@ -39,9 +39,9 @@ All cells in the entry.accession columns match
 Readonly my @SEQ_DB_CATEGORIES => qw(
     emblnew
     emblrelease
-    uniprot
     uniprot_archive
     refseq
+    uniprot
 );
 
 Readonly my $UNIPARC => 'uniprot_archive';
@@ -59,9 +59,9 @@ Readonly my %CLASS_TO_SOURCE => (
     );
 
 Readonly my %DEFAULT_OPTIONS => (
-    host => 'cbi5d',
-    port => 3306,
-    user => 'genero',
+    host => '193.62.52.185',
+    port => 3310,
+    user => 'mm_readonly',
     name => 'mm_ini',
     db_categories => [ @SEQ_DB_CATEGORIES ],
     );
@@ -615,4 +615,3 @@ __END__
 =head1 AUTHOR
 
 Ana Code B<email> anacode@sanger.ac.uk
-

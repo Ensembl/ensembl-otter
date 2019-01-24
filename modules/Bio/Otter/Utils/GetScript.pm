@@ -346,6 +346,7 @@ sub get_mapping {
         chr     => $chr,
         start   => $start,
         end     => $end,
+        'author' => $self->arg('author'),
     });
     if ($dataset and defined($csver_remote)) {
         my $mapping_xml = $self->do_http_request('GET', 'get_mapping', $params);

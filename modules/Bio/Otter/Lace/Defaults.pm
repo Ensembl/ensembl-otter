@@ -63,7 +63,7 @@ my @CLIENT_OPTIONS = qw(
     url=s
     author=s
     email=s
-    write_access!
+    write_access=s
     gene_type_prefix=s
     debug=s
     ); # a "constant"
@@ -313,8 +313,8 @@ sub save_server_otter_config {
 }
 
 sub __ready {
-    confess "Not ready to operate on configuration until after do_getopt"
-      unless $DONE_GETOPT;
+#    confess "Not ready to operate on configuration until after do_getopt"
+#      unless $DONE_GETOPT;
     return ();
 }
 
@@ -686,7 +686,7 @@ __DATA__
 # disable.
 
 [client]
-url=http://localhost:8004/cgi-bin/otter
+url=http://193.62.52.185:82/cgi-bin/otter
 write_access=1
 gff_version=3
 acedb_version=4.9.61
