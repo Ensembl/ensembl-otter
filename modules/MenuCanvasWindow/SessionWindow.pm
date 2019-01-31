@@ -889,11 +889,11 @@ sub _populate_menus {
         $tools_menu->add('command',
             -label          => 'Fetch Db',
             -command        =>  $run_fetchDb_command,
-            -accelerator    => 'Ctrl+X',
+            -accelerator    => 'Ctrl+D',
             -underline      => 0,
             );
-        $top->bind('<Control-x>', $run_fetchDb_command);
-        $top->bind('<Control-X>', $run_fetchDb_command);
+        $top->bind('<Control-d>', $run_fetchDb_command);
+        $top->bind('<Control-D>', $run_fetchDb_command);
 
     # Show dialog for renaming the locus attached to this subseq
     my $re_authorize = sub { $self->AceDatabase->Client->_authorize };
