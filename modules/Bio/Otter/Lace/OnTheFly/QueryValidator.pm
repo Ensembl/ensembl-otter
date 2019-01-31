@@ -266,7 +266,7 @@ sub parse_fasta_sequence {
             $seq->name($name);
         }
         $seq->type(seq_is_protein($seq->sequence_string) ? 'Protein' : 'DNA');
-    }
+      }
 
       use Data::Dumper;
       $self->logger->warn("We are here: QueryValidator, parse_fasta_seq");
