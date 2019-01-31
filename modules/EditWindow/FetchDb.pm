@@ -243,7 +243,7 @@ sub set_entry {
         $entry->configure(-state => 'normal');
         $reset = 1;
     }
-
+    $entry->delete('1.0','end');
     $entry->insert('end', $txt);
 
     $entry->configure(-state => 'readonly') if $reset;
@@ -265,6 +265,7 @@ sub get_entry {
 sub clear_accessions {
     my ($self) = @_;
     $self->set_entry('match', '');
+    $self->set_entry('sequence_txt', "");
     return;
 }
 
