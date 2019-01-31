@@ -28,7 +28,8 @@ use List::MoreUtils qw{ uniq };
 
 use Bio::Otter::Lace::OnTheFly::Utils::SeqList;
 use Bio::Otter::Lace::OnTheFly::Utils::Types;
-
+use Bio::Otter::Lace::Client;
+use Hum::FastaFileIO;
 use Bio::Vega::Evidence::Types qw{ new_evidence_type_valid seq_is_protein };
 
 has accession_type_cache => ( is => 'ro', isa => 'Bio::Otter::Lace::AccessionTypeCache', required => 1 );
@@ -82,19 +83,18 @@ sub _build_confirmed_seqs {     ## no critic (Subroutines::ProhibitUnusedPrivate
         return Bio::Otter::Lace::OnTheFly::Utils::SeqList->new( seqs => [] ) unless @accessions; # nothing to do
 
         $self->logger->debug('n(accessions) = ', scalar @accessions);
-
         # identify the types of all the accessions supplied
-        my $cache = $self->accession_type_cache;
+
         # The populate method will fetch the latest version of
         # any accessions which are supplied without a SV into
         # the cache object.
         &{$self->progress_cb}('Fetching accession info') if $self->progress_cb;
-        $cache->populate(\@accessions);
+
     }
 
     $self->_augment_supplied_sequences;
-    my @to_fetch = $self->_check_augment_supplied_accessions;
-    $self->_fetch_sequences(@to_fetch);
+    # legacy:  my @to_fetch = $self->_check_augment_supplied_accessions;
+    $self->_fetch_sequences($self->accessions);
 
     # tell the user about any missing sequences or remapped accessions
 
@@ -222,56 +222,77 @@ sub _check_augment_supplied_accessions {
     return @to_fetch;
 }
 
+sub Client {
+    my ($self, $client) = @_;
+
+    if ($client) {
+        $self->{'_Client'} = $client;
+        $self->colour( $self->next_session_colour );
+    }
+    return $self->{'_Client'};
+}
+
 # Adds sequences to $self->seqs
 #
 sub _fetch_sequences {
-    my ($self, @to_fetch) = @_;
+    my ($self, $to_fetch) = @_;
+    my @tofetch = uniq @$to_fetch;
+    #$self->logger->warn('Need seq for: ', @$tofetch);
 
-    my $cache = $self->accession_type_cache;
-
-    @to_fetch = uniq @to_fetch;
-    $self->logger->debug('Need seq for: ', join(',', @to_fetch) || '<none>');
-
-    foreach my $acc (@to_fetch) {
-
-        my ($type, $full) = @{$self->_acc_type_full($acc)};
-        unless ($type) {
-            $self->_add_missing_warning($acc => 'illegal evidence type');
-            next;
+    my $client = Bio::Otter::Lace::Defaults::make_Client();
+      foreach my $acc (@tofetch) {
+        my $seq = $client->fetch_fasta_seqence($acc);
+        if (substr($seq, 0, 1) eq ">") {
+          $seq = $self->parse_fasta_sequence($seq);
+          push(@{$self->seqs}, $seq);
+        } else {
+          $self->_add_missing_warning($acc, "unknown accession or illegal evidence type");
         }
+      }
+    return;
+}
 
-        my $info = $cache->feature_accession_info($acc);
-        unless ($info) {
-            $self->logger->error("No info for '$acc' - this should not happen");
-            $self->_add_missing_warning($acc => 'internal error');
-            next;
+sub parse_fasta_sequence {
+    my ($self, $raw_seq) = @_;
+
+      my @seqs;
+      $raw_seq = $self->_tidy_sequence($raw_seq);
+      push @seqs, Hum::FastaFileIO->new(\$raw_seq)->read_all_sequences;
+        # Make sure entered seqs are distinct from seqs fetched by accession.
+        # (We could try to lookup and compare, as a future feature.)
+      foreach my $seq (@seqs) {
+        my $name = $seq->name;
+        unless ($name =~ /^otf[_:]/i) {
+            $seq->name($name);
         }
-
-        unless ($info->{currency} and $info->{currency} eq 'current') {
-            $self->_add_missing_warning($acc => 'obsolete SV');
-            next;
-        }
-
-        unless ($info->{sequence}) {
-            $self->_add_missing_warning($acc => 'no sequence');
-            next;
-        }
-
-        my $seq = Hum::Sequence->new;
-        $seq->name($full);
-        $seq->type($type);
-        $seq->sequence_string($info->{sequence});
-
-        # Will this ever get hit?
-        if ($full ne $acc) {
-            $self->logger->error("_fetch_sequences called with partial acc.sv for '$acc','$full'");
-            $self->_add_remap_warning($acc => $full);
-        }
-
-        push(@{$self->seqs}, $seq);
+        $seq->type(seq_is_protein($seq->sequence_string) ? 'Protein' : 'DNA');
     }
 
-    return;
+      use Data::Dumper;
+      $self->logger->warn("We are here: QueryValidator, parse_fasta_seq");
+      $self->logger->warn(Dumper(@seqs));
+      return @seqs[0];
+}
+
+sub _tidy_sequence {
+    my ($self, $seq) = @_;
+    open my $fh, '<', \$seq or $self->logger->logdie('open stringref failed');
+    my @stripped;
+    while (my $line = <$fh>) {
+        chomp $line;
+        unless ($line =~ /^>/) {
+            $line =~ s{       # strip leading line numbers:
+                          ^   #   start of line
+                          \s* #   optional leading whitespace
+                          \d+ #   line number
+                          \s+ #   at least some whitespace
+                      }{}x;
+            $line =~ s/\s+//g; # strip whitespace
+        }
+        push @stripped, $line if $line;
+    }
+    push @stripped, '';         # ensure trailing newline
+    return join("\n", @stripped);
 }
 
 # implements the local micro-cache - including caching misses
