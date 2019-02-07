@@ -83,13 +83,14 @@ sub _build_confirmed_seqs {     ## no critic (Subroutines::ProhibitUnusedPrivate
         return Bio::Otter::Lace::OnTheFly::Utils::SeqList->new( seqs => [] ) unless @accessions; # nothing to do
 
         $self->logger->debug('n(accessions) = ', scalar @accessions);
-        # identify the types of all the accessions supplied
 
+        # identify the types of all the accessions supplied
+        my $cache = $self->accession_type_cache;
         # The populate method will fetch the latest version of
         # any accessions which are supplied without a SV into
         # the cache object.
         &{$self->progress_cb}('Fetching accession info') if $self->progress_cb;
-
+        $cache->populate(\@accessions);
     }
 
     $self->_augment_supplied_sequences;
@@ -132,6 +133,8 @@ sub _build_confirmed_seqs {     ## no critic (Subroutines::ProhibitUnusedPrivate
             $seq->sequence_string($s);
         }
     }
+    use Data::Dumper;
+    print Dumper(@confirmed_seqs);
 
     return Bio::Otter::Lace::OnTheFly::Utils::SeqList->new( seqs => \@confirmed_seqs );
 }
@@ -235,21 +238,28 @@ sub Client {
 # Adds sequences to $self->seqs
 #
 sub _fetch_sequences {
-    my ($self, @to_fetch) = @_;
-    my @tofetch = uniq @to_fetch;
-    #$self->logger->warn('Need seq for: ', @$tofetch);
+  my ($self, @to_fetch) = @_;
 
-    my $client = Bio::Otter::Lace::Defaults::make_Client();
-      foreach my $acc (@tofetch) {
+  my $cache = $self->accession_type_cache;
+
+  @to_fetch = uniq @to_fetch;
+  $self->logger->debug('Need seq for: ', join(',', @to_fetch) || '<none>');
+  my $client = Bio::Otter::Lace::Defaults::make_Client();
+  foreach my $acc (@to_fetch) {
         my $seq = $client->fetch_fasta_seqence($acc);
         if (substr($seq, 0, 1) eq ">") {
           $seq = $self->parse_fasta_sequence($seq);
           push(@{$self->seqs}, $seq);
           my ($type, $full) = @{$self->_acc_type_full($acc)};
+          unless ($type) {
+              $self->_add_missing_warning($acc => 'illegal evidence type');
+              next;
+          }
           $seq->type($type);
         } else {
           $self->_add_missing_warning($acc, "unknown accession or illegal evidence type");
         }
+
       }
     return;
 }
@@ -307,6 +317,7 @@ sub _acc_type_full {
         my $cached_entry = $local_cache->{$acc};
         return $cached_entry;
     }
+
 
     my ($type, $full) = $self->accession_type_cache->type_and_name_from_accession($acc);
     my $new_entry;
