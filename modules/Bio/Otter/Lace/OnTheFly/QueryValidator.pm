@@ -93,8 +93,8 @@ sub _build_confirmed_seqs {     ## no critic (Subroutines::ProhibitUnusedPrivate
     }
 
     $self->_augment_supplied_sequences;
-    # legacy:  my @to_fetch = $self->_check_augment_supplied_accessions;
-    $self->_fetch_sequences($self->accessions);
+    my @to_fetch = $self->_check_augment_supplied_accessions;
+    $self->_fetch_sequences(@to_fetch);
 
     # tell the user about any missing sequences or remapped accessions
 
@@ -235,8 +235,8 @@ sub Client {
 # Adds sequences to $self->seqs
 #
 sub _fetch_sequences {
-    my ($self, $to_fetch) = @_;
-    my @tofetch = uniq @$to_fetch;
+    my ($self, @to_fetch) = @_;
+    my @tofetch = uniq @to_fetch;
     #$self->logger->warn('Need seq for: ', @$tofetch);
 
     my $client = Bio::Otter::Lace::Defaults::make_Client();
@@ -245,6 +245,8 @@ sub _fetch_sequences {
         if (substr($seq, 0, 1) eq ">") {
           $seq = $self->parse_fasta_sequence($seq);
           push(@{$self->seqs}, $seq);
+          my ($type, $full) = @{$self->_acc_type_full($acc)};
+          $seq->type($type);
         } else {
           $self->_add_missing_warning($acc, "unknown accession or illegal evidence type");
         }
