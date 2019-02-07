@@ -256,6 +256,7 @@ sub _fetch_sequences {
               next;
           }
           $seq->type($type);
+          $seq->name($acc);
         } else {
           $self->_add_missing_warning($acc, "unknown accession or illegal evidence type");
         }
