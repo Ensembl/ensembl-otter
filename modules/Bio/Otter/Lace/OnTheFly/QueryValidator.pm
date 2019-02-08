@@ -133,8 +133,6 @@ sub _build_confirmed_seqs {     ## no critic (Subroutines::ProhibitUnusedPrivate
             $seq->sequence_string($s);
         }
     }
-    use Data::Dumper;
-    print Dumper(@confirmed_seqs);
 
     return Bio::Otter::Lace::OnTheFly::Utils::SeqList->new( seqs => \@confirmed_seqs );
 }
@@ -260,9 +258,8 @@ sub _fetch_sequences {
         } else {
           $self->_add_missing_warning($acc, "unknown accession or illegal evidence type");
         }
-
-      }
-    return;
+  }
+  return;
 }
 
 sub parse_fasta_sequence {
@@ -281,9 +278,6 @@ sub parse_fasta_sequence {
         $seq->type(seq_is_protein($seq->sequence_string) ? 'Protein' : 'DNA');
       }
 
-      use Data::Dumper;
-      $self->logger->warn("We are here: QueryValidator, parse_fasta_seq");
-      $self->logger->warn(Dumper(@seqs));
       return @seqs[0];
 }
 
@@ -318,7 +312,6 @@ sub _acc_type_full {
         my $cached_entry = $local_cache->{$acc};
         return $cached_entry;
     }
-
 
     my ($type, $full) = $self->accession_type_cache->type_and_name_from_accession($acc);
     my $new_entry;
