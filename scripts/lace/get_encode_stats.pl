@@ -82,9 +82,9 @@ foreach my $set ( @sets ) {
 
   my $slice   = $sliceAd->fetch_by_chr_name($chrom);
 
-  #my $pipe_slice = Bio::Otter::Lace::Slice->new($client, $dataset, $set, 'chromosome', __PACKAGE__.' '.__LINE__,
-                                                #$slice->chr_name, $slice->chr_start, $slice->chr_end);
-  my $pipe_slice = Bio::Otter::Lace::Slice->new($client, $dataset, $set, 'chromosome', 'Otter', $slice->chr_name, $slice->chr_start, $slice->chr_end);
+  my $pipe_slice = Bio::Otter::Lace::Slice->new($client, $dataset, $set, 'chromosome', __PACKAGE__.' '.__LINE__,
+                                                $slice->chr_name, $slice->chr_start, $slice->chr_end);
+#  my $pipe_slice = Bio::Otter::Lace::Slice->new($client, $dataset, $set, 'chromosome', 'Otter', $slice->chr_name, $slice->chr_start, $slice->chr_end);
   my $region_evidences;
 
   # 1: newpipe 0: oldpipe

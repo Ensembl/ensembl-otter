@@ -149,13 +149,13 @@ sub _create_or_extend_chr_slice {
 
     my $assembly_type = $self->parent_data->{'assembly_type'};
 
-    if (my $chrname = $chromosome_name{$self}) { # cached from the previous SequenceFragments
-        if($chrname ne $data->{'chromosome'}) {
-            die "Chromosome names '$chrname' and '".$data->{'chromosome'}."' are different - can't join in 1 slice";
-        }
-    } else { # cache it now
+#    if (my $chrname = $chromosome_name{$self}) { # cached from the previous SequenceFragments
+#        if($chrname ne $data->{'chromosome'}) {
+#            die "Chromosome names '$chrname' and '".$data->{'chromosome'}."' are different - can't join in 1 slice";
+#        }
+#    } else { # cache it now
         $chromosome_name{$self} = $data->{'chromosome'};
-    }
+#    }
 
     my $start          = $data->{'assembly_start'};
     my $end            = $data->{'assembly_end'};
@@ -254,7 +254,7 @@ sub _build_clone_sequence {
     }
 
         ## FIXME: $cln_author may be passed in the XML, but is ultimately ignored by write_region
-    #my $cln_author=$self->_make_Author($data->{'author'}, $data->{'author_email'});
+    my $cln_author=$self->_make_Author('dummy', 'dummy');
 
     # create tiles (offset_in_slice + contig_component_slice + attributes)
     my $ctg_cmp_slice = Bio::EnsEMBL::Slice->new(
@@ -281,7 +281,7 @@ sub _build_clone_sequence {
 
     my $ci = Bio::Vega::ContigInfo->new(
         -slice      => $ctg_cmp_slice,
-        # -author   => $cln_author, # see FIXME above about $cln_author
+        -author     => $cln_author, # see FIXME above about $cln_author
         -attributes => $cln_attrib_list,
         );
     $cs->ContigInfo($ci);
@@ -338,7 +338,7 @@ sub _build_Feature {            ## no critic (Subroutines::ProhibitUnusedPrivate
     my ($self, $data) = @_;
 
     my $ana = $self->_get_Analysis($data->{'type'});
-    my $chr_slice = $self->_chr_slice;
+    my $chr_slice = $self->_chr_slice; 
 
        ##convert xml coordinates which are in chromosomal coords - to feature coords
     my $slice_offset = $chr_slice->start - 1;
@@ -349,7 +349,7 @@ sub _build_Feature {            ## no critic (Subroutines::ProhibitUnusedPrivate
         -strand        => $data->{'strand'},
         -analysis      => $ana,
         -score         => $data->{'score'},
-        -display_label => $data->{'label'},
+        -display_label => $data->{'label'} | 'rank = filler',
         -slice         => $chr_slice,
     );
     $region{$self}->add_seq_features($feature);
@@ -413,8 +413,8 @@ sub _build_Transcript {         ## no critic (Subroutines::ProhibitUnusedPrivate
     } else {
         $logic_name = $data->{'analysis'};
     }
-    #my $ana = $self->_get_Analysis($logic_name || __PACKAGE__.' '.__LINE__);
-    my $ana = $self->_get_Analysis($logic_name || 'Otter');
+    my $ana = $self->_get_Analysis($logic_name || __PACKAGE__.' '.__LINE__);
+#    my $ana = $self->_get_Analysis($logic_name || 'Otter');
 
     my $transcript = Bio::Vega::Transcript->new(
         -stable_id => $data->{'stable_id'},
@@ -570,8 +570,8 @@ sub _build_Locus {              ## no critic (Subroutines::ProhibitUnusedPrivate
     ## transcript author group has been temporarily set to 'anything' ??
 
     my $chr_slice = $self->_chr_slice;
-    #my $ana = $self->_get_Analysis($data->{'analysis'} || __PACKAGE__.' '.__LINE__);
-    my $ana = $self->_get_Analysis($data->{'analysis'} || 'Otter');
+    my $ana = $self->_get_Analysis($data->{'analysis'} || __PACKAGE__.' '.__LINE__);
+#    my $ana = $self->_get_Analysis($data->{'analysis'} || 'Otter');
     my $gene = Bio::Vega::Gene->new(
         -stable_id => $data->{'stable_id'},
         -slice => $chr_slice,
@@ -636,7 +636,6 @@ sub _build_Locus {              ## no critic (Subroutines::ProhibitUnusedPrivate
         $transcript->end(  $transcript->end   - $slice_offset);
 
         my $logic_name = $transcript->analysis->logic_name;
-        #if ($self->analysis_from_transcript_class and $source ne 'havana' and $logic_name ne __PACKAGE__.' '.__LINE__) {
         if ($self->analysis_from_transcript_class and $source ne 'havana' and $logic_name ne __PACKAGE__.' '.__LINE__) {
             $logic_name = sprintf('%s:%s', $source, $logic_name);
         }

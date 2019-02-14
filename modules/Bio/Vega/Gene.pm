@@ -9,7 +9,7 @@ use Bio::Vega::Utils::AttributesMixin;
 use base 'Bio::EnsEMBL::Gene';
 
 
-sub new {
+sub new { 
   my ($class, @args) = @_;
   my $self = $class->SUPER::new(@args);
   my ($gene_author)  = rearrange([qw(AUTHOR)],@args);
@@ -72,8 +72,8 @@ sub new_dissociated_copy {
     return $copy;
 }
 
-sub gene_author {
-  my ($self, $value) = @_;
+sub gene_author {  
+  my ($self, $value) = @_; 
   if( defined $value) {
       if ($value->isa("Bio::Vega::Author")) {
           $self->{'gene_author'} = $value;

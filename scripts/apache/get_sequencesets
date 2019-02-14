@@ -126,7 +126,7 @@ XML
     foreach my $ss_slice (@{$slice_adaptor->fetch_all('toplevel')}) {
 
         my $chr_name = $ss_slice->seq_region_name();
-        warn "Got chr '$chr_name'\n";
+        #warn "Got chr '$chr_name'\n";
         my $description  = ''; # default
         my $write_access = 1;  # default; but ignoring dataset readonly-ness
         my $hidden       = 1;  # default

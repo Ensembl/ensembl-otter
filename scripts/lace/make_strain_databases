@@ -68,8 +68,8 @@ use File::Basename qw{ dirname };
         system_do("mysqldump --no-create-info $grit_param coord_system seq_region assembly dna | $loutre");
 
         # Massage coord_system table to contain records expected by otter.
-        #system_do(qq{$loutre --execute='UPDATE coord_system SET version = __PACKAGE__." ".__LINE__ WHERE name = "chromosome"'});
-        system_do(qq{$loutre --execute='UPDATE coord_system SET version = "Otter" WHERE name = "chromosome"'});
+        system_do(qq{$loutre --execute='UPDATE coord_system SET version = __PACKAGE__." ".__LINE__ WHERE name = "chromosome"'});
+#        system_do(qq{$loutre --execute='UPDATE coord_system SET version = "Otter" WHERE name = "chromosome"'});
         system_do(qq{$loutre --execute='UPDATE coord_system SET version = NULL WHERE version = "CURRENT"'});
 
         # Populate meta table with appropriate entries

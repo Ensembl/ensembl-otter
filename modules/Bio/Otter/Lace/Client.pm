@@ -38,7 +38,7 @@ use Bio::Otter::Lace::DB;
 use Bio::Otter::LogFile;
 use Bio::Otter::Auth::SSO;
 use Bio::Vega::Utils::MacProxyConfig qw{ mac_os_x_set_proxy_vars };
-
+use Bio::Otter::Auth::Access;
 use 5.009001; # for stacked -f -r which returns false under 5.8.8
 
 # we add "1" and "2" as keys for backwards compatibility with "debug=1" and "debug=2"
@@ -151,6 +151,15 @@ sub _debug_server {
         || Bio::Otter::Debug->debug('2')
         ;
     return $_debug_server;
+}
+
+sub fetch_seqence {
+    my ($self, $acc) = @_;
+    use Data::Dumper;
+    my $datasets_hash = $self->otter_response_content
+        ('GET', 'get_sequence', {'id'=>$acc, 'author' => $self->author});
+
+    return $datasets_hash;
 }
 
 sub no_user_config {
@@ -436,7 +445,7 @@ sub reauthorize_if_cookie_will_expire_soon {
 
     # Soon is if cookie expires less than half an hour from now
     my $soon = time + (30 * 60);
-    my $expiry = $self->_cookie_expiry_time;
+    my $expiry = $self->{'_cookie_jar'}{'expiry'} || time;
     if ($expiry < $soon) {
         $self->logger->warn(
             sprintf("reauthorize_if_cookie_will_expire_soon: expiry expected at %s", scalar localtime($expiry)));
@@ -484,22 +493,35 @@ sub config_set {
 
 sub _authorize {
     my ($self) = @_;
+
     my $user = $self->author;
     my $password = $self->password_prompt()->($self)
       or $self->logger->logdie("No password given");
+    my $password_attempts = $self->_password_attempts;
 
     my ($status, $failed, $detail) =
       Bio::Otter::Auth::SSO->login($self->get_UserAgent, $user, $password);
-
+    $self->{'_cookie_jar'}{'expiry'} = time + (24 * 60 * 60);
     if (!$failed) {
+        my $decoded_jwt = Bio::Otter::Auth::Access->_jwt_verify($detail);
+        if  ($decoded_jwt->{'nickname'} ne ($self->author)) {
+             die ('Username does not match token name');
+        }
         # Cookie will have been given to UserAgent
         $self->logger->info(sprintf("Authenticated as %s: %s\n", $self->author, $status));
         $self->_save_CookieJar;
         return 1;
     } else {
-        $self->logger->warn(sprintf("Authentication as %s failed: %s (((%s)))\n", $self->author, $status, $detail));
-        $self->password_problem()->($self, $failed);
-        return 0;
+        if($password_attempts > 2){
+             $self->logger->warn(sprintf("Authentication as %s failed: %s (((%s)))\n", $self->author, $status, $detail));
+             $password_attempts--;
+             $self->{'_password_attempts'} = $password_attempts;
+             $self->password_problem()->($self, $failed);
+             return 0;
+        }
+        else{
+             die ('Unauthorized user');
+        }
     }
 }
 
@@ -533,7 +555,7 @@ sub _create_UserAgent {
 # Call it early, but after loggers are ready
 sub env_config {
     my ($self) = @_;
-    $self->_ua_tell_hostinfo;
+    #$self->_ua_tell_hostinfo;
     $self->_setup_pfetch_env;
     return;
 }
@@ -748,8 +770,7 @@ sub _general_http_dialog {
         if ($response->is_success) {
             last REQUEST;
         }
-        my $code = $response->code;
-        
+        my $code = $response->code;        
         if ($code == 401 || $code == 403) {
             # 401 = unauthorized
             # 403 = forbidden
@@ -894,14 +915,13 @@ sub status_refresh_for_DataSet_SequenceSet{
 
         my $status_subhash = $status_hash{$contig_name} || $names_subhash;
 
-        if($status_subhash == $names_subhash) {
-            $self->logger->warn("had to assign an empty subhash to contig '$contig_name'");
-        }
+#        if($status_subhash == $names_subhash) {
+#            $self->logger->warn("had to assign an empty subhash to contig '$contig_name'");
+#        }
 
         while(my ($ana_name, $values) = each %$status_subhash) {
             $status->add_analysis($ana_name, $values);
         }
-
         $cs->pipelineStatus($status);
     }
 
@@ -918,7 +938,8 @@ sub find_clones {
         'find_clones',
         {
             'dataset'  => $dsname,
-            'qnames'   => $qnames_string, 'author' => $self->author
+            'qnames'   => $qnames_string, 
+            'author'   => $self->author
         },
     );
 
@@ -951,8 +972,8 @@ sub get_meta {
 
 sub get_db_info {
     my ($self, $dsname, $ss) = @_;
-    my $hashref = $self->otter_response_content(GET => 'get_db_info', { dataset => $dsname,  'coord_system_name' => $ss->coord_system_name,
-                                                                         'coord_system_version' => $ss->coord_system_version,'author' => $self->author });
+    my $hashref = $self->otter_response_content(GET => 'get_db_info', { dataset => $dsname, 'coord_system_name' => $ss->coord_system_name,
+                                                                         'coord_system_version' => $ss->coord_system_version, 'author' => $self->author });
     return $hashref;
 }
 
@@ -1093,6 +1114,15 @@ sub _get_DataSets_hash {
 
     my $datasets_hash = $self->otter_response_content
         ('GET', 'get_datasets', {'author' => $self->author});
+
+    return $datasets_hash;
+}
+
+sub fetch_fasta_seqence {
+    my ($self, $acc) = @_;
+    use Data::Dumper;
+    my $datasets_hash = $self->otter_response_content
+        ('GET', 'get_fasta_sequence', {'id'=>$acc, 'author' => $self->author});
 
     return $datasets_hash;
 }
@@ -1291,8 +1321,8 @@ sub slice_query {
             'csver'   => $slice->csver(),
             'name'    => $slice->seqname(),
             'start'   => $slice->start(),
-            'end'     => $slice->end());
-            'author'  => $self->author
+            'end'     => $slice->end()),
+            'author'  => $self->author;
 }
 
 
@@ -1421,7 +1451,6 @@ sub get_all_CloneSequences_for_DataSet_SequenceSet { # without any lock info
               $dataset_name, $sequenceset_name, $_);
       } @{$clonesequences_array} ];
   $ss->CloneSequence_list($clonesequences);
-
   return $clonesequences;
 }
 
@@ -1452,13 +1481,12 @@ sub get_methods_ace {
 }
 
 sub get_accession_info {
-    my ($self, @accessions) = @_;
+    my ($self, @accessions) = @_; 
 
     my $hashref = $self->otter_response_content(
         'POST',
         'get_accession_info',
-        {accessions => join ',', @accessions,
-         'author'      => $self->author
+        {'author' => $self->author, accessions => join ',', @accessions
         },
         );
 
@@ -1471,8 +1499,7 @@ sub get_accession_types {
     my $hashref = $self->otter_response_content(
         'POST',
         'get_accession_types',
-        {accessions => join ',', @accessions,
-         'author'      => $self->author
+        {'author'      => $self->author, accessions => join ',', @accessions         
         },
         );
 
@@ -1485,8 +1512,7 @@ sub get_taxonomy_info {
     my $response = $self->otter_response_content(
         'POST',
         'get_taxonomy_info',
-        {id => join ',', @ids,
-         'author'      => $self->author
+        {'author'      => $self->author, id => join ',', @ids
         },
         );
     return $response;
@@ -1507,7 +1533,7 @@ sub save_otter_xml {
             'dataset'  => $dsname,
             'data'     => $xml,
             'locknums' => $lock_token,
-            'author'   => $self->author
+            'author'   => $self->author,
         }
     );
 

@@ -1,14 +1,56 @@
+=head1 LICENSE
+
+Copyright [2018] EMBL-European Bioinformatics Institute
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+=cut
+
 package Bio::Otter::Auth::Access;
 use strict;
 use warnings;
 use Try::Tiny;
 use Carp;
 use Scalar::Util 'weaken';
+use Crypt::JWT qw(decode_jwt);
 
 use Bio::Otter::Auth::DsList;
 use Bio::Otter::Auth::UserGroup;
 use Bio::Otter::Auth::User;
 
+my $pem_key_string = <<'EOF';
+-----BEGIN CERTIFICATE-----
+MIIDYzCCAkugAwIBAgIEBonRiDANBgkqhkiG9w0BAQsFADBiMQswCQYDVQQGEwJV
+SzEQMA4GA1UECBMHRW5nbGFuZDESMBAGA1UEBxMJQ2FtYnJpZGdlMREwDwYDVQQK
+EwhFTUJMLUVCSTEMMAoGA1UECxMDVFNDMQwwCgYDVQQDEwNBQVAwHhcNMTgwMjE0
+MTAxMjMzWhcNMTgwNTE1MTAxMjMzWjBiMQswCQYDVQQGEwJVSzEQMA4GA1UECBMH
+RW5nbGFuZDESMBAGA1UEBxMJQ2FtYnJpZGdlMREwDwYDVQQKEwhFTUJMLUVCSTEM
+MAoGA1UECxMDVFNDMQwwCgYDVQQDEwNBQVAwggEiMA0GCSqGSIb3DQEBAQUAA4IB
+DwAwggEKAoIBAQCarIcPOnQEHPOsQHg+PUV4r8bp9h1PJec6Rj3yByuENYQ+8vLX
+aCylvUy9VVVturKVwQHydDllQAQDKu0rY2jHIJK2C4/zLTxrsbeOtl2NZzOX1QqM
+8UC9RV21SIfXiwqr2e1yw5pOGyXyCd8P2GVmePnzoYF9bx8nZB+aObudiUqSJ9jx
+AFv1d6Qcwc+R24pS9lZfNsoNZHjRJUmixUvzElQybDqquCR9se6w9a9vKSMrKYqM
+F+IuI+8ip4toJdEr1xnJ5Frd80cPMqpoPwu1wktXBKJiVWMBi1u5g2X7dR3o3tin
+U2om9zqXFjobRKc2IQYDTBM1QkACq5ZWgooRAgMBAAGjITAfMB0GA1UdDgQWBBRK
+0o7PJrf/mQKDEvE8wp/Es8Ej5jANBgkqhkiG9w0BAQsFAAOCAQEAX2nRBUckyfxi
+UlMSipjffBBdaDMFeIc+rkmQVaWNvlwSvigZ94IXTQk0cmPwcsPRkFsg9PkPCnLS
+wlXPuopjtiVMmGL+MK+pGetqk8E4hxYznyWAcyXX4uQF6BLxHK+tD1diX6mqeaP6
+15nZfb8Lt66voarM+9tArtNOLWaNhrvpNJAo8eLUEJHRPZdd1zk1A/hmzkyiIRV7
+GgnrZl4yLDOZWElRtUYGFfSiqTdWhCoszlrGC4U6SjeHNZGFTc5nkGFBQO5mOIWP
+Hm9k2zgA4Ll+z+lKOcfyXSRJzxXDiHFBfCxF0NDBH0GTdvdVc9A+rNMkfI48einX
+xgZLTquzEg==
+-----END CERTIFICATE-----
+EOF
 
 =head1 NAME
 
@@ -263,6 +305,13 @@ sub _build_alias_map {
         }
     }
     return \%by_provider;
+}
+
+sub _jwt_verify {
+    my($self, $token) = @_;
+
+    my $data = decode_jwt(token=>$token, key=>Crypt::PK::RSA->new(\$pem_key_string));
+    return $data;
 }
 
 =head1 AUTHOR

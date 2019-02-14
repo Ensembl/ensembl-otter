@@ -222,8 +222,7 @@ foreach my $chrom (@$chroms) {
 
 
 #get all chromosomes
-#my $all_chromosomes = $sa->fetch_all('Chromosome',__PACKAGE__.' '.__LINE__);
-my $all_chromosomes = $sa->fetch_all('Chromosome','Otter');
+my $all_chromosomes = $sa->fetch_all('Chromosome',__PACKAGE__.' '.__LINE__);
 
 # see which of the non hidden chromosomes best match to what we want
 my $regions_wanted = { %$regions_wanted_details, %$patch_regions_wanted_details } ;

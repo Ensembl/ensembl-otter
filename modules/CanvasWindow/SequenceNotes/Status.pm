@@ -6,7 +6,7 @@ package CanvasWindow::SequenceNotes::Status;
 use strict;
 use warnings;
 use Carp;
-use Data::Dumper;
+
 use base 'CanvasWindow::SequenceNotes';
 
 sub clone_index{

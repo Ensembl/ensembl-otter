@@ -21,20 +21,20 @@ sub get_slice {
     $cs ||= 'chromosome'; # can't make a slice without cs
 
     if(!$csver && ($cs eq 'chromosome')) {
-        $csver = 'Otter';
-#        $csver = __PACKAGE__.' '.__LINE__;
+#        $csver = 'Otter';
+        $csver = __PACKAGE__.' '.__LINE__;
     }
 
     # The following statement ensures
     # that we use 'assembly type' as the chromosome name
     # only for Otter chromosomes.
     # EnsEMBL chromosomes will have simple names.
-#    my ($segment_attr, $segment_name) = (($cs eq 'chromosome') && ($csver eq __PACKAGE__.' '.__LINE__))
-#        ? ('chr',  $chr)
-#        : ('name', $name);
-    my ($segment_attr, $segment_name) = (($cs eq 'chromosome') && ($csver eq 'Otter')) 
+    my ($segment_attr, $segment_name) = (($cs eq 'chromosome') && ($csver eq __PACKAGE__.' '.__LINE__))
         ? ('chr',  $chr)
         : ('name', $name);
+#    my ($segment_attr, $segment_name) = (($cs eq 'chromosome') && ($csver eq 'Otter')) 
+#        ? ('chr',  $chr)
+#        : ('name', $name);
 
     die "$cs '$segment_attr' attribute not set" unless $segment_name;
 
@@ -159,8 +159,8 @@ sub map_remote_slice_back {
             $remote_slice->start(),
             $remote_slice->end(),
             $remote_slice->strand(),
-            'Otter',
-#            __PACKAGE__.' '.__LINE__,
+#            'Otter',
+            __PACKAGE__.' '.__LINE__,
         );
 
         return [ $local_slice ];
@@ -176,8 +176,8 @@ sub map_remote_slice_back {
             );
 
         my @local_slices = ();
-#        foreach my $proj_segment (@{ $remote_slice_2->project('chromosome', __PACKAGE__.' '.__LINE__) }) {
-        foreach my $proj_segment (@{ $remote_slice_2->project('chromosome', 'Otter') }) {
+        foreach my $proj_segment (@{ $remote_slice_2->project('chromosome', __PACKAGE__.' '.__LINE__) }) {
+#        foreach my $proj_segment (@{ $remote_slice_2->project('chromosome', 'Otter') }) {
             my $local_slice_2 = $proj_segment->to_Slice();
 
             my $local_slice = $local_sa->fetch_by_region(
@@ -193,12 +193,12 @@ sub map_remote_slice_back {
 
         if(my $results = scalar(@local_slices)) {
             if($results>1) {
-#                warn "Could not uniquely map '$csver_remote' slice to __PACKAGE__.' '.__LINE__ (got $results pieces)\n";
-                warn "Could not uniquely map '$csver_remote' slice to 'Otter' (got $results pieces)\n";
+                warn "Could not uniquely map '$csver_remote' slice to __PACKAGE__.' '.__LINE__ (got $results pieces)\n";
+#                warn "Could not uniquely map '$csver_remote' slice to 'Otter' (got $results pieces)\n";
             }
         } else {
-#            warn "Could not map '$csver_remote' slice to __PACKAGE__.' '.__LINE__ at all\n";
-            warn "Could not map '$csver_remote' slice to 'Otter' at all\n";
+            warn "Could not map '$csver_remote' slice to __PACKAGE__.' '.__LINE__ at all\n";
+#            warn "Could not map '$csver_remote' slice to 'Otter' at all\n";
         }
         return \@local_slices;
     }
@@ -226,10 +226,10 @@ sub fetch_mapped_features_ensembl {
     my ($cs, $name, $chr, $start, $end, $csver_orig, $csver_remote) =
         @{$map}{qw( cs name chr start end csver csver_remote )};
 
-#    confess "invalid coordinate system: '${cs}'"
-#        unless $cs eq 'chromosome';
-#    confess "invalid coordinate system version: '${csver_orig}'"
-#        unless $csver_orig eq __PACKAGE__.' '.__LINE__;
+    confess "invalid coordinate system: '${cs}'"
+        unless $cs eq 'chromosome';
+    confess "invalid coordinate system version: '${csver_orig}'"
+        unless $csver_orig eq __PACKAGE__.' '.__LINE__;
 #        unless $csver_orig eq 'Otter';
 
     my $adaptor_class = $self->ensembl_adaptor_class;
@@ -324,10 +324,10 @@ sub fetch_mapped_features_das {
     my ($cs, $name, $chr, $start, $end, $csver_orig, $csver_remote) =
         @{$map}{qw( cs name chr start end csver csver_remote )};
 
-#    confess "invalid coordinate system: '${cs}'"
-#        unless $cs eq 'chromosome';
-#    confess "invalid coordinate system version: '${csver_orig}'"
-#        unless $csver_orig eq __PACKAGE__.' '.__LINE__;
+    confess "invalid coordinate system: '${cs}'"
+        unless $cs eq 'chromosome';
+    confess "invalid coordinate system version: '${csver_orig}'"
+        unless $csver_orig eq __PACKAGE__.' '.__LINE__;
 #        unless $csver_orig eq 'Otter';
 
     if( ($self->otter_assembly_equiv_hash()->{$csver_remote}{$name} || '') eq $chr) {

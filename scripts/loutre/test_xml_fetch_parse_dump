@@ -97,11 +97,11 @@ sub test_xml_fetch {
     my ($cl, $ss, $title) = @_;
     
     my ($dsname, $ssname, $chr_name, $chr_start, $chr_end) = $ss->selected_CloneSequences_parameters;
-    #my $smart_slice = Bio::Otter::Lace::Slice->new($cl, $dsname, $ssname,
-    #    'chromosome', __PACKAGE__.' '.__LINE__, $chr_name, $chr_start, $chr_end);
-
     my $smart_slice = Bio::Otter::Lace::Slice->new($cl, $dsname, $ssname,
-        'chromosome', 'Otter', $chr_name, $chr_start, $chr_end);
+        'chromosome', __PACKAGE__.' '.__LINE__, $chr_name, $chr_start, $chr_end);
+
+#    my $smart_slice = Bio::Otter::Lace::Slice->new($cl, $dsname, $ssname,
+#        'chromosome', 'Otter', $chr_name, $chr_start, $chr_end);
 
     my $adb = $cl->new_AceDatabase;
     $adb->error_flag(1);    # Keep it if anything goes wrong

@@ -247,7 +247,7 @@ sub LaceSlice_from_vc {
         $band->DataSet->name,
         $vc->seq_region_name,
         'chromosome',
-        'Otter',
+        __PACKAGE__.' '.__LINE__,
         $vc->get_all_Attributes('chr')->[0]->value,
         $vc->start,
         $vc->end,

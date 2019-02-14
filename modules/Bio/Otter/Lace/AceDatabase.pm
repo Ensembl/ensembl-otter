@@ -237,8 +237,7 @@ sub empty_acefile_list {
 
 sub init_AceDatabase {
     my ($self) = @_;
-
-    my $xml_string = $self->Client->get_region_xml($self->slice);
+    my $xml_string = $self->Client->get_region_xml($self->slice); 
     $self->write_file('01_before.xml', $xml_string);
 
     my $parser = Bio::Vega::Transform::XMLToRegion->new;
@@ -948,8 +947,8 @@ sub _add_transcript_filters {
             priority            => 1,
             script_name         => 'localdb_get',
             resource_bin        => 'local',
-            analysis            => 'Otter',
-            #analysis            => __PACKAGE__.' '.__LINE__,
+#            analysis            => 'Otter',
+            analysis            => __PACKAGE__.' '.__LINE__,
             feature_kind        => 'Gene',
             zmap_column         => $top_level->name,
             description         => $top_level->remark,

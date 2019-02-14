@@ -678,23 +678,23 @@ sub update_item_select_state {
 }
 
 sub load_filters {
-    my ($self, %options) = @_;
+    my ($self, %options) = @_; 
 
-    my $is_recover = $options{is_recover};
+    my $is_recover = $options{is_recover}; 
 
-    my $top = $self->top_window;
+    my $top = $self->top_window; 
     my $busy = Tk::ScopedBusy->new($top, -recurse => 1);
 
-    my $cllctn = $self->root_Collection;
+    my $cllctn = $self->root_Collection; 
 
     # So that next session will use current selected filters:
     $cllctn->save_Columns_selected_flag_to_Filter_wanted;
     $self->AceDatabase->save_filter_state;
 
-    my @statuses =  qw( Selected );
+    my @statuses =  qw( Selected ); 
     push @statuses, qw( Queued Loading Processing HitsQueued HitsProcess Visible ) if $is_recover;
 
-    my @to_fetch = $cllctn->list_Columns_with_status(@statuses);
+    my @to_fetch = $cllctn->list_Columns_with_status(@statuses); 
     foreach my $col (@to_fetch) {
         $col->status('Queued');
     }
@@ -726,6 +726,7 @@ sub load_filters {
     } else {
         # we need to set up and show a SessionWindow
         my $zmap = $self->zmap_select;
+        
 
         my $SessionWindow = MenuCanvasWindow::SessionWindow->init_or_reuse_Toplevel
           (# no Tk opts, because SessionWindow sets its own -title
@@ -746,7 +747,7 @@ sub load_filters {
     }
 
     undef $busy; # i.e. Unbusy
-    # $top->withdraw;
+#    $top->withdraw;
     $self->zmap_select_destroy;
 
     return;

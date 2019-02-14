@@ -106,8 +106,8 @@ sub csver {
     if ($csver) {
         $self->{'_csver'} = $csver;
     }
-    #return $self->{'_csver'} || __PACKAGE__.' '.__LINE__;
-    return $self->{'_csver'} || 'Otter';
+    return $self->{'_csver'} || __PACKAGE__.' '.__LINE__;
+#    return $self->{'_csver'} || 'Otter';
 }
 
 sub seqname {

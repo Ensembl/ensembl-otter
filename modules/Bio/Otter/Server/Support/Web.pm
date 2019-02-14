@@ -1,3 +1,21 @@
+=head1 LICENSE
+
+Copyright [2018] EMBL-European Bioinformatics Institute
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+=cut
+
 
 package Bio::Otter::Server::Support::Web;
 
@@ -60,7 +78,7 @@ sub new {
     $self->compression($options{-compression});
     $self->content_type($options{-content_type});
 
-    #$self->_authenticate_user;
+    
     if ($self->show_restricted_datasets || ! $self->local_user) {
         $self->authorized_user;
     }
@@ -218,7 +236,7 @@ sub sangerweb {
 sub _authenticate_user {
     my ($self, $unauthorized_user) = @_;
 
-    #my $sw = $self->sangerweb;
+    
     my %set = Bio::Otter::Auth::SSO->auth_user($self->Access, $unauthorized_user);
 
     # Merge properties (_authorized_user, _internal_user, _local_user) into %$self
@@ -229,16 +247,18 @@ sub _authenticate_user {
 
 sub authorized_user { # deprecated, because of hard exit()
     my ($self) = @_;  # but also a setter in ::Local
-    my $unauthorized_user = $self->param('author');
-    $self->_authenticate_user($unauthorized_user);
+    if (defined $self){
+        my $unauthorized_user = $self->param('author');
+        $self->_authenticate_user($unauthorized_user);
 
-    my $user = try {
-        $self->authorized_user__catchable;
-    } catch {
-        $self->_unauth_exit('User not authorized');
-    };
+        my $user = try {
+          $self->authorized_user__catchable;
+        } catch {
+          $self->_unauth_exit('User not authorized');
+        };
 
-    return $user;
+        return $user;
+    }
 }
 
 sub authorized_user__catchable {

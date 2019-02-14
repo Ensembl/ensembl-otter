@@ -1,6 +1,24 @@
+=head1 LICENSE
+
+Copyright [2018] EMBL-European Bioinformatics Institute
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+=cut
+
 package Bio::Otter::Server::Support;
 
-#use strict;
+use strict;
 use warnings;
 
 =head1 NAME
@@ -32,7 +50,7 @@ sub new { # just to make it possible to instantiate an object
 # Error text like m{^(\d{3}) (.*)$} is an HTTP status code
 sub dataset {
     my ($self, $dataset) = @_;
-    
+
     if($dataset) {
         $self->{'_dataset'} = $dataset;
     }
@@ -63,7 +81,6 @@ sub Access {
 sub AccessUser {
     my ($self, $unauthorized_user) = @_;
     my $user = $self->Access->user($unauthorized_user);
-    #my $user = $self->Access->user($self->authenticated_username);
     return $user;
 }
 
@@ -85,7 +102,6 @@ sub _guarded_dataset {
     my ($user, $dataset_name);
     return try {
         $user = $self->AccessUser($unauthorized_user) || die "user unknown\n";
-        #$user = $self->{'_authorized_user'} || die "user unknown\n";
         $dataset_name = $self->dataset_name;
         $user->all_datasets->{$dataset_name} || die "not in access.yaml\n";
     } catch {
@@ -96,7 +112,6 @@ sub _guarded_dataset {
         # (real) 403 and then hard exit; our 403 below is munged to a
         # 412 in ::Web to circumvent re-login in the case of not
         # having access to a dataset.
-        #my $username = $self->authorized_user;
         my $username = $self->{'_authorized_user'};
 
         $dataset_name = '(none)' unless defined $dataset_name;

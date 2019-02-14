@@ -45,8 +45,8 @@ use Hum::Sort 'ace_sort';
 
         if ($sequence_set) {
             if ($show_agp) {
-                #$agp_cs_version ||= __PACKAGE__.' '.__LINE__;
-                $agp_cs_version ||= 'Otter';
+                $agp_cs_version ||= __PACKAGE__.' '.__LINE__;
+#                $agp_cs_version ||= 'Otter';
                 print_agp($ds, $sequence_set, $agp_cs_version);
             } else {
                 print_sequence_set($ds, $sequence_set, $acc_only, $acc_sv);

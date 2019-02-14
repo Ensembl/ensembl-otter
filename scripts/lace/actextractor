@@ -51,10 +51,10 @@ sub show_one_set {
 
     print "DataSet='".$ds->name()."'\n\n";
 
-    #my $slice = Bio::Otter::Lace::Slice->new($cl, $ds->name, $ssname,
-                #'chromosome', __PACKAGE__.' '.__LINE__, $chr_name, $chr_start, $chr_end);
     my $slice = Bio::Otter::Lace::Slice->new($cl, $ds->name, $ssname,
-                'chromosome', 'Otter', $chr_name, $chr_start, $chr_end);
+                'chromosome', __PACKAGE__.' '.__LINE__, $chr_name, $chr_start, $chr_end);
+#    my $slice = Bio::Otter::Lace::Slice->new($cl, $ds->name, $ssname,
+#                'chromosome', 'Otter', $chr_name, $chr_start, $chr_end);
 
     my $genes = $slice->get_all_Genes();
 

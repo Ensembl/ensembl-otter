@@ -13,7 +13,7 @@ use Bio::Vega::Evidence;
 use Bio::Vega::Exon;
 use Bio::Vega::Transcript;
 use Bio::Vega::Translation;
-
+use Data::Dumper;
 use Bio::Vega::Utils::Attribute                   qw( add_EnsEMBL_Attributes );
 use Bio::Vega::Utils::ExonPhase                   qw( exon_phase_Ace_to_EnsEMBL );
 use Bio::Vega::Utils::GeneTranscriptBiotypeStatus qw( method2biotype_status );
@@ -386,8 +386,8 @@ sub _gene_from_Locus {
     my @synonyms = map { ('synonym' => $_) } $locus->list_aliases;
     add_EnsEMBL_Attributes($gene, @synonyms);
 
-    #$gene->analysis   ($self->_get_Analysis(__PACKAGE__.' '.__LINE__));
-    $gene->analysis   ($self->_get_Analysis('Otter'));
+    $gene->analysis   ($self->_get_Analysis(__PACKAGE__.' '.__LINE__));
+#    $gene->analysis   ($self->_get_Analysis('Otter'));
     $gene->gene_author($self->_author_object );
 
     $self->logger->debug(
@@ -430,7 +430,7 @@ sub remove_SimpleFeatures {
 # FIXME: duplication with XMLToRegion
 #
 sub _simpleFeature_from_HumAce {
-    my ($self, $ha_feature) = @_;
+    my ($self, $ha_feature) = @_; 
 
     my $offset = $self->session_slice->start - 1;
 

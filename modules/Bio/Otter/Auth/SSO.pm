@@ -1,9 +1,28 @@
+=head1 LICENSE
+
+Copyright [2018] EMBL-European Bioinformatics Institute
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+=cut
+
 package Bio::Otter::Auth::SSO;
 use strict;
 use warnings;
 
 use URI::Escape qw{ uri_escape };
 use HTTP::Request;
+use LWP::UserAgent;
 
 
 =head1 NAME
@@ -33,19 +52,20 @@ authenticated requests.
 =cut
 
 sub login {
-    my ($called, $fetcher, $orig_user, $password) = @_;
+    my ($called, $fetcher, $orig_user, $orig_password) = @_;
 
     # need to url-encode these
     my $user  = uri_escape($orig_user); # possibly not worth it...
-    
+    my $password = uri_escape($orig_password);  # definitely worth it!
+
+    my $ua  = LWP::UserAgent->new();
     my $req = HTTP::Request->new;
-    
     $req->method('GET');
     $req->uri("https://explore.api.aai.ebi.ac.uk/auth");
     $req->content_type('application/json;charset=UTF-8');
-    $req->authorization_basic($user,$password);
+    $req->authorization_basic($user, $orig_password);
 
-    my $response = $fetcher->request($req);
+    my $response = $ua->request($req);
     my $content = $response->decoded_content;
     my $failed;
 
@@ -121,7 +141,7 @@ sub auth_user {
       ? 1 : 0;
     # ...from the HTTP header added by front end proxy
 
-    #if (my $user = lc($sangerweb->username)) {
+
         my $auth_flag     = 0;
         my $internal_flag = 0;
 
@@ -138,7 +158,7 @@ sub auth_user {
             $out{'_authorized_user'} = $unauthorized_user;
             $out{'_internal_user'}   = $internal_flag;
         }
-    #}
+    
 
     die 'wantarray!' unless wantarray;
     return %out;

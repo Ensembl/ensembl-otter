@@ -10,7 +10,8 @@ use List::MoreUtils qw{ uniq };
 
 use Bio::Otter::Lace::OnTheFly::Utils::SeqList;
 use Bio::Otter::Lace::OnTheFly::Utils::Types;
-
+use Bio::Otter::Lace::Client;
+use Hum::FastaFileIO;
 use Bio::Vega::Evidence::Types qw{ new_evidence_type_valid seq_is_protein };
 
 has accession_type_cache => ( is => 'ro', isa => 'Bio::Otter::Lace::AccessionTypeCache', required => 1 );
@@ -204,6 +205,16 @@ sub _check_augment_supplied_accessions {
     return @to_fetch;
 }
 
+sub Client {
+    my ($self, $client) = @_;
+
+    if ($client) {
+        $self->{'_Client'} = $client;
+        $self->colour( $self->next_session_colour );
+    }
+    return $self->{'_Client'};
+}
+
 # Adds sequences to $self->seqs
 #
 sub _fetch_sequences {
@@ -213,47 +224,102 @@ sub _fetch_sequences {
 
     @to_fetch = uniq @to_fetch;
     $self->logger->debug('Need seq for: ', join(',', @to_fetch) || '<none>');
-
+    my $client = Bio::Otter::Lace::Defaults::make_Client();
     foreach my $acc (@to_fetch) {
 
-        my ($type, $full) = @{$self->_acc_type_full($acc)};
-        unless ($type) {
-            $self->_add_missing_warning($acc => 'illegal evidence type');
-            next;
+        my $seq = $client->fetch_fasta_seqence($acc);
+        if (substr($seq, 0, 1) eq ">") {
+          $seq = $self->parse_fasta_sequence($seq);
+          push(@{$self->seqs}, $seq);
+          my ($type, $full) = @{$self->_acc_type_full($acc)};
+          unless ($type) {
+              $self->_add_missing_warning($acc => 'illegal evidence type');
+              next;
+          }
+          $seq->type($type);
+          $seq->name($acc);
+        } else {
+          $self->_add_missing_warning($acc, "unknown accession or illegal evidence type");
         }
 
-        my $info = $cache->feature_accession_info($acc);
-        unless ($info) {
-            $self->logger->error("No info for '$acc' - this should not happen");
-            $self->_add_missing_warning($acc => 'internal error');
-            next;
-        }
+#        my ($type, $full) = @{$self->_acc_type_full($acc)};
+#        unless ($type) {
+#            $self->_add_missing_warning($acc => 'illegal evidence type');
+#            next;
+#        }
 
-        unless ($info->{currency} and $info->{currency} eq 'current') {
-            $self->_add_missing_warning($acc => 'obsolete SV');
-            next;
-        }
+#        my $info = $cache->feature_accession_info($acc);
+#        unless ($info) {
+#            $self->logger->error("No info for '$acc' - this should not happen");
+#            $self->_add_missing_warning($acc => 'internal error');
+#            next;
+#        }
 
-        unless ($info->{sequence}) {
-            $self->_add_missing_warning($acc => 'no sequence');
-            next;
-        }
+#        unless ($info->{currency} and $info->{currency} eq 'current') {
+#            $self->_add_missing_warning($acc => 'obsolete SV');
+#            next;
+#        }
 
-        my $seq = Hum::Sequence->new;
-        $seq->name($full);
-        $seq->type($type);
-        $seq->sequence_string($info->{sequence});
+#        unless ($info->{sequence}) {
+#            $self->_add_missing_warning($acc => 'no sequence');
+#            next;
+#        }
 
-        # Will this ever get hit?
-        if ($full ne $acc) {
-            $self->logger->error("_fetch_sequences called with partial acc.sv for '$acc','$full'");
-            $self->_add_remap_warning($acc => $full);
-        }
+#        my $seq = Hum::Sequence->new;
+#        $seq->name($full);
+#        $seq->type($type);
+#        $seq->sequence_string($info->{sequence});
 
-        push(@{$self->seqs}, $seq);
+#        # Will this ever get hit?
+#        if ($full ne $acc) {
+#            $self->logger->error("_fetch_sequences called with partial acc.sv for '$acc','$full'");
+#            $self->_add_remap_warning($acc => $full);
+#        }
+
+#        push(@{$self->seqs}, $seq);
     }
 
     return;
+}
+
+sub parse_fasta_sequence {
+    my ($self, $raw_seq) = @_;
+
+      my @seqs;
+      $raw_seq = $self->_tidy_sequence($raw_seq);
+      push @seqs, Hum::FastaFileIO->new(\$raw_seq)->read_all_sequences;
+        # Make sure entered seqs are distinct from seqs fetched by accession.
+        # (We could try to lookup and compare, as a future feature.)
+      foreach my $seq (@seqs) {
+        my $name = $seq->name;
+        unless ($name =~ /^otf[_:]/i) {
+            $seq->name($name);
+        }
+        $seq->type(seq_is_protein($seq->sequence_string) ? 'Protein' : 'DNA');
+      }
+
+      return @seqs[0];
+}
+
+sub _tidy_sequence {
+    my ($self, $seq) = @_;
+    open my $fh, '<', \$seq or $self->logger->logdie('open stringref failed');
+    my @stripped;
+    while (my $line = <$fh>) {
+        chomp $line;
+        unless ($line =~ /^>/) {
+            $line =~ s{       # strip leading line numbers:
+                          ^   #   start of line
+                          \s* #   optional leading whitespace
+                          \d+ #   line number
+                          \s+ #   at least some whitespace
+                      }{}x;
+            $line =~ s/\s+//g; # strip whitespace
+        }
+        push @stripped, $line if $line;
+    }
+    push @stripped, '';         # ensure trailing newline
+    return join("\n", @stripped);
 }
 
 # implements the local micro-cache - including caching misses

@@ -15,7 +15,7 @@ use Bio::Otter::SpeciesDat;
 use Bio::Otter::SpeciesDat::Database;
 use Bio::Otter::Version;
 use Bio::Otter::Auth::Access;
-
+use Bio::Otter::Server::UserSpecies;
 
 =head1 NAME
 
@@ -83,7 +83,7 @@ sub data_dir {
       unless -d $data;
 
     my $vsn = Bio::Otter::Version->version;
-    my @want = ("species.dat", "access.yaml",
+    my @want = ("species_ens.dat", "access.yaml",
                 "$vsn/otter_config", "$vsn/otter_styles.ini");
     my @lack = grep { ! -f "$data/$_" } @want;
     die "data_dir $data (from $src): lacks expected files (@lack)"
@@ -204,7 +204,7 @@ sub data_filename {
 
     if (!defined $dev_cfg) {
         @out = ("$data_dir/$fn", 'default');
-    } elsif (-f "$dev_cfg/species.dat" && -f "$dev_cfg/$vsn/otter_config") {
+    } elsif (-f "$dev_cfg/species_ens.dat" && -f "$dev_cfg/$vsn/otter_config") {
         @out = ("$dev_cfg/$fn", 'developer (full)');
     } else {
         # We have a partial override, e.g. checkout of a major version
@@ -366,7 +366,7 @@ sub Databases {
     my ($pkg) = @_;
     return $_DBS if defined $_DBS;
     my $dbs = try {
-        my ($h) = $pkg->_get_yaml('/databases.yaml');
+        my ($h) = $pkg->_get_yaml('/databases_ens.yaml');
         $h->{dbspec} or
           die "no dbspec in databases.yaml";
     } catch {
@@ -412,7 +412,7 @@ sub SpeciesDat {
 
 sub _SpeciesDat {
     my ($pkg) = @_;
-    my $fn = $pkg->data_filename('/species.dat');
+    my $fn = $pkg->data_filename('/species_ens.dat');
     return Bio::Otter::SpeciesDat->new($fn);
 }
 
@@ -492,7 +492,14 @@ Currently freshly loaded.  Maybe should be cached.
 my $_access;
 sub Access {
     my ($pkg) = @_;
-    my $acc = $pkg->_get_yaml('/access.yaml');
+    my $db = $pkg->Databases->{'otter_authentication'};
+    my $host = $db->{'_params'}->{'host'};
+    my $port = $db->{'_params'}->{'port'};
+    my $user = $db->{'_params'}->{'user'};
+    my $pass = $db->{'_params'}->{'pass'};
+    my $database = 'otter_user_registration';
+    my $dsn = "DBI:mysql:$database:$host:$port"; 
+    my $acc = Bio::Otter::Server::UserSpecies->species_group($dsn, $user, $pass);
     # this is not caching (like a singleton), it prevents weak refs to
     # the B:O:A:Access vanishing during multi-statement method chains
     $_access = Bio::Otter::Auth::Access->new($acc, $pkg->_SpeciesDat);

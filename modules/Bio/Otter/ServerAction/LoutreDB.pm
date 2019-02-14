@@ -74,6 +74,12 @@ sub get_meta {
 =head2 get_db_info
 =cut
 
+my $select_cs_sql = <<'SQL';
+    SELECT coord_system_id, species_id, name, version, rank, attrib
+      FROM coord_system
+     WHERE name = 'chromosome' AND version = 'Otter'
+SQL
+
 my $select_at_sql = <<'SQL';
     SELECT attrib_type_id, code, name, description
       FROM attrib_type
