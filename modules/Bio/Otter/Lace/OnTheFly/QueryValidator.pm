@@ -243,21 +243,19 @@ sub _fetch_sequences {
   @to_fetch = uniq @to_fetch;
   $self->logger->debug('Need seq for: ', join(',', @to_fetch) || '<none>');
   my $client = Bio::Otter::Lace::Defaults::make_Client();
-  foreach my $acc (@to_fetch) {
-        my $seq = $client->fetch_fasta_seqence($acc);
-        if (substr($seq, 0, 1) eq ">") {
-          $seq = $self->parse_fasta_sequence($seq);
-          push(@{$self->seqs}, $seq);
-          my ($type, $full) = @{$self->_acc_type_full($acc)};
-          unless ($type) {
-              $self->_add_missing_warning($acc => 'illegal evidence type');
-              next;
-          }
-          $seq->type($type);
-          $seq->name($acc);
-        } else {
-          $self->_add_missing_warning($acc, "unknown accession or illegal evidence type");
-        }
+  my @seqs = $client->fetch_fasta_sequence(@to_fetch).split('>');
+  my $iteration = 0;
+  foreach my $seq (@seqs) {
+      $seq = $self->parse_fasta_sequence($seq);
+      push(@{$self->seqs}, $seq);
+      my ($type, $full) = @{$self->_acc_type_full(@to_fetch[$iteration])};
+      unless ($type) {
+          $self->_add_missing_warning(@to_fetch[$iteration] => 'illegal evidence type');
+          next;
+      }
+      $seq->type($type);
+      $seq->name(@to_fetch[$iteration]);
+      $iteration++;
   }
   return;
 }
