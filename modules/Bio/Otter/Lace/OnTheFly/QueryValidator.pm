@@ -243,11 +243,15 @@ sub _fetch_sequences {
   @to_fetch = uniq @to_fetch;
   $self->logger->debug('Need seq for: ', join(',', @to_fetch) || '<none>');
   my $client = Bio::Otter::Lace::Defaults::make_Client();
-  my @seqs = $client->fetch_fasta_sequence(@to_fetch).split('>');
+  my $seqs = $client->fetch_fasta_sequence(@to_fetch);
+  my @seq_array = split('>', $seqs);
   my $iteration = 0;
-  foreach my $seq (@seqs) {
-      $seq = $self->parse_fasta_sequence($seq);
-      push(@{$self->seqs}, $seq);
+
+  foreach my $sequence (@seq_array) {
+      if (length($sequence) < 2) {
+          next;
+      };
+      my $seq = $self->parse_fasta_sequence('>' . $sequence);
       my ($type, $full) = @{$self->_acc_type_full(@to_fetch[$iteration])};
       unless ($type) {
           $self->_add_missing_warning(@to_fetch[$iteration] => 'illegal evidence type');
@@ -256,6 +260,7 @@ sub _fetch_sequences {
       $seq->type($type);
       $seq->name(@to_fetch[$iteration]);
       $iteration++;
+      push(@{$self->seqs}, $seq);
   }
   return;
 }
