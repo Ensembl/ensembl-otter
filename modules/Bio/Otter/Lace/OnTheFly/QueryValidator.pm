@@ -252,6 +252,10 @@ sub _fetch_sequences {
           next;
       };
       my $seq = $self->parse_fasta_sequence('>' . $sequence);
+      while ((index $seq->name, $to_fetch[$iteration]) == -1 && $iteration < scalar(@to_fetch)) {
+            warn ($to_fetch[$iteration] . ' skipped, not found in ' . $seq->name);
+            $iteration++;
+      }
       my ($type, $full) = @{$self->_acc_type_full($to_fetch[$iteration])};
       unless ($type) {
           $self->_add_missing_warning($to_fetch[$iteration] => 'illegal evidence type');
