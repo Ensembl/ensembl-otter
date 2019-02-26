@@ -252,13 +252,13 @@ sub _fetch_sequences {
           next;
       };
       my $seq = $self->parse_fasta_sequence('>' . $sequence);
-      my ($type, $full) = @{$self->_acc_type_full(@to_fetch[$iteration])};
+      my ($type, $full) = @{$self->_acc_type_full($to_fetch[$iteration])};
       unless ($type) {
-          $self->_add_missing_warning(@to_fetch[$iteration] => 'illegal evidence type');
+          $self->_add_missing_warning($to_fetch[$iteration] => 'illegal evidence type');
           next;
       }
       $seq->type($type);
-      $seq->name(@to_fetch[$iteration]);
+      $seq->name($to_fetch[$iteration]);
       $iteration++;
       push(@{$self->seqs}, $seq);
   }
@@ -281,7 +281,7 @@ sub parse_fasta_sequence {
         $seq->type(seq_is_protein($seq->sequence_string) ? 'Protein' : 'DNA');
       }
 
-      return @seqs[0];
+      return $seqs[0];
 }
 
 sub _tidy_sequence {
