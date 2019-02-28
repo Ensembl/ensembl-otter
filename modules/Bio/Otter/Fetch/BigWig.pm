@@ -25,7 +25,6 @@ use strict;
 use warnings;
 use Try::Tiny;
 use Carp;
-use Data::Dumper;
 use Bio::DB::BigWig qw( binMean );
 
 use Bio::Otter::Fetch::BigWig::Feature;
@@ -111,4 +110,3 @@ __END__
 =head1 AUTHOR
 
 Ana Code B<email> anacode@sanger.ac.uk
-
