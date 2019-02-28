@@ -17,6 +17,7 @@
 use warnings;
 use LWP::UserAgent;
 use HTTP::Request;
+use strict;
 
 BEGIN { use lib ($ENV{OTTER_PERL_INC} || q{}) =~ m{([^:]+)}g }
 use SangerPaths qw{ core bioperl123 otter };
@@ -28,31 +29,52 @@ sub get_fasta_sequence {
     my ($server) = @_;
 
     my $id = $server->require_argument('id');
+
+    my @raw_id_array = split (',', $id);
+    $id = "";
+    foreach my $current_id (@raw_id_array) {
+        if (index($current_id, '-') != -1) {
+          $current_id =~ s/\.\d+//;
+        }
+        $id = $id . ',' . $current_id;
+    }
+
     my @queries;
-    my $query = 'http://www.ebi.ac.uk/Tools/dbfetch/dbfetch?format=fasta&style=raw&db=refseqn&id='
-      . $id;
+    my $query = 'http://www.ebi.ac.uk/Tools/dbfetch/dbfetch?format=fasta&style=raw&db=uniprotkb&id=';
     push @queries, $query;
-    $query = 'http://www.ebi.ac.uk/Tools/dbfetch/dbfetch?db=ena_sequence&format=fasta&style=raw&Retrieve=Retrieve&id='
-      . $id;
+    my $query = 'http://www.ebi.ac.uk/Tools/dbfetch/dbfetch?format=fasta&style=raw&db=refseqn&id=';
+    push @queries, $query;
+    $query = 'http://www.ebi.ac.uk/Tools/dbfetch/dbfetch?db=ena_sequence&format=fasta&style=raw&Retrieve=Retrieve&id=';
     push @queries, $query;
 
-    if (index($id, '-') != -1) {
-      $id =~ s/\.\d+//;
+    my $response;
+    my $concat_response = '';
+    my $i = 0;
+    while ($i < 3 || $id != '') {
+        my @id_array = split (',', $id);
+        $id = '';
+        foreach my $current_id (@id_array) {
+            if ((index $concat_response, $current_id) == -1) {
+                warn "ID " . $current_id . "not found ";
+                 $id = $id . ',' . $current_id;
+            }
+        }
+        $response = fetch_ids_from_external_db($queries[$i] . $id);
+        $concat_response = $concat_response . $response;
+        $i++;
     }
+    return $server->otter_wrap_response($concat_response);
+}
 
-    $query = 'http://www.ebi.ac.uk/Tools/dbfetch/dbfetch?format=fasta&style=raw&db=uniprotkb&id='
-      . $id;
-    push @queries, $query;
+sub fetch_ids_from_external_db {
+    my ($query) = @_;
     my $result;
+    $result = web_fetch($query);
+    if ($result->is_success && substr($result->decoded_content, 0, 1) eq ">") {
+      return $result->decoded_content;
 
-    for my $current_query (@queries) {
-      $result = web_fetch($current_query);
-      if ($result->is_success && substr($result->decoded_content, 0, 1) eq ">") {
-        return $server->otter_wrap_response($result->decoded_content);
-      }
     }
-    warn $result->decoded_content;
-    return $server->otter_wrap_response($result->decoded_content);
+    return '';
 }
 
 sub web_fetch {

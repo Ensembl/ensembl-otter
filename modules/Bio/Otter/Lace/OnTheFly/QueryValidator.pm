@@ -253,7 +253,11 @@ sub _fetch_sequences {
       };
       my $seq = $self->parse_fasta_sequence('>' . $sequence);
       while ((index $seq->name, $to_fetch[$iteration]) == -1 && $iteration < scalar(@to_fetch)) {
-            warn ($to_fetch[$iteration] . ' skipped, not found in ' . $seq->name);
+      my $iteration = 0;
+      my @to_fetch_cut = @to_fetch;
+      @to_fetch_cut = map { m/\-/ && s/\.\d+$//; $_ } @to_fetch_cut;
+      while ((index $seq->name, $to_fetch_cut[$iteration]) == -1 && $iteration < scalar(@to_fetch)) {
+            warn ($to_fetch_cut[$iteration] . ' skipped, not found in ' . $seq->name);
             $iteration++;
       }
       my ($type, $full) = @{$self->_acc_type_full($to_fetch[$iteration])};
