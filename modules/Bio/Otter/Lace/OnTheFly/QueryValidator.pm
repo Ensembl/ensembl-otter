@@ -244,32 +244,41 @@ sub _fetch_sequences {
   $self->logger->debug('Need seq for: ', join(',', @to_fetch) || '<none>');
   my $client = Bio::Otter::Lace::Defaults::make_Client();
   my $seqs = $client->fetch_fasta_sequence(@to_fetch);
+  use Data::Dumper;
+  warn Dumper(@to_fetch);
+  warn Dumper($seqs);
   my @seq_array = split('>', $seqs);
-  my $iteration = 0;
+
 
   foreach my $sequence (@seq_array) {
       if (length($sequence) < 2) {
           next;
       };
+
       my $seq = $self->parse_fasta_sequence('>' . $sequence);
-      while ((index $seq->name, $to_fetch[$iteration]) == -1 && $iteration < scalar(@to_fetch)) {
       my $iteration = 0;
+       warn "TO FETCH BEFOR MAP: " . Dumper(@to_fetch);
       my @to_fetch_cut = @to_fetch;
       @to_fetch_cut = map { m/\-/ && s/\.\d+$//; $_ } @to_fetch_cut;
+      warn "TO FETCH AFTER MAP: " . Dumper(@to_fetch);
       while ((index $seq->name, $to_fetch_cut[$iteration]) == -1 && $iteration < scalar(@to_fetch)) {
             warn ($to_fetch_cut[$iteration] . ' skipped, not found in ' . $seq->name);
             $iteration++;
       }
+
+      warn "WE HAVE CHECKED IN RESPONSE ACCESSION". $to_fetch[$iteration];
+      warn "IT HAS TYPE: " . Dumper($self->_acc_type_full($to_fetch[$iteration]));
       my ($type, $full) = @{$self->_acc_type_full($to_fetch[$iteration])};
       unless ($type) {
           $self->_add_missing_warning($to_fetch[$iteration] => 'illegal evidence type');
           next;
       }
       $seq->type($type);
-      $seq->name($to_fetch[$iteration]);
-      $iteration++;
+      $seq->name($to_fetch_cut[$iteration]);
       push(@{$self->seqs}, $seq);
   }
+  warn Dumper($self->seqs);
+
   return;
 }
 
