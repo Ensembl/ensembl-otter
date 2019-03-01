@@ -274,7 +274,7 @@ sub _fetch_sequences {
           next;
       }
       $seq->type($type);
-      $seq->name($to_fetch_cut[$iteration]);
+      $seq->name($full);
       push(@{$self->seqs}, $seq);
   }
   warn Dumper($self->seqs);
