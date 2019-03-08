@@ -15,7 +15,7 @@ fi
 bin_dir="${OTTER_SWAC}/bin"
 export PATH="$bin_dir:$PATH"
 
-export FONTCONFIG_PATH="${OTTER_SWAC}/etc/fonts"
+export FONTCONFIG_PATH="${OTTER_SWAC}/share/fonts"
 
 # Make etc directory inside ~/.otter to store
 # the gdk-pixbuf and pango config files needed
@@ -29,7 +29,7 @@ lib_path="${OTTER_SWAC}/lib"
 # its bitmap image format loaders
 export GDK_PIXBUF_MODULE_FILE="$dot_otter_etc/gdk-pixbuf.loaders"
 
-GDK_PIXBUF_MODULEDIR="${lib_path}/gdk-pixbuf-2.0/2.10.0/loaders" \
+GDK_PIXBUF_MODULEDIR="/opt/local/lib/gdk-pixbuf-2.0/2.10.0/loaders" \
 gdk-pixbuf-query-loaders > "$GDK_PIXBUF_MODULE_FILE"
 
 # Create config files for pango font handling library
@@ -43,7 +43,7 @@ ModuleFiles = $pango_module_file
 
 PANGO_RC
 
-find "${lib_path}/pango" -name '*.so' -print0 \
+find "/opt/local/lib" -name 'libpango*.dylib' -print0 \
 | xargs -0 pango-querymodules > "$pango_module_file"
 
 # Need the X11 locale directory
