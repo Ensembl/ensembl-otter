@@ -1,5 +1,5 @@
 #!/usr/bin/perl -Tw
-# Copyright [2018] EMBL-European Bioinformatics Institute
+# Copyright [2018-2019] EMBL-European Bioinformatics Institute
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -35,7 +35,11 @@ sub get_fasta_sequence {
     $query = 'http://www.ebi.ac.uk/Tools/dbfetch/dbfetch?db=ena_sequence&format=fasta&style=raw&Retrieve=Retrieve&id='
       . $id;
     push @queries, $query;
-    $id =~ s/-\d+//;
+
+    if (index($id, '-') != -1) {
+      $id =~ s/\.\d+//;
+    }
+
     $query = 'http://www.ebi.ac.uk/Tools/dbfetch/dbfetch?format=fasta&style=raw&db=uniprotkb&id='
       . $id;
     push @queries, $query;
