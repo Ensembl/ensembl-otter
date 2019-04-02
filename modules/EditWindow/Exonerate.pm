@@ -500,6 +500,16 @@ sub launch_exonerate {
 
     my $top = $self->top;
 
+    if (scalar(@{$self->entered_accessions}) > 99) {
+        $top->messageBox(
+            -title   => 'Too much accessions',
+            -icon    => 'warning',
+            -message => 'You have requested '. scalar(@{$self->entered_accessions}) . ' accessions, can\'t fetch more than 100',
+            -type    => 'OK',
+        );
+        return;
+    }
+
     $self->progress('Building OTF session');
     my $otf = Bio::Otter::Lace::OnTheFly::Genomic->new(
 
