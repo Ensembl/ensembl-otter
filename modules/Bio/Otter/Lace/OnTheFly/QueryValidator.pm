@@ -269,7 +269,6 @@ sub _fetch_sequences {
       $seq->name($full);
       push(@{$self->seqs}, $seq);
   }
-  warn Dumper($self->seqs);
 
   return;
 }
