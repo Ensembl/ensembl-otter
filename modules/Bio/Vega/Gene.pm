@@ -18,17 +18,6 @@ sub new {
   return $self;
 }
 
-#sub status {
-#  my ($self) = @_;
-
-#  return 'KNOWN';
-#}
-
-#sub is_known {
-#  my ($self) = @_;
-
-#  return 1;
-#}
 
 sub new_dissociated_copy {
     my ($self) = @_;
@@ -359,6 +348,16 @@ sub set_biotype_status_from_transcripts {
     return;
 }
 
+
+=head2 status
+
+ Arg [1]    : String (optional), status of the gene, KNOWN, PUTATIVE,...
+ Description: Return or set the status of the gene. The value will
+              be stored as an attribute.
+ Returntype : String
+ Exceptions : None
+
+=cut
 
 sub status {
   my ($self, $status) = @_;
