@@ -4,6 +4,7 @@ use strict;
 use warnings;
 use Bio::EnsEMBL::Utils::Argument  qw ( rearrange );
 use Bio::EnsEMBL::Utils::Exception qw ( throw warning );
+use Bio::EnsEMBL::Attribute;
 use Bio::Vega::Utils::Attribute    qw ( get_first_Attribute_value get_name_Attribute_value );
 use Bio::Vega::Utils::AttributesMixin;
 use base 'Bio::EnsEMBL::Gene';
@@ -358,6 +359,28 @@ sub set_biotype_status_from_transcripts {
     return;
 }
 
+
+sub status {
+  my ($self, $status) = @_;
+
+  my $attributes = $self->get_all_Attributes('status');
+  if ($status) {
+    $self->{status} = $status;
+    if (@$attributes) {
+      $attributes->[0]->value($status);
+    }
+    else {
+      $self->add_Attributes(Bio::EnsEMBL::Attribute->new(-code => 'status', -value => $status));
+    }
+  }
+  elsif (!$self->{status} and @$attributes) {
+    if (@$attributes > 1) {
+      warning('You have multiple status attributes, using the first one '.$attributes->[0]);
+    }
+    $self->{status} = $attributes->[0]->value;
+  }
+  return $self->{status};
+}
 
 
 1;
