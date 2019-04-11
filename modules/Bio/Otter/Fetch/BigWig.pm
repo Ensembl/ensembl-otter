@@ -1,6 +1,6 @@
 =head1 LICENSE
 
-Copyright [2018] EMBL-European Bioinformatics Institute
+Copyright [2018-2019] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -25,7 +25,6 @@ use strict;
 use warnings;
 use Try::Tiny;
 use Carp;
-use Data::Dumper;
 use Bio::DB::BigWig qw( binMean );
 
 use Bio::Otter::Fetch::BigWig::Feature;
@@ -111,4 +110,3 @@ __END__
 =head1 AUTHOR
 
 Ana Code B<email> anacode@sanger.ac.uk
-
