@@ -96,7 +96,11 @@ sub result_url {
 
 sub widg {
     my ($self, $name) = @_;
-    return $self->{_widg}->{$name} or die "No widg($name)";
+
+    if (! $self->{_widg}->{$name}) {
+      confess "No widg($name)";
+    }
+    return $self->{_widg}->{$name};
 }
 
 sub initialise {
