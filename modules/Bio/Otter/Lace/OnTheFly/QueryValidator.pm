@@ -243,22 +243,33 @@ sub _fetch_sequences {
   @to_fetch = uniq @to_fetch;
   $self->logger->debug('Need seq for: ', join(',', @to_fetch) || '<none>');
   my $client = Bio::Otter::Lace::Defaults::make_Client();
-  foreach my $acc (@to_fetch) {
-        my $seq = $client->fetch_fasta_seqence($acc);
-        if (substr($seq, 0, 1) eq ">") {
-          $seq = $self->parse_fasta_sequence($seq);
-          push(@{$self->seqs}, $seq);
-          my ($type, $full) = @{$self->_acc_type_full($acc)};
-          unless ($type) {
-              $self->_add_missing_warning($acc => 'illegal evidence type');
-              next;
-          }
-          $seq->type($type);
-          $seq->name($acc);
-        } else {
-          $self->_add_missing_warning($acc, "unknown accession or illegal evidence type");
-        }
+  my $seqs = $client->fetch_fasta_sequence(@to_fetch);
+  my @seq_array = split('>', $seqs);
+
+
+  foreach my $sequence (@seq_array) {
+      if (length($sequence) < 2) {
+          next;
+      };
+
+      my $seq = $self->parse_fasta_sequence('>' . $sequence);
+      my $iteration = 0;
+      my @to_fetch_cut = @to_fetch;
+      @to_fetch_cut = map { m/\-/ && s/\.\d+$//; $_ } @to_fetch_cut;
+      while ((index $seq->name, $to_fetch_cut[$iteration]) == -1 && $iteration < scalar(@to_fetch)) {
+            $iteration++;
+      }
+
+      my ($type, $full) = @{$self->_acc_type_full($to_fetch[$iteration])};
+      unless ($type) {
+          $self->_add_missing_warning($to_fetch[$iteration] => 'illegal evidence type');
+          next;
+      }
+      $seq->type($type);
+      $seq->name($full);
+      push(@{$self->seqs}, $seq);
   }
+
   return;
 }
 
@@ -278,7 +289,7 @@ sub parse_fasta_sequence {
         $seq->type(seq_is_protein($seq->sequence_string) ? 'Protein' : 'DNA');
       }
 
-      return @seqs[0];
+      return $seqs[0];
 }
 
 sub _tidy_sequence {

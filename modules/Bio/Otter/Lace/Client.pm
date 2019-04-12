@@ -1134,12 +1134,17 @@ sub _get_DataSets_hash {
     return $datasets_hash;
 }
 
-sub fetch_fasta_seqence {
-    my ($self, $acc) = @_;
-    my $datasets_hash = $self->otter_response_content
-        ('GET', 'get_fasta_sequence', {'id'=>$acc, 'author' => $self->author});
 
-    return $datasets_hash;
+sub fetch_fasta_sequence {
+    my ($self, @accessions) = @_;
+
+    my $hashref = $self->otter_response_content(
+        'POST',
+        'get_fasta_sequence',
+        {'author' => $self->author, 'id' => join ',', @accessions },
+        );
+
+    return $hashref;
 }
 
 sub _make_DataSet {
