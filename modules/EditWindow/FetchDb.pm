@@ -335,7 +335,7 @@ sub entered_accessions {
         $txt =~ s/\s+$//;
         @supplied_accs = split(/[,;\|\s]+/, $txt);
     }
-    return @supplied_accs[0];
+    return $supplied_accs[0];
 }
 
 sub _tidy_pasted_sequence {
