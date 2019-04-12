@@ -134,12 +134,11 @@ case "$osname" in
     Darwin)
         anasoft_distro=
         otter_perl=
-        PERL5LIB="${PERL5LIB}:\
-$anasoft/lib/site_perl:\
-$anasoft/lib/perl5/site_perl:\
-$anasoft/lib/perl5/vendor_perl:\
-$anasoft/lib/perl5\
-"
+        #This is based on someone having a Mac will have the app installed. Hopefully it should work even
+        #if it is not installed.
+        #I used '=' for sed but anything can be used except '/'
+        perl_inc=`$anasoft/bin/perl -e '$"=":";print qq(@INC)' | sed "s=/Users[^:]*\.app/Contents/Resources=$anasoft=g"`
+        PERL5LIB="${PERL5LIB}:${perl_inc}"
         if [ -z "$OTTER_MACOS" ]
         then
             source "$ensembl_otter_home/scripts/client/_otter_macos_env.sh"
