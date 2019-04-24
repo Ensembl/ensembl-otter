@@ -317,6 +317,22 @@ sub status {
 }
 
 
+=head2 status
+
+ Arg [1]    : None
+ Description: Return true if the transcript is of status 'KNOWN'
+ Returntype : Boolean
+ Exceptions : None
+
+=cut
+
+sub is_known {
+  my ($self) = @_;
+
+  return ($self->status eq 'KNOWN' || $self->status eq 'KNOWN_BY_PROJECTION');
+}
+
+
 1;
 
 __END__
