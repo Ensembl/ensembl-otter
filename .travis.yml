@@ -22,3 +22,9 @@ install:
 
 
 script: "docker run -i --name devtest -v $ROOT_PATH/app:/loutre smmebi/otter_test_update:latest"
+
+notifications:
+  slack:
+    rooms:
+      secure: LxuhCWySaQN0zz4Zjkl8zG5R3L1Nfcu1VNesZxyafde6MMzaG4Bhg50yfRVTdt41o0j4/c/4V/s1UwGN+RMZvG3kaeG/0Fj4WUDKa8DLyYDS10amiYwxuZ6p7bOduig9TYCVMIKlBHWizLrvk4KXJVxSAv1QPHbvJIVJ0Ie4JSFsW9KSy7AdEGR9fScHT3wnuBeMiw42h1jkU1yFfc0ISctTqybhccyHNAp9UqQgQxFzd4CHd9xfbAZ80eDMmEuMcpMnVJAcSZzJzci0ftw0ThfEowZVkoBp0LLM7hMVFaSWzj7gm1PoDROPOFrlypLeJrlZkcg/WtCp/8IBjqYzseNhXG35ALOjtje9nXGg0/a1XSlI93u+XOMY5g0lt1nN2rr+wiYnWiGbBb56/EvMedUiAzeMdVk6iOq7h9Qo38dLdQ2QPDWZqA7fn9JrqD7wIofiX4R8p7wJi+a5Lx3up2AG4AMzUWfmzxkf+pAZE09aOfonAaAdWtaN84pEVjV2S0Dc+uSUzlAp8jCvSLkNtw0dbNvRyFGppEYZaJmqaO6EiKx6jEMG/DDWeFCLNGjWFRzlF6dpXY+28v8gHhM7AzOkfS3JFOeBz65i5JnIC9VVXOJJ3JRe3AH+VBwETZ+kKKVXj4FIDLuUi7a7H4oyJgo2VV9ZHZldYxsptZI+AXo=
+    on_failure: change
