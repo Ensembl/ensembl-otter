@@ -382,7 +382,7 @@ sub status {
 }
 
 
-=head2 status
+=head2 is_known
 
  Arg [1]    : None
  Description: Return true if the gene is of status 'KNOWN'
