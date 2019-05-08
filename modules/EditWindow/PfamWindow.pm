@@ -97,7 +97,7 @@ sub result_url {
 sub widg {
     my ($self, $name) = @_;
 
-    if (! $self->{_widg}->{$name}) {
+    if (! exists $self->{_widg}->{$name}) {
       confess "No widg($name)";
     }
     return $self->{_widg}->{$name};
