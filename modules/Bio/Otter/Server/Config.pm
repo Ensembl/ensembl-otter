@@ -83,7 +83,7 @@ sub data_dir {
       unless -d $data;
 
     my $vsn = Bio::Otter::Version->version;
-    my @want = ("species_ens.dat", "access.yaml",
+    my @want = ("species.dat",
                 "$vsn/otter_config", "$vsn/otter_styles.ini");
     my @lack = grep { ! -f "$data/$_" } @want;
     die "data_dir $data (from $src): lacks expected files (@lack)"
@@ -204,7 +204,7 @@ sub data_filename {
 
     if (!defined $dev_cfg) {
         @out = ("$data_dir/$fn", 'default');
-    } elsif (-f "$dev_cfg/species_ens.dat" && -f "$dev_cfg/$vsn/otter_config") {
+    } elsif (-f "$dev_cfg/species.dat" && -f "$dev_cfg/$vsn/otter_config") {
         @out = ("$dev_cfg/$fn", 'developer (full)');
     } else {
         # We have a partial override, e.g. checkout of a major version
@@ -366,7 +366,7 @@ sub Databases {
     my ($pkg) = @_;
     return $_DBS if defined $_DBS;
     my $dbs = try {
-        my ($h) = $pkg->_get_yaml('/databases_ens.yaml');
+        my ($h) = $pkg->_get_yaml('/databases.yaml');
         $h->{dbspec} or
           die "no dbspec in databases.yaml";
     } catch {
@@ -412,7 +412,7 @@ sub SpeciesDat {
 
 sub _SpeciesDat {
     my ($pkg) = @_;
-    my $fn = $pkg->data_filename('/species_ens.dat');
+    my $fn = $pkg->data_filename('/species.dat');
     return Bio::Otter::SpeciesDat->new($fn);
 }
 
