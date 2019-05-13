@@ -4,71 +4,27 @@ perl:
   - "5.22"
 os:
   - linux
-dist:
-  - xenial
+services: docker
 
-sudo: true
-
+before_install:
+    - docker pull smmebi/otter_test_update
 install:
-    - sudo apt-get update
-    - sudo apt-get install -y git libtry-tiny-perl perl-tk libproc-processtable-perl libdbi-perl libreadonly-perl liblog-log4perl-perl libterm-readkey-perl libxml-simple-perl libtext-sprintfn-perl libjson-perl libconfig-inifiles-perl liblingua-en-inflect-perl libio-stringy-perl libdata-rmap-perl libnamespace-autoclean-perl libyaml-perl libhash-merge-simple-perl libfile-slurp-perl libmoosex-role-strict-perl libmoosex-log-log4perl-perl liblog-any-adapter-screencoloredlevel-perl cpanminus libzeromq-perl libzmqpp-dev libanyevent-perl libconst-fast-perl libtest-mockobject-perl mysql-client apache2 sqlite3 libcurl3 libcurl4-openssl-dev libsqlite3-dev libgtk2.0-dev libmysqlclient-dev libconfig-dev libhts-dev libreadline6-dev libssl-dev libgnutls-dev exonerate hmmer2 libdbd-sqlite3-perl libdbd-mysql-perl uuid-dev libbz2-dev liblzma-dev libzmqpp-dev libzmqpp3 libzmq5 libzmq3-dev libzmq1
+    - cd ../
+    - export ROOT_PATH=$PWD
+    - mkdir app
+    - cp -r $ROOT_PATH/ensembl-otter ./app
+    - cd app
     - git clone --branch master --depth 1 https://github.com/Ensembl/team_tools.git
     - git clone --branch master --depth 1 https://github.com/Ensembl/webvm.git
     - git clone --branch master --depth 1 https://github.com/Ensembl/webvm-deps.git
-    - wget https://github.com/samtools/htslib/releases/download/1.8/htslib-1.8.tar.bz2
-    - tar xvf htslib-1.8.tar.bz2
-    - cd htslib-1.8
-    - ./configure
-    - make
-    - sudo make install
-    - cd ../
-    - cpanm --sudo --force Bio::Das::Lite
-    - travis_wait cpanm -n --sudo Try::Tiny Test::Class::Most Tk Proc::ProcessTable DBI Readonly Log::Log4perl Term::ReadKey XML::Simple Text::sprintfn JSON Config::IniFiles Lingua::EN::Inflect IO::Scalar Data::Rmap namespace::autoclean YAML Hash::Merge::Simple File::Slurp Moose::Role MooseX::Log::Log4perl Log::Log4perl::Appender XML::Entities Const::Fast Crypt::CBC App::Cmd::Simple Mac::PropertyList
-    - travis_wait cpanm -n --sudo Bio::DB::HTS
-    - travis_wait cpanm -n --sudo XML::Entities
-    - travis_wait cpanm -n --sudo ZMQ::LibZMQ3
-    - travis_wait cpanm --sudo Crypt::CBC App::Cmd::Simple Mac::PropertyList
-    - git clone git://genome-source.soe.ucsc.edu/kent.git
-    - cd kent
-    - sed -i -- 's/-DUCSC_CRAM/-DUCSC_CRAM -fPIC/g' ./src/htslib/Makefile
-    - sed -i -- 's/CC=gcc/CC=gcc -fPIC/g' ./src/inc/common.mk
-    - cd src
-    - export KENT_SRC=$PWD
-    - travis_wait sudo CFLAGS=-fPIC make userApps
-    - cd ../../
-    - travis_wait wget https://cpan.metacpan.org/authors/id/L/LD/LDS/Bio-BigFile-1.01.tar.gz
-    - travis_wait tar -zxvf Bio-BigFile-1.01.tar.gz
-    - cd Bio-BigFile-1.01
-    - perl -pi -e 's/.*extra_linker_flags.*/extra_linker_flags => ["\$jk_lib\/\$LibFile","\$jk_lib\/..\/..\/htslib\/libhts.a","-lz", "-lssl"],/g' Build.PL
-    - export MACHTYPE=`uname -p`
-    - travis_wait perl Build.PL
-    - travis_wait ./Build
-    - travis_wait ./Build test
-    - travis_wait sudo ./Build install
-    - cd ../
-    - travis_wait wget "ftp://ftp.sanger.ac.uk/pub/resources/software/zmap/production/seqtools-4.44.1.tar.gz"
-    - travis_wait tar -zxvf seqtools-4.44.1.tar.gz
-    - cd seqtools-4.44.1/
-    - travis_wait ./configure
-    - travis_wait make
-    - travis_wait sudo make install
-    - cd ../
-    - travis_wait wget "ftp://ftp.sanger.ac.uk/pub/resources/software/zmap/production/zmap-2.12.0.tar.gz"
-    - travis_wait tar -zxvf zmap-2.12.0.tar.gz
-    - cd zmap-2.12.0
-    - travis_wait sed -i 's/opensslv\.h/openssl\/opensslv.h/' ./configure
-    - travis_wait ./configure
-    - travis_wait make
-    - travis_wait sudo make install
-    - cd ../
-    - travis_wait wget https://github.com/Annosoft/zircon/archive/master.zip
-    - travis_wait unzip master.zip
-    - cp -r zircon-master zircon
-    - cd ../
-    - export PERL5LIB=$PWD/ensembl-otter/modules:$PWD/ensembl/modules:$PWD/PerlModules:$PWD/zircon/lib
-    - export PATH=$PATH:$PWD/ensembl-otter/scripts/client
-    - mysql -u root -h localhost -e 'GRANT ALL PRIVILEGES ON *.* TO "travis"@"%"'
-    - chmod 777 ensembl-otter/travisci.sh
-    - chmod +x ensembl-otter/travisci.sh
+    - git clone --branch master --depth 1 https://github.com/Ensembl/zircon.git
+    - git clone --branch master --depth 1 https://github.com/Ensembl/PerlModules.git
 
-script: "perl -Ilib ensembl-otter/t/classes.t" 
+
+script: "docker run -i --name devtest -v $ROOT_PATH/app:/loutre smmebi/otter_test_update:latest"
+
+notifications:
+  slack:
+    rooms:
+      secure: LxuhCWySaQN0zz4Zjkl8zG5R3L1Nfcu1VNesZxyafde6MMzaG4Bhg50yfRVTdt41o0j4/c/4V/s1UwGN+RMZvG3kaeG/0Fj4WUDKa8DLyYDS10amiYwxuZ6p7bOduig9TYCVMIKlBHWizLrvk4KXJVxSAv1QPHbvJIVJ0Ie4JSFsW9KSy7AdEGR9fScHT3wnuBeMiw42h1jkU1yFfc0ISctTqybhccyHNAp9UqQgQxFzd4CHd9xfbAZ80eDMmEuMcpMnVJAcSZzJzci0ftw0ThfEowZVkoBp0LLM7hMVFaSWzj7gm1PoDROPOFrlypLeJrlZkcg/WtCp/8IBjqYzseNhXG35ALOjtje9nXGg0/a1XSlI93u+XOMY5g0lt1nN2rr+wiYnWiGbBb56/EvMedUiAzeMdVk6iOq7h9Qo38dLdQ2QPDWZqA7fn9JrqD7wIofiX4R8p7wJi+a5Lx3up2AG4AMzUWfmzxkf+pAZE09aOfonAaAdWtaN84pEVjV2S0Dc+uSUzlAp8jCvSLkNtw0dbNvRyFGppEYZaJmqaO6EiKx6jEMG/DDWeFCLNGjWFRzlF6dpXY+28v8gHhM7AzOkfS3JFOeBz65i5JnIC9VVXOJJ3JRe3AH+VBwETZ+kKKVXj4FIDLuUi7a7H4oyJgo2VV9ZHZldYxsptZI+AXo=
+    on_failure: change
