@@ -280,11 +280,11 @@ sub load_dataset_info {
 
     my $dbh = $dbh{$self};
 
-    my $meta_sth = $dbh->prepare(q{ INSERT OR IGNORE INTO meta (species_id, meta_key, meta_value) VALUES (?, ?, ?) });
+    my $meta_sth = $dbh->prepare(q{ INSERT INTO meta (species_id, meta_key, meta_value) VALUES (?, ?, ?) });
     my $meta_hash = $dataset->meta_hash;
 
     my @cs_cols = qw(                                        coord_system_id  species_id  name  version  rank  attrib );
-    my $cs_sth  = $dbh->prepare(q{ INSERT OR IGNORE INTO coord_system (coord_system_id, species_id, name, version, rank, attrib)
+    my $cs_sth  = $dbh->prepare(q{ INSERT INTO coord_system (coord_system_id, species_id, name, version, rank, attrib)
                                                      VALUES (?, ?, ?, ?, ?, ?) });
 
     # I'm not really sure we need to do this - we could just use a local version
