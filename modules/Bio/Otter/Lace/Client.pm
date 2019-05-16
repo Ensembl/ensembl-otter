@@ -1334,15 +1334,16 @@ sub get_slice_DE {
 sub slice_query {
     my ($self, $slice) = @_;
     die unless wantarray;
-    return ('dataset' => $slice->dsname(),
-            'chr'     => $slice->ssname(),
-
-            'cs'      => $slice->csname(),
-            'csver'   => $slice->csver(),
-            'name'    => $slice->seqname(),
-            'start'   => $slice->start(),
-            'end'     => $slice->end(),
-            'author'  => $self->author;
+    return (
+        'dataset' => $slice->dsname(),
+        'chr'     => $slice->ssname(),
+        'cs'      => $slice->csname(),
+        'csver'   => $slice->csver(),
+        'name'    => $slice->seqname(),
+        'start'   => $slice->start(),
+        'end'     => $slice->end(),
+        'author'  => $self->author,
+    );
 }
 
 
