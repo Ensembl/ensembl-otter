@@ -1354,7 +1354,7 @@ sub do_authentication {
         'authenticate_me',
         {'author' => $self->author},
     );
-    return $user
+    return $user;
 }
 
 sub get_all_SequenceSets_for_DataSet {
