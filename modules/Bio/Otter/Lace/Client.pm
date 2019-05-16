@@ -1341,7 +1341,7 @@ sub slice_query {
             'csver'   => $slice->csver(),
             'name'    => $slice->seqname(),
             'start'   => $slice->start(),
-            'end'     => $slice->end()),
+            'end'     => $slice->end(),
             'author'  => $self->author;
 }
 
