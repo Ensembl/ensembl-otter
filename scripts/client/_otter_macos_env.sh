@@ -1,3 +1,19 @@
+#!/usr/bin/env perl
+# Copyright [2018-2019] EMBL-European Bioinformatics Institute
+# 
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+# 
+#      http://www.apache.org/licenses/LICENSE-2.0
+# 
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+
 # The guts of setting up MacOS specifics,
 # usually called from _otter_env_core.sh.
 #
@@ -23,13 +39,13 @@ dot_otter=~/.otter
 dot_otter_etc="$dot_otter/etc"
 mkdir -p "$dot_otter_etc"
 
-lib_path="${OTTER_SWAC}/lib"
+lib_path="/opt/local/lib"
 
 # Create config file so that gdk-pixbuf can load
 # its bitmap image format loaders
 export GDK_PIXBUF_MODULE_FILE="$dot_otter_etc/gdk-pixbuf.loaders"
 
-GDK_PIXBUF_MODULEDIR="/opt/local/lib/gdk-pixbuf-2.0/2.10.0/loaders" \
+GDK_PIXBUF_MODULEDIR="${lib_path}/gdk-pixbuf-2.0/2.10.0/loaders" \
 gdk-pixbuf-query-loaders > "$GDK_PIXBUF_MODULE_FILE"
 
 # Create config files for pango font handling library
@@ -43,7 +59,7 @@ ModuleFiles = $pango_module_file
 
 PANGO_RC
 
-find "/opt/local/lib" -name 'libpango*.dylib' -print0 \
+find "${lib_path}" -name 'libpango*.dylib' -print0 \
 | xargs -0 pango-querymodules > "$pango_module_file"
 
 # Need the X11 locale directory
