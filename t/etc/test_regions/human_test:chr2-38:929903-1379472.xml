@@ -5,6 +5,8 @@
      <sequence_fragment>
        <id>AC116614.6.1.129814</id>
        <chromosome>2</chromosome>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <accession>AC116614</accession>
        <version>6</version>
        <clone_name>CTD-2029L3</clone_name>
@@ -19,6 +21,8 @@
      <sequence_fragment>
        <id>KF456632.1.1.330</id>
        <chromosome>2</chromosome>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <accession>KF456632</accession>
        <version>1</version>
        <clone_name>KF456632.1</clone_name>
@@ -31,6 +35,8 @@
      <sequence_fragment>
        <id>AC116614.6.1.129814</id>
        <chromosome>2</chromosome>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <accession>AC116614</accession>
        <version>6</version>
        <clone_name>CTD-2029L3</clone_name>
@@ -45,6 +51,8 @@
      <sequence_fragment>
        <id>KF456630.1.1.371</id>
        <chromosome>2</chromosome>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <accession>KF456630</accession>
        <version>1</version>
        <clone_name>KF456630.1</clone_name>
@@ -57,6 +65,8 @@
      <sequence_fragment>
        <id>AC116614.6.1.129814</id>
        <chromosome>2</chromosome>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <accession>AC116614</accession>
        <version>6</version>
        <clone_name>CTD-2029L3</clone_name>
@@ -71,6 +81,8 @@
      <sequence_fragment>
        <id>KF456628.1.1.381</id>
        <chromosome>2</chromosome>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <accession>KF456628</accession>
        <version>1</version>
        <clone_name>KF456628.1</clone_name>
@@ -83,6 +95,8 @@
      <sequence_fragment>
        <id>AC116614.6.1.129814</id>
        <chromosome>2</chromosome>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <accession>AC116614</accession>
        <version>6</version>
        <clone_name>CTD-2029L3</clone_name>
@@ -97,6 +111,8 @@
      <sequence_fragment>
        <id>AC114808.4.1.176316</id>
        <chromosome>2</chromosome>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <accession>AC114808</accession>
        <version>4</version>
        <clone_name>RP11-1268F2</clone_name>
@@ -111,6 +127,8 @@
      <sequence_fragment>
        <id>AC225604.3.1.72250</id>
        <chromosome>2</chromosome>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <accession>AC225604</accession>
        <version>3</version>
        <clone_name>CH16-67O12</clone_name>
@@ -123,6 +141,8 @@
      <sequence_fragment>
        <id>AC140476.2.1.172117</id>
        <chromosome>2</chromosome>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <accession>AC140476</accession>
        <version>2</version>
        <clone_name>RP11-1294H20</clone_name>
@@ -137,6 +157,8 @@
      <sequence_fragment>
        <id>AC108462.5.1.161648</id>
        <chromosome>2</chromosome>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <accession>AC108462</accession>
        <version>5</version>
        <clone_name>RP13-542C4</clone_name>
