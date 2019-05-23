@@ -971,9 +971,9 @@ sub get_meta {
 }
 
 sub get_db_info {
-    my ($self, $dsname, $ss) = @_;
-    my $hashref = $self->otter_response_content(GET => 'get_db_info', { dataset => $dsname, 'coord_system_name' => $ss->coord_system_name,
-                                                                         'coord_system_version' => $ss->coord_system_version, 'author' => $self->author });
+    my ($self, $dsname, $coord_system_name, $coord_system_version) = @_;
+    my $hashref = $self->otter_response_content(GET => 'get_db_info', { dataset => $dsname, 'coord_system_name' => $coord_system_name,
+                                                                         'coord_system_version' => $coord_system_version, 'author' => $self->author });
     return $hashref;
 }
 

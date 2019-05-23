@@ -5,8 +5,6 @@
      <sequence_fragment>
        <id>AC116614.6.1.129814</id>
        <chromosome>2</chromosome>
-       <coord_system_name>chromosome</coord_system_name>
-       <coord_system_version>Otter</coord_system_version>
        <accession>AC116614</accession>
        <version>6</version>
        <clone_name>CTD-2029L3</clone_name>
@@ -15,14 +13,14 @@
        <fragment_ori>1</fragment_ori>
        <fragment_offset>2001</fragment_offset>
        <clone_length>129814</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- Contains the 5&apos; end of the SNTG2 gene for syntrophin gamma 2, a novel gene and a CpG island.</remark>
        <keyword>SNTG2</keyword>
      </sequence_fragment>
      <sequence_fragment>
        <id>KF456632.1.1.330</id>
        <chromosome>2</chromosome>
-       <coord_system_name>chromosome</coord_system_name>
-       <coord_system_version>Otter</coord_system_version>
        <accession>KF456632</accession>
        <version>1</version>
        <clone_name>KF456632.1</clone_name>
@@ -31,12 +29,12 @@
        <fragment_ori>1</fragment_ori>
        <fragment_offset>1</fragment_offset>
        <clone_length>330</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
      </sequence_fragment>
      <sequence_fragment>
        <id>AC116614.6.1.129814</id>
        <chromosome>2</chromosome>
-       <coord_system_name>chromosome</coord_system_name>
-       <coord_system_version>Otter</coord_system_version>
        <accession>AC116614</accession>
        <version>6</version>
        <clone_name>CTD-2029L3</clone_name>
@@ -45,14 +43,14 @@
        <fragment_ori>1</fragment_ori>
        <fragment_offset>23590</fragment_offset>
        <clone_length>129814</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- Contains the 5&apos; end of the SNTG2 gene for syntrophin gamma 2, a novel gene and a CpG island.</remark>
        <keyword>SNTG2</keyword>
      </sequence_fragment>
      <sequence_fragment>
        <id>KF456630.1.1.371</id>
        <chromosome>2</chromosome>
-       <coord_system_name>chromosome</coord_system_name>
-       <coord_system_version>Otter</coord_system_version>
        <accession>KF456630</accession>
        <version>1</version>
        <clone_name>KF456630.1</clone_name>
@@ -61,12 +59,12 @@
        <fragment_ori>1</fragment_ori>
        <fragment_offset>1</fragment_offset>
        <clone_length>371</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
      </sequence_fragment>
      <sequence_fragment>
        <id>AC116614.6.1.129814</id>
        <chromosome>2</chromosome>
-       <coord_system_name>chromosome</coord_system_name>
-       <coord_system_version>Otter</coord_system_version>
        <accession>AC116614</accession>
        <version>6</version>
        <clone_name>CTD-2029L3</clone_name>
@@ -75,14 +73,14 @@
        <fragment_ori>1</fragment_ori>
        <fragment_offset>38288</fragment_offset>
        <clone_length>129814</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- Contains the 5&apos; end of the SNTG2 gene for syntrophin gamma 2, a novel gene and a CpG island.</remark>
        <keyword>SNTG2</keyword>
      </sequence_fragment>
      <sequence_fragment>
        <id>KF456628.1.1.381</id>
        <chromosome>2</chromosome>
-       <coord_system_name>chromosome</coord_system_name>
-       <coord_system_version>Otter</coord_system_version>
        <accession>KF456628</accession>
        <version>1</version>
        <clone_name>KF456628.1</clone_name>
@@ -91,12 +89,12 @@
        <fragment_ori>-1</fragment_ori>
        <fragment_offset>1</fragment_offset>
        <clone_length>381</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
      </sequence_fragment>
      <sequence_fragment>
        <id>AC116614.6.1.129814</id>
        <chromosome>2</chromosome>
-       <coord_system_name>chromosome</coord_system_name>
-       <coord_system_version>Otter</coord_system_version>
        <accession>AC116614</accession>
        <version>6</version>
        <clone_name>CTD-2029L3</clone_name>
@@ -105,14 +103,14 @@
        <fragment_ori>1</fragment_ori>
        <fragment_offset>84474</fragment_offset>
        <clone_length>129814</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- Contains the 5&apos; end of the SNTG2 gene for syntrophin gamma 2, a novel gene and a CpG island.</remark>
        <keyword>SNTG2</keyword>
      </sequence_fragment>
      <sequence_fragment>
        <id>AC114808.4.1.176316</id>
        <chromosome>2</chromosome>
-       <coord_system_name>chromosome</coord_system_name>
-       <coord_system_version>Otter</coord_system_version>
        <accession>AC114808</accession>
        <version>4</version>
        <clone_name>RP11-1268F2</clone_name>
@@ -121,14 +119,14 @@
        <fragment_ori>1</fragment_ori>
        <fragment_offset>1</fragment_offset>
        <clone_length>176316</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- Contains part of the SNTG2 gene for syntrophin gamma 2, two novel genes and a CpG island.</remark>
        <keyword>SNTG2</keyword>
      </sequence_fragment>
      <sequence_fragment>
        <id>AC225604.3.1.72250</id>
        <chromosome>2</chromosome>
-       <coord_system_name>chromosome</coord_system_name>
-       <coord_system_version>Otter</coord_system_version>
        <accession>AC225604</accession>
        <version>3</version>
        <clone_name>CH16-67O12</clone_name>
@@ -137,12 +135,12 @@
        <fragment_ori>-1</fragment_ori>
        <fragment_offset>1</fragment_offset>
        <clone_length>72250</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
      </sequence_fragment>
      <sequence_fragment>
        <id>AC140476.2.1.172117</id>
        <chromosome>2</chromosome>
-       <coord_system_name>chromosome</coord_system_name>
-       <coord_system_version>Otter</coord_system_version>
        <accession>AC140476</accession>
        <version>2</version>
        <clone_name>RP11-1294H20</clone_name>
@@ -151,14 +149,14 @@
        <fragment_ori>1</fragment_ori>
        <fragment_offset>1433</fragment_offset>
        <clone_length>172117</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- Contains part of the SNTG2 gene for syntrophin gamma 2.</remark>
        <keyword>SNTG2</keyword>
      </sequence_fragment>
      <sequence_fragment>
        <id>AC108462.5.1.161648</id>
        <chromosome>2</chromosome>
-       <coord_system_name>chromosome</coord_system_name>
-       <coord_system_version>Otter</coord_system_version>
        <accession>AC108462</accession>
        <version>5</version>
        <clone_name>RP13-542C4</clone_name>
@@ -167,6 +165,8 @@
        <fragment_ori>1</fragment_ori>
        <fragment_offset>1</fragment_offset>
        <clone_length>161648</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- Contains the 3&apos; end of the SNTG2 gene for syntrophin gamma 2, the 5&apos; end of the TPO gene for thyroid peroxidase and a novel gene.</remark>
        <keyword>SNTG2</keyword>
        <keyword>TPO</keyword>

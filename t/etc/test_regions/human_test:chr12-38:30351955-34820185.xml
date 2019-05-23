@@ -13,6 +13,8 @@
        <fragment_ori>-1</fragment_ori>
        <fragment_offset>1</fragment_offset>
        <clone_length>152951</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- Contains a pseudogene similar to part of transmembrane and tetratricopeptide repeat containing 1 (TMTC1).</remark>
        <remark>Annotation_remark- annotated</remark>
      </sequence_fragment>
@@ -27,6 +29,8 @@
        <fragment_ori>1</fragment_ori>
        <fragment_offset>186</fragment_offset>
        <clone_length>148610</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- Contains the 3&apos; end of the IPO8 gene for importin 8.</remark>
        <remark>Annotation_remark- annotated</remark>
      </sequence_fragment>
@@ -41,6 +45,8 @@
        <fragment_ori>-1</fragment_ori>
        <fragment_offset>1</fragment_offset>
        <clone_length>171</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
      </sequence_fragment>
      <sequence_fragment>
        <id>AC023426.29.1.148610</id>
@@ -53,6 +59,8 @@
        <fragment_ori>1</fragment_ori>
        <fragment_offset>71573</fragment_offset>
        <clone_length>148610</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- Contains the 3&apos; end of the IPO8 gene for importin 8.</remark>
        <remark>Annotation_remark- annotated</remark>
      </sequence_fragment>
@@ -67,6 +75,8 @@
        <fragment_ori>1</fragment_ori>
        <fragment_offset>1</fragment_offset>
        <clone_length>391</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
      </sequence_fragment>
      <sequence_fragment>
        <id>AC023426.29.1.148610</id>
@@ -79,6 +89,8 @@
        <fragment_ori>1</fragment_ori>
        <fragment_offset>91641</fragment_offset>
        <clone_length>148610</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- Contains the 3&apos; end of the IPO8 gene for importin 8.</remark>
        <remark>Annotation_remark- annotated</remark>
      </sequence_fragment>
@@ -93,6 +105,8 @@
        <fragment_ori>1</fragment_ori>
        <fragment_offset>2006</fragment_offset>
        <clone_length>47302</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- Contains the 5&apos; end of the IPO8 gene for importin 8.</remark>
        <remark>Annotation_remark- annotated</remark>
      </sequence_fragment>
@@ -107,6 +121,8 @@
        <fragment_ori>-1</fragment_ori>
        <fragment_offset>141702</fragment_offset>
        <clone_length>199070</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- Contains the CAPRIN2 gene for caprin family member 2, a peptidylprolyl isomerase A (cyclophilin A) (PPIA) pseudogene, and two novel genes.</remark>
        <remark>Annotation_remark- annotated</remark>
      </sequence_fragment>
@@ -121,6 +137,8 @@
        <fragment_ori>1</fragment_ori>
        <fragment_offset>1</fragment_offset>
        <clone_length>371</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
      </sequence_fragment>
      <sequence_fragment>
        <id>AC010198.8.1.199070</id>
@@ -133,6 +151,8 @@
        <fragment_ori>-1</fragment_ori>
        <fragment_offset>96919</fragment_offset>
        <clone_length>199070</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- Contains the CAPRIN2 gene for caprin family member 2, a peptidylprolyl isomerase A (cyclophilin A) (PPIA) pseudogene, and two novel genes.</remark>
        <remark>Annotation_remark- annotated</remark>
      </sequence_fragment>
@@ -147,6 +167,8 @@
        <fragment_ori>-1</fragment_ori>
        <fragment_offset>1</fragment_offset>
        <clone_length>264</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
      </sequence_fragment>
      <sequence_fragment>
        <id>AC010198.8.1.199070</id>
@@ -159,6 +181,8 @@
        <fragment_ori>-1</fragment_ori>
        <fragment_offset>1</fragment_offset>
        <clone_length>199070</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- Contains the CAPRIN2 gene for caprin family member 2, a peptidylprolyl isomerase A (cyclophilin A) (PPIA) pseudogene, and two novel genes.</remark>
        <remark>Annotation_remark- annotated</remark>
      </sequence_fragment>
@@ -173,6 +197,8 @@
        <fragment_ori>-1</fragment_ori>
        <fragment_offset>1</fragment_offset>
        <clone_length>68935</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- Contains the 5&apos; end of the TSPAN11 gene for tetraspanin 11.</remark>
        <remark>Annotation_remark- annotated</remark>
      </sequence_fragment>
@@ -187,6 +213,8 @@
        <fragment_ori>1</fragment_ori>
        <fragment_offset>214</fragment_offset>
        <clone_length>168986</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- Contains the 3&apos; end of the TSPAN11 gene for tetraspanin 11, the DDX11 gene for DEAD/H (Asp-Glu-Ala-Asp/His) box polypeptide 11, the 3&apos; end of an ovostatin (OVOS) pseudogene, and three novel genes.</remark>
        <remark>Annotation_remark- annotated</remark>
      </sequence_fragment>
@@ -201,6 +229,8 @@
        <fragment_ori>1</fragment_ori>
        <fragment_offset>1</fragment_offset>
        <clone_length>309</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
      </sequence_fragment>
      <sequence_fragment>
        <id>AC008013.8.1.168986</id>
@@ -213,6 +243,8 @@
        <fragment_ori>1</fragment_ori>
        <fragment_offset>4112</fragment_offset>
        <clone_length>168986</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- Contains the 3&apos; end of the TSPAN11 gene for tetraspanin 11, the DDX11 gene for DEAD/H (Asp-Glu-Ala-Asp/His) box polypeptide 11, the 3&apos; end of an ovostatin (OVOS) pseudogene, and three novel genes.</remark>
        <remark>Annotation_remark- annotated</remark>
      </sequence_fragment>
@@ -227,6 +259,8 @@
        <fragment_ori>-1</fragment_ori>
        <fragment_offset>1</fragment_offset>
        <clone_length>362</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
      </sequence_fragment>
      <sequence_fragment>
        <id>AC008013.8.1.168986</id>
@@ -239,6 +273,8 @@
        <fragment_ori>1</fragment_ori>
        <fragment_offset>54271</fragment_offset>
        <clone_length>168986</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- Contains the 3&apos; end of the TSPAN11 gene for tetraspanin 11, the DDX11 gene for DEAD/H (Asp-Glu-Ala-Asp/His) box polypeptide 11, the 3&apos; end of an ovostatin (OVOS) pseudogene, and three novel genes.</remark>
        <remark>Annotation_remark- annotated</remark>
      </sequence_fragment>
@@ -253,6 +289,8 @@
        <fragment_ori>1</fragment_ori>
        <fragment_offset>1</fragment_offset>
        <clone_length>392</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
      </sequence_fragment>
      <sequence_fragment>
        <id>AC008013.8.1.168986</id>
@@ -265,6 +303,8 @@
        <fragment_ori>1</fragment_ori>
        <fragment_offset>67306</fragment_offset>
        <clone_length>168986</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- Contains the 3&apos; end of the TSPAN11 gene for tetraspanin 11, the DDX11 gene for DEAD/H (Asp-Glu-Ala-Asp/His) box polypeptide 11, the 3&apos; end of an ovostatin (OVOS) pseudogene, and three novel genes.</remark>
        <remark>Annotation_remark- annotated</remark>
      </sequence_fragment>
@@ -279,6 +319,8 @@
        <fragment_ori>1</fragment_ori>
        <fragment_offset>3888</fragment_offset>
        <clone_length>24091</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- Contains part of an ovostatin (OVOS) pseudogene.</remark>
        <remark>Annotation_remark- annotated</remark>
      </sequence_fragment>
@@ -293,6 +335,8 @@
        <fragment_ori>-1</fragment_ori>
        <fragment_offset>1</fragment_offset>
        <clone_length>205952</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- Contains the 5&apos; end of an ovostatin (OVOS) pseudogene, a ribosomal protein L13a (RPL13A) pseudogene, the FAM60A gene for family with sequence similarity 60, member A; and a solute carrier family 25, member 13 (citrin) (SLC25A13) pseudogene.</remark>
        <remark>Annotation_remark- annotated</remark>
      </sequence_fragment>
@@ -307,6 +351,8 @@
        <fragment_ori>-1</fragment_ori>
        <fragment_offset>1</fragment_offset>
        <clone_length>106277</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- Contains 3&apos; end of the DENND5B gene for DENN/MADD domain containing 5B and a novel gene.</remark>
        <remark>Annotation_remark- annotated</remark>
      </sequence_fragment>
@@ -321,6 +367,8 @@
        <fragment_ori>1</fragment_ori>
        <fragment_offset>2016</fragment_offset>
        <clone_length>178217</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- Contains the 5&apos; end of the DENND5B gene for DENN/MADD domain containing 5B, a TAF10 RNA polymerase II, TATA box binding protein (TBP)-associated factor, 30kDa (TAF10) pseudogene, a mitochondrial ribosomal protein L30 (MRPL30) pseudogene, an ankyrin repeat domain 49 (ANKRD49) pseudogene, a ribosomal protein L31 (RPL31) pseudogene, an AK4P3 adenylate kinase 4 pseudogene 3 and a novel gene.</remark>
        <remark>Annotation_remark- annotated</remark>
      </sequence_fragment>
@@ -335,6 +383,8 @@
        <fragment_ori>-1</fragment_ori>
        <fragment_offset>1</fragment_offset>
        <clone_length>29789</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- Contains the 5&apos; end of the C12orf72 gene for chromosome 12 open reading frame 72.</remark>
        <remark>Annotation_remark- annotated</remark>
      </sequence_fragment>
@@ -349,6 +399,8 @@
        <fragment_ori>1</fragment_ori>
        <fragment_offset>2113</fragment_offset>
        <clone_length>122351</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- Contains the 3&apos; end of the C12orf72 gene for chromosome 12 open reading frame 72, the AMN1 gene for antagonist of mitotic exit network 1 homolog (S. cerevisiae), a stathmin 1 (STMN1) pseudogene, a dpy-30 homolog (C. elegans) (DPY30) pseudogene and an interferon induced transmembrane protein 3 (1-8U) (IFITM3) pseudogene.</remark>
        <remark>Annotation_remark- annotated</remark>
      </sequence_fragment>
@@ -363,6 +415,8 @@
        <fragment_ori>1</fragment_ori>
        <fragment_offset>2053</fragment_offset>
        <clone_length>186864</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- Contains the H3F3C gene for H3 histone, family 3C, a basic transcription factor 3-like 4 (BTF3L4) pseudogene, an Impact homolog (mouse) (IMPACT) pseudogene, a ribosomal protein, large, P2 (RPLP2) pseudogene, a ribosomal protein L12 (RPL12) pseudogene, a family with sequence similarity 98, member B (FAM98B) pseudogene, the 5&apos; end of the C12orf35 gene for chromosome 12 open reading frame 35 and a novel gene.</remark>
        <remark>Annotation_remark- annotated</remark>
      </sequence_fragment>
@@ -377,6 +431,8 @@
        <fragment_ori>1</fragment_ori>
        <fragment_offset>2005</fragment_offset>
        <clone_length>50743</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- Contains 3&apos; end of the C12orf35 gene for chromosome 12 open reading frame 35 and a COX assembly mitochondrial protein homolog (S. cerevisiae) (CMC1) pseudogene.</remark>
        <remark>Annotation_remark- annotated</remark>
      </sequence_fragment>
@@ -391,6 +447,8 @@
        <fragment_ori>1</fragment_ori>
        <fragment_offset>2005</fragment_offset>
        <clone_length>124427</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- Contains a gamma-aminobutyric acid (GABA) A receptor, pi (GABRP) pseudogene, the 5&apos; end of the BICD1 gene for bicaudal D homolog 1 (Drosophila) and a novel gene.</remark>
        <remark>Annotation_remark- annotated</remark>
      </sequence_fragment>
@@ -405,6 +463,8 @@
        <fragment_ori>-1</fragment_ori>
        <fragment_offset>1</fragment_offset>
        <clone_length>190195</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- Contains part of the BICD1 gene for bicaudal D homolog 1 (Drosophila) and a WW domain binding protein 2 (WBP2) pseudogene.</remark>
        <remark>Annotation_remark- annotated</remark>
      </sequence_fragment>
@@ -419,6 +479,8 @@
        <fragment_ori>-1</fragment_ori>
        <fragment_offset>1</fragment_offset>
        <clone_length>37490</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- Contains part of the BICD1 gene for bicaudal D homolog 1 (Drosophila).</remark>
        <remark>Annotation_remark- annotated</remark>
      </sequence_fragment>
@@ -433,6 +495,8 @@
        <fragment_ori>-1</fragment_ori>
        <fragment_offset>1</fragment_offset>
        <clone_length>7000</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- Contains part of the BICD1 gene for bicaudal D homolog 1 (Drosophila).</remark>
        <remark>Annotation_remark- annotated</remark>
      </sequence_fragment>
@@ -447,6 +511,8 @@
        <fragment_ori>1</fragment_ori>
        <fragment_offset>2000</fragment_offset>
        <clone_length>93342</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- Contains the 3&apos; end of the BICD1 gene for bicaudal D homolog 1 (Drosophila) and the 5&apos; end of the FGD4 gene for FYVE, RhoGEF and PH domain containing 4.</remark>
        <remark>Annotation_remark- annotated</remark>
      </sequence_fragment>
@@ -461,6 +527,8 @@
        <fragment_ori>1</fragment_ori>
        <fragment_offset>2005</fragment_offset>
        <clone_length>60429</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- Contains the 5&apos; end of the FGD4 gene for FYVE, RhoGEF and PH domain containing 4.</remark>
        <remark>Annotation_remark- annotated</remark>
      </sequence_fragment>
@@ -475,6 +543,8 @@
        <fragment_ori>1</fragment_ori>
        <fragment_offset>2004</fragment_offset>
        <clone_length>134628</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- Contains part of the FGD4 gene for FYVE, RhoGEF and PH domain containing 4.</remark>
        <remark>Annotation_remark- annotated</remark>
      </sequence_fragment>
@@ -489,6 +559,8 @@
        <fragment_ori>1</fragment_ori>
        <fragment_offset>2005</fragment_offset>
        <clone_length>98236</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- Contains the 3&apos; end of the FGD4 gene for FYVE, RhoGEF and PH domain containing 4, the 5&apos; end of the DNM1L gene for dynamin 1-like, a chromosome 7 open reading frame 30 (C7orf30) pseudogene, a nucleosome assembly protein 1-like 1 (NAP1L1) pseudogene and part of the YARS2 gene for tyrosyl-tRNA synthetase 2, mitochondrial.</remark>
        <remark>Annotation_remark- annotated</remark>
      </sequence_fragment>
@@ -503,6 +575,8 @@
        <fragment_ori>-1</fragment_ori>
        <fragment_offset>1</fragment_offset>
        <clone_length>146167</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- Contains the 3&apos; end of the DNM1L gene for dynamin 1-like, the YARS2 gene for tyrosyl-tRNA synthetase 2, mitochondrial, the 3&apos; end of the PKP2 gene for plakophilin 2 and a ribosomal protein L35a (RPL35A) pseudogene.</remark>
        <remark>Annotation_remark- annotated</remark>
      </sequence_fragment>
@@ -517,6 +591,8 @@
        <fragment_ori>-1</fragment_ori>
        <fragment_offset>1</fragment_offset>
        <clone_length>159688</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- Contains the 5&apos; end of the PKP2 gene for plakophilin 2, an argininosuccinate synthase 1 (ASS1) pseudogene and a novel gene.</remark>
        <remark>Annotation_remark- annotated</remark>
      </sequence_fragment>
@@ -531,6 +607,8 @@
        <fragment_ori>-1</fragment_ori>
        <fragment_offset>1</fragment_offset>
        <clone_length>88874</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- no genes</remark>
        <remark>Annotation_remark- annotated</remark>
      </sequence_fragment>
@@ -545,6 +623,8 @@
        <fragment_ori>1</fragment_ori>
        <fragment_offset>2006</fragment_offset>
        <clone_length>162978</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- no genes</remark>
        <remark>Annotation_remark- annotated</remark>
      </sequence_fragment>
@@ -559,6 +639,8 @@
        <fragment_ori>-1</fragment_ori>
        <fragment_offset>1</fragment_offset>
        <clone_length>383</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
      </sequence_fragment>
      <sequence_fragment>
        <id>AC021070.24.1.162978</id>
@@ -571,6 +653,8 @@
        <fragment_ori>1</fragment_ori>
        <fragment_offset>64286</fragment_offset>
        <clone_length>162978</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- no genes</remark>
        <remark>Annotation_remark- annotated</remark>
      </sequence_fragment>
@@ -585,6 +669,8 @@
        <fragment_ori>-1</fragment_ori>
        <fragment_offset>1</fragment_offset>
        <clone_length>146530</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- Contains the 3&apos; end of the SYT10 gene for synaptotagmin X and a novel gene.</remark>
        <remark>Annotation_remark- annotated</remark>
      </sequence_fragment>
@@ -599,6 +685,8 @@
        <fragment_ori>-1</fragment_ori>
        <fragment_offset>1</fragment_offset>
        <clone_length>86970</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- Contains the 5&apos; end of the SYT10 gene for synaptotagmin X and a suppression of tumorigenicity 13 (colon carcinoma) (Hsp70 interacting protein) (ST13) pseudogene.</remark>
        <remark>Annotation_remark- annotated</remark>
      </sequence_fragment>
@@ -613,6 +701,8 @@
        <fragment_ori>-1</fragment_ori>
        <fragment_offset>1</fragment_offset>
        <clone_length>50983</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- no genes</remark>
        <remark>Annotation_remark- annotated</remark>
      </sequence_fragment>
@@ -627,6 +717,8 @@
        <fragment_ori>1</fragment_ori>
        <fragment_offset>2043</fragment_offset>
        <clone_length>178905</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- no genes</remark>
        <remark>Annotation_remark- annotated</remark>
      </sequence_fragment>
@@ -641,6 +733,8 @@
        <fragment_ori>-1</fragment_ori>
        <fragment_offset>1</fragment_offset>
        <clone_length>186000</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- no genes</remark>
        <remark>Annotation_remark- annotated</remark>
      </sequence_fragment>
@@ -655,6 +749,8 @@
        <fragment_ori>1</fragment_ori>
        <fragment_offset>90455</fragment_offset>
        <clone_length>101027</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- no genes</remark>
        <remark>Annotation_remark- annotated</remark>
      </sequence_fragment>
@@ -669,6 +765,8 @@
        <fragment_ori>1</fragment_ori>
        <fragment_offset>208</fragment_offset>
        <clone_length>176600</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- Contains the ALG10 gene for asparagine-linked glycosylation 10, alpha-1,2-glucosyltransferase homolog (S. pombe) and two novel genes.</remark>
        <remark>Annotation_remark- annotated</remark>
      </sequence_fragment>
@@ -683,6 +781,8 @@
        <fragment_ori>-1</fragment_ori>
        <fragment_offset>1</fragment_offset>
        <clone_length>134878</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- Contains a family with sequence similarity 41, member A, Y-linked 1 (FAM41AY1) pseudogene, tubulin, beta 8 class VIII pseudogene 4 TUBB8P4, a double homeobox, 4-like (DUX4) pseudogene and two novel genes.</remark>
        <remark>Annotation_remark- annotated</remark>
      </sequence_fragment>
@@ -697,6 +797,8 @@
        <fragment_ori>-1</fragment_ori>
        <fragment_offset>1</fragment_offset>
        <clone_length>174598</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- Contains a TAF9 RNA polymerase II, TATA box binding protein (TBP)-associated factor, 32kDa (TAF9) pseudogene.</remark>
        <remark>Annotation_remark- annotated</remark>
      </sequence_fragment>
@@ -711,6 +813,8 @@
        <fragment_ori>1</fragment_ori>
        <fragment_offset>2012</fragment_offset>
        <clone_length>131101</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- no genes</remark>
        <remark>Annotation_remark- annotated</remark>
      </sequence_fragment>
@@ -725,6 +829,8 @@
        <fragment_ori>-1</fragment_ori>
        <fragment_offset>1</fragment_offset>
        <clone_length>156422</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- no genes</remark>
        <remark>Annotation_remark- annotated</remark>
      </sequence_fragment>
@@ -739,6 +845,8 @@
        <fragment_ori>1</fragment_ori>
        <fragment_offset>22467</fragment_offset>
        <clone_length>38114</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
      </sequence_fragment>
      <sequence_fragment>
        <id>ABBA01016732.1.1.3474</id>
@@ -751,6 +859,8 @@
        <fragment_ori>1</fragment_ori>
        <fragment_offset>1</fragment_offset>
        <clone_length>3474</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
      </sequence_fragment>
      <feature_set>
        <feature>
