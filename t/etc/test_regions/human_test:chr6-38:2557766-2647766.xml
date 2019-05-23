@@ -13,6 +13,8 @@
        <fragment_ori>1</fragment_ori>
        <fragment_offset>89977</fragment_offset>
        <clone_length>120512</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>Annotation_remark- annotated</remark>
      </sequence_fragment>
      <sequence_fragment>
@@ -26,6 +28,8 @@
        <fragment_ori>1</fragment_ori>
        <fragment_offset>101</fragment_offset>
        <clone_length>107888</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- Contains part of a gene for a novel protein similar to myosin light chain kinase and two novel genes.</remark>
        <remark>Annotation_remark- annotated</remark>
        <keyword>myosin</keyword>

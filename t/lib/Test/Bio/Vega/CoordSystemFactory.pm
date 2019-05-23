@@ -30,6 +30,15 @@ sub startup {
 
 sub build_attributes { return };
 
+sub our_args {
+    return [override_spec => {
+      chromosome => { '-version' => 'Otter', '-rank' => 2, '-default' => 1,                         },
+      clone      => {                        '-rank' => 4, '-default' => 1,                         },
+      contig     => {                        '-rank' => 5, '-default' => 1,                         },
+      dna_contig => { '-version' => 'Otter', '-rank' => 6, '-default' => 1, '-sequence_level' => 1, },
+    }];
+}
+
 sub coord_systems : Tests {
     my $test = shift;
 
@@ -50,7 +59,12 @@ sub coord_systems : Tests {
 sub override_spec : Tests {
     my $test = shift;
 
-    my $override_spec = { 'chromosome' => { '-dbid' => 2, '-version' => 'Test', '-rank' => 2, '-default' => 1, } };
+    my $override_spec = { 
+       'chromosome' => { '-version' => 'Test',  '-rank' => 2, '-default' => 1, '-dbid' => 2,           },
+       'clone'      => {                        '-rank' => 4, '-default' => 1,                         },
+       'contig'     => {                        '-rank' => 5, '-default' => 1,                         },
+       'dna_contig' => { '-version' => 'Otter', '-rank' => 6, '-default' => 1, '-sequence_level' => 1, }, 
+    };
 
     my $std_factory = $test->our_object;
     my $ovr_factory = $test->class->new( override_spec => $override_spec );
@@ -78,7 +92,7 @@ sub override_spec : Tests {
 sub dba_0_not_stored_yet : Tests {
     my $test = shift;
 
-    my $dba_factory = $test->class->new( dba => $test->dba );
+    my $dba_factory = $test->class->new( dba => $test->dba, @{$test->our_args} );
     foreach my $name ($dba_factory->known) {
         my $cs = $dba_factory->coord_system($name);
         ok not(defined($cs)), "$name: not defined";
@@ -90,8 +104,7 @@ sub dba_1_create_in_db : Tests {
     my $test = shift;
 
     my $dba = $test->dba;
-    my $dba_factory = $test->class->new( dba => $dba, create_in_db => 1 );
-
+    my $dba_factory = $test->class->new( dba => $dba, create_in_db => 1, @{$test->our_args});
     can_ok $dba_factory, 'instantiate_all';
     $dba_factory->instantiate_all;
 
@@ -110,7 +123,7 @@ sub dba_2_already_in_db : Tests {
     my $test = shift;
 
     my $dba = $test->dba;
-    my $dba_factory = $test->class->new( dba => $dba );
+    my $dba_factory = $test->class->new( dba => $dba, @{$test->our_args});
     foreach my $name ($dba_factory->known) {
         subtest $name => sub {
             my $cs = $dba_factory->coord_system($name);
@@ -119,18 +132,6 @@ sub dba_2_already_in_db : Tests {
             _note_cs($cs);
         };
     }
-    return;
-}
-
-sub assembly_mappings : Tests(2) {
-    my $test = shift;
-    my $factory = $test->our_object;
-
-    can_ok $factory, 'assembly_mappings';
-    my @mappings = $factory->assembly_mappings;
-    ok scalar(@mappings), '... and returns some mappings';
-    note 'n(assembly_mappings) = ', scalar(@mappings);
-
     return;
 }
 
