@@ -349,7 +349,7 @@ sub _build_Feature {            ## no critic (Subroutines::ProhibitUnusedPrivate
         -strand        => $data->{'strand'},
         -analysis      => $ana,
         -score         => $data->{'score'},
-        -display_label => $data->{'label'} | 'rank = filler',
+        -display_label => $data->{'label'} || 'rank = filler',
         -slice         => $chr_slice,
     );
     $region{$self}->add_seq_features($feature);
