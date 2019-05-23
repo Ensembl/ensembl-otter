@@ -280,6 +280,7 @@ sub load_dataset_info {
 
     my $dbh = $dbh{$self};
 
+    my $select_sth = $dbh->prepare(q{ SELECT species_id, meta_key, meta_value FROM meta WHERE species_id = ? AND meta_key = ? AND meta_value = ? });
     my $meta_sth = $dbh->prepare(q{ INSERT INTO meta (species_id, meta_key, meta_value) VALUES (?, ?, ?) });
     my $meta_hash = $dataset->meta_hash;
 
@@ -328,7 +329,13 @@ sub load_dataset_info {
     #
     while (my ($key, $details) = each %$meta_hash) {
         foreach my $value (@{$details->{values}}) {
-            $meta_sth->execute($details->{species_id}, $key, $value);
+            $select_sth->execute($details->{species_id}, $key, $value);
+            if($select_sth->fetchrow_array) {
+                next;
+            }
+            else {
+                $meta_sth->execute($details->{species_id}, $key, $value);
+            }
         }
     }
 
