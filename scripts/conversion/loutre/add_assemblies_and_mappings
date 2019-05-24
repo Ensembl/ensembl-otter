@@ -311,8 +311,7 @@ my $insdc_map = $insdc_names{$species} || {};
 # Log if there's no entry and warn if the seq_region is a patch
 my $chrom_dets;
 my ($insdc_edb) = $edbh->selectrow_array(qq(SELECT external_db_id FROM external_db WHERE db_name = 'INSDC'));
-foreach my $chrom (@{$vsa->fetch_all('chromosome',__PACKAGE__.' '.__LINE__)}) {
-#foreach my $chrom (@{$vsa->fetch_all('chromosome', 'Otter')}) {
+foreach my $chrom (@{$vsa->fetch_all('chromosome', 'Otter')}) {
   my $v_name  = $chrom->seq_region_name;
   my $v_sr_id = $chrom->get_seq_region_id;
   $support->log_verbose("Looking at Vega chromosome $v_name for INSDC\n",1);
@@ -350,8 +349,7 @@ foreach my $chrom (@{$vsa->fetch_all('chromosome',__PACKAGE__.' '.__LINE__)}) {
 
 #The method by which we generate the mappings varies depending on the type of seq_region
 #So first of all loop through all chromsomes and make a note of which method to use for which
-foreach my $chrom (@{$vsa->fetch_all('chromosome',__PACKAGE__.' '.__LINE__)}) {
-#foreach my $chrom (@{$vsa->fetch_all('chromosome','Otter')}) {
+foreach my $chrom (@{$vsa->fetch_all('chromosome','Otter')}) {
   my $v_name  = $chrom->seq_region_name;
   my $v_sr_id = $chrom->get_seq_region_id;
   my $l_chrom = $lsa->fetch_by_region('chromosome',$v_name);
@@ -434,8 +432,7 @@ foreach my $chrom (@{$vsa->fetch_all('chromosome',__PACKAGE__.' '.__LINE__)}) {
 my $sr_ins_sth  = $vdbh->prepare(qq(INSERT into seq_region VALUES (?,?,?,?)));
 my $ass_ins_sth = $vdbh->prepare(qq(INSERT into assembly VALUES (?,?,?,?,?,?,?)));
 
-foreach my $chrom (@{$vsa->fetch_all('chromosome',__PACKAGE__.' '.__LINE__)}) {
-#foreach my $chrom (@{$vsa->fetch_all('chromosome','Otter')}) {
+foreach my $chrom (@{$vsa->fetch_all('chromosome','Otter')}) {
   my $v_name  = $chrom->seq_region_name;
   next unless my $dets = $chrom_dets{$v_name}{'do_mapping_using'};
   $support->log("Adding assembly mappings for chromosome $v_name\n",1);

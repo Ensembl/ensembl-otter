@@ -19,9 +19,7 @@ sub get_SliceLocks {
     my $S_dba = $server->otter_dba->get_SliceAdaptor;
     my $chr = $server->require_argument('chr');
     my $coord_system_name = $server->require_argument('coord_system_name') || 'chromosome';
-#    my $coord_system_name ='chromosome';
-    my $coord_system_version = $server->require_argument('coord_system_version') || __PACKAGE__.' '.__LINE__;
-#    my $coord_system_version = 'Otter';
+    my $coord_system_version = $server->require_argument('coord_system_version') || 'Otter';
     my $chr_slice = $S_dba->fetch_by_region
       ($coord_system_name, $chr, undef, undef, undef, $coord_system_version, 1);
     die "Cannot find $coord_system_name:$coord_system_version:$chr" unless $chr_slice;

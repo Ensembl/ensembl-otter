@@ -906,7 +906,7 @@ sub fetch_all_genes_on_reference_slice {
 
     my $transformed_genes = $mfetcher->fetch_and_export(
         'get_all_Genes', [ 'otter', undef, 1 ], 'chromosome', $ncbi_chr,
-        $otter_chr, $start, $end, __PACKAGE__.' '.__LINE__,
+        $otter_chr, $start, $end, 'Otter',
         $assembly
     );
 

@@ -85,6 +85,6 @@ __END__
 =head1 NAME - dump_alignments
 
 =head1 AUTHOR
-csver       => __PACKAGE__.' '.__LINE__,
+csver       => 'Otter'
 James Gilbert B<email> jgrg@sanger.ac.uk
 

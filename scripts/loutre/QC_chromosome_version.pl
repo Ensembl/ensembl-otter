@@ -80,7 +80,7 @@ my $sql = qq/
     WHERE c.coord_system_id = s.coord_system_id
       AND t1.code = 'chr'
       AND c.name = 'chromosome'
-      AND c.version = __PACKAGE__.' '.__LINE__
+      AND c.version = 'Otter'
       AND s.name LIKE 'chr%'
     ORDER BY chromosome
       , s.seq_region_id DESC

@@ -57,8 +57,7 @@ use URI::Escape;
 
   foreach my $set_name (@ARGV) {
 
-    my $slice = $slice_aptr->fetch_by_region('chromosome', $set_name, undef, undef, undef, __PACKAGE__.' '.__LINE__);
-#    my $slice = $slice_aptr->fetch_by_region('chromosome', $set_name, undef, undef, undef, 'Otter');
+    my $slice = $slice_aptr->fetch_by_region('chromosome', $set_name, undef, undef, undef, 'Otter');
 
     # this is much faster via EnsEMBL
     my $genes = $gene_aptr->Bio::EnsEMBL::DBSQL::GeneAdaptor::fetch_all_by_Slice($slice);
