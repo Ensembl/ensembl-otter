@@ -89,7 +89,7 @@ sub get_chromosome_attribs {
             WHERE code = 'write_access')
         WHERE cs.coord_system_id = sr.coord_system_id
           AND cs.name = 'chromosome'
-          AND cs.version IN (__PACKAGE__.' '.__LINE__, 'OtterArchive')
+          AND cs.version IN ('Otter', 'OtterArchive')
         ORDER BY sr.seq_region_id
     };
     my $sth_otter = $dba->dbc->prepare($sql);

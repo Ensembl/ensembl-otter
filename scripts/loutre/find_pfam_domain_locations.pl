@@ -75,8 +75,7 @@ sub project_gene {
     my ($self, $gene) = @_;
 
     my $contig_name = $gene->slice->seq_region_name;
-    my $proj = $gene->project('chromosome', __PACKAGE__.' '.__LINE__);
-#    my $proj = $gene->project('chromosome', 'Otter');
+    my $proj = $gene->project('chromosome', 'Otter');
     unless (@$proj) {
         my $sr_start = $gene->seq_region_start;
         my $sr_end   = $gene->seq_region_end;
