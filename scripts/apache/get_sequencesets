@@ -9,55 +9,6 @@ use Bio::Otter::Git qw{ :server_ensembl :match };
 
 use Bio::Otter::Server::Support::Web;
 
-my $select_mapping_sql = <<'SQL'
-
-    SELECT sub.name
-      , chr.name
-      , count(*) cnt
-      , group_concat(cln.name ORDER BY sub_ctg.asm_start SEPARATOR ',')
-      , sub_hdn.value
-    FROM seq_region sub
-      , assembly sub_ctg
-      , seq_region ctg
-      , assembly chr_ctg
-      , seq_region chr
-      , assembly cln_ctg
-      , seq_region cln
-      , seq_region_attrib sub_hdn
-    WHERE sub.coord_system_id = (SELECT coord_system_id
-                                 FROM coord_system
-                                 WHERE name = 'subregion')
-
-      AND sub_hdn.seq_region_id = sub.seq_region_id
-      AND sub_hdn.attrib_type_id = (SELECT attrib_type_id
-                                    FROM attrib_type
-                                    WHERE code = 'hidden')
-
-      AND sub.seq_region_id = sub_ctg.asm_seq_region_id
-      AND ctg.seq_region_id = sub_ctg.cmp_seq_region_id
-      AND ctg.coord_system_id = (SELECT coord_system_id
-                                 FROM coord_system
-                                 WHERE name = 'contig')
-
-      AND cln.seq_region_id = cln_ctg.asm_seq_region_id
-      AND ctg.seq_region_id = cln_ctg.cmp_seq_region_id
-      AND cln.coord_system_id = (SELECT coord_system_id
-                                 FROM coord_system
-                                 WHERE name = 'clone')
-
-      AND sub_ctg.cmp_seq_region_id = chr_ctg.cmp_seq_region_id
-      AND chr.seq_region_id = chr_ctg.asm_seq_region_id
-      AND (chr.coord_system_id = (SELECT coord_system_id
-                                  FROM coord_system
-                                  WHERE name = 'chromosome'
-                                    AND version = 'Otter')
-           OR chr.seq_region_id = sub.seq_region_id)
-
-    GROUP BY sub.name, chr.name
-    ORDER BY sub.name, cnt DESC
-SQL
-    ;
-
 # loutre_*.sequence_set_access tables contain no rows 2014-09-03
 my $select_access_sql = <<'SQL'
     SELECT acc.access_type
