@@ -1342,7 +1342,6 @@ sub slice_query {
         'name'    => $slice->seqname(),
         'start'   => $slice->start(),
         'end'     => $slice->end(),
-        'author'  => $self->author,
     );
 }
 
