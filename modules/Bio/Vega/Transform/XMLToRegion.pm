@@ -263,7 +263,7 @@ sub _build_clone_sequence {
         -end                => $cmp_end,
         -strand             => $strand,
         -seq_region_length  => $cln_length,
-        -coord_system       => $self->coord_system_factory->coord_system('contig'),
+        -coord_system       => $self->coord_system_factory->coord_system('contig') || $self->coord_system_factory->coord_system('dna_contig'),
     );
 
     my $cs = Bio::Otter::Lace::CloneSequence->new;
