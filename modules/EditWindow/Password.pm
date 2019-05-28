@@ -126,6 +126,8 @@ sub get_password {
     $self->top->toplevel->Busy;
     $self->password_field->focus;
     $self->set_minsize;     # Does an "update"
+    my ($width, $height) = $self->top->geometry =~ /^(\d+)x(\d+)/;
+    $self->top->geometry("${width}x$height+40+40");
 
     $$finref = '';
     ${ $self->passref } = '';
