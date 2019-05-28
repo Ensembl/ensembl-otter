@@ -426,9 +426,7 @@ sub generate_FeatureSet {
       }
 
       if ($feature->strand){
-          $f->attribvals($self->prettyprint('strand',$feature->strand));
-      } else {
-          throw "Cannot create Otter XML, feature strand is absent: $feature";
+          $f->attribvals($self->prettyprint('strand',$feature->strand || 1));
       }
 
       if ($feature->score){
