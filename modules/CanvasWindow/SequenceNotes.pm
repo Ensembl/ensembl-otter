@@ -120,7 +120,7 @@ sub refresh_lock_columns {
     my ($self) = @_;
 
     my $top = $self->canvas->toplevel;
-    my $busy = Tk::ScopedBusy->new($top);
+    my $busy = Tk::ScopedBusy->new_if_not_busy($top);
     $self->refresh_column(7);   # Padlock icon column
     $self->refresh_column(8);   # Lock author name column
 
