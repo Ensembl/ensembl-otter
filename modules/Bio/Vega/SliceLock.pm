@@ -262,7 +262,12 @@ sub _init {
                 throw("Argument [$newval] is not a Bio::Vega::Author")
                   if $author{$field} && defined $newval &&
                     !try { $newval->isa("Bio::Vega::Author") };
-                $self->{$field} = $newval;
+                if ($field eq 'otter_version') {
+                  $self->{$field} = substr($newval, 0, 16);
+                }
+                else {
+                  $self->{$field} = $newval;
+                }
             }
             return $self->{$field};
         };
