@@ -1416,6 +1416,7 @@ sub get_all_CloneSequences_for_DataSet_SequenceSet { # without any lock info
 
   my $dataset_name     = $ds->name;
   my $sequenceset_name = $ss->name;
+  $ds->selected_SequenceSet($ss);
 
   my $clonesequences_xml = $self->http_response_content(
         'GET',
