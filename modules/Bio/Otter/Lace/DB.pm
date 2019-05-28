@@ -320,6 +320,7 @@ sub load_dataset_info {
       '-default' => 1,
       'version'  => $toplevel_cs->{version},
     };
+    $meta_hash->{'assembly.mapping'}->{species_id} = $meta_hash->{'species.classification'}->{species_id};
     push(@{$meta_hash->{'assembly.mapping'}->{values}}, $toplevel_cs->{name}.':'.$toplevel_cs->{version}.'|dna_contig:'.$toplevel_cs->{version});
     
 
