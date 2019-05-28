@@ -108,7 +108,7 @@ sub get_db_info {
         '-sequence_level' => $coord_system->is_sequence_level
       };
     }
-    if (!exists $results{'coord_systems'}->{contig}) {
+    if ($coord_system_name ne 'primary_assembly' and !exists $results{'coord_systems'}->{contig}) {
       my $contig_cs = $self->server->otter_dba->get_CoordSystemAdaptor->fetch_by_name('contig');
       $results{'coord_systems'}->{contig} = {
         '-rank' => $contig_cs->rank,
@@ -117,7 +117,7 @@ sub get_db_info {
       };
     }
   
-    if (!exists $results{'coord_systems'}->{clone}) {
+    if ($coord_system_name ne 'primary_assembly' and !exists $results{'coord_systems'}->{clone}) {
       my $clone_cs = $self->server->otter_dba->get_CoordSystemAdaptor->fetch_by_name('clone');
       $results{'coord_systems'}->{clone} = {
         '-rank' => $clone_cs->rank,
