@@ -156,11 +156,40 @@ sub chromosome_name {
 sub fetch_CloneSequences {
     my ($self) = @_;
 
-    my $slice_projection = $self->slice->project('contig');
-    my $cs_list = $self->_clone_seq_list([]); # empty list
-    foreach my $contig_seg (@$slice_projection) {
-        my $cs = $self->fetch_CloneSeq($contig_seg);
-        push @$cs_list, $cs;
+    my $slice_projection;
+    my $cs_list = $self->_clone_seq_list([]); # empty list;
+    if ($self->slice->coord_system->adaptor->fetch_by_name('contig')) {
+      $slice_projection = $self->slice->project('contig');
+      foreach my $contig_seg (@$slice_projection) {
+          my $cs = $self->fetch_CloneSeq($contig_seg);
+          push @$cs_list, $cs;
+      }
+    }
+    else {
+      my $cs = Bio::Otter::Lace::CloneSequence->new;
+      my $slice = $self->slice;
+      $cs->chromosome($slice->seq_region_name);
+      $cs->contig_name($slice->seq_region_name.':'.$slice->start.'-'.$slice->end);
+      my $synonym = $slice->get_all_synonyms();
+      my $accession_version = $slice->seq_region_name;
+      if (@$synonym) {
+        $synonym = $slice->get_all_synonyms('insdc');
+        if (@$synonym) {
+          $accession_version = $synonym->[0]->name;
+        }
+      }
+      my ($accession, $sv) = $accession_version =~ /^(\S+)\.(\d+)$/;
+      $cs->accession($accession);
+      $cs->sv($sv);
+      $cs->clone_name($accession_version);
+      $cs->chr_start($slice->start);
+      $cs->chr_end($slice->end);
+      $cs->contig_start(1);
+      $cs->contig_end($slice->length);
+      $cs->contig_strand($slice->strand);
+      $cs->length($slice->seq_region_length);
+      $cs->ContigInfo(Bio::Vega::ContigInfo->new(-slice => $slice));
+      push(@$cs_list, $cs);
     }
 
     return @$cs_list;

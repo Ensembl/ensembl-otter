@@ -17,8 +17,15 @@ sub do_it {
 
     $self->do_requires;
 
+    my $cs_name;
+    if ($self->vega_slice->adaptor->db->get_CoordSystemAdaptor->fetch_by_name('contig')) {
+      $cs_name = 'contig';
+    }
+    else {
+      $cs_name = 'seqlevel';
+    }
     my $tiler = Bio::Vega::Tiler->new($self->vega_slice);
-    my @features = $tiler->simple_features('contig');
+    my @features = $tiler->simple_features($cs_name);
     $self->send_feature_gff(\@features);
 
     return;
