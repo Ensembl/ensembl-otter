@@ -298,7 +298,7 @@ sub parse_fasta_sequence {
         $seq->type(seq_is_protein($seq->sequence_string) ? 'Protein' : 'DNA');
       }
 
-      return @seqs[0];
+      return $seqs[0];
 }
 
 sub _tidy_sequence {
