@@ -669,9 +669,8 @@ __DATA__
 
 
 [client]
-#url=http://193.62.52.185:82/cgi-bin/otter
-url=http://localhost:8004/cgi-bin/otter
-write_access=0
+url=http://172.22.10.136:8004/cgi-bin/otter
+write_access=1
 gff_version=3
 acedb_version=4.9.61
 debug=Client,Zircon,XRemote
