@@ -6,6 +6,7 @@ package Bio::Otter::Lace::AceDatabase;
 use strict;
 use warnings;
 use Carp;
+#use Data::Dumper;
 
 use Fcntl qw{ O_WRONLY O_CREAT };
 use File::Basename;
@@ -202,6 +203,7 @@ sub _MethodCollection {
         Hum::ZMapStyleCollection->new_from_string($otter_styles);
 
     my $methods_ace = $client->get_methods_ace;
+#    print $methods_ace, "\n";
     my $method_collection =
         Hum::Ace::MethodCollection->new_from_string($methods_ace, $style_collection);
     $method_collection->process_for_otterlace;
@@ -947,14 +949,14 @@ sub _add_transcript_filters {
             priority            => 1,
             script_name         => 'localdb_get',
             resource_bin        => 'local',
-#            analysis            => 'Otter',
-            analysis            => __PACKAGE__.' '.__LINE__,
+            analysis            => 'Otter',
             feature_kind        => 'Gene',
             zmap_column         => $top_level->name,
             description         => $top_level->remark,
             transcript_analyses => $child_list,
             featuresets         => "${filter_name},${child_list}",
                                                              });
+#        $self->logger->info(Dumper($filter));
         $dataset->add_filter($filter);
     }
 

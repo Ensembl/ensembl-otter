@@ -669,10 +669,8 @@ my %skipped_obj = ();
 ### RUN # $chr_names_wanted ###
 
 foreach my $name (@{$chr_names_wanted}) {
-  my $lslice = $lsa->fetch_by_region('chromosome',$name,undef,undef,undef,__PACKAGE__.' '.__LINE__);
-  my $vslice = $vsa->fetch_by_region('chromosome',$name,undef,undef,undef,__PACKAGE__.' '.__LINE__);
-#  my $lslice = $lsa->fetch_by_region('chromosome',$name,undef,undef,undef,'Otter');
-#  my $vslice = $vsa->fetch_by_region('chromosome',$name,undef,undef,undef,'Otter');
+  my $lslice = $lsa->fetch_by_region('chromosome',$name,undef,undef,undef,'Otter');
+  my $vslice = $vsa->fetch_by_region('chromosome',$name,undef,undef,undef,'Otter');
   $support->log_stamped("Looking at Chromosome $name...\n");
   my $c = 0;
 

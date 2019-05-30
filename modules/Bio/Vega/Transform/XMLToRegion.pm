@@ -263,7 +263,7 @@ sub _build_clone_sequence {
         -end                => $cmp_end,
         -strand             => $strand,
         -seq_region_length  => $cln_length,
-        -coord_system       => $self->coord_system_factory->coord_system('contig'),
+        -coord_system       => $self->coord_system_factory->coord_system('contig') || $self->coord_system_factory->coord_system('dna_contig'),
     );
 
     my $cs = Bio::Otter::Lace::CloneSequence->new;
@@ -413,8 +413,7 @@ sub _build_Transcript {         ## no critic (Subroutines::ProhibitUnusedPrivate
     } else {
         $logic_name = $data->{'analysis'};
     }
-    my $ana = $self->_get_Analysis($logic_name || __PACKAGE__.' '.__LINE__);
-#    my $ana = $self->_get_Analysis($logic_name || 'Otter');
+    my $ana = $self->_get_Analysis($logic_name || 'Otter');
 
     my $transcript = Bio::Vega::Transcript->new(
         -stable_id => $data->{'stable_id'},
@@ -570,8 +569,7 @@ sub _build_Locus {              ## no critic (Subroutines::ProhibitUnusedPrivate
     ## transcript author group has been temporarily set to 'anything' ??
 
     my $chr_slice = $self->_chr_slice;
-    my $ana = $self->_get_Analysis($data->{'analysis'} || __PACKAGE__.' '.__LINE__);
-#    my $ana = $self->_get_Analysis($data->{'analysis'} || 'Otter');
+    my $ana = $self->_get_Analysis($data->{'analysis'} || 'Otter');
     my $gene = Bio::Vega::Gene->new(
         -stable_id => $data->{'stable_id'},
         -slice => $chr_slice,
@@ -636,7 +634,7 @@ sub _build_Locus {              ## no critic (Subroutines::ProhibitUnusedPrivate
         $transcript->end(  $transcript->end   - $slice_offset);
 
         my $logic_name = $transcript->analysis->logic_name;
-        if ($self->analysis_from_transcript_class and $source ne 'havana' and $logic_name ne __PACKAGE__.' '.__LINE__) {
+        if ($self->analysis_from_transcript_class and $source ne 'havana' and $logic_name ne 'Otter') {
             $logic_name = sprintf('%s:%s', $source, $logic_name);
         }
         if ($truncated) {

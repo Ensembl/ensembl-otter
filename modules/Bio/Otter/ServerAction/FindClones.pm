@@ -85,7 +85,7 @@ my $FIND_CONTAINING_CHROMOSOMES_SQL_TEMPLATE = <<'SQL'
               seq_region chr,
               coord_system cs
     WHERE     cs.name='chromosome'
-    AND       cs.version=__PACKAGE__.' '.__LINE__
+    AND       cs.version='Otter'
     AND       cs.coord_system_id=chr.coord_system_id
     AND       chr.seq_region_id=a.asm_seq_region_id
     AND       a.cmp_seq_region_id IN ( %s )

@@ -68,8 +68,7 @@ use Bio::Otter::Server::Config;
             FROM seq_region chr
             JOIN assembly asm
               ON chr.seq_region_id = asm.asm_seq_region_id
-              AND chr.coord_system_id = (SELECT coord_system_id FROM coord_system WHERE name = 'chromosome' AND version = __PACKAGE__.' '.__LINE__)
-#              AND chr.coord_system_id = (SELECT coord_system_id FROM coord_system WHERE name = 'chromosome' AND version = 'Otter')
+              AND chr.coord_system_id = (SELECT coord_system_id FROM coord_system WHERE name = 'chromosome' AND version = 'Otter')
             JOIN seq_region ctg
               ON asm.cmp_seq_region_id = ctg.seq_region_id
               AND ctg.coord_system_id = (SELECT coord_system_id FROM coord_system WHERE name = 'contig')
