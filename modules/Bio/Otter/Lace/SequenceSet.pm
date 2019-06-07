@@ -196,10 +196,10 @@ sub selected_CloneSequences_parameters {
 sub selected_CloneSequences_as_Slice {
     my ($self, $client) = @_;
 
-    my ($dsname, $ssname, $chr_name, $chr_start, $chr_end) = $self->selected_CloneSequences_parameters;
+    my ($dsname, $ssname, $chr_name, $chr_start, $chr_end, $cs_name, $cs_version) = $self->selected_CloneSequences_parameters;
     return Bio::Otter::Lace::Slice->new(
       $client, $dsname, $ssname,
-      'chromosome', 'Otter',
+      $cs_name, $cs_version,
       $chr_name, $chr_start, $chr_end,
       );
 }
