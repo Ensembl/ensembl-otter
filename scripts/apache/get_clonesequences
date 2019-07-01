@@ -19,7 +19,7 @@ my $coord_system_name = $server->require_argument('coord_system_name');
 my $coord_system_version = $server->require_argument('coord_system_version');
 
 my $dbc = $server->otter_dba->dbc;
-
+my $dba = $server->otter_dba;
 # Allow local scripts to access without authorization
 unless ($server->local_user) {
     $server->authorized_user;
@@ -198,6 +198,31 @@ my @cs_list;
 #    }
 #    push(@cs_list, $cs);
 #}
+
+my $misc_set = $dba->get_MiscSetAdaptor->fetch_by_code('otter');
+if ($misc_set) {
+  my $slice = $dba->get_SliceAdaptor->fetch_by_region($coord_system_name, $sequenceset, undef, undef, undef, $coord_system_version);
+  foreach my $feature (@{$dba->get_MiscFeatureAdaptor->fetch_all_by_Slice_and_set_code($slice, $misc_set->code)}) {
+    push(@cs_list, {
+      clone_name  => $feature->get_scalar_attribute('name'),
+      accession   => $feature->get_scalar_attribute('embl_acc') || $sequenceset,
+      sv          => 1,
+      contig_name => $feature->get_scalar_attribute('name'),
+      length      => $feature->length,
+      chr         => {
+        name   => $sequenceset,
+        length => $slice->seq_region_length,
+      },
+      chr_start     => $feature->start,
+      chr_end       => $feature->end,
+      contig_start  => 1,
+      contig_end    => $feature->end,
+      contig_strand => $feature->strand,
+      coord_system_name => $coord_system_name,
+      coord_system_version => $coord_system_version,
+    });
+  }
+}
 
 if (!@cs_list) {
 
