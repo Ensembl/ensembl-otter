@@ -47,7 +47,7 @@ sub _fetch_new_by_type {
 
     my $meta_container = $self->db->get_MetaContainer;
     my $prefix =
-        ($meta_container->get_primary_prefix || 'OTT')
+        ($meta_container->get_primary_prefix || 'ENS')
       . ($meta_container->get_species_prefix || '')
       . $type_prefix;
 
