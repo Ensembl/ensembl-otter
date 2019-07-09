@@ -236,9 +236,15 @@ sub generate_Locus {
     if( my $transcripts=$gene->get_all_Transcripts ) {
 
         my $coord_offset=$gene->get_all_Exons->[0]->slice->start-1;
-
+        my $start = $gene->get_all_Exons->[0]->slice->start; 
+        my $end = $gene->get_all_Exons->[0]->slice->end; 
         foreach my $tran (sort $by_start_end_strand @$transcripts) {
-            $g->attribobjs($self->generate_Transcript($tran, $coord_offset));
+            if ($tran->seq_region_start <= $end and $tran->seq_region_end >= $start) {
+                $g->attribobjs($self->generate_Transcript($tran, $coord_offset));
+            }
+            else {
+                next;
+            }
         }
     } else {
         throw "Cannot create Otter XML, no transcripts attached to this gene:$gene";
