@@ -82,12 +82,13 @@ sub add_selenocystein_Attr_from_Remark {
                                         -END     => $1,
                                         -ALT_SEQ => 'U'
                                         );
-        push(@translation_attributes, $seq_edit->get_Attribute);
+        warning('adding SELEN');
+        warning($seq_edit->get_Attribute);
+        add_EnsEMBL_Attributes($seq_edit->get_Attribute);
+
       }
     }
-    warning('adding SELEN');
-    warning(@translation_attributes);
-    add_EnsEMBL_Attributes(@translation_attributes);
+
   }
 
 }
