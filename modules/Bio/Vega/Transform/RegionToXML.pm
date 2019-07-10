@@ -242,9 +242,6 @@ sub generate_Locus {
             if ($tran->seq_region_start <= $end and $tran->seq_region_end >= $start) {
                 $g->attribobjs($self->generate_Transcript($tran, $coord_offset));
             }
-            else {
-                next;
-            }
         }
     } else {
         throw "Cannot create Otter XML, no transcripts attached to this gene:$gene";
