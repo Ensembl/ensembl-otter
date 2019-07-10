@@ -25,27 +25,71 @@ my $dbc = $otter_dba->dbc;
 unless ($server->local_user) {
     $server->authorized_user;
 }
-my $slice = $otter_dba->get_SliceAdaptor->fetch_by_region($coord_system_name, $sequenceset, undef, undef, undef, $coord_system_version);
 
 my $sql = <<'SQL'
-    select distinct asm.asm_start, asm.asm_end, asm.cmp_start, asm.cmp_end, sr.name, sr.length, asm.ori 
-    from assembly asm 
-    left join seq_region sr on asm.asm_seq_region_id = 
-    (select seq_region_id from seq_region where name = ? and coord_system_id = 4) 
-    and asm.cmp_seq_region_id = sr.seq_region_id 
-    left join misc_attrib ma on sr.name = ma.value 
-    left join misc_feature mf on ma.misc_feature_id = mf.misc_feature_id and ma.attrib_type_id = 4 
-    left join misc_feature_misc_set mfms on mf.misc_feature_id = mfms.misc_feature_id and mfms.misc_set_id = 91 
-    where mf.seq_region_id = 
-    (select seq_region_id from seq_region where name = ? and coord_system_id = 4) 
-    and sr.coord_system_id = 1 order by asm.asm_start
+SELECT cl.name
+      , intl_clone_name.value
+      , embl_acc.value
+      , embl_version.value
+      , ctg.name
+      , ctg.length
+      , chr_name.value
+      , chr.length
+      , chr2ctg.asm_start
+      , chr2ctg.asm_end
+      , chr2ctg.cmp_start
+      , chr2ctg.cmp_end
+      , chr2ctg.ori
+    FROM (assembly chr2ctg
+          , assembly cl2ctg
+          , seq_region chr
+          , seq_region ctg
+          , seq_region_attrib chr_name)
+      , seq_region cl
+    LEFT JOIN seq_region_attrib intl_clone_name
+      ON intl_clone_name.seq_region_id = cl.seq_region_id
+      AND intl_clone_name.attrib_type_id =
+    (SELECT attrib_type_id
+        FROM attrib_type
+        WHERE code = 'intl_clone_name')
+    LEFT JOIN seq_region_attrib embl_acc
+      ON cl.seq_region_id = embl_acc.seq_region_id
+      AND embl_acc.attrib_type_id =
+    (SELECT attrib_type_id
+        FROM attrib_type
+        WHERE code = 'embl_acc')
+    LEFT JOIN seq_region_attrib embl_version
+      ON cl.seq_region_id = embl_version.seq_region_id
+      AND embl_version.attrib_type_id =
+    (SELECT attrib_type_id
+        FROM attrib_type
+        WHERE code = 'embl_version')
+    WHERE chr.name = ?
+      AND chr2ctg.asm_seq_region_id = chr.seq_region_id
+      AND chr2ctg.cmp_seq_region_id = ctg.seq_region_id
+      AND cl2ctg.asm_seq_region_id = cl.seq_region_id
+      AND cl2ctg.cmp_seq_region_id = ctg.seq_region_id
+      AND ctg.coord_system_id =
+    (SELECT coord_system_id
+        FROM coord_system
+        WHERE name = 'contig')
+      AND cl.coord_system_id =
+    (SELECT coord_system_id
+        FROM coord_system
+        WHERE name = 'clone')
+      AND chr.seq_region_id = chr_name.seq_region_id
+      AND chr_name.attrib_type_id =
+    (SELECT attrib_type_id
+        FROM attrib_type
+        WHERE code = 'chr')
+    ORDER BY chr2ctg.asm_start
 SQL
 ;
 my @cs_list;
-my ($acc, $sv);
 
 my $misc_set = $otter_dba->get_MiscSetAdaptor->fetch_by_code('otter');
 if ($misc_set) {
+  my $slice = $otter_dba->get_SliceAdaptor->fetch_by_region($coord_system_name, $sequenceset, undef, undef, undef, $coord_system_version);
   foreach my $feature (@{$otter_dba->get_MiscFeatureAdaptor->fetch_all_by_Slice_and_set_code($slice, $misc_set->code)}) {
     push(@cs_list, {
       clone_name  => $feature->get_scalar_attribute('name'),
@@ -70,42 +114,52 @@ if ($misc_set) {
 
 if (!@cs_list) {
 
-   my $sth = $dbc->prepare($sql);
-   $sth->execute($sequenceset, $sequenceset);
-   while (
+ my $sth = $dbc->prepare($sql);
+ $sth->execute($sequenceset);
+
+ while (
     my (
-        $chr_start,    $chr_end,    $ctg_start,    $ctg_end,  $ctg_name,  $ctg_length,
+        $cl_name,    $intl_name,     $acc,       $sv,          $ctg_name,  $ctg_length,
+        $chr_name,   $chr_length,    $chr_start, $chr_end,     $ctg_start, $ctg_end,
         $ctg_strand
     )
     = $sth->fetchrow
   )
-  {
-    my @temp = split(/\./, $ctg_name);
-    $acc = $temp[0];
-    $sv = $temp[1];
+ {
 
+    my $clone_name = $intl_name || $cl_name;
     my $cs = {
-        clone_name  => $ctg_name,
+        clone_name  => $clone_name,
         accession   => $acc,
         sv          => $sv,
         contig_name => $ctg_name,
         length      => $ctg_length,
         chr         => {
-            name   => $sequenceset,
-            length => $slice->seq_region_length,
+            name   => $chr_name,
+            length => $chr_length,
         },
         chr_start     => $chr_start,
         chr_end       => $chr_end,
         contig_start  => $ctg_start,
         contig_end    => $ctg_end,
         contig_strand => $ctg_strand,
-        coord_system_name => $coord_system_name,
-        coord_system_version => $coord_system_version,
     };
 
+    if (my $prev = $cs_list[-1]) {
+        # Merge adjacent segments of the same contig together.
+        if (    $cs->{'contig_name'}   eq $prev->{'contig_name'}
+            and $cs->{'contig_strand'} eq $prev->{'contig_strand'})
+        {
+            $prev->{'chr_end'} = $cs->{'chr_end'};
+            $prev->{'contig_start'} = $cs->{'contig_start'}
+                if $cs->{'contig_start'} < $prev->{'contig_start'};
+            $prev->{'contig_end'} = $cs->{'contig_end'}
+                if $cs->{'contig_end'} > $prev->{'contig_end'};
+            next;   # Skip to next row so that $cs is not added to list
+        }
+    }
     push(@cs_list, $cs);
-  }
-
+ }
 }
 
 my $xml = '';
