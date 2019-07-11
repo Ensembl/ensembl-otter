@@ -9,7 +9,7 @@ use Bio::Otter::Git qw{ :server_ensembl :match };
 
 use Bio::Otter::Server::Support::Web;
 use Bio::EnsEMBL::Utils::Slice qw(split_Slices);
-use Data::Dumper;
+
 sub get_clonesequences {
     my ($server) = @_;
 
@@ -18,7 +18,8 @@ my $sequenceset = $server->require_argument('sequenceset');
 my $coord_system_name = $server->require_argument('coord_system_name');
 my $coord_system_version = $server->require_argument('coord_system_version');
 
-my $dbc = $server->otter_dba->dbc;
+my $otter_dba = $server->otter_dba;
+my $dbc = $otter_dba->dbc;
 
 # Allow local scripts to access without authorization
 unless ($server->local_user) {
@@ -26,7 +27,7 @@ unless ($server->local_user) {
 }
 
 my $sql = <<'SQL'
-    SELECT cl.name
+SELECT cl.name
       , intl_clone_name.value
       , embl_acc.value
       , embl_version.value
@@ -84,144 +85,48 @@ my $sql = <<'SQL'
     ORDER BY chr2ctg.asm_start
 SQL
 ;
-
-my $sql_no_chr = <<'SQL'
-    SELECT cl.name
-      , intl_clone_name.value
-      , embl_acc.value
-      , embl_version.value
-      , ctg.name
-      , ctg.length
-      , chr.name
-      , chr.length
-      , chr2ctg.asm_start
-      , chr2ctg.asm_end
-      , chr2ctg.cmp_start
-      , chr2ctg.cmp_end
-      , chr2ctg.ori
-    FROM (assembly chr2ctg
-          , assembly cl2ctg
-          , seq_region chr
-          , seq_region ctg
-          , seq_region_attrib chr_name)
-      , seq_region cl
-    LEFT JOIN seq_region_attrib intl_clone_name
-      ON intl_clone_name.seq_region_id = cl.seq_region_id
-      AND intl_clone_name.attrib_type_id =
-    (SELECT attrib_type_id
-        FROM attrib_type
-        WHERE code = 'intl_clone_name')
-    LEFT JOIN seq_region_attrib embl_acc
-      ON cl.seq_region_id = embl_acc.seq_region_id
-      AND embl_acc.attrib_type_id =
-    (SELECT attrib_type_id
-        FROM attrib_type
-        WHERE code = 'embl_acc')
-    LEFT JOIN seq_region_attrib embl_version
-      ON cl.seq_region_id = embl_version.seq_region_id
-      AND embl_version.attrib_type_id =
-    (SELECT attrib_type_id
-        FROM attrib_type
-        WHERE code = 'embl_version')
-    WHERE chr.name = ?
-      AND ctg.length > 20000
-      AND chr2ctg.asm_seq_region_id = chr.seq_region_id
-      AND chr2ctg.cmp_seq_region_id = ctg.seq_region_id
-      AND cl2ctg.asm_seq_region_id = cl.seq_region_id
-      AND cl2ctg.cmp_seq_region_id = ctg.seq_region_id
-      AND ctg.coord_system_id =
-    (SELECT coord_system_id
-        FROM coord_system
-        WHERE name = 'contig')
-      AND cl.coord_system_id =
-    (SELECT coord_system_id
-        FROM coord_system
-        WHERE name = 'clone')
-      AND chr.seq_region_id = chr_name.seq_region_id
-    ORDER BY chr2ctg.asm_start
-SQL
-;#      AND ctg.length > 10000
-
-# If the whole chromosome is missing, check that it has the chr attribute.
-# [ NO LONGER TRUE: If a clone is missing from the results, check that it has embl_acc and embl_version attributes. ]
-
-#my $sth = $dbc->prepare($sql);
-#$sth->execute($sequenceset);
-
-
 my @cs_list;
-#while (
-#    my (
-#        $cl_name,    $intl_name,     $acc,       $sv,          $ctg_name,  $ctg_length,
-#        $chr_name,   $chr_length,    $chr_start, $chr_end,     $ctg_start, $ctg_end,
-#        $ctg_strand
-#    )
-#    = $sth->fetchrow
-#  )
-#{
-#    warn "cl_name=", Dumper($cl_name), "\n";
-#    warn "intl_name=", Dumper($cl_name), "\n";
-#    warn "acc=", Dumper($cl_name), "\n";
-#    warn "ctg_name=", Dumper($cl_name), "\n";
-#    my $clone_name = $intl_name || $cl_name;
-#    my $cs = {
-#        clone_name  => $clone_name,
-#        accession   => $acc,
-#        sv          => $sv,
-#        contig_name => $ctg_name,
-#        length      => $ctg_length,
-#        chr         => {
-#            name   => $chr_name,
-#            length => $chr_length,
-#        },
-#        chr_start     => $chr_start,
-#        chr_end       => $chr_end,
-#        contig_start  => $ctg_start,
-#        contig_end    => $ctg_end,
-#        contig_strand => $ctg_strand,
-#        coord_system_name => $coord_system_name,
-#        coord_system_version => $coord_system_version,
-#    };
 
-#    if (my $prev = $cs_list[-1]) {
-#        # Merge adjacent segments of the same contig together.
-#        if (    $cs->{'contig_name'}   eq $prev->{'contig_name'}
-#            and $cs->{'contig_strand'} eq $prev->{'contig_strand'})
-#        {
-#            $prev->{'chr_end'} = $cs->{'chr_end'};
-#            $prev->{'contig_start'} = $cs->{'contig_start'}
-#                if $cs->{'contig_start'} < $prev->{'contig_start'};
-#            $prev->{'contig_end'} = $cs->{'contig_end'}
-#                if $cs->{'contig_end'} > $prev->{'contig_end'};
-#            next;   # Skip to next row so that $cs is not added to list
-#        }
-#    }
-#    push(@cs_list, $cs);
-#}
+my $misc_set = $otter_dba->get_MiscSetAdaptor->fetch_by_code('otter');
+if ($misc_set) {
+  my $slice = $otter_dba->get_SliceAdaptor->fetch_by_region($coord_system_name, $sequenceset, undef, undef, undef, $coord_system_version);
+  foreach my $feature (@{$otter_dba->get_MiscFeatureAdaptor->fetch_all_by_Slice_and_set_code($slice, $misc_set->code)}) {
+    push(@cs_list, {
+      clone_name  => $feature->get_scalar_attribute('name'),
+      accession   => $feature->get_scalar_attribute('name'),
+      sv          => 1,
+      contig_name => $feature->get_scalar_attribute('name'),
+      length      => $feature->length,
+      chr         => {
+          name    =>  $sequenceset,
+          length  =>  $slice->seq_region_length,
+      },
+      chr_start     => $feature->start,
+      chr_end       => $feature->end,
+      contig_start  => $feature->get_all_Attributes('inner_start')->[0],
+      contig_end    => $feature->get_all_Attributes('inner_end')->[0],
+      contig_strand => $feature->strand,
+      coord_system_name => $coord_system_name,
+      coord_system_version => $coord_system_version,
+    });
+  }
+}
 
 if (!@cs_list) {
 
-   my $sth_no_chr = $dbc->prepare($sql_no_chr);
-   $sth_no_chr->execute($sequenceset);#warn "SQL_QUERY_LENGTH=", Dumper(scalar $sth_no_chr->fetchrow), "\n";
-   while (
+ my $sth = $dbc->prepare($sql);
+ $sth->execute($sequenceset);
+
+ while (
     my (
         $cl_name,    $intl_name,     $acc,       $sv,          $ctg_name,  $ctg_length,
         $chr_name,   $chr_length,    $chr_start, $chr_end,     $ctg_start, $ctg_end,
         $ctg_strand
     )
-    = $sth_no_chr->fetchrow
+    = $sth->fetchrow
   )
-  {
-    my @temp = split(/\./, $cl_name);
-    if(!$acc) {
-       $acc = $temp[0];   
-    }
+ {
 
-    if(!$sv) {
-       $sv = $temp[1];    
-    }
-    
-    $ctg_name = join('.', $cl_name, 1, $ctg_length); #warn "ctg_name=", Dumper($ctg_name), "\n";
     my $clone_name = $intl_name || $cl_name;
     my $cs = {
         clone_name  => $clone_name,
@@ -238,8 +143,6 @@ if (!@cs_list) {
         contig_start  => $ctg_start,
         contig_end    => $ctg_end,
         contig_strand => $ctg_strand,
-        coord_system_name => $coord_system_name,
-        coord_system_version => $coord_system_version,
     };
 
     if (my $prev = $cs_list[-1]) {
@@ -254,10 +157,9 @@ if (!@cs_list) {
                 if $cs->{'contig_end'} > $prev->{'contig_end'};
             next;   # Skip to next row so that $cs is not added to list
         }
-    }warn "CS=", Dumper($cs), "\n";
+    }
     push(@cs_list, $cs);
-  }
-warn "CS_LIST_LENGTH=", Dumper(scalar @cs_list), "\n";
+ }
 }
 
 my $xml = '';
@@ -271,7 +173,7 @@ foreach my $cs (@cs_list) {
         qw{ clone_name accession sv contig_name length
         chr chr_start chr_end
         coord_system_name coord_system_version
-        contig_start contig_end contig_strand }#accession sv
+        contig_start contig_end contig_strand }
       )
     {
         my $value = $cs->{$tag};
