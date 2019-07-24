@@ -337,7 +337,6 @@ sub update_Gene {
 
     # $old_transcripts is the arrayref associated with $old_gene and now @new_gene, so we empty it to prevent
     # the gene adaptor from storing or removing the transcripts.
-    @$old_transcripts = ();
     $old_gene->flush_Transcripts;
 
     $new_gene->slice($self->whole_slice) unless $new_gene->slice;
