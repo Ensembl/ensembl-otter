@@ -312,6 +312,7 @@ sub store_Gene {
     $gene_adaptor->store_only($gene);
 
     # We want get_all_Transcripts to load from database on next call.
+    $gene->flush_Transcripts;
     delete $gene->{'_transcript_array'};
 
     $locus->ensembl_dbID($gene->dbID);
@@ -332,13 +333,12 @@ sub update_Gene {
     $self->logger->debug("update_Gene: old locus ", $self->_debug_hum_ace($old_locus),
                          " has transcript_ids: ", join ',', map { $_->dbID } @$old_transcripts );
 
-    my $transcripts_copy = [ @$old_transcripts ];
-
     my $new_gene = $self->_gene_from_Locus($new_locus, $old_transcripts); # transcripts for setting coords
 
     # $old_transcripts is the arrayref associated with $old_gene and now @new_gene, so we empty it to prevent
     # the gene adaptor from storing or removing the transcripts.
     @$old_transcripts = ();
+    $old_gene->flush_Transcripts;
 
     $new_gene->slice($self->whole_slice) unless $new_gene->slice;
     $gene_adaptor->store_only($new_gene);
@@ -347,7 +347,7 @@ sub update_Gene {
     # Point existing transcripts at the new version
     my $ts_adaptor = $self->vega_dba->get_TranscriptAdaptor;
     my $sth = $ts_adaptor->prepare("UPDATE transcript SET gene_id = ? WHERE transcript_id = ?");
-    foreach my $ts ( @$transcripts_copy ) {
+    foreach my $ts ( @$old_transcripts ) {
         $sth->execute($new_gene_dbID, $ts->dbID);
     }
     $sth->finish;
@@ -355,7 +355,9 @@ sub update_Gene {
     $gene_adaptor->remove($old_gene);
 
     # We want get_all_Transcripts to load from database on next call. Do both old and new in case of caching.
+    $old_gene->flush_Transcripts;
     delete $old_gene->{'_transcript_array'};
+    $new_gene->flush_Transcripts;
     delete $new_gene->{'_transcript_array'};
 
     $new_locus->ensembl_dbID($new_gene_dbID);
