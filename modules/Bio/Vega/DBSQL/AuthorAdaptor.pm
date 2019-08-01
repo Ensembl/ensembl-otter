@@ -5,7 +5,7 @@ use warnings;
 use Bio::Vega::Author;
 use Bio::Vega::AuthorGroup;
 use Bio::EnsEMBL::Utils::Exception qw ( throw warning );
-use Data::Dumper;
+
 use base 'Bio::EnsEMBL::DBSQL::BaseAdaptor';
 
 
