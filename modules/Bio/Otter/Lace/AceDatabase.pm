@@ -332,7 +332,7 @@ sub recover_slice_from_region_xml {
 
     my $parser = Bio::Vega::Transform::XMLToRegion->new;
     $parser->analysis_from_transcript_class(1);
-    $parser->coord_system_factory(Bio::Vega::CoordSystemFactory->new); # Should we get this from somewhere else?
+    $parser->coord_system_factory(Bio::Vega::CoordSystemFactory->new(dba => $self->DB->vega_dba)); # Should we get this from somewhere else?
     my $region = $parser->parse($xml);
 
     my $slice = Bio::Otter::Lace::Slice->new_from_region($client, $region);
