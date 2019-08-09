@@ -72,9 +72,12 @@ sub do_search {
     my $qnames = [ grep { /\S/ } # remove blank term, due to leading space
                    split(/[\s,]+/, ${$self->search_field()} ) ];
 
+    my $ss;
+    $ss = $self->DataSet->selected_SequenceSet
+      || $self->DataSet->get_all_SequenceSets->[0];
     my $result_list =
         $self->Client->find_clones($self->DataSet->name,
-                                    $self->DataSet->selected_SequenceSet,
+                                    $ss,
                                     $qnames);
     my $result_hash = { };
     foreach (@{$result_list}) {
