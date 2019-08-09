@@ -1334,15 +1334,15 @@ sub get_slice_DE {
 sub slice_query {
     my ($self, $slice) = @_;
     die unless wantarray;
-    return ('dataset' => $slice->dsname(),
-            'chr'     => $slice->ssname(),
-
-            'cs'      => $slice->csname(),
-            'csver'   => $slice->csver(),
-            'name'    => $slice->seqname(),
-            'start'   => $slice->start(),
-            'end'     => $slice->end()),
-            'author'  => $self->author;
+    return (
+        'dataset' => $slice->dsname(),
+        'chr'     => $slice->ssname(),
+        'cs'      => $slice->csname(),
+        'csver'   => $slice->csver(),
+        'name'    => $slice->seqname(),
+        'start'   => $slice->start(),
+        'end'     => $slice->end(),
+    );
 }
 
 
@@ -1354,7 +1354,7 @@ sub do_authentication {
         'authenticate_me',
         {'author' => $self->author},
     );
-    return $user
+    return $user;
 }
 
 sub get_all_SequenceSets_for_DataSet {
