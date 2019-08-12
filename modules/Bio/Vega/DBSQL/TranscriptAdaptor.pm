@@ -58,6 +58,7 @@ sub store_Evidence {
       my $name = $evidence->name;
       my $type = $evidence->type;
       $sth->execute($transcript_id, $name, $type);
+  }
   return;
 }
 
