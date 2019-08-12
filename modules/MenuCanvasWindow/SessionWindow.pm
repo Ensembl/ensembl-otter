@@ -1323,7 +1323,7 @@ sub _save_data {
 
         my $parser = Bio::Vega::Transform::XMLToRegion->new;
         $parser->analysis_from_transcript_class(1);
-        $parser->coord_system_factory(Bio::Vega::CoordSystemFactory->new);
+        $parser->coord_system_factory(Bio::Vega::CoordSystemFactory->new(dba => $adb->DB->vega_dba));
         my $region = $parser->parse($xml);
 
         $adb->unsaved_changes(0);

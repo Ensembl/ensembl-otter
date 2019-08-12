@@ -7,43 +7,6 @@ use Carp;
 use Readonly;
 use Bio::EnsEMBL::CoordSystem;
 
-# Our canned coordinate systems
-#
-#Readonly my %_COORD_SYSTEM_SPEC => (
-#    'chromosome' => { '-version' => 'Otter', '-rank' => 2, '-default' => 1,                         },
-#    #'clone'      => { '-version' => 'Otter', '-rank' => 4, '-default' => 1,                         },
-#    'clone'      => {                         '-rank' => 4, '-default' => 1,                         },
-#    #'contig'     => { '-version' => 'Otter', '-rank' => 5, '-default' => 1, '-sequence_level' => 1, },
-#    'contig'     => {                        '-rank' => 5, '-default' => 1,                         },
-#    'dna_contig' => { '-version' => 'Otter', '-rank' => 6, '-default' => 1, '-sequence_level' => 1, },
-#    );
-
-# Our canned mappings - kept here for consistency with our canned coordinate systems
-#
-no warnings 'qw';               ## no critic (TestingAndDebugging::ProhibitNoWarnings)
-#Readonly my @_MAPPINGS_SPEC => qw(
-#    chromosome:Otter#dna_contig:Otter
-#    chromosome:Otter#contig
-#    clone#contig
-#    );
-#Readonly my @_MAPPINGS_SPEC => qw(
-#    														     clone#contig
-#                                                                                                                     subregion#contig
-#                                                                                                                     chromosome:Otter#chromosome
-#                                                                                                                     chromosome:Otter#dna_contig:Otter
-#                                                                                                                     chromosome:Otter#clone
-#                                                                                                                     chromosome:Otter#chromosome:NCBI36
-#                                                                                                                     chromosome:Otter#contig
-#                                                                                                                     chromosome:NCBI36#contig
-#                                                                                                                     chromosome:Otter#contig#clone
-#                                                                                                                     chromosome:NCBI36#contig#clone
-#                                                                                                                     chromosome:OtterArchive#contig
-#                                                                                                                     chromosome:OtterArchive#contig#clone
-#                                                                                                                     chromosome:GRCh37#contig
-#                                                                                                                     chromosome:GRCh37#contig#clone
-#                                                                                                                     chromosome:Otter#chromosome:GRCh37
-#                                                                                                                     chromosome:Otter#chromosome:OtterArchive
-#    );
 use warnings 'qw';
 
 sub new {
@@ -69,8 +32,8 @@ sub new {
 sub coord_system {
     my ($self, $name) = @_;
   
-    my $cs = $self->_cached_cs($name);
-    return $cs if $cs;
+#    my $cs = $self->_cached_cs($name);
+#    return $cs if $cs;
 
     # Not cached yet
 #    unless ($_COORD_SYSTEM_SPEC{$name}) {
@@ -78,11 +41,17 @@ sub coord_system {
 #    }
 
     if ($self->dba) {
-        $cs = $self->_dba_cs($name);
-    } else {
-        $cs = $self->_local_cs($name);
+        my $cs = $self->_dba_cs($name);
+        return $self->_cached_cs($name, $cs);
+    } 
+    elsif ($self->_cached_cs($name)) {
+        my $cs = $self->_local_cs($name, $self->_cached_cs($name));
+        return $self->_cached_cs($name, $cs);
     }
-    return $self->_cached_cs($name, $cs);
+    else {
+        my $cs = $self->_local_cs($name);
+        return $self->_cached_cs($name, $cs);
+    }
 }
 
 sub known {
@@ -133,12 +102,17 @@ sub _dba_cs {
 }
 
 sub _local_cs {
-    my ($self, $name) = @_;
+    my ($self, $name, $cs_factory) = @_;
 
-    my $spec = $self->override_spec->{$name};
-
-    my $cs = Bio::EnsEMBL::CoordSystem->new('-name' => $name, %$spec);
-    return $cs;
+    if ($cs_factory) {
+        my $cs = Bio::EnsEMBL::CoordSystem->new('-name' => $name, %$cs_factory);
+        return $cs;
+    }
+    else {
+        my $spec = $self->override_spec->{$name};
+        my $cs = Bio::EnsEMBL::CoordSystem->new('-name' => $name, %$spec);
+        return $cs;
+    }
 }
 
 # Accessors
@@ -177,7 +151,6 @@ sub _cached_cs {
 sub _coord_system_specs {
   my ($self) = @_;
   return $self->override_spec || {};
-#  return $self->override_spec || \%_COORD_SYSTEM_SPEC;
 }
 
 1;
