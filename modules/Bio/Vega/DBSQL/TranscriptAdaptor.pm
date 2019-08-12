@@ -50,23 +50,14 @@ sub store_Evidence {
       throw("evidence_list and transcript_id must be supplied");
   }
   # Insert new evidence
-  my $select_sth = $self->prepare(q{
-     SELECT * FROM evidence WHERE transcript_id = ?
-  });
-  $select_sth->execute($transcript_id);
-  if($select_sth->fetchrow_array) { 
-      return;
-  }
-  else {
-      my $sth = $self->prepare(q{
-      INSERT INTO evidence(transcript_id, name, type) VALUES (?,?,?)
-  });
-      foreach my $evidence (@$evidence_list) {
-          my $name = $evidence->name;
-          my $type = $evidence->type;
-          $sth->execute($transcript_id, $name, $type);
-      }
-  }
+  my $sth = $self->prepare(q{
+        INSERT INTO evidence(transcript_id, name, type) VALUES (?,?,?)
+        });
+
+  foreach my $evidence (@$evidence_list) {
+      my $name = $evidence->name;
+      my $type = $evidence->type;
+      $sth->execute($transcript_id, $name, $type);
   return;
 }
 

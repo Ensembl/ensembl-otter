@@ -236,23 +236,10 @@ sub store_transcript_author {
       throw("transcript_id:$transcript_id and author_id:$author_id must be present to store a transcript_author");
   }
   # Insert new gene author
-  my $select_sth = $self->prepare(q{
-      SELECT * FROM transcript_author WHERE transcript_id = ?
-  });
-  $select_sth->execute($transcript_id);
-
-  if($select_sth->fetchrow_array) {
-      my $sth = $self->prepare(q{
-          UPDATE transcript_author SET author_id = ? WHERE transcript_id = ?
-      });
-      $sth->execute($author_id, $transcript_id);
-  }
-  else {
-      my $sth = $self->prepare(q{
-          INSERT INTO transcript_author(transcript_id, author_id) VALUES (?,?)
-      });
-      $sth->execute($transcript_id,$author_id);
-  }
+  my $sth = $self->prepare(q{
+        INSERT INTO transcript_author(transcript_id, author_id) VALUES (?,?)
+        });
+  $sth->execute($transcript_id,$author_id);
   return;
 }
 
