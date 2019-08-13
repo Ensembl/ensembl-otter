@@ -73,12 +73,11 @@ sub do_search {
                    split(/[\s,]+/, ${$self->search_field()} ) ];
 
     my $ss;
-    $ss = $self->DataSet->selected_SequenceSet
-      || $self->DataSet->get_all_SequenceSets->[0];
+    $ss = $self->DataSet->get_all_SequenceSets->[0];
     my $result_list =
         $self->Client->find_clones($self->DataSet->name,
-                                    $ss,
-                                    $qnames);
+                                    $qnames,
+                                    $ss);
     my $result_hash = { };
     foreach (@{$result_list}) {
         if ($_->{text}) {

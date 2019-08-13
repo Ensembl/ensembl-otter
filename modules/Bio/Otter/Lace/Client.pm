@@ -928,7 +928,7 @@ sub status_refresh_for_DataSet_SequenceSet{
 }
 
 sub find_clones {
-    my ($self, $dsname, $ss, $qnames_list) = @_;
+    my ($self, $dsname, $qnames_list, $ss) = @_;
     my $qnames_string = join(',', @$qnames_list);
 
     my $response = $self->http_response_content(
