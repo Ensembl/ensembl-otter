@@ -4,7 +4,7 @@ use Test::Class::Most
     parent     => 'Test::Bio::Vega';
 
 use Test::Bio::Vega::Region no_run_test => 1;
-use Data::Dumper;
+
 sub test_bio_vega_features             { return { test_region => 1, parsed_region => 1 }; }
 sub get_bio_vega_transform_xmltoregion { return shift->our_object; }
 
