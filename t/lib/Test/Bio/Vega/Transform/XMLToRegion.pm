@@ -4,7 +4,7 @@ use Test::Class::Most
     parent     => 'Test::Bio::Vega';
 
 use Test::Bio::Vega::Region no_run_test => 1;
-
+use Data::Dumper;
 sub test_bio_vega_features             { return { test_region => 1, parsed_region => 1 }; }
 sub get_bio_vega_transform_xmltoregion { return shift->our_object; }
 
@@ -27,7 +27,7 @@ sub parse : Test(5) {
 
     # region's coord_systems
     my $e_cs = $test->our_object()->coord_system_factory->coord_system('chromosome');
-    is $region->slice->coord_system('chromosome'), $e_cs, 'region slice coord_system';
+    is $region->slice->coord_system->rank, $e_cs->rank, 'region slice coord_system';
 
     return;
 }
