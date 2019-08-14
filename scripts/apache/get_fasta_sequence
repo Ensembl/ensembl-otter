@@ -42,7 +42,7 @@ sub get_fasta_sequence {
     my @queries;
     my $query = 'http://www.ebi.ac.uk/Tools/dbfetch/dbfetch?format=fasta&style=raw&db=uniprotkb&id=';
     push @queries, $query;
-    my $query = 'http://www.ebi.ac.uk/Tools/dbfetch/dbfetch?format=fasta&style=raw&db=refseqn&id=';
+    $query = 'http://www.ebi.ac.uk/Tools/dbfetch/dbfetch?format=fasta&style=raw&db=refseqn&id=';
     push @queries, $query;
     $query = 'http://www.ebi.ac.uk/Tools/dbfetch/dbfetch?db=ena_sequence&format=fasta&style=raw&Retrieve=Retrieve&id=';
 
