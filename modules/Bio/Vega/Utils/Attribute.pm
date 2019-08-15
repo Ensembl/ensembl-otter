@@ -72,19 +72,8 @@ sub add_selenocystein_Attr_from_Remark {
   my @translation_attributes;
    foreach my $value (@remarks) {
      if ($value =~ /^selenocystein\w+\s+\d+/) {
-       info(__LINE__.' SELENO '.$value);
        while($value =~ / (\d+)/gc) {
-         my $seq_edit = Bio::EnsEMBL::SeqEdit->new(
-                                        -CODE    => '_selenocysteine',
-                                        -NAME    => 'Selenocysteine',
-                                        -DESC    => 'Selenocysteine',
-                                        -START   => $1,
-                                        -END     => $1,
-                                        -ALT_SEQ => 'U'
-                                        );
-        warning('adding SELEN');
-        warning($seq_edit->get_Attribute);
-        add_EnsEMBL_Attributes($seq_edit->get_Attribute);
+        add_EnsEMBL_Attributes($e_obj, '_selenocysteine' => $1);
 
       }
     }
