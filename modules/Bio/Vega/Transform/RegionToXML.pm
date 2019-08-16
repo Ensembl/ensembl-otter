@@ -428,9 +428,7 @@ sub generate_FeatureSet {
           throw "Cannot create Otter XML, feature end is absent: $feature";
       }
 
-      if ($feature->strand){
-          $f->attribvals($self->prettyprint('strand',$feature->strand || 1));
-      }
+      $f->attribvals($self->prettyprint('strand',$feature->strand || 1));
 
       if ($feature->score){
           $f->attribvals($self->prettyprint('score',$feature->score));
