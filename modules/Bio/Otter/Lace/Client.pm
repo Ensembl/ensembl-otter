@@ -928,8 +928,7 @@ sub status_refresh_for_DataSet_SequenceSet{
 }
 
 sub find_clones {
-    my ($self, $dsname, $qnames_list) = @_;
-
+    my ($self, $dsname, $qnames_list, $ss) = @_;
     my $qnames_string = join(',', @$qnames_list);
 
     my $response = $self->http_response_content(
@@ -937,8 +936,10 @@ sub find_clones {
         'find_clones',
         {
             'dataset'  => $dsname,
-            'qnames'   => $qnames_string, 
-            'author'   => $self->author
+            'qnames'   => $qnames_string,
+            'author'   => $self->author,
+            'coord_system_name' => $ss->coord_system_name,
+            'coord_system_version' => $ss->coord_system_version,
         },
     );
 
