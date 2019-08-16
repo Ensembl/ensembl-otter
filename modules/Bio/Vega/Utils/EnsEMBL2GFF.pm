@@ -559,7 +559,7 @@ my $_new_feature_id_sub = sub {
         my ($self, @args) = @_;
         my $gff = $self->SUPER::_gff_hash(@args);
 
-        if ($self->analysis->logic_name =~ /RepeatMasker/i) {
+        if ($self->analysis->logic_name =~ /RepeatMask/i) {
             my $class = $self->repeat_consensus->repeat_class;
 
             if ($class =~ /LINE/) {
