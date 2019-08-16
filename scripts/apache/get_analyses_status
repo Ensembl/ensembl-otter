@@ -49,7 +49,7 @@ sub get_possible_analyses {
 
 
 my $select_components_sql = <<'SQL'
-SELECT cmp.name, cs.version, cmp.length
+SELECT cmp.name, cmp.length
 FROM coord_system cs
   , seq_region cmp
   , assembly a
@@ -88,14 +88,8 @@ my @tmp_cmp_name = ();
 my $cmp_sth = $pdbc->prepare($select_components_sql); 
 $cmp_sth->execute($assembly, $component_cs);
 
-while (my ($cmp_name, $cs_version, $seq_length) = $cmp_sth->fetchrow) {
-
-    my @syll = split(/\./, $cmp_name);
-    my $to = pop @syll;
-    my $from = pop @syll;
-    if(!defined($cs_version)) { $cs_version = ''; }
-    my $temp = join('.', $cmp_name, '1', $seq_length);
-    push @input_ids, join(':', $component_cs, 'none', $temp, 1, $seq_length, 1);
+while (my ($cmp_name, $seq_length) = $cmp_sth->fetchrow) {
+    push @input_ids, join(':', $component_cs, '', $cmp_name, 1, $seq_length, 1);
 } 
 
 my %skeleton_hash = map { ($_ => []) } get_possible_analyses($pdbc); 
