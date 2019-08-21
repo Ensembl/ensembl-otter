@@ -203,7 +203,7 @@ sub generate_Locus {
 
     my ($type) = biotype_status2method($gene->biotype, $gene->status);
     my $source = $gene->source;
-    if ($source ne 'havana') {
+    if ($source ne 'havana'and $source ne 'ensembl_havana') {
         $type = "$source:$type";
     }
     $g->attribvals($self->prettyprint('type',$type));
