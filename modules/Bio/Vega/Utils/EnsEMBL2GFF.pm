@@ -6,7 +6,7 @@ use strict;
 use warnings;
 
 use Bio::EnsEMBL::Utils::Exception qw(verbose);
-
+use Data::Dumper;
 # This module allows conversion of ensembl/otter objects to GFF by
 # inserting to_gff (and supporting _gff_hash) methods into the
 # necessary feature classes
@@ -529,8 +529,10 @@ my $_new_feature_id_sub = sub {
         $gff->{'attributes'}{'Name'} = $name;
         $gff->{'attributes'}{'ensembl_variation'} = $self->allele_string;
         if ($name =~ /^rs/ and my $url_string = $args{'url_string'}) {
-            my $url = sprintfn $url_string, { id => $name, species => $args{'species.url'} };
-            $gff->{'attributes'}{'url'}  = $url;
+            $url_string =~ s/\%\(id\)s/$name/;
+            $url_string =~ s/\%\(species\)s/$args{'species.url'}/;
+            $gff->{'attributes'}{'url'}  = $url_string;
+#            warn "\n";
         }
 
         return $gff;
