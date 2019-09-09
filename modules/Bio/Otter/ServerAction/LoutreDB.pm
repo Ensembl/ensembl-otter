@@ -2,7 +2,7 @@ package Bio::Otter::ServerAction::LoutreDB;
 
 use strict;
 use warnings;
-use Data::Dumper;
+
 use base 'Bio::Otter::ServerAction';
 
 =head1 NAME
