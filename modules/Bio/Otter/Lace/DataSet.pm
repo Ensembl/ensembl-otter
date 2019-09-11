@@ -465,9 +465,9 @@ sub db_info_hash {
     # Get all db_info in one call
     my $cs_name = 'chromosome';
     my $cs_version = 'Otter';
-    if ($self->sequence_sets_cached) {
-      $cs_name = $self->sequence_sets_cached->[0]->coord_system_name;
-      $cs_version = $self->sequence_sets_cached->[0]->coord_system_version;
+    if ($self->selected_SequenceSet) {
+      $cs_name = $self->selected_SequenceSet->coord_system_name;
+      $cs_version = $self->selected_SequenceSet->coord_system_version;
     }
     return $self->{'_db_info_hash'} ||=
         $self->Client->get_db_info($self->name, $cs_name, $cs_version);
