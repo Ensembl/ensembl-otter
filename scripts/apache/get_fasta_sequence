@@ -1,5 +1,5 @@
 #!/usr/bin/perl -Tw
-# Copyright [2018] EMBL-European Bioinformatics Institute
+# Copyright [2018-2019] EMBL-European Bioinformatics Institute
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@
 use warnings;
 use LWP::UserAgent;
 use HTTP::Request;
+use strict;
 
 BEGIN { use lib ($ENV{OTTER_PERL_INC} || q{}) =~ m{([^:]+)}g }
 use SangerPaths qw{ core bioperl123 otter };
@@ -28,27 +29,60 @@ sub get_fasta_sequence {
     my ($server) = @_;
 
     my $id = $server->require_argument('id');
-    my @queries;
-    my $query = 'http://www.ebi.ac.uk/Tools/dbfetch/dbfetch?format=fasta&style=raw&db=refseqn&id='
-      . $id;
-    push @queries, $query;
-    $query = 'http://www.ebi.ac.uk/Tools/dbfetch/dbfetch?db=ena_sequence&format=fasta&style=raw&Retrieve=Retrieve&id='
-      . $id;
-    push @queries, $query;
-    $id =~ s/-\d+//;
-    $query = 'http://www.ebi.ac.uk/Tools/dbfetch/dbfetch?format=fasta&style=raw&db=uniprotkb&id='
-      . $id;
-    push @queries, $query;
-    my $result;
 
-    for my $current_query (@queries) {
-      $result = web_fetch($current_query);
-      if ($result->is_success && substr($result->decoded_content, 0, 1) eq ">") {
-        return $server->otter_wrap_response($result->decoded_content);
-      }
+    my @raw_id_array = split (',', $id);
+    $id = "";
+    foreach my $current_id (@raw_id_array) {
+        if (index($current_id, '-') != -1) {
+          $current_id =~ s/\.\d+//;
+        }
+        $id = $id . ',' . $current_id;
     }
-    warn $result->decoded_content;
-    return $server->otter_wrap_response($result->decoded_content);
+
+    my @queries;
+    my $query = 'http://www.ebi.ac.uk/Tools/dbfetch/dbfetch?format=fasta&style=raw&db=uniprotkb&id=';
+    push @queries, $query;
+    $query = 'http://www.ebi.ac.uk/Tools/dbfetch/dbfetch?format=fasta&style=raw&db=refseqn&id=';
+    push @queries, $query;
+    $query = 'http://www.ebi.ac.uk/Tools/dbfetch/dbfetch?db=ena_sequence&format=fasta&style=raw&Retrieve=Retrieve&id=';
+
+    push @queries, $query;
+
+    my $response;
+    my $concat_response = '';
+    my $i = 0;
+    while ($i < 3 || $id != '') {
+        my @id_array = split (',', $id);
+        $id = '';
+        foreach my $current_id (@id_array) {
+            if ((index $concat_response, $current_id) == -1) {
+                warn "ID " . $current_id . "not found ";
+                 $id = $id . ',' . $current_id;
+            }
+        }
+
+        my $cut_id = $id;
+
+        if ($i == 0) {
+            $cut_id =~ s/\.\d+//;
+        }
+
+        $response = fetch_ids_from_external_db($queries[$i] . $cut_id);
+        $concat_response = $concat_response . $response;
+        $i++;
+    }
+    return $server->otter_wrap_response($concat_response);
+}
+
+sub fetch_ids_from_external_db {
+    my ($query) = @_;
+    my $result;
+    $result = web_fetch($query);
+    if ($result->is_success && substr($result->decoded_content, 0, 1) eq ">") {
+      return $result->decoded_content;
+
+    }
+    return '';
 }
 
 sub web_fetch {

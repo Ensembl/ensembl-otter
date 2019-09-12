@@ -203,7 +203,7 @@ sub generate_Locus {
 
     my ($type) = biotype_status2method($gene->biotype, $gene->status);
     my $source = $gene->source;
-    if ($source ne 'havana') {
+    if ($source ne 'havana'and $source ne 'ensembl_havana') {
         $type = "$source:$type";
     }
     $g->attribvals($self->prettyprint('type',$type));
@@ -428,9 +428,7 @@ sub generate_FeatureSet {
           throw "Cannot create Otter XML, feature end is absent: $feature";
       }
 
-      if ($feature->strand){
-          $f->attribvals($self->prettyprint('strand',$feature->strand || 1));
-      }
+      $f->attribvals($self->prettyprint('strand',$feature->strand || 1));
 
       if ($feature->score){
           $f->attribvals($self->prettyprint('score',$feature->score));

@@ -90,12 +90,13 @@ my @cs_list;
 my $misc_set = $otter_dba->get_MiscSetAdaptor->fetch_by_code('otter');
 if ($misc_set) {
   my $slice = $otter_dba->get_SliceAdaptor->fetch_by_region($coord_system_name, $sequenceset, undef, undef, undef, $coord_system_version);
-  foreach my $feature (@{$otter_dba->get_MiscFeatureAdaptor->fetch_all_by_Slice_and_set_code($slice, $misc_set->code)}) {
+  foreach my $feature (sort {$a->start <=> $b->start} @{$otter_dba->get_MiscFeatureAdaptor->fetch_all_by_Slice_and_set_code($slice, $misc_set->code)}) {
+    my $accession = $feature->get_scalar_attribute('name');
     push(@cs_list, {
-      clone_name  => $feature->get_scalar_attribute('name'),
-      accession   => $feature->get_scalar_attribute('name'),
-      sv          => 1,
-      contig_name => $feature->get_scalar_attribute('name'),
+      clone_name  => $feature->get_scalar_attribute('intl_clone_name') || $accession,
+      accession   => $feature->get_scalar_attribute('embl_acc'),
+      sv          => $feature->get_scalar_attribute('embl_version'),
+      contig_name => $accession,
       length      => $feature->length,
       chr         => {
           name    =>  $sequenceset,
@@ -103,8 +104,8 @@ if ($misc_set) {
       },
       chr_start     => $feature->start,
       chr_end       => $feature->end,
-      contig_start  => $feature->get_all_Attributes('inner_start')->[0],
-      contig_end    => $feature->get_all_Attributes('inner_end')->[0],
+      contig_start  => $feature->get_scalar_attribute('inner_start'),
+      contig_end    => $feature->get_scalar_attribute('inner_end'),
       contig_strand => $feature->strand,
       coord_system_name => $coord_system_name,
       coord_system_version => $coord_system_version,
