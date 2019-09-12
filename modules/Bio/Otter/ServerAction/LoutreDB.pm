@@ -88,11 +88,18 @@ SQL
 sub get_db_info {
     my ($self, $coord_system_name, $coord_system_version) = @_;
 
-    my %results;
+    my (%results, $select_cs_sql);
 
-    my $select_cs_sql = 'SELECT coord_system_id, species_id, name, version, rank, attrib'.
-      ' FROM coord_system'.
-      " WHERE name = '$coord_system_name' AND version = '$coord_system_version'";
+    if ($coord_system_name and $coord_system_version) {
+        $select_cs_sql = 'SELECT coord_system_id, species_id, name, version, rank, attrib'.
+        ' FROM coord_system'.
+        " WHERE name = '$coord_system_name' AND version = '$coord_system_version'";
+    }
+    else {
+         $select_cs_sql = 'SELECT coord_system_id, species_id, name, version, rank, attrib'.
+        ' FROM coord_system'.
+        " WHERE attrib = 'default_version' AND rank = 1";
+    }
 
     my $dbc = $self->server->otter_dba()->dbc();
 
@@ -100,32 +107,36 @@ sub get_db_info {
     $cs_sth->execute;
     my $cs_chromosome = $cs_sth->fetchrow_hashref;
     $results{'coord_system.chromosome'} = $cs_chromosome;
+
+    if (!$coord_system_name and !$coord_system_version) {
+        $coord_system_version = $cs_chromosome->{'version'};
+        $coord_system_name = $cs_chromosome->{'name'};
+    }
+
     foreach my $coord_system (@{$self->server->otter_dba->get_CoordSystemAdaptor->fetch_all_by_version($coord_system_version)}) {
-      $results{'coord_systems'}->{$coord_system->name} = {
+        $results{'coord_systems'}->{$coord_system->name} = {
         '-version' => $coord_system_version,
         '-rank' => $coord_system->rank,
         '-default' => $coord_system->is_default,
         '-sequence_level' => $coord_system->is_sequence_level
-      };
+        };
     }
     if ($coord_system_name ne 'primary_assembly' and !exists $results{'coord_systems'}->{contig}) {
-      my $contig_cs = $self->server->otter_dba->get_CoordSystemAdaptor->fetch_by_name('contig');
-      $results{'coord_systems'}->{contig} = {
+        my $contig_cs = $self->server->otter_dba->get_CoordSystemAdaptor->fetch_by_name('contig');
+        $results{'coord_systems'}->{contig} = {
         '-rank' => $contig_cs->rank,
         '-default' => $contig_cs->is_default,
         '-sequence_level' => $contig_cs->is_sequence_level
-      };
+        };
     }
-  
     if ($coord_system_name ne 'primary_assembly' and !exists $results{'coord_systems'}->{clone}) {
-      my $clone_cs = $self->server->otter_dba->get_CoordSystemAdaptor->fetch_by_name('clone');
-      $results{'coord_systems'}->{clone} = {
+        my $clone_cs = $self->server->otter_dba->get_CoordSystemAdaptor->fetch_by_name('clone');
+        $results{'coord_systems'}->{clone} = {
         '-rank' => $clone_cs->rank,
         '-default' => $clone_cs->is_default,
         '-sequence_level' => $clone_cs->is_sequence_level
-      };
+        };
     }
-
     my $at_sth = $dbc->prepare($select_at_sql);
     $at_sth->execute;
     my $at_rows = $at_sth->fetchall_arrayref({});
