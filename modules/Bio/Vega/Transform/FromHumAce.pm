@@ -14,7 +14,7 @@ use Bio::Vega::Exon;
 use Bio::Vega::Transcript;
 use Bio::Vega::Translation;
 use Data::Dumper;
-use Bio::Vega::Utils::Attribute                   qw( add_EnsEMBL_Attributes );
+use Bio::Vega::Utils::Attribute                   qw( add_EnsEMBL_Attributes add_selenocystein_Attr_from_Remark );
 use Bio::Vega::Utils::ExonPhase                   qw( exon_phase_Ace_to_EnsEMBL );
 use Bio::Vega::Utils::GeneTranscriptBiotypeStatus qw( method2biotype_status );
 
@@ -273,6 +273,8 @@ sub _add_remarks {
 
     my @remarks            = map { ('remark'        => $_) } $subseq->list_remarks;
     my @annotation_remarks = map { ('hidden_remark' => $_) } $subseq->list_annotation_remarks;
+    add_selenocystein_Attr_from_Remark($transcript, $subseq->list_remarks);
+    add_selenocystein_Attr_from_Remark($transcript, $subseq->list_annotation_remarks);
     add_EnsEMBL_Attributes($transcript, @remarks, @annotation_remarks);
 
     return;
@@ -305,6 +307,7 @@ sub store_Gene {
     # Throw it away
     my $transcripts = $gene->get_all_Transcripts;
     @$transcripts = ();
+    $gene->flush_Transcripts;
 
     $gene->slice($self->whole_slice) unless $gene->slice;
 
@@ -312,7 +315,6 @@ sub store_Gene {
     $gene_adaptor->store_only($gene);
 
     # We want get_all_Transcripts to load from database on next call.
-    $gene->flush_Transcripts;
     delete $gene->{'_transcript_array'};
 
     $locus->ensembl_dbID($gene->dbID);
@@ -430,7 +432,7 @@ sub remove_SimpleFeatures {
 # FIXME: duplication with XMLToRegion
 #
 sub _simpleFeature_from_HumAce {
-    my ($self, $ha_feature) = @_; 
+    my ($self, $ha_feature) = @_;
 
     my $offset = $self->session_slice->start - 1;
 
