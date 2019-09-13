@@ -13,8 +13,9 @@ use base 'Bio::EnsEMBL::Gene';
 sub new { 
   my ($class, @args) = @_;
   my $self = $class->SUPER::new(@args);
-  my ($gene_author)  = rearrange([qw(AUTHOR)],@args);
+  my ($gene_author, $status)  = rearrange([qw(AUTHOR STATUS)],@args);
   $self->gene_author($gene_author);
+  $self->status($status) if ($status);
   return $self;
 }
 
