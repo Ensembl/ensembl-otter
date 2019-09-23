@@ -203,10 +203,11 @@ sub generate_Locus {
 
     my ($type) = biotype_status2method($gene->biotype, $gene->status);
     my $source = $gene->source;
-    if ($source ne 'havana'and $source ne 'ensembl_havana') {
+    if ($source ne 'havana' and $source ne 'ensembl_havana') {
         $type = "$source:$type";
     }
     $g->attribvals($self->prettyprint('type',$type));
+    $g->attribvals($self->prettyprint('source',$source));
 
     $g->attribvals($self->prettyprint('known',$gene->is_known || 0));
     $g->attribvals($self->prettyprint('truncated',$gene->truncated_flag));
@@ -279,6 +280,12 @@ sub generate_Transcript {
   ##in future <transcript_class> tag will be replaced by trancript <biotype> and <status> tags
   ##<type> tag will be removed
   my ($class) = biotype_status2method($tran->biotype, $tran->status);
+  my $source = $tran->source;
+  $t->attribvals($self->prettyprint('source', $source));
+  if ($source ne 'havana' and $source ne 'ensembl_havana') {
+    $t->attribvals($self->prettyprint('type', "$source:$class"));
+  }
+
   $t->attribvals($self->prettyprint('transcript_class', $class));
 
   my $tran_name = _feature_name($tran);

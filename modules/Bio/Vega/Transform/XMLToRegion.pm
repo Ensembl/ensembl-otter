@@ -480,6 +480,9 @@ sub _build_Transcript {         ## no critic (Subroutines::ProhibitUnusedPrivate
         $transcript->biotype($biotype);
         $transcript->status($status);
     }
+    if (my $source = $data->{'source'}) {
+      $transcript->source($source);
+    }
 
     if ($data->{'author'}) {
         my $transcript_author = $self->_make_Author($data->{'author'}, $data->{'author_email'});
@@ -596,6 +599,9 @@ sub _build_Locus {              ## no critic (Subroutines::ProhibitUnusedPrivate
     my ($biotype, $status) = method2biotype_status($type);
     $status = 'KNOWN' if $data->{'known'};
 
+    if (my $gene_source = $data->{source}) {
+      $source = $gene_source;
+    }
     $gene->source($source);
     $gene->biotype($biotype);
     $gene->status($status);
@@ -607,7 +613,6 @@ sub _build_Locus {              ## no critic (Subroutines::ProhibitUnusedPrivate
 
     ##share exons among transcripts of this gene
     foreach my $tran (@$transcripts) {
-        $tran->source($source); # copy from $gene, we don't need them to differ
         $gene->add_Transcript($tran);
     }
     $gene->prune_Exons;
@@ -634,7 +639,7 @@ sub _build_Locus {              ## no critic (Subroutines::ProhibitUnusedPrivate
         $transcript->end(  $transcript->end   - $slice_offset);
 
         my $logic_name = $transcript->analysis->logic_name;
-        if ($self->analysis_from_transcript_class and $source ne 'havana' and $logic_name ne 'Otter') {
+        if ($self->analysis_from_transcript_class and $source ne 'havana' and $source ne 'ensembl_havana' and $logic_name ne 'Otter') {
             $logic_name = sprintf('%s:%s', $source, $logic_name);
         }
         if ($truncated) {
