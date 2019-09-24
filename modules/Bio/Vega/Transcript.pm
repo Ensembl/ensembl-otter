@@ -14,7 +14,7 @@ use base 'Bio::EnsEMBL::Transcript';
 sub new {
   my ($class, @args) = @_;
   my $self = $class->SUPER::new(@args);
-  my ($transcript_author,$evidence_list)  = rearrange([qw(AUTHOR EVIDENCE)],@args);
+  my ($transcript_author,$evidence_list, $status)  = rearrange([qw(AUTHOR EVIDENCE STATUS)],@args);
   $self->transcript_author($transcript_author);
   if (defined($evidence_list)) {
       if (ref($evidence_list) eq "ARRAY") {
@@ -23,6 +23,7 @@ sub new {
           $self->throw( "Argument to evidence must be an array ref. Currently [$evidence_list]");
       }
   }
+  $self->status($status) if ($status);
   return $self;
 }
 
