@@ -109,6 +109,7 @@
        <description>TEC</description>
        <name>RP23-271O17.1</name>
        <type>TEC</type>
+       <source>havana</source>
        <known>0</known>
        <truncated>0</truncated>
        <author>al1</author>
@@ -117,6 +118,8 @@
          <stable_id>OTTMUST00000127109</stable_id>
          <author>al1</author>
          <author_email>al1</author_email>
+         <source>ensembl</source>
+         <type>ensembl:TEC</type>
          <transcript_class>TEC</transcript_class>
          <name>RP23-271O17.1-001</name>
          <evidence_set>
@@ -142,6 +145,7 @@
        <description>X Kell blood group precursor related family member 4</description>
        <name>Xkr4</name>
        <type>Known_CDS</type>
+       <source>havana</source>
        <known>1</known>
        <truncated>0</truncated>
        <author>al1</author>
@@ -150,6 +154,8 @@
          <stable_id>OTTMUST00000086625</stable_id>
          <author>mt4</author>
          <author_email>mt4</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Transcript</type>
          <transcript_class>Transcript</transcript_class>
          <name>AC157543.1-003</name>
          <evidence_set>
@@ -181,6 +187,8 @@
          <stable_id>OTTMUST00000086624</stable_id>
          <author>mt4</author>
          <author_email>mt4</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Transcript</type>
          <transcript_class>Transcript</transcript_class>
          <name>AC157543.1-002</name>
          <evidence_set>
@@ -213,6 +221,8 @@
          <author>al1</author>
          <author_email>al1</author_email>
          <remark>Annotation_remark- CCDS14803.1</remark>
+         <source>ensembl</source>
+         <type>ensembl:Known_CDS</type>
          <transcript_class>Known_CDS</transcript_class>
          <name>AC157543.1-001</name>
          <translation_start>3671348</translation_start>
@@ -265,6 +275,7 @@
        <description>X Kell blood group precursor related family member 4</description>
        <name>KO:Xkr4</name>
        <type>KO:Known_CDS</type>
+       <source>havana</source>
        <known>1</known>
        <truncated>0</truncated>
        <author>am9</author>
@@ -274,6 +285,8 @@
          <author>am9</author>
          <author_email>am9</author_email>
          <remark>based on OTTMUST00000065166</remark>
+         <source>ensembl</source>
+         <type>ensembl:Coding</type>
          <transcript_class>Coding</transcript_class>
          <name>KO:AC157543.1-001</name>
          <translation_start>3671348</translation_start>
@@ -304,6 +317,7 @@
        <description>coenzyme Q2 4-hydroxybenzoate polyprenyltransferase (COQ2) pseudogene</description>
        <name>RP23-317L18.1</name>
        <type>Processed_pseudogene</type>
+       <source>havana</source>
        <known>0</known>
        <truncated>0</truncated>
        <author>al1</author>
@@ -314,6 +328,8 @@
          <author_email>al1</author_email>
          <remark>Gm18956</remark>
          <remark>predicted gene, 18956</remark>
+         <source>ensembl</source>
+         <type>ensembl:Processed_pseudogene</type>
          <transcript_class>Processed_pseudogene</transcript_class>
          <name>RP23-317L18.1-001</name>
          <evidence_set>
@@ -347,6 +363,7 @@
        <description>artifact gene</description>
        <name>RP23-317L18.2</name>
        <type>Artifact</type>
+       <source>havana</source>
        <known>0</known>
        <truncated>0</truncated>
        <author>al1</author>
@@ -355,6 +372,8 @@
          <stable_id>OTTMUST00000127144</stable_id>
          <author>al1</author>
          <author_email>al1</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Artifact</type>
          <transcript_class>Artifact</transcript_class>
          <name>RP23-317L18.2-001</name>
          <evidence_set>
@@ -380,6 +399,7 @@
        <description>TEC</description>
        <name>RP23-317L18.4</name>
        <type>TEC</type>
+       <source>havana</source>
        <known>0</known>
        <truncated>0</truncated>
        <author>al1</author>
@@ -388,6 +408,8 @@
          <stable_id>OTTMUST00000127145</stable_id>
          <author>al1</author>
          <author_email>al1</author_email>
+         <source>ensembl</source>
+         <type>ensembl:TEC</type>
          <transcript_class>TEC</transcript_class>
          <name>RP23-317L18.4-001</name>
          <evidence_set>
@@ -413,6 +435,7 @@
        <description>TEC</description>
        <name>RP23-317L18.3</name>
        <type>TEC</type>
+       <source>havana</source>
        <known>0</known>
        <truncated>0</truncated>
        <author>al1</author>
@@ -421,6 +444,8 @@
          <stable_id>OTTMUST00000127146</stable_id>
          <author>al1</author>
          <author_email>al1</author_email>
+         <source>ensembl</source>
+         <type>ensembl:TEC</type>
          <transcript_class>TEC</transcript_class>
          <name>RP23-317L18.3-001</name>
          <evidence_set>
@@ -446,6 +471,7 @@
        <description>artifact gene</description>
        <name>RP23-115I1.7</name>
        <type>Artifact</type>
+       <source>havana</source>
        <known>0</known>
        <truncated>0</truncated>
        <author>al1</author>
@@ -454,6 +480,8 @@
          <stable_id>OTTMUST00000127147</stable_id>
          <author>al1</author>
          <author_email>al1</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Artifact</type>
          <transcript_class>Artifact</transcript_class>
          <name>RP23-115I1.7-001</name>
          <evidence_set>
@@ -479,6 +507,7 @@
        <description>TEC</description>
        <name>RP23-115I1.6</name>
        <type>TEC</type>
+       <source>havana</source>
        <known>0</known>
        <truncated>0</truncated>
        <author>al1</author>
@@ -487,6 +516,8 @@
          <stable_id>OTTMUST00000127101</stable_id>
          <author>al1</author>
          <author_email>al1</author_email>
+         <source>ensembl</source>
+         <type>ensembl:TEC</type>
          <transcript_class>TEC</transcript_class>
          <name>RP23-115I1.6-001</name>
          <evidence_set>
@@ -520,6 +551,7 @@
        <description>novel transcript, antisense to Xkr4</description>
        <name>RP23-115I1.1</name>
        <type>Novel_Transcript</type>
+       <source>havana</source>
        <known>0</known>
        <truncated>0</truncated>
        <remark>Annotation_remark- Gene originally annotated by WU</remark>
@@ -529,6 +561,8 @@
          <stable_id>OTTMUST00000065165</stable_id>
          <author>cas</author>
          <author_email>cas</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Antisense</type>
          <transcript_class>Antisense</transcript_class>
          <name>RP23-115I1.1-001</name>
          <evidence_set>
@@ -562,6 +596,7 @@
        <description>TEC</description>
        <name>RP23-115I1.5</name>
        <type>TEC</type>
+       <source>havana</source>
        <known>0</known>
        <truncated>0</truncated>
        <author>al1</author>
@@ -570,6 +605,8 @@
          <stable_id>OTTMUST00000127100</stable_id>
          <author>al1</author>
          <author_email>al1</author_email>
+         <source>ensembl</source>
+         <type>ensembl:TEC</type>
          <transcript_class>TEC</transcript_class>
          <name>RP23-115I1.5-001</name>
          <evidence_set>
@@ -603,6 +640,7 @@
        <description>solute carrier family 35, member E3 (Slc35e3) pseudogene</description>
        <name>RP23-115I1.2</name>
        <type>Processed_pseudogene</type>
+       <source>havana</source>
        <known>0</known>
        <truncated>0</truncated>
        <author>al1</author>
@@ -613,6 +651,8 @@
          <author_email>al1</author_email>
          <remark>Gm7341</remark>
          <remark>predicted gene 7341</remark>
+         <source>ensembl</source>
+         <type>ensembl:Processed_pseudogene</type>
          <transcript_class>Processed_pseudogene</transcript_class>
          <name>RP23-115I1.2-001</name>
          <evidence_set>
@@ -646,6 +686,7 @@
        <description>artifact gene</description>
        <name>RP23-115I1.4</name>
        <type>Artifact</type>
+       <source>havana</source>
        <known>0</known>
        <truncated>0</truncated>
        <author>al1</author>
@@ -654,6 +695,8 @@
          <stable_id>OTTMUST00000127099</stable_id>
          <author>al1</author>
          <author_email>al1</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Artifact</type>
          <transcript_class>Artifact</transcript_class>
          <name>RP23-115I1.4-001</name>
          <evidence_set>
@@ -679,6 +722,7 @@
        <description>TEC</description>
        <name>RP23-115I1.3</name>
        <type>TEC</type>
+       <source>havana</source>
        <known>0</known>
        <truncated>0</truncated>
        <author>al1</author>
@@ -687,6 +731,8 @@
          <stable_id>OTTMUST00000127098</stable_id>
          <author>al1</author>
          <author_email>al1</author_email>
+         <source>ensembl</source>
+         <type>ensembl:TEC</type>
          <transcript_class>TEC</transcript_class>
          <name>RP23-115I1.3-001</name>
          <evidence_set>
@@ -712,6 +758,7 @@
        <description>novel transcript, sense overlapping Xkr4</description>
        <name>RP23-122M2.3</name>
        <type>Transcript</type>
+       <source>havana</source>
        <known>0</known>
        <truncated>0</truncated>
        <author>al1</author>
@@ -720,6 +767,8 @@
          <stable_id>OTTMUST00000127092</stable_id>
          <author>al1</author>
          <author_email>al1</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Sense_intronic</type>
          <transcript_class>Sense_intronic</transcript_class>
          <name>RP23-122M2.3-001</name>
          <evidence_set>
@@ -761,6 +810,7 @@
        <description>TEC</description>
        <name>RP23-122M2.2</name>
        <type>TEC</type>
+       <source>havana</source>
        <known>0</known>
        <truncated>0</truncated>
        <author>al1</author>
@@ -771,6 +821,8 @@
          <author_email>al1</author_email>
          <remark>Gm10568</remark>
          <remark>predicted gene 10568</remark>
+         <source>ensembl</source>
+         <type>ensembl:TEC</type>
          <transcript_class>TEC</transcript_class>
          <name>RP23-122M2.2-001</name>
          <evidence_set>
@@ -804,6 +856,7 @@
        <description>TEC</description>
        <name>RP23-122M2.1</name>
        <type>TEC</type>
+       <source>havana</source>
        <known>0</known>
        <truncated>0</truncated>
        <author>al1</author>
@@ -812,6 +865,8 @@
          <stable_id>OTTMUST00000127091</stable_id>
          <author>al1</author>
          <author_email>al1</author_email>
+         <source>ensembl</source>
+         <type>ensembl:TEC</type>
          <transcript_class>TEC</transcript_class>
          <name>RP23-122M2.1-001</name>
          <evidence_set>

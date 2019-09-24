@@ -194,6 +194,7 @@
        <description>novel transcript</description>
        <name>AC116614.1</name>
        <type>Novel_Transcript</type>
+       <source>havana</source>
        <known>0</known>
        <truncated>0</truncated>
        <author>clb</author>
@@ -202,6 +203,8 @@
          <stable_id>OTTHUMT00000322452</stable_id>
          <author>clb</author>
          <author_email>clb</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Antisense</type>
          <transcript_class>Antisense</transcript_class>
          <name>AC116614.1-001</name>
          <evidence_set>
@@ -239,6 +242,7 @@
        <description>syntrophin, gamma 2</description>
        <name>SNTG2</name>
        <type>Known_CDS</type>
+       <source>havana</source>
        <known>1</known>
        <truncated>0</truncated>
        <author>lw2</author>
@@ -247,6 +251,8 @@
          <stable_id>OTTHUMT00000322407</stable_id>
          <author>lw2</author>
          <author_email>lw2</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Nonsense_mediated_decay</type>
          <transcript_class>Nonsense_mediated_decay</transcript_class>
          <name>AC114808.1-002</name>
          <translation_start>950997</translation_start>
@@ -329,6 +335,8 @@
          <stable_id>OTTHUMT00000322786</stable_id>
          <author>lw2</author>
          <author_email>lw2</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Nonsense_mediated_decay</type>
          <transcript_class>Nonsense_mediated_decay</transcript_class>
          <name>AC114808.1-011</name>
          <translation_start>950997</translation_start>
@@ -412,6 +420,8 @@
          <author>lw2</author>
          <author_email>lw2</author_email>
          <remark>NP_061841</remark>
+         <source>ensembl</source>
+         <type>ensembl:Known_CDS</type>
          <transcript_class>Known_CDS</transcript_class>
          <name>AC114808.1-001</name>
          <translation_start>950997</translation_start>
@@ -578,6 +588,8 @@
          <stable_id>OTTHUMT00000322455</stable_id>
          <author>lw2</author>
          <author_email>lw2</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Novel_CDS</type>
          <transcript_class>Novel_CDS</transcript_class>
          <name>AC114808.1-003</name>
          <translation_start>950997</translation_start>
@@ -688,6 +700,8 @@
          <stable_id>OTTHUMT00000322456</stable_id>
          <author>lw2</author>
          <author_email>lw2</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Transcript</type>
          <transcript_class>Transcript</transcript_class>
          <name>AC114808.1-004</name>
          <evidence_set>
@@ -759,6 +773,8 @@
          <stable_id>OTTHUMT00000322460</stable_id>
          <author>lw2</author>
          <author_email>lw2</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Transcript</type>
          <transcript_class>Transcript</transcript_class>
          <name>AC114808.1-008</name>
          <evidence_set>
@@ -810,6 +826,8 @@
          <stable_id>OTTHUMT00000322787</stable_id>
          <author>lw2</author>
          <author_email>lw2</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Transcript</type>
          <transcript_class>Transcript</transcript_class>
          <name>AC114808.1-012</name>
          <evidence_set>
@@ -877,6 +895,8 @@
          <stable_id>OTTHUMT00000322457</stable_id>
          <author>lw2</author>
          <author_email>lw2</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Transcript</type>
          <transcript_class>Transcript</transcript_class>
          <name>AC114808.1-005</name>
          <evidence_set>
@@ -940,6 +960,8 @@
          <stable_id>OTTHUMT00000322461</stable_id>
          <author>lw2</author>
          <author_email>lw2</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Transcript</type>
          <transcript_class>Transcript</transcript_class>
          <name>AC114808.1-009</name>
          <evidence_set>
@@ -979,6 +1001,8 @@
          <stable_id>OTTHUMT00000322458</stable_id>
          <author>lw2</author>
          <author_email>lw2</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Transcript</type>
          <transcript_class>Transcript</transcript_class>
          <name>AC114808.1-006</name>
          <evidence_set>
@@ -1014,6 +1038,8 @@
          <stable_id>OTTHUMT00000322459</stable_id>
          <author>lw2</author>
          <author_email>lw2</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Transcript</type>
          <transcript_class>Transcript</transcript_class>
          <name>AC114808.1-007</name>
          <evidence_set>
@@ -1073,6 +1099,8 @@
          <stable_id>OTTHUMT00000322462</stable_id>
          <author>lw2</author>
          <author_email>lw2</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Transcript</type>
          <transcript_class>Transcript</transcript_class>
          <name>AC114808.1-010</name>
          <evidence_set>
@@ -1110,6 +1138,7 @@
        <description>novel transcript</description>
        <name>AC114808.3</name>
        <type>Novel_Transcript</type>
+       <source>havana</source>
        <known>0</known>
        <truncated>0</truncated>
        <author>clb</author>
@@ -1118,6 +1147,8 @@
          <stable_id>OTTHUMT00000322453</stable_id>
          <author>clb</author>
          <author_email>clb</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Antisense</type>
          <transcript_class>Antisense</transcript_class>
          <name>AC114808.3-001</name>
          <evidence_set>
@@ -1155,6 +1186,7 @@
        <description>novel transcript</description>
        <name>AC114808.2</name>
        <type>Novel_Transcript</type>
+       <source>havana</source>
        <known>0</known>
        <truncated>0</truncated>
        <author>clb</author>
@@ -1163,6 +1195,8 @@
          <stable_id>OTTHUMT00000322450</stable_id>
          <author>clb</author>
          <author_email>clb</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Antisense</type>
          <transcript_class>Antisense</transcript_class>
          <name>AC114808.2-001</name>
          <evidence_set>
@@ -1204,6 +1238,7 @@
        <description>novel transcript</description>
        <name>AC108462.1</name>
        <type>Novel_Transcript</type>
+       <source>havana</source>
        <known>0</known>
        <truncated>0</truncated>
        <author>clb</author>
@@ -1212,6 +1247,8 @@
          <stable_id>OTTHUMT00000322451</stable_id>
          <author>clb</author>
          <author_email>clb</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Antisense</type>
          <transcript_class>Antisense</transcript_class>
          <name>AC108462.1-001</name>
          <evidence_set>
@@ -1245,6 +1282,7 @@
        <description>thyroid peroxidase</description>
        <name>TPO</name>
        <type>Known_CDS</type>
+       <source>havana</source>
        <known>1</known>
        <truncated>1</truncated>
        <remark>Transcript &apos;AC141930.1-001&apos; has no exons within the slice</remark>
@@ -1265,6 +1303,8 @@
          <stable_id>OTTHUMT00000353107</stable_id>
          <author>lw2</author>
          <author_email>lw2</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Transcript</type>
          <transcript_class>Transcript</transcript_class>
          <name>AC141930.1-011</name>
          <evidence_set>
