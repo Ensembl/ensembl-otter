@@ -675,7 +675,7 @@ sub url_root_is_default {
 sub pfetch_url {
     my ($self) = @_;
 
-    return $self->url_root . '/nfetch';
+    return $self->url_root . '/nfetch&user='.$self->author;
 }
 
 sub pfetch_port {
