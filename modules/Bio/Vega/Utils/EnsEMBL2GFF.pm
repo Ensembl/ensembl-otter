@@ -73,8 +73,12 @@ my $_new_feature_id_sub = sub {
         my ($self) = @_;
 
         if ($self->analysis) {
-            return $self->analysis->gff_source
-                || $self->analysis->logic_name;
+          my $gff_source = $self->analysis->gff_source || $self->analysis->logic_name;
+          if ($gff_source eq 'ensembl_havana:Predicted') {
+              $gff_source = 'ensembl:Predicted';
+          }
+          $gff_source =~ s/ensembl_havana://;
+            return $gff_source;
         }
         else {
             return ref($self);
