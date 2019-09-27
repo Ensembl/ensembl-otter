@@ -33,7 +33,7 @@ sub new_from_otter {
                 chr     => $chr,
                 start   => $start,
                 end     => $end,
-                'author'  => Bio::Otter::Lace::Client->author,
+                'author'=> $client->author,
             });
         my $mapping = $pkg->new_from_xml($mapping_xml);
         return $mapping;
