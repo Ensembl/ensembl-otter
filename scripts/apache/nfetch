@@ -138,11 +138,14 @@ sub ebi_web_fetch_full_entry {
                 # Remove dash and number from VARSPLIC entries, or the fetch will fail.
                 $acc_sv =~ s/-\d+//;
             }
+            #Remove version number so that dbfetch can find the entry
+            $acc_sv =~ s/\.\d+//;
             $query = 'http://www.ebi.ac.uk/Tools/dbfetch/dbfetch?format=default&style=raw&db=uniprotkb&id='
               . $acc_sv;
         }
         else {
-            $query = sprintf 'http://www.ebi.ac.uk/ena/data/view/%s&display=text', $acc_sv;
+            $query = 'http://www.ebi.ac.uk/Tools/dbfetch/dbfetch?format=default&style=raw&db=ena_sequence&id=' . $acc_sv;
+            #$query = sprintf 'https://www.ebi.ac.uk/ena/data/view/%s&display=text', $acc_sv;
         }
         $full_txt .= web_fetch($query);
     }
