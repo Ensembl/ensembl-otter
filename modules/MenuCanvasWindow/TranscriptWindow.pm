@@ -1387,7 +1387,6 @@ sub _populate_transcript_type_menu {
       $menu->add('command',
           -label      => $phrase,
           -command    => sub { $self->_draw_translation_region;
-                        $self->fix_window_min_max_sizes;
                         $mb->configure(-textvariable => $phrase);
                         $$method_ref = $phrase;
                       #  $top->focus;  # Need this
