@@ -1403,8 +1403,6 @@ sub _populate_transcript_type_menu {
   }
 
   return;
-
-    return;
 }
 
 sub _populate_attribute_menu {
