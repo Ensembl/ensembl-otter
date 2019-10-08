@@ -2570,9 +2570,6 @@ sub _replace_SubSeq_sqlite {
         if ($prev_locus) {
             $from_HumAce->update_Gene($prev_locus, $prev_locus);
         }
-        if ($old_locus->gene_type_prefix eq 'ensembl') {
-          $new_locus->gene_type_prefix('ensembl_havana');
-        }
 
         if ($old_locus and $old_locus->ensembl_dbID) {
             my $locus_diffs = $self->_compare_loci($old_locus, $new_locus);
@@ -2606,9 +2603,6 @@ sub _replace_SubSeq_sqlite {
         $vega_dba->commit;
         $self->_mark_unsaved;
         $done_sqlite = 1;
-        if ($new_locus->gene_type_prefix eq 'ensembl_havana') {
-          $new_locus->gene_type_prefix('');
-        }
 
 
         $done_zmap = $self->_replace_in_zmap($new_subseq, $old_subseq, $old_subseq->ensembl_dbID);
@@ -3449,10 +3443,10 @@ sub zircon_zmap_view_zoom_to_subseq_xml {
     my $xml = Hum::XmlWriter->new;
     my $feature_set_name = $subseq->GeneMethod->name;
     if ($subseq->Locus->gene_type_prefix) {
-      if ($subseq->GeneMethod->name eq 'Predicted' and $subseq->Locus->gene_type_prefix eq 'ensembl_havana') {
+      if ($subseq->GeneMethod->name eq 'Predicted' and !$subseq->Locus->gene_type_prefix) {
         $feature_set_name = 'ensembl:Predicted';
       }
-      elsif ($subseq->Locus->gene_type_prefix ne 'havana' and $subseq->Locus->gene_type_prefix ne 'ensembl_havana') {
+      elsif ($subseq->Locus->gene_type_prefix) {
         $feature_set_name = $subseq->Locus->gene_type_prefix.':'.$subseq->GeneMethod->name;
       }
     }

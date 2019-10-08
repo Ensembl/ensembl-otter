@@ -244,7 +244,7 @@ sub _add_genes {
         $locus->name(get_first_attrib_value($gene, 'name'));
         $locus->ensembl_dbID($gene->dbID);
 
-        unless ($gene->source eq 'havana') {
+        if ($gene->source ne 'havana' and $gene->source ne 'ensembl_havana') {
             $locus->gene_type_prefix($gene->source);
         }
 

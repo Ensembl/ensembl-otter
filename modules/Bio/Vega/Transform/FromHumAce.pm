@@ -27,7 +27,7 @@ sub new {
 }
 
 sub store_Transcript {
-    my ($self, $subseq) = @_;
+    my ($self, $subseq, $old_transcript) = @_;
 
     my $transcript = $self->_transcript_from_SubSeq($subseq);
 
@@ -36,6 +36,30 @@ sub store_Transcript {
                                             ": Locus ", $self->_debug_hum_ace($subseq->Locus),
                                             " has no dbID");
 
+    my $gene = $self->vega_dba->get_GeneAdaptor->fetch_by_dbID($gene_dbID);
+    if ($old_transcript) {
+      $transcript->source($old_transcript->source);
+      if ($transcript->source eq 'ensembl') {
+        $transcript->source('ensembl_havana');
+      }
+    }
+    my $update_gene_source = 0;
+    if ($gene->source eq 'havana') {
+      foreach my $t (@{$gene->get_all_Transcripts}) {
+        if ($t->source eq 'ensembl' or $t->source eq 'ensembl_havana') {
+          $gene->source('ensembl_havana');
+          $update_gene_source = 1;
+          last;
+        }
+      }
+    }
+    elsif ($gene->source eq 'ensembl') {
+      $gene->source('ensembl_havana');
+      $update_gene_source = 1;
+    }
+    if ($update_gene_source) {
+      $self->_update_gene_source($gene);
+    }
     my $ts_adaptor = $self->vega_dba->get_TranscriptAdaptor;
     $ts_adaptor->store($transcript, $gene_dbID);
 
@@ -53,7 +77,7 @@ sub update_Transcript {
     my $old_ts = $ts_adaptor->fetch_by_dbID($old_subseq->ensembl_dbID);
     $self->logger->logconfess("Cannot find transcript for ", $self->_debug_hum_ace($old_subseq)) unless $old_ts;
 
-    my $new_ts = $self->store_Transcript($new_subseq);
+    my $new_ts = $self->store_Transcript($new_subseq, $old_ts);
     $ts_adaptor->remove($old_ts);
 
     $self->logger->debug(sprintf("Updated transcript for '%s', dbID: %d => %d",
@@ -67,6 +91,13 @@ sub remove_Transcript {
     my $ts_adaptor = $self->vega_dba->get_TranscriptAdaptor;
 
     my $transcript = $ts_adaptor->fetch_by_dbID($subseq->ensembl_dbID);
+    if ($transcript->source eq 'ensembl') {
+      my $gene = $self->vega_dba->get_GeneAdaptor->fetch_by_dbID($subseq->Locus->ensembl_dbID);
+      if ($gene->source eq 'ensembl') {
+        $gene->source('ensembl_havana');
+        $self->_update_gene_source($gene);
+      }
+    }
     $self->logger->logconfess("Cannot find transcript for ", $self->_debug_hum_ace($subseq)) unless $transcript;
 
     $ts_adaptor->remove($transcript);
@@ -336,6 +367,10 @@ sub update_Gene {
                          " has transcript_ids: ", join ',', map { $_->dbID } @$old_transcripts );
 
     my $new_gene = $self->_gene_from_Locus($new_locus, $old_transcripts); # transcripts for setting coords
+    $new_gene->source($old_gene->source);
+    if ($old_gene->source eq 'ensembl') {
+      $new_gene->source('ensembl_havana');
+    }
 
     # $old_transcripts is the arrayref associated with $old_gene and now @new_gene, so we empty it to prevent
     # the gene adaptor from storing or removing the transcripts.
@@ -514,6 +549,25 @@ sub _debug_hum_ace {
 sub default_log_context {
     my ($self) = @_;
     return '-FromHumAce-context-not-set-';
+}
+
+
+=head2 _update_gene_source
+
+ Arg [1]    : Bio::Vega::Gene
+ Description: Update the source of the gene
+ Returntype : None
+ Exceptions : None
+
+=cut
+
+sub _update_gene_source {
+  my ($self, $gene) = @_;
+
+  my $sth = $gene->adaptor->prepare('UPDATE gene SET source = ? WHERE gene_id = ?');
+  $sth->bind_param(1, $gene->source);
+  $sth->bind_param(2, $gene->dbID);
+  $sth->execute;
 }
 
 1;
