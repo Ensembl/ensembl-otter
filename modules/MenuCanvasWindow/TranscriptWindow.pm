@@ -348,12 +348,20 @@ sub initialise {
             -text => 'Type:',
             )->pack( -side => 'left' );
         my %menu_list;
+        my $parent;
+        my $last_was_parent = 0;
         foreach my $gm (@mutable_gene_methods) {
             my $name = $gm->name;
             if ($gm->has_parent) {
-              $menu_list{$name} = $gm->column_parent
+              $menu_list{$name} = $parent;
+              $last_was_parent = 0;
+            } else {
+                if($last_was_parent == 1) {
+                  $menu_list{$parent} = 'single';
+                }
+                $parent = $name;
+                $last_was_parent = 1;
             }
-              else { $menu_list{$name} = 'single'; }
 
         }
 
@@ -1387,9 +1395,10 @@ sub _populate_transcript_type_menu {
       $menu->add('command',
           -label      => $phrase,
           -command    => sub { $self->_draw_translation_region;
+                        $self->fix_window_min_max_sizes;
                         $mb->configure(-textvariable => $phrase);
                         $$method_ref = $phrase;
-                      #  $top->focus;  # Need this
+                        $self->canvas->toplevel->focus;  # Need this
                       });
   }
 
