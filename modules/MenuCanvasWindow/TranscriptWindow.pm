@@ -1394,10 +1394,12 @@ sub _populate_transcript_type_menu {
       }
       $menu->add('command',
           -label      => $phrase,
-          -command    => sub { $self->_draw_translation_region;
+          -command    => sub {
+                        $$method_ref = $phrase;
+                        $self->_draw_translation_region;
                         $self->fix_window_min_max_sizes;
                         $mb->configure(-textvariable => $phrase);
-                        $$method_ref = $phrase;
+
                         $self->canvas->toplevel->focus;  # Need this
                       });
   }
@@ -3157,4 +3159,3 @@ __END__
 =head1 AUTHOR
 
 Ana Code B<email> anacode@sanger.ac.uk
-
