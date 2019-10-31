@@ -687,11 +687,7 @@ __DATA__
 
 
 [client]
-<<<<<<< HEAD
-url=http://193.62.52.185:82/cgi-bin/otter
-=======
 url=http://otter-server.ebi.ac.uk:8004/cgi-bin/otter
->>>>>>> feature/ensembl_friendly
 write_access=1
 gff_version=3
 acedb_version=4.9.61
