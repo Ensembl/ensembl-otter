@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
 use strict;
 use warnings;
 
@@ -105,7 +106,7 @@ while (my ($cmp_name, $seq_length) = $cmp_sth->fetchrow) {
     push @input_ids, join(':', $component_cs, '', $cmp_name, 1, $seq_length, 1);
 } 
 
-my %skeleton_hash = map { ($_ => []) } get_possible_analyses($pdbc); 
+my %skeleton_hash = map { ($_ => []) } get_possible_analyses($pdbc);
 my %result_hash   = ();
 
 if(! @input_ids) {
@@ -113,7 +114,7 @@ if(! @input_ids) {
     return $server->otter_wrap_response('');
 }
 
-my $input_id_str = join ',', qw(?) x @input_ids; 
+my $input_id_str = join ',', qw(?) x @input_ids;
 my $sql_statement = sprintf $select_analyses_sql_format, $input_id_str;
 my $input_sth = $pdbc->prepare($sql_statement);
 $input_sth->execute(@input_ids);
@@ -127,7 +128,6 @@ while(my ($input_id, $logic_name, $created, $db_version) = $input_sth->fetchrow_
     $result_hash{$input_id}{$logic_name} = [$created, $db_version];
 }
 
-
     # output the results:
 my $output_string = '';
 for my $input_id (sort keys %result_hash) {
@@ -137,7 +137,6 @@ for my $input_id (sort keys %result_hash) {
             $output_string .= join("\t", $input_id, $logic_name, @{$result_hash{$input_id}{$logic_name}})."\n";
     }
 }
- 
     return $server->otter_wrap_response($output_string);
 }
 

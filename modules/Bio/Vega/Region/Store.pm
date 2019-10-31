@@ -61,9 +61,9 @@ sub vega_dba {
 
 sub store {
     my ($self, $region, $dna) = @_;
-    
+
     my $vega_dba = $self->vega_dba;
-    
+
     try {
         $vega_dba->begin_work;
 
@@ -71,19 +71,17 @@ sub store {
         # we do it here. The correct coord_system_factory will store the instantiated
         # coord_systems in the database.
         #
-#        $self->coord_system_factory->instantiate_all;
-        
         my $slice = $region->slice;
-        
+
         # Take chromosome name from first CloneSequence
         my @clone_seqs = $region->sorted_clone_sequences;
         my $chromosome = $clone_seqs[0]->chromosome;
 
         
         my $db_slice = $self->slice_stored_if_needed($slice, $dna, $chromosome);
-        
+
         my $reattach = ($db_slice != $slice);
-        
+
         foreach my $cs ( @clone_seqs ) {
             $self->_store_clone_sequence($cs, $db_slice);
         }
@@ -95,8 +93,8 @@ sub store {
             }
             $gene_a->store($gene);
         }
-        
-        my $sf_a = $vega_dba->get_SimpleFeatureAdaptor; 
+
+        my $sf_a = $vega_dba->get_SimpleFeatureAdaptor;
         foreach my $sf ( $region->seq_features ) {
             if ($reattach) {
                 $sf->slice($db_slice);
@@ -119,11 +117,12 @@ sub slice_stored_if_needed {
 
     my $vega_dba = $self->vega_dba;
     my $slice_adaptor = $vega_dba->get_SliceAdaptor;
+
     my $db_seq_region = $slice_adaptor->fetch_by_region(
         $region_slice->coord_system->name,
         $region_slice->seq_region_name,
         );
-    
+
     if ($db_seq_region) {
         $self->logger->debug('slice already in sqlite');
     } else {
@@ -132,13 +131,6 @@ sub slice_stored_if_needed {
         my $cs_factory    = $self->coord_system_factory;
         my $cs_chr        = $cs_factory->coord_system($region_slice->coord_system->name);
         my $cs_dna_contig = $cs_factory->coord_system('dna_contig');
-#        if (!$cs_dna_contig){
-#        $cs_dna_contig = Bio::EnsEMBL::CoordSystem->new(-name => 'dna_contig', -default => 1, -sequence_level => 1, -rank => 6);
-#        $vega_dba->get_CoordSystemAdaptor->store($cs_dna_contig);
-#        $vega_dba->get_MetaContainerAdaptor->store_key_value('assembly.mapping',$region_slice->coord_system->name.':'.$region_slice->coord_system->version.'|dna_contig');
-#        }
-     
-        #my $cs_dna_contig = $cs_factory->coord_system('contig');
        
         # db_seq_region must start from 1
         my $db_seq_region_parameters = {
@@ -157,11 +149,10 @@ sub slice_stored_if_needed {
         
         # Replace $region_slice with one connected to the database
         $region_slice = $db_seq_region->sub_Slice($region_slice->start, $region_slice->end);
-        
+
         # This is replicating the stuff from B:O:L:DB where we just needed a region contig to bung the sequence on
         # and may cause problems here...
         my $region_length = $region_slice->end - $region_slice->start + 1;
-
         my $contig_seq_region_parameters = {
             seq_region_name   => $region_slice->seq_region_name . ":contig",
             strand            => 1,
@@ -169,7 +160,7 @@ sub slice_stored_if_needed {
             end               => $region_length,
             seq_region_length => $region_length,
             coord_system      => $cs_dna_contig,
-        }; 
+        };
         my $contig_seq_region = Bio::EnsEMBL::Slice->new_fast($contig_seq_region_parameters);
 
         $slice_adaptor->store($contig_seq_region, \$dna);
@@ -199,13 +190,11 @@ sub _reattach_gene {
 
 sub _store_clone_sequence {
     my ($self, $cs, $db_slice) = @_;
-    
     my $vega_dba = $self->vega_dba;
 
     my $slice_adaptor = $vega_dba->get_SliceAdaptor;
 
     my $cs_factory       = $self->coord_system_factory;
-    
     my $clone_coord_sys  = $cs_factory->coord_system('clone');
     
     if ($clone_coord_sys) {

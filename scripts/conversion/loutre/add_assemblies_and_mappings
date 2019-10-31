@@ -321,7 +321,7 @@ my $insdc_map = $insdc_names{$species} || {};
 # Log if there's no entry and warn if the seq_region is a patch
 my $chrom_dets;
 my ($insdc_edb) = $edbh->selectrow_array(qq(SELECT external_db_id FROM external_db WHERE db_name = 'INSDC'));
-foreach my $chrom (@{$vsa->fetch_all('chromosome', 'Otter')}) {
+foreach my $chrom (@{$vsa->fetch_all('chromosome','Otter')}) {
   my $v_name  = $chrom->seq_region_name;
   my $v_sr_id = $chrom->get_seq_region_id;
   $support->log_verbose("Looking at Vega chromosome $v_name for INSDC\n",1);

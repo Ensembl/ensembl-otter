@@ -167,13 +167,7 @@ sub _create_or_extend_chr_slice {
 
     my $assembly_type = $self->parent_data->{'assembly_type'};
 
-#    if (my $chrname = $chromosome_name{$self}) { # cached from the previous SequenceFragments
-#        if($chrname ne $data->{'chromosome'}) {
-#            die "Chromosome names '$chrname' and '".$data->{'chromosome'}."' are different - can't join in 1 slice";
-#        }
-#    } else { # cache it now
         $chromosome_name{$self} = $data->{'chromosome'};
-#    }
 
     my $start          = $data->{'assembly_start'};
     my $end            = $data->{'assembly_end'};
@@ -299,7 +293,7 @@ sub _build_clone_sequence {
 
     my $ci = Bio::Vega::ContigInfo->new(
         -slice      => $ctg_cmp_slice,
-        -author     => $cln_author, # see FIXME above about $cln_author
+        -author    => $cln_author, # see FIXME above about $cln_author
         -attributes => $cln_attrib_list,
         );
     $cs->ContigInfo($ci);

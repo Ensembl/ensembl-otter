@@ -23,6 +23,7 @@ use warnings;
 
 use Carp;
 use Readonly;
+
 use Bio::EnsEMBL::CoordSystem;
 
 use warnings 'qw';
@@ -50,14 +51,6 @@ sub new {
 sub coord_system {
     my ($self, $name) = @_;
   
-#    my $cs = $self->_cached_cs($name);
-#    return $cs if $cs;
-
-    # Not cached yet
-#    unless ($_COORD_SYSTEM_SPEC{$name}) {
-#        croak "CoordSystemFactory doesn't know about '$name'";
-#    }
-
     if ($self->dba) {
         my $cs = $self->_dba_cs($name);
         return $self->_cached_cs($name, $cs);
@@ -87,7 +80,7 @@ sub known {
       }
   }
   return @sorted_array;
-#  return sort { $_coord_system_specs->{$a}->{'-rank'} <=> $_coord_system_specs->{$b}->{'-rank'} } keys %$_coord_system_specs;
+
 }
 
 sub instantiate_all {
@@ -99,9 +92,6 @@ sub instantiate_all {
     return;
 }
 
-#sub assembly_mappings {
-#    return @_MAPPINGS_SPEC;
-#}
 
 sub _dba_cs {
     my ($self, $name) = @_;

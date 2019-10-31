@@ -111,7 +111,6 @@ sub test_xml_fetch {
     my ($cl, $ss, $title) = @_;
     
     my ($dsname, $ssname, $chr_name, $chr_start, $chr_end) = $ss->selected_CloneSequences_parameters;
-
     my $smart_slice = Bio::Otter::Lace::Slice->new($cl, $dsname, $ssname,
         'chromosome', 'Otter', $chr_name, $chr_start, $chr_end);
 

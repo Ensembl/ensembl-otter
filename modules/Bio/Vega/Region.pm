@@ -22,6 +22,7 @@ use strict;
 use warnings;
 
 use Carp;
+
 use Bio::EnsEMBL::SimpleFeature;
 use Bio::EnsEMBL::Slice;
 use Bio::Otter::Lace::CloneSequence;

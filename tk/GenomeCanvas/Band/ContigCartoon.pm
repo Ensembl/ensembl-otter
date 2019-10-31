@@ -73,7 +73,7 @@ sub render {
         $slice->chr_name,
         $slice->chr_start,
         $slice->chr_end,
-        );#__PACKAGE__.' '.__LINE__,
+        );
     
     my $pipe_head = 1;
     my $rep_feats = $lace_slice->get_all_RepeatFeatures('RepeatMasker', $pipe_head);

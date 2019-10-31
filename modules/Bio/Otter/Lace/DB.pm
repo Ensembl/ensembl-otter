@@ -276,7 +276,7 @@ sub init_db {
 
 sub create_tables {
     my ($self, $schema, $name) = @_;
-    
+
     $self->logger->debug("create_tables for '$name'");
 
     my $dbh = $dbh{$self};

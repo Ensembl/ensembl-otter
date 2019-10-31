@@ -20,7 +20,6 @@ use warnings;
 BEGIN { use lib ($ENV{OTTER_PERL_INC} || q{}) =~ m{([^:]+)}g }
 use SangerPaths qw{ core bioperl123 otter };
 use Bio::Otter::Git qw{ :server_ensembl :match };
-use Data::Dumper;
 use Bio::Otter::Server::Support::Web;
 use Bio::Otter::ServerAction::Apache::AccessionInfo;
 
@@ -28,7 +27,7 @@ Bio::Otter::Server::Support::Web->send_response(
     -content_type => 'application/json',
     sub {
         my ($server) = @_;
-        my $encoded = Bio::Otter::ServerAction::Apache::AccessionInfo->new($server)->get_accession_info; 
+        my $encoded = Bio::Otter::ServerAction::Apache::AccessionInfo->new($server)->get_accession_info;
         return $encoded;
     });
 

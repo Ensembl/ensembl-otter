@@ -23,6 +23,7 @@ package Bio::Otter::Lace::Client;
 use strict;
 use warnings;
 use Carp;
+
 use Try::Tiny;
 
 use Net::Domain qw{ hostname hostfqdn };
@@ -113,6 +114,7 @@ sub new {
     warn "Debug from config: $debug_show\n";
     Bio::Otter::Debug->set($debug) if defined $debug;
     # nb. no loggers yet, because this object configures them
+    
     return $new;
 }
 
@@ -145,6 +147,14 @@ sub email {
     return $self->config_value('email') || (getpwuid($<))[0];
 }
 
+sub fetch_seqence {
+    my ($self, $acc) = @_;
+    my $datasets_hash = $self->otter_response_content
+        ('GET', 'get_sequence', {'id'=>$acc, 'author' => $self->author});
+
+    return $datasets_hash;
+}
+
 sub _client_name {
     my ($self) = @_;
     return $self->{'_client_name'};
@@ -169,14 +179,6 @@ sub _debug_server {
         || Bio::Otter::Debug->debug('2')
         ;
     return $_debug_server;
-}
-
-sub fetch_seqence {
-    my ($self, $acc) = @_;
-    my $datasets_hash = $self->otter_response_content
-        ('GET', 'get_sequence', {'id'=>$acc, 'author' => $self->author});
-
-    return $datasets_hash;
 }
 
 sub no_user_config {
@@ -932,13 +934,14 @@ sub status_refresh_for_DataSet_SequenceSet{
 
         my $status_subhash = $status_hash{$contig_name} || $names_subhash;
 
-#        if($status_subhash == $names_subhash) {
-#            $self->logger->warn("had to assign an empty subhash to contig '$contig_name'");
-#        }
+        if($status_subhash == $names_subhash) {
+            $self->logger->warn("had to assign an empty subhash to contig '$contig_name'");
+        }
 
         while(my ($ana_name, $values) = each %$status_subhash) {
             $status->add_analysis($ana_name, $values);
         }
+
         $cs->pipelineStatus($status);
     }
 
@@ -1212,7 +1215,7 @@ sub _get_config_file {
     return $self->http_response_content(
         'GET',
         'get_config',
-        { 'key' => $key,'author' => $self->author },
+        { 'key' => $key, 'author' => $self->author },
         );
 }
 
@@ -1461,7 +1464,7 @@ sub get_all_CloneSequences_for_DataSet_SequenceSet { # without any lock info
             'author' => $self->author
 
         }
-  );
+    );
 
   local $XML::Simple::PREFERRED_PARSER = 'XML::Parser';
   # configure expat for speed, also used in Bio::Vega::XML::Parser
@@ -1485,7 +1488,8 @@ sub get_all_CloneSequences_for_DataSet_SequenceSet { # without any lock info
               $dataset_name, $sequenceset_name, $_);
       } @{$clonesequences_array} ];
   $ss->CloneSequence_list($clonesequences);
-  return $clonesequences;
+ 
+ return $clonesequences;
 }
 
 sub _make_CloneSequence {
@@ -1520,8 +1524,7 @@ sub get_accession_info {
     my $hashref = $self->otter_response_content(
         'POST',
         'get_accession_info',
-        {'author' => $self->author, accessions => join ',', @accessions
-        },
+        {'author' => $self->author, accessions => join ',', @accessions},
         );
 
     return $hashref;
@@ -1533,8 +1536,7 @@ sub get_accession_types {
     my $hashref = $self->otter_response_content(
         'POST',
         'get_accession_types',
-        {'author' => $self->author, accessions => join ',', @accessions         
-        },
+        {'author' => $self->author, accessions => join ',', @accessions},
         );
 
     return $hashref;
@@ -1546,9 +1548,7 @@ sub get_taxonomy_info {
     my $response = $self->otter_response_content(
         'POST',
         'get_taxonomy_info',
-        {'author' => $self->author, id => join ',', @ids
-        },
-
+        {'author' => $self->author, id => join ',', @ids},
         );
     return $response;
 }
@@ -1774,7 +1774,7 @@ sub unlock_region {
         {
             dataset  => $dataset_name,
             locknums => $locknums,
-            'author' => $self->author
+            'author' => $self->author,
         },
         );
     return $hash;

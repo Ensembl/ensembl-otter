@@ -1009,6 +1009,8 @@ sub run_fetchDb {
     return 1;
 }
 
+
+
 sub _bind_events {
     my ($self) = @_;
 
@@ -2622,7 +2624,6 @@ sub _replace_SubSeq_sqlite {
         $vega_dba->commit;
         $self->_mark_unsaved;
         $done_sqlite = 1;
-
 
         $done_zmap = $self->_replace_in_zmap($new_subseq, $old_subseq, $old_subseq->ensembl_dbID);
     }

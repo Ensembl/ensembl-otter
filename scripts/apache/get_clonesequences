@@ -41,7 +41,7 @@ unless ($server->local_user) {
 }
 
 my $sql = <<'SQL'
-SELECT cl.name
+    SELECT cl.name
       , intl_clone_name.value
       , embl_acc.value
       , embl_version.value

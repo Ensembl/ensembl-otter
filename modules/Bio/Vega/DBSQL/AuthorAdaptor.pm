@@ -313,7 +313,6 @@ sub fetch_gene_author {
 sub fetch_transcript_author {
   my ($self, $transcript_id) = @_;
   my $author;
-
   unless ($transcript_id) {
       throw("transcript_id:$transcript_id  must be present to fetch a transcript_author");
   }

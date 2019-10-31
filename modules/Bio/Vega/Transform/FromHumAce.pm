@@ -31,7 +31,6 @@ use Bio::Vega::Evidence;
 use Bio::Vega::Exon;
 use Bio::Vega::Transcript;
 use Bio::Vega::Translation;
-use Data::Dumper;
 use Bio::Vega::Utils::Attribute                   qw( add_EnsEMBL_Attributes add_selenocystein_Attr_from_Remark );
 use Bio::Vega::Utils::ExonPhase                   qw( exon_phase_Ace_to_EnsEMBL );
 use Bio::Vega::Utils::GeneTranscriptBiotypeStatus qw( method2biotype_status );

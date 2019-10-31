@@ -592,9 +592,9 @@ sub fetch_latest_by_stable_id {
 sub store {
     my ($self, $gene, $time_now) = @_;
 
-    $time_now ||= time; 
+    $time_now ||= time;
 
-    $gene->prune_Exons; 
+    $gene->prune_Exons;
 
     unless ($gene) {
         throw("Must enter a Gene object to the store method");

@@ -270,7 +270,7 @@ sub LaceSlice_from_vc {
         $vc->start,
         $vc->end,
         );
-}#__PACKAGE__.' '.__LINE__,
+}
 
 sub Client {
     my( $self, $Client ) = @_;
@@ -516,7 +516,7 @@ sub next_sub_VirtualContig {
     }
 
     return ($vc, $i);
-}#__PACKAGE__.' '.__LINE__,
+}
 
 sub merge_sort_Features {
     my $band = shift;

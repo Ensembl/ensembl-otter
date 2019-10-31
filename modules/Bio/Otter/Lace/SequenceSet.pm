@@ -157,7 +157,7 @@ sub select_CloneSequences_by_start_end_accessions {
 
     my $ctg = [];
     my $in_contig = 0;
-    my $cs_list = $self->CloneSequence_list; 
+    my $cs_list = $self->CloneSequence_list;
     foreach my $cs (@$cs_list) {
         my $acc = $cs->accession;
         if ($acc eq $start_acc) {

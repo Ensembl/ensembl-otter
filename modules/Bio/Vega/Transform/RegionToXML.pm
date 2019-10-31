@@ -425,7 +425,7 @@ sub generate_EvidenceSet {
 sub generate_FeatureSet {
   my ($self) = @_;
 
-  my @features = $region{$self}->seq_features or return; 
+  my @features = $region{$self}->seq_features or return;
   my $slice = $region{$self}->slice;
 
   my $fs=$self->prettyprint('feature_set');
