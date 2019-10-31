@@ -45,7 +45,7 @@ sub parse : Test(5) {
 
     # region's coord_systems
     my $e_cs = $test->our_object()->coord_system_factory->coord_system('chromosome');
-    is $region->slice->coord_system, $e_cs, 'region slice coord_system';
+    is $region->slice->coord_system->rank, $e_cs->rank, 'region slice coord_system';
 
     return;
 }

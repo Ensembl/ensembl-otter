@@ -39,7 +39,11 @@ dot_otter=~/.otter
 dot_otter_etc="$dot_otter/etc"
 mkdir -p "$dot_otter_etc"
 
-lib_path="/opt/local/lib"
+if [ -d "${OTTER_SWAC}/lib/gdk-pixbuf-2.0" ]; then
+  lib_path="${OTTER_SWAC}/lib"
+else
+  lib_path="/opt/local/lib"
+fi
 
 # Create config file so that gdk-pixbuf can load
 # its bitmap image format loaders

@@ -23,7 +23,6 @@ package Bio::Otter::Lace::Client;
 use strict;
 use warnings;
 use Carp;
-
 use Try::Tiny;
 
 use Net::Domain qw{ hostname hostfqdn };
@@ -114,7 +113,6 @@ sub new {
     warn "Debug from config: $debug_show\n";
     Bio::Otter::Debug->set($debug) if defined $debug;
     # nb. no loggers yet, because this object configures them
-
     return $new;
 }
 
@@ -179,6 +177,14 @@ sub _debug_server {
         || Bio::Otter::Debug->debug('2')
         ;
     return $_debug_server;
+}
+
+sub fetch_seqence {
+    my ($self, $acc) = @_;
+    my $datasets_hash = $self->otter_response_content
+        ('GET', 'get_sequence', {'id'=>$acc, 'author' => $self->author});
+
+    return $datasets_hash;
 }
 
 sub no_user_config {
@@ -895,7 +901,6 @@ sub _do_http_request {
         $request->content($paramstring);
 
         $self->_client_logger->debug("POST  $url");
-        # $self->_client_logger->debug("paramstring: $paramstring");
     }
     else {
         $self->logger->logconfess("method '$method' is not supported");
@@ -935,14 +940,13 @@ sub status_refresh_for_DataSet_SequenceSet{
 
         my $status_subhash = $status_hash{$contig_name} || $names_subhash;
 
-        if($status_subhash == $names_subhash) {
-            $self->logger->warn("had to assign an empty subhash to contig '$contig_name'");
-        }
+#        if($status_subhash == $names_subhash) {
+#            $self->logger->warn("had to assign an empty subhash to contig '$contig_name'");
+#        }
 
         while(my ($ana_name, $values) = each %$status_subhash) {
             $status->add_analysis($ana_name, $values);
         }
-
         $cs->pipelineStatus($status);
     }
 
@@ -950,8 +954,7 @@ sub status_refresh_for_DataSet_SequenceSet{
 }
 
 sub find_clones {
-    my ($self, $dsname, $qnames_list) = @_;
-
+    my ($self, $dsname, $qnames_list, $ss) = @_;
     my $qnames_string = join(',', @$qnames_list);
 
     my $response = $self->http_response_content(
@@ -960,7 +963,9 @@ sub find_clones {
         {
             'dataset'  => $dsname,
             'qnames'   => $qnames_string,
-            'author'   => $self->author
+            'author'   => $self->author,
+            'coord_system_name' => $ss->coord_system_name,
+            'coord_system_version' => $ss->coord_system_version,
         },
     );
 
@@ -992,8 +997,9 @@ sub get_meta {
 }
 
 sub get_db_info {
-    my ($self, $dsname) = @_;
-    my $hashref = $self->otter_response_content(GET => 'get_db_info', { dataset => $dsname, 'author' => $self->author });
+    my ($self, $dsname, $coord_system_name, $coord_system_version) = @_;
+    my $hashref = $self->otter_response_content(GET => 'get_db_info', { dataset => $dsname, 'coord_system_name' => $coord_system_name,
+                                                                         'coord_system_version' => $coord_system_version, 'author' => $self->author });
     return $hashref;
 }
 
@@ -1001,8 +1007,12 @@ sub lock_refresh_for_DataSet_SequenceSet {
     my ($self, $ds, $ss) = @_;
     my $response =
        $self->_DataSet_SequenceSet_response_content(
-           $ds, $ss, 'GET', 'get_locks', {'author' => $self->author});
-
+           $ds, $ss, 'GET', 'get_locks',
+        {
+            'coord_system_name' => $ss->coord_system_name,
+            'coord_system_version' => $ss->coord_system_version,
+            'author' => $self->author
+        });
     my @slice_lock = map { Bio::Vega::SliceLock->new_from_json($_) }
       @{ $response->{SliceLock} || [] };
 
@@ -1025,7 +1035,7 @@ sub fetch_all_SequenceNotes_for_DataSet_SequenceSet {
 
     my $response =
         $self->_DataSet_SequenceSet_response_content(
-            $ds, $ss, 'GET', 'get_sequence_notes', {'author' => $self->author});
+            $ds, $ss, 'GET', 'get_sequence_notes',{'author' => $self->author});
 
     my %ctgname2notes = ();
 
@@ -1097,7 +1107,7 @@ sub _sequence_note_action {
             'contig'    => $contig_name,
             'timestamp' => $seq_note->timestamp(),
             'text'      => $seq_note->text(),
-            'author'    => $self->author,
+            'author'    => $self->author
         },
     );
 
@@ -1130,6 +1140,15 @@ sub _get_DataSets_hash {
 
     my $datasets_hash = $self->otter_response_content
         ('GET', 'get_datasets', {'author' => $self->author});
+
+
+    return $datasets_hash;
+}
+
+sub fetch_fasta_seqence {
+    my ($self, $acc) = @_;
+    my $datasets_hash = $self->otter_response_content
+        ('GET', 'get_fasta_sequence', {'id'=>$acc, 'author' => $self->author});
 
     return $datasets_hash;
 }
@@ -1201,7 +1220,7 @@ sub _get_config_file {
     return $self->http_response_content(
         'GET',
         'get_config',
-        { 'key' => $key, 'author' => $self->author },
+        { 'key' => $key,'author' => $self->author },
         );
 }
 
@@ -1238,7 +1257,9 @@ sub get_server_ensembl_version {
 # same as Bio::Otter::Server::Config->designations (fresh every time)
 sub _get_designations {
     my ($self) = @_;
-    my $hashref = $self->otter_response_content(GET => 'get_config', { key => 'designations', 'author' => $self->author });
+
+    my $hashref = $self->otter_response_content(GET => 'get_config', { key => 'designations','author' => $self->author });
+
     return $hashref;
 }
 
@@ -1334,15 +1355,16 @@ sub get_slice_DE {
 sub slice_query {
     my ($self, $slice) = @_;
     die unless wantarray;
-    return (
-        'dataset' => $slice->dsname(),
-        'chr'     => $slice->ssname(),
-        'cs'      => $slice->csname(),
-        'csver'   => $slice->csver(),
-        'name'    => $slice->seqname(),
-        'start'   => $slice->start(),
-        'end'     => $slice->end(),
-    );
+
+    return ('dataset' => $slice->dsname(),
+            'chr'     => $slice->ssname(),
+            'cs'      => $slice->csname(),
+            'csver'   => $slice->csver(),
+            'name'    => $slice->seqname(),
+            'start'   => $slice->start(),
+            'end'     => $slice->end(),
+           );
+
 }
 
 
@@ -1365,9 +1387,7 @@ sub get_all_SequenceSets_for_DataSet {
 
   my $sequencesets_xml =
       $self->http_response_content(
-          'GET', 'get_sequencesets', {
-              'dataset' => $dataset_name, 'author' => $self->author,
-          });
+          'GET', 'get_sequencesets', {'dataset' => $dataset_name, 'author' => $self->author});
 
   local $XML::Simple::PREFERRED_PARSER = 'XML::Parser';
   # configure expat for speed, also used in Bio::Vega::XML::Parser
@@ -1416,6 +1436,9 @@ sub _make_SequenceSet {
                     $sr_name, [split(/,/, $sr_params->{content})]);
             }
         }
+        elsif ($key eq 'coord_system_name' or $key eq 'coord_system_version') {
+            $sequenceset->$key($value);
+        }
         elsif ($sequenceset->can($key)) {
             die "Bad key $key" unless $key =~ /^[_A-Za-z]{1,16}$/;
             $sequenceset->$key($value);
@@ -1433,6 +1456,7 @@ sub get_all_CloneSequences_for_DataSet_SequenceSet { # without any lock info
 
   my $dataset_name     = $ds->name;
   my $sequenceset_name = $ss->name;
+  $ds->selected_SequenceSet($ss);
 
   my $clonesequences_xml = $self->http_response_content(
         'GET',
@@ -1440,9 +1464,12 @@ sub get_all_CloneSequences_for_DataSet_SequenceSet { # without any lock info
         {
             'dataset'     => $dataset_name,
             'sequenceset' => $sequenceset_name,
-            'author'      => $self->author
+            'coord_system_name' => $ss->coord_system_name,
+            'coord_system_version' => $ss->coord_system_version,
+            'author' => $self->author
+
         }
-    );
+  );
 
   local $XML::Simple::PREFERRED_PARSER = 'XML::Parser';
   # configure expat for speed, also used in Bio::Vega::XML::Parser
@@ -1466,7 +1493,6 @@ sub get_all_CloneSequences_for_DataSet_SequenceSet { # without any lock info
               $dataset_name, $sequenceset_name, $_);
       } @{$clonesequences_array} ];
   $ss->CloneSequence_list($clonesequences);
-
   return $clonesequences;
 }
 
@@ -1478,6 +1504,9 @@ sub _make_CloneSequence {
     while (my ($key, $value) = each %{$params}) {
         if ($key eq 'chr') {
             $clonesequence->chromosome($value->{name});
+        }
+        elsif ($key eq 'coord_system_name' or $key eq 'coord_system_version') {
+            $clonesequence->$key($value);
         }
         elsif ($clonesequence->can($key)) {
             die "Bad key $key" unless $key =~ /^[_A-Za-z]{1,16}$/;
@@ -1494,12 +1523,13 @@ sub get_methods_ace {
 }
 
 sub get_accession_info {
-    my ($self, @accessions) = @_;
+    my ($self, @accessions) = @_; 
 
     my $hashref = $self->otter_response_content(
         'POST',
         'get_accession_info',
-        {'author' => $self->author, accessions => join ',', @accessions },
+        {'author' => $self->author, accessions => join ',', @accessions
+        },
         );
 
     return $hashref;
@@ -1511,7 +1541,8 @@ sub get_accession_types {
     my $hashref = $self->otter_response_content(
         'POST',
         'get_accession_types',
-        {'author' => $self->author, accessions => join ',', @accessions },
+        {'author' => $self->author, accessions => join ',', @accessions         
+        },
         );
 
     return $hashref;
@@ -1523,7 +1554,9 @@ sub get_taxonomy_info {
     my $response = $self->otter_response_content(
         'POST',
         'get_taxonomy_info',
-        {'author' => $self->author, id => join ',', @ids },
+        {'author' => $self->author, id => join ',', @ids
+        },
+
         );
     return $response;
 }
@@ -1553,14 +1586,17 @@ sub save_otter_xml {
 # lock_region, unlock_region : see Bio::Otter::Lace::AceDatabase
 
 sub _DataSet_SequenceSet_response_content {
-    my ($self, $ds, $ss, $method, $script) = @_;
+    my ($self, $ds, $ss, $method, $script, $extra) = @_;
 
     my $query = {
         'dataset'  => $ds->name,
         'chr'      => $ss->name,
         'author'   => $self->author
     };
-
+    
+    if ($extra and ref($extra) eq 'HASH') {
+      %$query = (%$query, %$extra);
+    }
     my $content =
         $self->otter_response_content($method, $script, $query);
 
@@ -1746,7 +1782,7 @@ sub unlock_region {
         {
             dataset  => $dataset_name,
             locknums => $locknums,
-            'author' => $self->author,
+            'author' => $self->author
         },
         );
     return $hash;

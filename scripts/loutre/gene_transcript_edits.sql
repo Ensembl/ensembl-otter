@@ -92,7 +92,7 @@ GROUP BY sr.name, g.biotype
     chr7-03  protein_coding             35
     chr7-03  unprocessed_pseudogene      4
 
-
+--AND cs.version = 'Otter'
 
 SELECT sr.name chr
   , t.biotype

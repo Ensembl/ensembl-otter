@@ -53,7 +53,7 @@ sub main {
     {
         my $dir = "$tmp/$test";
         foreach my $file ("$vsn/otter_config", "$vsn/otter_styles.ini",
-                          "access.yaml", "species.dat", "databases.yaml") {
+                          "species.dat", "databases.yaml") {
             mkfile("$dir/$file");
         }
     }

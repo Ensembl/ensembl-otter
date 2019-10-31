@@ -71,7 +71,7 @@ my $by_start_end_strand = sub {
 sub _feature_name {
     my ($feature) = @_;
     my $name = get_name_Attribute_value($feature);
-    return $name // '';
+    return $name // $feature->display_id;
 }
 
 # get/set methods exposed on object interface
@@ -158,6 +158,8 @@ sub generate_SequenceFragment {
     $sf->attribvals($self->prettyprint('fragment_ori',      $cs->contig_strand  ));
     $sf->attribvals($self->prettyprint('fragment_offset',   $cs->contig_start   ));
     $sf->attribvals($self->prettyprint('clone_length',      $cs->length         ));
+    $sf->attribvals($self->prettyprint('coord_system_name', $self->region->slice->coord_system->name));
+    $sf->attribvals($self->prettyprint('coord_system_version', $self->region->slice->coord_system->version));
 
     # write_region requires that the client describe the region, to
     # ensure it is the correct one, but then ignores ContigInfo.
@@ -219,10 +221,11 @@ sub generate_Locus {
 
     my ($type) = biotype_status2method($gene->biotype, $gene->status);
     my $source = $gene->source;
-    if ($source ne 'havana') {
+    if ($source ne 'havana' and $source ne 'ensembl_havana') {
         $type = "$source:$type";
     }
     $g->attribvals($self->prettyprint('type',$type));
+    $g->attribvals($self->prettyprint('source',$source));
 
     $g->attribvals($self->prettyprint('known',$gene->is_known || 0));
     $g->attribvals($self->prettyprint('truncated',$gene->truncated_flag));
@@ -252,9 +255,12 @@ sub generate_Locus {
     if( my $transcripts=$gene->get_all_Transcripts ) {
 
         my $coord_offset=$gene->get_all_Exons->[0]->slice->start-1;
-
+        my $start = $gene->get_all_Exons->[0]->slice->start; 
+        my $end = $gene->get_all_Exons->[0]->slice->end; 
         foreach my $tran (sort $by_start_end_strand @$transcripts) {
-            $g->attribobjs($self->generate_Transcript($tran, $coord_offset));
+            if ($tran->seq_region_start <= $end and $tran->seq_region_end >= $start) {
+                $g->attribobjs($self->generate_Transcript($tran, $coord_offset));
+            }
         }
     } else {
         throw "Cannot create Otter XML, no transcripts attached to this gene:$gene";
@@ -292,6 +298,12 @@ sub generate_Transcript {
   ##in future <transcript_class> tag will be replaced by trancript <biotype> and <status> tags
   ##<type> tag will be removed
   my ($class) = biotype_status2method($tran->biotype, $tran->status);
+  my $source = $tran->source;
+  $t->attribvals($self->prettyprint('source', $source));
+  if ($source ne 'havana' and $source ne 'ensembl_havana') {
+    $t->attribvals($self->prettyprint('type', "$source:$class"));
+  }
+
   $t->attribvals($self->prettyprint('transcript_class', $class));
 
   my $tran_name = _feature_name($tran);
@@ -413,7 +425,7 @@ sub generate_EvidenceSet {
 sub generate_FeatureSet {
   my ($self) = @_;
 
-  my @features = $region{$self}->seq_features or return;
+  my @features = $region{$self}->seq_features or return; 
   my $slice = $region{$self}->slice;
 
   my $fs=$self->prettyprint('feature_set');
@@ -441,11 +453,7 @@ sub generate_FeatureSet {
           throw "Cannot create Otter XML, feature end is absent: $feature";
       }
 
-      if ($feature->strand){
-          $f->attribvals($self->prettyprint('strand',$feature->strand));
-      } else {
-          throw "Cannot create Otter XML, feature strand is absent: $feature";
-      }
+      $f->attribvals($self->prettyprint('strand',$feature->strand || 1));
 
       if ($feature->score){
           $f->attribvals($self->prettyprint('score',$feature->score));

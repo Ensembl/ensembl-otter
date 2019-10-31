@@ -32,7 +32,6 @@ use Hum::Ace::Exon;
 use Hum::Ace::Locus;
 use Hum::Ace::SubSeq;
 use Hum::Ace::SeqFeature::Simple;
-
 use Bio::Vega::Utils::ExonPhase                   'exon_phase_EnsEMBL_to_Ace';
 use Bio::Vega::Utils::GeneTranscriptBiotypeStatus 'biotype_status2method';
 
@@ -263,7 +262,7 @@ sub _add_genes {
         $locus->name(get_first_attrib_value($gene, 'name'));
         $locus->ensembl_dbID($gene->dbID);
 
-        unless ($gene->source eq 'havana') {
+        if ($gene->source ne 'havana' and $gene->source ne 'ensembl_havana') {
             $locus->gene_type_prefix($gene->source);
         }
 
@@ -340,6 +339,7 @@ sub _add_genes {
                                       biotype_status2method($tsct->biotype, $tsct->status),
                                       $gene->truncated_flag ? '_trunc' : '');
             my $method = $name_method{$method_name};
+
             unless ($method) {
                 confess "No transcript Method called '$method_name'";
             }

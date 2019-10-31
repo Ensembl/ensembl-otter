@@ -119,14 +119,14 @@ sub _send_queued_requests {
         $self->_sender_timeout_id(undef);
     }
 
-    my $slots = $self->_slots_available;
+    my $slots = $self->_slots_available; 
     if ($slots < $self->_cfg_min_batch) {
         # This is only really required to avoid excessive interleaving in Zircon :-(
         $logger->debug("_send_queued_requests: min batch size not reached");
         return;
     }
 
-    my $queue = $self->_queue;
+    my $queue = $self->_queue; 
     my @to_send;
     my $current_priority;
 

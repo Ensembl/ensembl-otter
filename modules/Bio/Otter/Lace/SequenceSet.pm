@@ -49,6 +49,24 @@ sub dataset_name {
     return $self->{'_dataset_name'};
 }
 
+sub coord_system_name {
+    my ($self, $coord_system_name) = @_;
+
+    if ($coord_system_name) {
+        $self->{'_coord_system_name'} = $coord_system_name;
+    }
+    return $self->{'_coord_system_name'};
+}
+
+sub coord_system_version {
+    my ($self, $coord_system_version) = @_;
+
+    if ($coord_system_version) {
+        $self->{'_coord_system_version'} = $coord_system_version;
+    }
+    return $self->{'_coord_system_version'};
+}
+
 sub description {
     my ($self, $description) = @_;
 
@@ -139,7 +157,7 @@ sub select_CloneSequences_by_start_end_accessions {
 
     my $ctg = [];
     my $in_contig = 0;
-    my $cs_list = $self->CloneSequence_list;
+    my $cs_list = $self->CloneSequence_list; 
     foreach my $cs (@$cs_list) {
         my $acc = $cs->accession;
         if ($acc eq $start_acc) {
@@ -188,18 +206,18 @@ sub selected_CloneSequences_parameters {
 
     confess "No CloneSequences selected" unless @$cs_list;
 
-    my ($chr_name, $chr_start, $chr_end) = $self->region_coordinates($cs_list);
+    my ($chr_name, $chr_start, $chr_end, $cs_name, $cs_version) = $self->region_coordinates($cs_list);
 
-    return ($dsname, $ssname, $chr_name, $chr_start, $chr_end);
+    return ($dsname, $ssname, $chr_name, $chr_start, $chr_end, $cs_name, $cs_version);
 }
 
 sub selected_CloneSequences_as_Slice {
     my ($self, $client) = @_;
 
-    my ($dsname, $ssname, $chr_name, $chr_start, $chr_end) = $self->selected_CloneSequences_parameters;
+    my ($dsname, $ssname, $chr_name, $chr_start, $chr_end, $cs_name, $cs_version) = $self->selected_CloneSequences_parameters;
     return Bio::Otter::Lace::Slice->new(
       $client, $dsname, $ssname,
-      'chromosome', 'Otter',     # Should these be defaults, or can we fetch them from another object?
+      $cs_name, $cs_version,
       $chr_name, $chr_start, $chr_end,
       );
 }
@@ -210,7 +228,9 @@ sub region_coordinates {
     my $chr_name  = $ctg->[0]->chromosome;
     my $chr_start = $ctg->[0]->chr_start;
     my $chr_end   = $ctg->[-1]->chr_end;
-    return ($chr_name, $chr_start, $chr_end);
+    my $cs_name   = $ctg->[0]->coord_system_name;
+    my $cs_version = $ctg->[0]->coord_system_version;
+    return ($chr_name, $chr_start, $chr_end, $cs_name, $cs_version);
 }
 
 

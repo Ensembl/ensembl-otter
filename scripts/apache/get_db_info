@@ -26,7 +26,9 @@ use Bio::Otter::ServerAction::LoutreDB;
 
 sub get_db_info {
     my ($server) = @_;
-    return Bio::Otter::ServerAction::LoutreDB->new($server)->get_db_info;
+    my $coord_system_name = $server->require_argument('coord_system_name') || 'chromosome';
+    my $coord_system_version = $server->require_argument('coord_system_version') || 'Otter';
+    return Bio::Otter::ServerAction::LoutreDB->new($server)->get_db_info($coord_system_name, $coord_system_version);
 }
 
 Bio::Otter::Server::Support::Web->send_response(-content_type => 'application/json', \&get_db_info);

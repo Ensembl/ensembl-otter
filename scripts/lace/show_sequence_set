@@ -225,7 +225,7 @@ will print out the same set in AGP format.
   ./show_sequence_set -dataset human -set 21 -agp -agp_cs_ver NCBI36
 
 will print out the set named "21" with coord system version NCBI36.
-(-agp_cs_ver defaults to "Otter".)
+(-agp_cs_ver defaults to 'Otter'.)
 
 =head1 AUTHOR
 

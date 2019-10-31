@@ -29,7 +29,6 @@ package Bio::Otter::MappingFetcher;
 use strict;
 use warnings;
 use Carp;
-
 use base 'Bio::Otter::Server::Support';
 
 # new() provided by Bio::Otter::Server::Support
@@ -47,7 +46,7 @@ sub get_slice {
     # that we use 'assembly type' as the chromosome name
     # only for Otter chromosomes.
     # EnsEMBL chromosomes will have simple names.
-    my ($segment_attr, $segment_name) = (($cs eq 'chromosome') && ($csver eq 'Otter'))
+    my ($segment_attr, $segment_name) = (($cs eq 'chromosome') && ($csver eq 'Otter')) 
         ? ('chr',  $chr)
         : ('name', $name);
 
@@ -169,12 +168,12 @@ sub map_remote_slice_back {
             # chromosomes are equivalent, re-create the slice on loutre_db:
 
         my $local_slice = $local_sa->fetch_by_region(
-            'chromosome',
+            $cs,
             $otter_chr_name,
             $remote_slice->start(),
             $remote_slice->end(),
             $remote_slice->strand(),
-            'Otter',
+            $csver_remote,
         );
 
         return [ $local_slice ];
@@ -190,7 +189,7 @@ sub map_remote_slice_back {
             );
 
         my @local_slices = ();
-        foreach my $proj_segment (@{ $remote_slice_2->project('chromosome', 'Otter') }) {
+        foreach my $proj_segment (@{ $remote_slice_2->project($cs, $csver_remote) }) {
             my $local_slice_2 = $proj_segment->to_Slice();
 
             my $local_slice = $local_sa->fetch_by_region(
@@ -234,14 +233,13 @@ sub ensembl_adaptor_class {
 
 sub fetch_mapped_features_ensembl {
     my ($self, $fetching_method, $call_parms, $map, $metakey) = @_;
-
     my ($cs, $name, $chr, $start, $end, $csver_orig, $csver_remote) =
         @{$map}{qw( cs name chr start end csver csver_remote )};
 
-    confess "invalid coordinate system: '${cs}'"
-        unless $cs eq 'chromosome';
-    confess "invalid coordinate system version: '${csver_orig}'"
-        unless $csver_orig eq 'Otter';
+#    confess "invalid coordinate system: '${cs}'"
+#        unless $cs eq 'chromosome';
+#    confess "invalid coordinate system version: '${csver_orig}'"
+#        unless $csver_orig eq 'Otter';
 
     my $adaptor_class = $self->ensembl_adaptor_class;
 
@@ -253,7 +251,7 @@ sub fetch_mapped_features_ensembl {
 
     my $features = [];
 
-    if(!$metakey) { # fetch from the pipeline
+    if(!$metakey) {# fetch from the pipeline
         my $pdba = $self->dataset->pipeline_dba;
         my $slice = $self->get_slice($pdba, $cs, $name, $chr, $start, $end, $csver_orig);
         $features = $slice->$fetching_method(@$call_parms);
@@ -264,7 +262,7 @@ sub fetch_mapped_features_ensembl {
         my $sdba = $self->dataset->satellite_dba( $metakey, $adaptor_class );
         my $original_slice = $self->get_slice($sdba, $cs, $name, $chr, $start, $end, $csver_remote);
         $features = $original_slice->$fetching_method(@$call_parms);
-    } else { # let's try to do the mapping:
+    } else {# let's try to do the mapping:
         warn "Proceeding with mapping code\n";
 
         my $odba = $self->otter_dba;
@@ -335,10 +333,10 @@ sub fetch_mapped_features_das {
     my ($cs, $name, $chr, $start, $end, $csver_orig, $csver_remote) =
         @{$map}{qw( cs name chr start end csver csver_remote )};
 
-    confess "invalid coordinate system: '${cs}'"
-        unless $cs eq 'chromosome';
-    confess "invalid coordinate system version: '${csver_orig}'"
-        unless $csver_orig eq 'Otter';
+#    confess "invalid coordinate system: '${cs}'"
+#        unless $cs eq 'chromosome';
+#    confess "invalid coordinate system version: '${csver_orig}'"
+#        unless $csver_orig eq 'Otter';
 
     if( ($self->otter_assembly_equiv_hash()->{$csver_remote}{$name} || '') eq $chr) {
         warn "fetch_mapped_features_das(): no mapping\n";

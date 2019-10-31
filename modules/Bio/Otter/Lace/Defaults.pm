@@ -685,8 +685,13 @@ __DATA__
 # e.g. short_window_title_prefix and password_timeout accept -1 to
 # disable.
 
+
 [client]
+<<<<<<< HEAD
 url=http://193.62.52.185:82/cgi-bin/otter
+=======
+url=http://otter-server.ebi.ac.uk:8004/cgi-bin/otter
+>>>>>>> feature/ensembl_friendly
 write_access=1
 gff_version=3
 acedb_version=4.9.61

@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 use strict;
 use warnings;
 
@@ -32,9 +31,11 @@ sub get_SliceLocks {
     my $SLdba = $server->otter_dba->get_SliceLockAdaptor;
     my $S_dba = $server->otter_dba->get_SliceAdaptor;
     my $chr = $server->require_argument('chr');
+    my $coord_system_name = $server->require_argument('coord_system_name') || 'chromosome';
+    my $coord_system_version = $server->require_argument('coord_system_version') || 'Otter';
     my $chr_slice = $S_dba->fetch_by_region
-      ('chromosome', $chr, undef, undef, undef, 'Otter', 1);
-    die "Cannot find chromosome:Otter:$chr" unless $chr_slice;
+      ($coord_system_name, $chr, undef, undef, undef, $coord_system_version, 1);
+    die "Cannot find $coord_system_name:$coord_system_version:$chr" unless $chr_slice;
     my $srid = $chr_slice->get_seq_region_id;
 
     my $slocks = $SLdba->fetch_by_seq_region_id($srid, 1); # extant = not freed

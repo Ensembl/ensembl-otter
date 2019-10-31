@@ -31,6 +31,7 @@ BEGIN {
         make_EnsEMBL_Attribute
         get_first_Attribute_value
         get_name_Attribute_value
+        add_selenocystein_Attr_from_Remark
     );
 }
 
@@ -76,6 +77,27 @@ sub add_EnsEMBL_Attributes {
         push @attributes, make_EnsEMBL_Attribute($code, $value);
     }
     return $e_obj->add_Attributes(@attributes);
+}
+
+=item add_selenocystein_Attr_from_Remark($e_obj, @remarks)
+
+Search C<@remarks>. for selenocystin pattern and adds a L<Bio::EnsEMBL::Attribute>
+at the given C<$e_obj>
+=cut
+
+sub add_selenocystein_Attr_from_Remark {
+  my ($e_obj, @remarks) = @_;
+  my @translation_attributes;
+   foreach my $value (@remarks) {
+     if ($value =~ /^selenocystein\w+\s+\d+/) {
+       while($value =~ / (\d+)/gc) {
+        add_EnsEMBL_Attributes($e_obj, '_selenocysteine' => $1);
+
+      }
+    }
+
+  }
+
 }
 
 =item make_EnsEMBL_Attribute($code, $value)

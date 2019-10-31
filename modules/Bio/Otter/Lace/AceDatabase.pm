@@ -24,6 +24,7 @@ package Bio::Otter::Lace::AceDatabase;
 use strict;
 use warnings;
 use Carp;
+#use Data::Dumper;
 
 use Fcntl qw{ O_WRONLY O_CREAT };
 use File::Basename;
@@ -220,6 +221,7 @@ sub _MethodCollection {
         Hum::ZMapStyleCollection->new_from_string($otter_styles);
 
     my $methods_ace = $client->get_methods_ace;
+#    print $methods_ace, "\n";
     my $method_collection =
         Hum::Ace::MethodCollection->new_from_string($methods_ace, $style_collection);
     $method_collection->process_for_otterlace;
@@ -255,8 +257,7 @@ sub empty_acefile_list {
 
 sub init_AceDatabase {
     my ($self) = @_;
-
-    my $xml_string = $self->Client->get_region_xml($self->slice);
+    my $xml_string = $self->Client->get_region_xml($self->slice); 
     $self->write_file('01_before.xml', $xml_string);
 
     my $parser = Bio::Vega::Transform::XMLToRegion->new;
@@ -349,7 +350,7 @@ sub recover_slice_from_region_xml {
 
     my $parser = Bio::Vega::Transform::XMLToRegion->new;
     $parser->analysis_from_transcript_class(1);
-    $parser->coord_system_factory(Bio::Vega::CoordSystemFactory->new); # Should we get this from somewhere else?
+    $parser->coord_system_factory(Bio::Vega::CoordSystemFactory->new( dba => $self->DB->vega_dba )); # Should we get this from somewhere else?
     my $region = $parser->parse($xml);
 
     my $slice = Bio::Otter::Lace::Slice->new_from_region($client, $region);
@@ -835,6 +836,7 @@ sub generate_XML_from_sqlite {
 
     $self->DB->vega_dba->clear_caches;
     my $region = Bio::Vega::Region->new_from_otter_db( slice => $self->DB->session_slice );
+    $region->{species} = $self->DB->species;
     $region->check_transcript_stable_ids;
     my $formatter = Bio::Vega::Transform::RegionToXML->new;
     $formatter->region($region);
@@ -973,6 +975,7 @@ sub _add_transcript_filters {
             transcript_analyses => $child_list,
             featuresets         => "${filter_name},${child_list}",
                                                              });
+#        $self->logger->info(Dumper($filter));
         $dataset->add_filter($filter);
     }
 

@@ -56,10 +56,23 @@ sub setup : Tests(setup) {
 # Overrideable - default is a plain in-memory one
 #
 sub get_coord_system_factory {
+    my ($test) = @_;
     require Bio::Vega::CoordSystemFactory;
-    return Bio::Vega::CoordSystemFactory->new;
+    return Bio::Vega::CoordSystemFactory->new(%{$test->get_coord_system_factory_override_spec});
 }
 
+sub get_coord_system_factory_override_spec {
+  my ($test) = @_;
+
+  return {
+    override_spec => {
+      chromosome => { '-version' => 'Otter', '-rank' => 2, '-default' => 1,                         },
+      clone      => {                        '-rank' => 4, '-default' => 1,                         },
+      contig     => {                        '-rank' => 5, '-default' => 1,                         },
+      dna_contig => { '-version' => 'Otter', '-rank' => 6, '-default' => 1, '-sequence_level' => 1, },
+    }
+  }
+}
 sub get_bio_vega_transform_xmltoregion {
     require Bio::Vega::Transform::XMLToRegion;
     return Bio::Vega::Transform::XMLToRegion->new;

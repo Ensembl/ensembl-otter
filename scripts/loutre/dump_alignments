@@ -99,6 +99,6 @@ __END__
 =head1 NAME - dump_alignments
 
 =head1 AUTHOR
-
+csver       => 'Otter'
 James Gilbert B<email> jgrg@sanger.ac.uk
 

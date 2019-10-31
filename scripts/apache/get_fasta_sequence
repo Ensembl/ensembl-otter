@@ -42,7 +42,7 @@ sub get_fasta_sequence {
     my @queries;
     my $query = 'http://www.ebi.ac.uk/Tools/dbfetch/dbfetch?format=fasta&style=raw&db=uniprotkb&id=';
     push @queries, $query;
-    my $query = 'http://www.ebi.ac.uk/Tools/dbfetch/dbfetch?format=fasta&style=raw&db=refseqn&id=';
+    $query = 'http://www.ebi.ac.uk/Tools/dbfetch/dbfetch?format=fasta&style=raw&db=refseqn&id=';
     push @queries, $query;
     $query = 'http://www.ebi.ac.uk/Tools/dbfetch/dbfetch?db=ena_sequence&format=fasta&style=raw&Retrieve=Retrieve&id=';
 
@@ -60,7 +60,14 @@ sub get_fasta_sequence {
                  $id = $id . ',' . $current_id;
             }
         }
-        $response = fetch_ids_from_external_db($queries[$i] . $id);
+
+        my $cut_id = $id;
+
+        if ($i == 0) {
+            $cut_id =~ s/\.\d+//;
+        }
+
+        $response = fetch_ids_from_external_db($queries[$i] . $cut_id);
         $concat_response = $concat_response . $response;
         $i++;
     }

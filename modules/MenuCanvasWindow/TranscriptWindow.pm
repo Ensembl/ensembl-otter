@@ -365,22 +365,38 @@ sub initialise {
             -padx => 6,
             -text => 'Type:',
             )->pack( -side => 'left' );
-        my $menu_list = [];
+        my %menu_list;
+        my $parent;
+        my $last_was_parent = 0;
         foreach my $gm (@mutable_gene_methods) {
             my $name = $gm->name;
-            my $display_name = $gm->has_parent ? "    $name" : $name;
-            push(@$menu_list, [$display_name, $name]);
-        }
-        my $type_option_menu = $type_frame->SmartOptionmenu(
-            -options => $menu_list,
-            -variable => \$current_method,
-            -command => sub{
-                    $self->_draw_translation_region;
-                    $self->fix_window_min_max_sizes;
-                    $top->focus;  # Need this
-                },
-            )->pack(-side => 'left');
+            if ($gm->has_parent) {
+              $menu_list{$name} = $parent;
+              $last_was_parent = 0;
+            } else {
+                if($last_was_parent == 1) {
+                  $menu_list{$parent} = 'single';
+                }
+                $parent = $name;
+                $last_was_parent = 1;
+            }
 
+        }
+
+        my $mb = $type_frame->Menubutton(
+          -textvariable => \$current_method,
+          -width => 38,
+          -indicatoron => 1,
+          -relief => 'raised',
+          -borderwidth => 2,
+          -highlightthickness => 2,
+          -anchor => 'c',
+          -direction => 'flush', )->pack( -side => 'left' );
+
+        my $tsct_type_menu = $mb->Menu(-tearoff => 0);
+        $mb->configure(-menu => $tsct_type_menu);
+
+        $self->_populate_transcript_type_menu($tsct_type_menu,\%menu_list, $mb, \$current_method);
         # Start not found and end not found and method widgets
         $self->_add_start_end_method_widgets($frame);
 
@@ -1379,6 +1395,43 @@ sub _populate_locus_attribute_menu {
                                     $self->_SW_AceDB_DataSet->vocab_locus);
 
     return;
+}
+
+
+sub _populate_transcript_type_menu {
+  my ($self, $parent_menu, $item_list, $mb, $method_ref) = @_;
+  my $attribs = $item_list;
+  my %sub_menus;
+  foreach my $phrase (sort keys %$attribs) {
+      my $value = $attribs->{$phrase};
+      my $menu;
+      if ($value eq 'single') {
+          $menu = $parent_menu;
+      } else {
+          $menu = $sub_menus{$value} ||= $parent_menu->Menu(-tearoff => 0);
+      }
+      $menu->add('command',
+          -label      => $phrase,
+          -command    => sub {
+                        $$method_ref = $phrase;
+                        $self->_draw_translation_region;
+                        $self->fix_window_min_max_sizes;
+                        $mb->configure(-textvariable => $phrase);
+
+                        $self->canvas->toplevel->focus;  # Need this
+                      });
+  }
+
+  # Add any cascade sub-menus onto the end of this menu
+  foreach my $label (sort keys %sub_menus) {
+      $parent_menu->add('cascade',
+          -menu       => $sub_menus{$label},
+          -label      => $label,
+          -underline  => 0,
+          );
+  }
+
+  return;
 }
 
 sub _populate_attribute_menu {
@@ -3124,4 +3177,3 @@ __END__
 =head1 AUTHOR
 
 Ana Code B<email> anacode@sanger.ac.uk
-

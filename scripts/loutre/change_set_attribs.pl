@@ -128,6 +128,7 @@ use Bio::EnsEMBL::Utils::Exception qw(throw warning);
        'csver=s'  => \$csver,
 
        'new|N!'   => sub { $write = $visible = 1; $csver = 'Otter' },
+#       'new|N!'   => sub { $write = $visible = 1; $csver = 'Otter' },
        'old|O!'   => sub { $read  = $hide    = 1; $csver = 'OtterArchive' },
 
        'set=s'    => \$set,

@@ -3,7 +3,7 @@ os:
 services: docker
 
 before_install:
-    - docker pull smmebi/otter_test_update
+    - docker pull smmebi/otter_test_nomerge
 install:
     - cd ../
     - export ROOT_PATH=$PWD
@@ -13,11 +13,19 @@ install:
     - git clone --branch master --depth 1 https://github.com/Ensembl/team_tools.git
     - git clone --branch master --depth 1 https://github.com/Ensembl/webvm.git
     - git clone --branch master --depth 1 https://github.com/Ensembl/webvm-deps.git
+    - cd webvm-deps/
+    - mkdir ensembl-branch-97/
+    - cd ensembl-branch-97/
+    - git clone --branch release/97 https://github.com/Ensembl/ensembl.git
+    - git clone --branch release/97 https://github.com/Ensembl/ensembl-variation.git
+    - git clone --branch release/97 https://github.com/Ensembl/ensembl-funcgen.git
+    - git clone --branch release/97 https://github.com/Ensembl/ensembl-compara.git
+    - cd ../../
     - git clone --branch master --depth 1 https://github.com/Ensembl/zircon.git
     - git clone --branch master --depth 1 https://github.com/Ensembl/PerlModules.git
 
 
-script: "docker run -i --name devtest -v $ROOT_PATH/app:/loutre smmebi/otter_test_update:latest"
+script: "docker run -i --name devtest -v $ROOT_PATH/app:/loutre smmebi/otter_test_nomerge:latest"
 
 notifications:
   slack:

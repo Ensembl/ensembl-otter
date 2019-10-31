@@ -35,7 +35,6 @@ use Bio::Otter::Version;
 use Bio::Otter::Auth::Access;
 use Bio::Otter::Server::UserSpecies;
 
-
 =head1 NAME
 
 Bio::Otter::Server::Config - obtain config data for Otter Server
@@ -102,7 +101,7 @@ sub data_dir {
       unless -d $data;
 
     my $vsn = Bio::Otter::Version->version;
-    my @want = ("species.dat", "access.yaml",
+    my @want = ("species.dat",
                 "$vsn/otter_config", "$vsn/otter_styles.ini");
     my @lack = grep { ! -f "$data/$_" } @want;
     die "data_dir $data (from $src): lacks expected files (@lack)"

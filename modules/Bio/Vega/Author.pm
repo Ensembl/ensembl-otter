@@ -36,7 +36,7 @@ sub new {
 
   $self->name($name);
   $self->email($email);
-  $self->group($group);
+  $self->group($group); 
   return $self;
 }
 

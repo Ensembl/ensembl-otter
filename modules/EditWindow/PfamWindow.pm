@@ -21,7 +21,7 @@ package EditWindow::PfamWindow;
 
 use strict;
 use warnings;
-use Carp;
+use Carp qw(confess);
 use POSIX ();
 use URI;
 use Try::Tiny;
@@ -96,7 +96,10 @@ sub result_url {
 
 sub widg {
     my ($self, $name) = @_;
-    return $self->{_widg}->{$name} or die "No widg($name)";
+    if (!exists $self->{_widg}->{$name}) {
+      confess "No widg($name)";
+    }
+    return $self->{_widg}->{$name};
 }
 
 sub initialise {
