@@ -16,6 +16,8 @@ limitations under the License.
 
 =cut
 
+### Bio::Otter::Lace::OnTheFly::QueryValidator
+
 package Bio::Otter::Lace::OnTheFly::QueryValidator;
 
 use namespace::autoclean;
@@ -236,48 +238,6 @@ sub Client {
 # Adds sequences to $self->seqs
 #
 sub _fetch_sequences {
-<<<<<<< HEAD
-  my ($self, @to_fetch) = @_;
-
-  my $cache = $self->accession_type_cache;
-
-  @to_fetch = uniq @to_fetch;
-  $self->logger->debug('Need seq for: ', join(',', @to_fetch) || '<none>');
-  my $client = Bio::Otter::Lace::Defaults::make_Client();
-  my $seqs = $client->fetch_fasta_sequence(@to_fetch);
-  my @seq_array = split('>', $seqs);
-
-
-  foreach my $sequence (@seq_array) {
-      if (length($sequence) < 2) {
-          next;
-      };
-
-      my $seq = $self->parse_fasta_sequence('>' . $sequence);
-      my $iteration = 0;
-      my @to_fetch_cut = @to_fetch;
-      @to_fetch_cut = map { m/\-/ && s/\.\d+$//; $_ } @to_fetch_cut;
-      while ((index $seq->name, $to_fetch_cut[$iteration]) == -1 && $iteration < scalar(@to_fetch)) {
-            $iteration++;
-      }
-
-      my ($type, $full) = @{$self->_acc_type_full($to_fetch[$iteration])};
-      unless ($type) {
-          $self->_add_missing_warning($to_fetch[$iteration] => 'illegal evidence type');
-          next;
-      }
-      $seq->type($type);
-      $seq->name($full);
-      push(@{$self->seqs}, $seq);
-  }
-
-  return;
-}
-
-sub parse_fasta_sequence {
-    my ($self, $raw_seq) = @_;
-
-=======
     my ($self, @to_fetch) = @_;
 
     my $cache = $self->accession_type_cache;
