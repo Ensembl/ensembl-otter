@@ -285,7 +285,7 @@ sub remove_transcript_author {
 }
 
 sub fetch_gene_author {
-  my ($self, $gene_id) = @_; 
+  my ($self, $gene_id) = @_;
   my $author;
   unless ($gene_id) {
       throw("gene_id:$gene_id  must be present to fetch a gene_author");
@@ -297,14 +297,14 @@ sub fetch_gene_author {
   my ($author_id) = $sth->fetchrow_array();
   $sth->finish();
   if($author_id){
-   $author=$self->fetch_by_dbID($author_id);  
+   $author=$self->fetch_by_dbID($author_id);
   }
   else{
    $author = Bio::Vega::Author->new;
         $author->dbID('filler_dbID');
         $author->email('filler_email');
         $author->name('filler_author');
-        $author->adaptor($self); 
+        $author->adaptor($self);
   }
 
   return $author;
@@ -324,14 +324,14 @@ sub fetch_transcript_author {
   $sth->finish();
 
   if($author_id){
-   $author = $self->fetch_by_dbID($author_id);  
+   $author = $self->fetch_by_dbID($author_id);
   }
   else{
    $author = Bio::Vega::Author->new;
         $author->dbID('filler_dbID');
         $author->email('filler_email');
         $author->name('filler_author');
-        $author->adaptor($self); 
+        $author->adaptor($self);
   }
   return $author;
 }

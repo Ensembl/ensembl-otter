@@ -72,7 +72,7 @@ sub store_Evidence {
      SELECT * FROM evidence WHERE transcript_id = ?
   });
   $select_sth->execute($transcript_id);
-  if($select_sth->fetchrow_array) { 
+  if($select_sth->fetchrow_array) {
       return;
   }
   else {
@@ -85,7 +85,7 @@ sub store_Evidence {
           $sth->execute($transcript_id, $name, $type);
       }
   }
-  
+
   return;
 }
 

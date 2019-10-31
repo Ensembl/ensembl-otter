@@ -50,11 +50,11 @@ sub new {
 
 sub coord_system {
     my ($self, $name) = @_;
-  
+
     if ($self->dba) {
         my $cs = $self->_dba_cs($name);
         return $self->_cached_cs($name, $cs);
-    } 
+    }
     elsif ($self->_cached_cs($name)) {
         my $cs = $self->_local_cs($name, $self->_cached_cs($name));
         return $self->_cached_cs($name, $cs);

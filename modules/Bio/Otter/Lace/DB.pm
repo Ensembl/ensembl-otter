@@ -323,7 +323,7 @@ sub load_dataset_info {
         $dna_cs_rank = $value->{'-rank'}+1;
       }
     }
-    
+
     my $cs_factory = Bio::Vega::CoordSystemFactory->new(
         dba           => $_dba,
         create_in_db  => 1,
@@ -331,7 +331,6 @@ sub load_dataset_info {
         );
     my $toplevel_cs = $dataset->get_db_info_item('coord_system.chromosome');
 
-    
     $override_specs->{dna_contig} = {
       '-rank' => $dna_cs_rank,
       '-sequence_level' => 1,
@@ -340,7 +339,6 @@ sub load_dataset_info {
     };
     $meta_hash->{'assembly.mapping'}->{species_id} = $meta_hash->{'species.classification'}->{species_id};
     push(@{$meta_hash->{'assembly.mapping'}->{values}}, $toplevel_cs->{name}.':'.$toplevel_cs->{version}.'|dna_contig:'.$toplevel_cs->{version});
-    
 
     $dbh->begin_work;
 

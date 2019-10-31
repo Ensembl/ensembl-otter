@@ -255,7 +255,7 @@ sub empty_acefile_list {
 
 sub init_AceDatabase {
     my ($self) = @_;
-    my $xml_string = $self->Client->get_region_xml($self->slice); 
+    my $xml_string = $self->Client->get_region_xml($self->slice);
     $self->write_file('01_before.xml', $xml_string);
 
     my $parser = Bio::Vega::Transform::XMLToRegion->new;

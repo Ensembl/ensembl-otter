@@ -1584,7 +1584,7 @@ sub _DataSet_SequenceSet_response_content {
         'chr'      => $ss->name,
         'author'   => $self->author
     };
-    
+
     if ($extra and ref($extra) eq 'HASH') {
       %$query = (%$query, %$extra);
     }
