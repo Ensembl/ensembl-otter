@@ -59,7 +59,7 @@ sub Client {
 }
 
 sub SequenceSet {
-    my ($self, $SequenceSet) = @_; 
+    my ($self, $SequenceSet) = @_;
     if ($SequenceSet) {
         $self->{'_SequenceSet'} = $SequenceSet;
     }

@@ -28,7 +28,7 @@ sub get_clonesequences {
     my ($server) = @_;
 
 my $dataset     = $server->require_argument('dataset');
-my $sequenceset = $server->require_argument('sequenceset'); 
+my $sequenceset = $server->require_argument('sequenceset');
 my $coord_system_name = $server->require_argument('coord_system_name');
 my $coord_system_version = $server->require_argument('coord_system_version');
 

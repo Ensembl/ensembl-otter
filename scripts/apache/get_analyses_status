@@ -91,20 +91,19 @@ SQL
 sub get_analyses_status {
     my ($server) = @_;
 
-    #return $server->otter_wrap_response('');
-my $assembly = $server->require_argument('chr'); 
-my $component_cs = $server->param('component_cs') || 'contig'; 
+my $assembly = $server->require_argument('chr');
+my $component_cs = $server->param('component_cs') || 'contig';
 
 my $pdbc = $server->dataset->pipeline_dba()->dbc();  # pipeline dbc
 
 my @input_ids = ();
 my @tmp_cmp_name = ();
-my $cmp_sth = $pdbc->prepare($select_components_sql); 
+my $cmp_sth = $pdbc->prepare($select_components_sql);
 $cmp_sth->execute($assembly, $component_cs);
 
 while (my ($cmp_name, $seq_length) = $cmp_sth->fetchrow) {
     push @input_ids, join(':', $component_cs, '', $cmp_name, 1, $seq_length, 1);
-} 
+}
 
 my %skeleton_hash = map { ($_ => []) } get_possible_analyses($pdbc);
 my %result_hash   = ();
@@ -137,6 +136,7 @@ for my $input_id (sort keys %result_hash) {
             $output_string .= join("\t", $input_id, $logic_name, @{$result_hash{$input_id}{$logic_name}})."\n";
     }
 }
+
     return $server->otter_wrap_response($output_string);
 }
 

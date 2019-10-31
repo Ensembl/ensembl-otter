@@ -77,7 +77,7 @@ sub store {
         # Take chromosome name from first CloneSequence
         my @clone_seqs = $region->sorted_clone_sequences;
         my $chromosome = $clone_seqs[0]->chromosome;
-        
+
         my $db_slice = $self->slice_stored_if_needed($slice, $dna, $chromosome);
 
         my $reattach = ($db_slice != $slice);
@@ -195,7 +195,7 @@ sub _store_clone_sequence {
 
     my $cs_factory       = $self->coord_system_factory;
     my $clone_coord_sys  = $cs_factory->coord_system('clone');
-    
+
     if ($clone_coord_sys) {
       my $contig_coord_sys = $cs_factory->coord_system('contig');
 
