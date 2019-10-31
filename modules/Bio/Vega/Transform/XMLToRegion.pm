@@ -350,7 +350,7 @@ sub _build_Feature {            ## no critic (Subroutines::ProhibitUnusedPrivate
     my ($self, $data) = @_;
 
     my $ana = $self->_get_Analysis($data->{'type'});
-    my $chr_slice = $self->_chr_slice; 
+    my $chr_slice = $self->_chr_slice;
 
        ##convert xml coordinates which are in chromosomal coords - to feature coords
     my $slice_offset = $chr_slice->start - 1;

@@ -709,7 +709,7 @@ sub load_filters {
     $cllctn->save_Columns_selected_flag_to_Filter_wanted;
     $self->AceDatabase->save_filter_state;
 
-    my @statuses =  qw( Selected ); 
+    my @statuses =  qw( Selected );
     push @statuses, qw( Queued Loading Processing HitsQueued HitsProcess Visible ) if $is_recover;
 
     my @to_fetch = $cllctn->list_Columns_with_status(@statuses);

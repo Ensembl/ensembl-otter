@@ -114,7 +114,7 @@ sub new {
     warn "Debug from config: $debug_show\n";
     Bio::Otter::Debug->set($debug) if defined $debug;
     # nb. no loggers yet, because this object configures them
-    
+
     return $new;
 }
 
@@ -1488,7 +1488,6 @@ sub get_all_CloneSequences_for_DataSet_SequenceSet { # without any lock info
               $dataset_name, $sequenceset_name, $_);
       } @{$clonesequences_array} ];
   $ss->CloneSequence_list($clonesequences);
- 
  return $clonesequences;
 }
 
@@ -1519,12 +1518,12 @@ sub get_methods_ace {
 }
 
 sub get_accession_info {
-    my ($self, @accessions) = @_; 
+    my ($self, @accessions) = @_;
 
     my $hashref = $self->otter_response_content(
         'POST',
         'get_accession_info',
-        {'author' => $self->author, accessions => join ',', @accessions},
+        {'author' => $self->author, accessions => join ',', @accessions },
         );
 
     return $hashref;
@@ -1536,7 +1535,7 @@ sub get_accession_types {
     my $hashref = $self->otter_response_content(
         'POST',
         'get_accession_types',
-        {'author' => $self->author, accessions => join ',', @accessions},
+        {'author' => $self->author, accessions => join ',', @accessions },
         );
 
     return $hashref;
@@ -1548,7 +1547,7 @@ sub get_taxonomy_info {
     my $response = $self->otter_response_content(
         'POST',
         'get_taxonomy_info',
-        {'author' => $self->author, id => join ',', @ids},
+        {'author' => $self->author, id => join ',', @ids },
         );
     return $response;
 }

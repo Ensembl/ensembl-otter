@@ -140,7 +140,7 @@ if (!@cs_list) {
     )
     = $sth->fetchrow
   )
- {
+{
 
     my $clone_name = $intl_name || $cl_name;
     my $cs = {

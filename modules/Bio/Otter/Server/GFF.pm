@@ -53,9 +53,9 @@ my $SUBCLASS = {
 
 sub send_requested_features {
     my ($pkg) = @_;
-    
+
     my $specific_pkg = $pkg;
-    
+
     if (my $path_info = $pkg->path_info) {
 
         my ($key) = $path_info =~ m{^/(\w+)$};

@@ -20,6 +20,7 @@ use warnings;
 BEGIN { use lib ($ENV{OTTER_PERL_INC} || q{}) =~ m{([^:]+)}g }
 use SangerPaths qw{ core bioperl123 otter };
 use Bio::Otter::Git qw{ :server_ensembl :match };
+
 use Bio::Otter::Server::Support::Web;
 use Bio::Otter::ServerAction::XML::Region;
 

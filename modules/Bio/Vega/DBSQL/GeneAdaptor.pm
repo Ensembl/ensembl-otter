@@ -408,7 +408,7 @@ sub fetch_all_by_Slice {
               }
             }
             $t_name or die sprintf("Error getting name of %s %s (%d):\n$@",
-                            ref($transcript), $transcript->stable_id, $transcript->dbID);
+                                ref($transcript), $transcript->stable_id, $transcript->dbID);
             my $exons_truncated = $transcript->truncate_to_Slice($slice);
             my $ex_list         = $transcript->get_all_Exons;
             my $message;

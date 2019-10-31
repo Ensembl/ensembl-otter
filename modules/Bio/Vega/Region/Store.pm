@@ -28,6 +28,7 @@ use strict;
 use warnings;
 
 use Try::Tiny;
+
 use Bio::EnsEMBL::Attribute;
 use Bio::EnsEMBL::Slice;
 use Bio::Vega::Author;
@@ -76,7 +77,6 @@ sub store {
         # Take chromosome name from first CloneSequence
         my @clone_seqs = $region->sorted_clone_sequences;
         my $chromosome = $clone_seqs[0]->chromosome;
-
         
         my $db_slice = $self->slice_stored_if_needed($slice, $dna, $chromosome);
 
@@ -131,7 +131,7 @@ sub slice_stored_if_needed {
         my $cs_factory    = $self->coord_system_factory;
         my $cs_chr        = $cs_factory->coord_system($region_slice->coord_system->name);
         my $cs_dna_contig = $cs_factory->coord_system('dna_contig');
-       
+
         # db_seq_region must start from 1
         my $db_seq_region_parameters = {
             %$region_slice,
@@ -141,12 +141,12 @@ sub slice_stored_if_needed {
         };
         $db_seq_region = Bio::EnsEMBL::Slice->new_fast($db_seq_region_parameters);
         $slice_adaptor->store($db_seq_region);
-        
+
         # Ensure EnsEMBL-style chromosome name is stored
         my $attrib_adaptor = $vega_dba->get_AttributeAdaptor;
         my $chr_name_attr = Bio::EnsEMBL::Attribute->new( -CODE => 'chr', -VALUE => $chromosome);
         $attrib_adaptor->store_on_Slice($db_seq_region, [ $chr_name_attr ] );
-        
+
         # Replace $region_slice with one connected to the database
         $region_slice = $db_seq_region->sub_Slice($region_slice->start, $region_slice->end);
 
@@ -164,7 +164,6 @@ sub slice_stored_if_needed {
         my $contig_seq_region = Bio::EnsEMBL::Slice->new_fast($contig_seq_region_parameters);
 
         $slice_adaptor->store($contig_seq_region, \$dna);
-       
         $slice_adaptor->store_assembly($region_slice, $contig_seq_region);
     }
 
