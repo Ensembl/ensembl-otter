@@ -145,14 +145,6 @@ sub email {
     return $self->config_value('email') || (getpwuid($<))[0];
 }
 
-sub fetch_seqence {
-    my ($self, $acc) = @_;
-    my $datasets_hash = $self->otter_response_content
-        ('GET', 'get_sequence', {'id'=>$acc, 'author' => $self->author});
-
-    return $datasets_hash;
-}
-
 sub _client_name {
     my ($self) = @_;
     return $self->{'_client_name'};
