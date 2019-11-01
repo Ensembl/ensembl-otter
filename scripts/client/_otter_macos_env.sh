@@ -1,4 +1,3 @@
-#!/usr/bin/env perl
 # Copyright [2018-2019] EMBL-European Bioinformatics Institute
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");

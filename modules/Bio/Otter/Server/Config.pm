@@ -390,7 +390,7 @@ sub Databases {
           die "no dbspec in databases.yaml";
     } catch {
         die "Database passwords not available: $_";
-    }; 
+    };
     return $_DBS = Bio::Otter::SpeciesDat::Database->new_many_from_dbspec($dbs);
 }
 

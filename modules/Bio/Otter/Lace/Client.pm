@@ -1822,3 +1822,4 @@ An ordinary constructor, making instances as requested.
 =head1 AUTHOR
 
 Ana Code B<email> anacode@sanger.ac.uk
+
