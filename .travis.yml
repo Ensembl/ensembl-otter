@@ -14,12 +14,12 @@ install:
     - git clone --branch master --depth 1 https://github.com/Ensembl/webvm.git
     - git clone --branch master --depth 1 https://github.com/Ensembl/webvm-deps.git
     - cd webvm-deps/
-    - mkdir ensembl-branch-97/
-    - cd ensembl-branch-97/
-    - git clone --branch release/97 https://github.com/Ensembl/ensembl.git
-    - git clone --branch release/97 https://github.com/Ensembl/ensembl-variation.git
-    - git clone --branch release/97 https://github.com/Ensembl/ensembl-funcgen.git
-    - git clone --branch release/97 https://github.com/Ensembl/ensembl-compara.git
+    - mkdir ensembl-branch-99/
+    - cd ensembl-branch-99/
+    - git clone --branch release/99 https://github.com/Ensembl/ensembl.git
+    - git clone --branch release/99 https://github.com/Ensembl/ensembl-variation.git
+    - git clone --branch release/99 https://github.com/Ensembl/ensembl-funcgen.git
+    - git clone --branch release/99 https://github.com/Ensembl/ensembl-compara.git
     - cd ../../
     - git clone --branch master --depth 1 https://github.com/Ensembl/zircon.git
     - git clone --branch master --depth 1 https://github.com/Ensembl/PerlModules.git
