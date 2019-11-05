@@ -392,9 +392,6 @@ sub _write_region_exclusive { # runs under $slb->exclusive_work
             $tran->slice($db_slice);
             $tran->transcript_author($author_obj);
         }
-        foreach my $exon (@{ $dbgene->get_all_Exons }) {
-            $exon->slice($db_slice);
-        }
         ##update all gene and its components in db (del)
 
         # Setting is_current to 0 will cause the store method to delete it.
@@ -463,11 +460,6 @@ sub fill_exon_align_evidence() {
 
   my $start_Exon;
   my $end_Exon;
-  if ($transcript->translation) {
-    $self->add_translation_attributes($transcript);
-    $start_Exon = $transcript->translation->start_Exon;
-    $end_Exon = $transcript->translation->end_Exon;
-  }
   my $target_slice = $transcript->slice;
 
   my $exon_projection_slice = $transformed_exon->slice;
@@ -522,8 +514,6 @@ sub fill_exon_align_evidence() {
             eval {
               $target_contig_projection = $target_slice_contig->project($target_slice->coord_system->name, $target_slice->coord_system->version);
             };
-            if ($@) {
-            }
             if ($target_contig_projection) {
               if (@$target_contig_projection == 1) {
                 my $target_contig_proj_toplevel = $target_contig_projection->[0]->to_Slice;
@@ -589,7 +579,7 @@ sub fill_exon_align_evidence() {
               }
             }
             else {
-              warn('COULD NOT PROJECT target_slice_contig TO toplevel');
+              error('COULD NOT PROJECT target_slice_contig TO toplevel');
             }
           }
         }
@@ -638,8 +628,6 @@ sub fill_exon_align_evidence() {
                   }
                   set_hstart_hend($sf, $cut_sf);
                   $sf = $cut_sf;
-                }
-                else {
                 }
                 my ($target_exon_projection_slice_name) = $exon_projection_slice->seq_region_name =~ /^([^.]+\.\d+)/;
                 my $target_exon_projection_slice = $target_slice->adaptor->fetch_by_region($exon_projection_slice->coord_system->name, $target_exon_projection_slice_name, $exon_projection_slice->start, $exon_projection_slice->end);
@@ -756,11 +744,7 @@ sub check_all_supporting_evidences {
 # When we have transfered the exon, we need to make sure that it is on the top level sequence
 # we aim for and that the slice object is on the forward (1) strand. Otherwise it might cause
 # problems later
-  if ($toplevel_exon->slice->strand == -1) {
-  }
-  elsif ($toplevel_exon->slice->name ne $target_slice->name) {
-  }
-  else {
+  if ($toplevel_exon->slice->strand != -1  && $toplevel_exon->slice->name eq $target_slice->name) {
 #   If a supporting evidence has not been transfered, there will be an undef value in the array
 #   It can happened when the feature is longer than the exon and is overlapping two contigs in
 #   the assembly or if there is a small sequence to correct the clone
@@ -781,8 +765,6 @@ sub check_all_supporting_evidences {
         my $sf_on_sf_slice = $sf->transfer($sf_slice);
         my $projected_slice = $sf_on_sf_slice->slice->project($target_slice->coord_system->name, $target_slice->coord_system->version);
         if ($projected_slice) {
-          foreach my $elm (@$projected_slice) {
-          }
           my $region_start = $projected_slice->[0]->from_start;
           my $region_end = $projected_slice->[-1]->from_end;
           my $previous_end = 0;
@@ -842,9 +824,6 @@ sub check_all_supporting_evidences {
           foreach my $loutre_side_slice (@slices_to_project) {
             my $loutre_side_projection = $loutre_side_slice->project('seqlevel');
             if ($loutre_side_projection) {
-              foreach my $lsp (@$loutre_side_projection) {
-                warn('  LSP '.$lsp->to_Slice->name.' '.$lsp->from_start.' '.$lsp->from_end);
-              }
               foreach my $lsp (@$loutre_side_projection) {
                 my $loutre_side_contig = $lsp->to_Slice;
                 my $short_contig_name = $loutre_side_contig->seq_region_name;
