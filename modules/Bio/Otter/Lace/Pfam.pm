@@ -37,9 +37,10 @@ use XML::LibXML;
 use XML::LibXML::XPathContext;
 use Bio::Otter::Version;
 
-my $SEARCH_URL = 'http://pfam.xfam.org/search/sequence';
-my $HMM_URL    = 'http://pfam.xfam.org/family/hmm';
-my $SEED_URL   = 'http://pfam.xfam.org/family/alignment/download/format';
+my $BASE_PFAM  = 'https://pfam.xfam.org';
+my $SEARCH_URL = "$BASE_PFAM/search/sequence";
+my $HMM_URL    = "$BASE_PFAM/family/hmm";
+my $SEED_URL   = "$BASE_PFAM/family/alignment/download/format";
 
 # full path for hmmalign
 my $HMMALIGN = 'hmmalign'; # see also Bio::Otter::Utils::About
@@ -151,7 +152,11 @@ sub check_submission {
 
     # set up to use XPaths
     my $xc = XML::LibXML::XPathContext->new($root);
-    $xc->registerNs( 'p', 'http://pfam.xfam.org/' );
+    my $namespace = $BASE_PFAM;
+    if ($root->namespaceURI =~ /^http/) {
+      $namespace = $root->namespaceURI;
+    }
+    $xc->registerNs( 'p', $namespace );
 
     # we're only running a single Pfam-A search, so there will be only one "job"
     # tag, so we know that these XPaths will each give us only a single node
@@ -159,6 +164,9 @@ sub check_submission {
 #    my $estimated_time = $xc->findvalue('/p:jobs/p:job/p:estimated_time'); # no longer present
     die "Cannot recover result_url from XML\n$xml" unless $result_url;
     $result_url     =~ s/\s//g;
+    if ($result_url !~ /^http/) {
+      $result_url = "$namespace/$result_url";
+    }
 
     return $result_url;
 }
@@ -192,7 +200,11 @@ sub parse_results {
     # set up the XPath stuff for this document
     my $root = $dom->documentElement();
     my $xc   = XML::LibXML::XPathContext->new($root);
-    $xc->registerNs( 'p', 'http://pfam.xfam.org/' );
+    my $namespace = $BASE_PFAM;
+    if ($root->namespaceURI =~ /^http/) {
+      $namespace = $root->namespaceURI;
+    }
+    $xc->registerNs( 'p', $namespace );
 
     # get all of the matches, that is the list of Pfam-A families that are found
     # on the sequence

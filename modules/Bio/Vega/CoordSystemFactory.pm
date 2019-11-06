@@ -26,23 +26,6 @@ use Readonly;
 
 use Bio::EnsEMBL::CoordSystem;
 
-# Our canned coordinate systems
-#
-Readonly my %_COORD_SYSTEM_SPEC => (
-    'chromosome' => { '-version' => 'Otter', '-rank' => 2, '-default' => 1,                         },
-    'clone'      => {                        '-rank' => 4, '-default' => 1,                         },
-    'contig'     => {                        '-rank' => 5, '-default' => 1,                         },
-    'dna_contig' => { '-version' => 'Otter', '-rank' => 6, '-default' => 1, '-sequence_level' => 1, },
-    );
-
-# Our canned mappings - kept here for consistency with our canned coordinate systems
-#
-no warnings 'qw';               ## no critic (TestingAndDebugging::ProhibitNoWarnings)
-Readonly my @_MAPPINGS_SPEC => qw(
-    chromosome:Otter#dna_contig:Otter
-    chromosome:Otter#contig
-    clone#contig
-    );
 use warnings 'qw';
 
 sub new {
@@ -68,26 +51,36 @@ sub new {
 sub coord_system {
     my ($self, $name) = @_;
 
-    my $cs = $self->_cached_cs($name);
-    return $cs if $cs;
-
-    # Not cached yet
-    unless ($_COORD_SYSTEM_SPEC{$name}) {
-        croak "CoordSystemFactory doesn't know about '$name'";
-    }
-
     if ($self->dba) {
-        $cs = $self->_dba_cs($name);
-    } else {
-        $cs = $self->_local_cs($name);
+        my $cs = $self->_dba_cs($name);
+        return $self->_cached_cs($name, $cs);
     }
-
-    return $self->_cached_cs($name, $cs);
+    elsif ($self->_cached_cs($name)) {
+        my $cs = $self->_local_cs($name, $self->_cached_cs($name));
+        return $self->_cached_cs($name, $cs);
+    }
+    else {
+        my $cs = $self->_local_cs($name);
+        return $self->_cached_cs($name, $cs);
+    }
 }
 
 sub known {
-    my @known = sort { $_COORD_SYSTEM_SPEC{$a}->{'-rank'} <=> $_COORD_SYSTEM_SPEC{$b}->{'-rank'} } keys %_COORD_SYSTEM_SPEC;
-    return @known;
+  my ($self) = @_;
+
+  my $_coord_system_specs = $self->_coord_system_specs;
+  my @sorted_array = sort { $_coord_system_specs->{$a}->{'-rank'} <=> $_coord_system_specs->{$b}->{'-rank'} } keys %$_coord_system_specs;
+  if (! exists $_coord_system_specs->{$sorted_array[-1]}->{'-sequence_level'}){
+      if (! exists $_coord_system_specs->{$sorted_array[-1]}->{'-default'}){
+          my $cs = pop(@sorted_array);
+          unshift(@sorted_array, $cs);
+      }
+      else {
+            croak "Last element not seq_level but default version";
+      }
+  }
+  return @sorted_array;
+
 }
 
 sub instantiate_all {
@@ -99,16 +92,13 @@ sub instantiate_all {
     return;
 }
 
-sub assembly_mappings {
-    return @_MAPPINGS_SPEC;
-}
 
 sub _dba_cs {
     my ($self, $name) = @_;
 
     # Try the DB first
     my $cs_a = $self->dba->get_CoordSystemAdaptor;
-    my $spec = $_COORD_SYSTEM_SPEC{$name};
+    my $spec = $self->_coord_system_specs->{$name};
     my $cs   = $cs_a->fetch_by_name($name, $spec->{'-version'});
     return $cs if $cs;
 
@@ -120,13 +110,17 @@ sub _dba_cs {
 }
 
 sub _local_cs {
-    my ($self, $name) = @_;
+    my ($self, $name, $cs_factory) = @_;
 
-    my $override = $self->override_spec || {};
-    my $spec = $override->{$name} || $_COORD_SYSTEM_SPEC{$name};
-
-    my $cs = Bio::EnsEMBL::CoordSystem->new('-name' => $name, %$spec);
-    return $cs;
+    if ($cs_factory) {
+        my $cs = Bio::EnsEMBL::CoordSystem->new('-name' => $name, %$cs_factory);
+        return $cs;
+    }
+    else {
+        my $spec = $self->override_spec->{$name};
+        my $cs = Bio::EnsEMBL::CoordSystem->new('-name' => $name, %$spec);
+        return $cs;
+    }
 }
 
 # Accessors
@@ -160,6 +154,11 @@ sub _cached_cs {
     ($cache->{$name}) = @args if @args;
     my $_cached_cs = $cache->{$name};
     return $_cached_cs;
+}
+
+sub _coord_system_specs {
+  my ($self) = @_;
+  return $self->override_spec || {};
 }
 
 1;

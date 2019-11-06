@@ -349,7 +349,7 @@ sub recover_slice_from_region_xml {
 
     my $parser = Bio::Vega::Transform::XMLToRegion->new;
     $parser->analysis_from_transcript_class(1);
-    $parser->coord_system_factory(Bio::Vega::CoordSystemFactory->new); # Should we get this from somewhere else?
+    $parser->coord_system_factory(Bio::Vega::CoordSystemFactory->new( dba => $self->DB->vega_dba )); # Should we get this from somewhere else?
     my $region = $parser->parse($xml);
 
     my $slice = Bio::Otter::Lace::Slice->new_from_region($client, $region);
@@ -835,6 +835,7 @@ sub generate_XML_from_sqlite {
 
     $self->DB->vega_dba->clear_caches;
     my $region = Bio::Vega::Region->new_from_otter_db( slice => $self->DB->session_slice );
+    $region->{species} = $self->DB->species;
     $region->check_transcript_stable_ids;
     my $formatter = Bio::Vega::Transform::RegionToXML->new;
     $formatter->region($region);

@@ -481,8 +481,14 @@ sub get_meta_value {
 sub db_info_hash {
     my ($self) = @_;
     # Get all db_info in one call
+    my $cs_name = 'chromosome';
+    my $cs_version = 'Otter';
+    if ($self->selected_SequenceSet) {
+      $cs_name = $self->selected_SequenceSet->coord_system_name;
+      $cs_version = $self->selected_SequenceSet->coord_system_version;
+    }
     return $self->{'_db_info_hash'} ||=
-        $self->Client->get_db_info($self->name);
+        $self->Client->get_db_info($self->name, $cs_name, $cs_version);
 }
 
 sub get_db_info_item {
@@ -682,7 +688,7 @@ sub get_cached_DBAdaptor {
         $self->_attach_DNA_DBAdaptor($tmp) if $self->DNA_DBNAME;
         $self->{'_dba_cache'} = $tmp;
     }
-    #warn "OTTER DBADAPTOR = '$dba'";
+
     return $self->{'_dba_cache'};
 }
 

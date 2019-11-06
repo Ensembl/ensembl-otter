@@ -1,11 +1,11 @@
 -- Copyright [2018-2019] EMBL-European Bioinformatics Institute
--- 
+--
 -- Licensed under the Apache License, Version 2.0 (the "License");
 -- you may not use this file except in compliance with the License.
 -- You may obtain a copy of the License at
--- 
+--
 --      http://www.apache.org/licenses/LICENSE-2.0
--- 
+--
 -- Unless required by applicable law or agreed to in writing, software
 -- distributed under the License is distributed on an "AS IS" BASIS,
 -- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -28,7 +28,7 @@ CREATE TABLE gene_stable_id_pool (
 
    PRIMARY KEY(gene_pool_id)
 
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 ################################################################################
 #
@@ -44,7 +44,7 @@ CREATE TABLE gene_author (
    PRIMARY KEY ( gene_id ),
    KEY ( author_id )
 
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 ################################################################################
 #
@@ -59,7 +59,7 @@ CREATE TABLE transcript_stable_id_pool (
 
    PRIMARY KEY ( transcript_pool_id )
 
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 ################################################################################
 #
@@ -69,13 +69,13 @@ CREATE TABLE transcript_stable_id_pool (
 
 CREATE TABLE transcript_author (
 
-   transcript_id         INT UNSIGNED NOT NULL REFERENCES transcript(transcript_id),
-   author_id             INT(10) UNSIGNED NOT NULL REFERENCES author(author_id),
+   transcript_id         INT UNSIGNED NOT NULL DEFAULT '0' REFERENCES transcript(transcript_id),
+   author_id             INT(10) UNSIGNED NOT NULL DEFAULT '0' REFERENCES author(author_id),
 
    PRIMARY KEY (transcript_id),
    KEY (author_id)
 
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 ################################################################################
 #
@@ -86,13 +86,13 @@ CREATE TABLE transcript_author (
 
 CREATE TABLE evidence (
 
-   transcript_id        INT UNSIGNED NOT NULL REFERENCES transcript(transcript_id),
-   name                VARCHAR(40) NOT NULL,
-   type                ENUM('EST','ncRNA','cDNA','Protein','Genomic','SRA','UNKNOWN'),
+   transcript_id        INT UNSIGNED NOT NULL DEFAULT '0' REFERENCES transcript(transcript_id),
+   name                VARCHAR(40) NOT NULL DEFAULT '',
+   type                ENUM('EST','ncRNA','cDNA','Protein','Genomic','SRA','UNKNOWN') NOT NULL DEFAULT 'EST',
 
    PRIMARY KEY ( transcript_id,name,type )
 
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 ################################################################################
 #
@@ -107,7 +107,7 @@ CREATE TABLE translation_stable_id_pool (
 
   PRIMARY KEY ( translation_pool_id )
 
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 ################################################################################
 #
@@ -122,7 +122,7 @@ CREATE TABLE exon_stable_id_pool (
 
   PRIMARY KEY ( exon_pool_id )
 
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 ################################################################################
 #
@@ -134,15 +134,15 @@ CREATE TABLE exon_stable_id_pool (
 CREATE TABLE author (
 
   author_id        INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
-  author_email        VARCHAR(50) NOT NULL,
-  author_name        VARCHAR(50) NOT NULL,
-  group_id          int(10) not null references author_group(group_id),
+  author_email        VARCHAR(50) NOT NULL DEFAULT '',
+  author_name        VARCHAR(50) NOT NULL DEFAULT '',
+  group_id          INT(10) NOT NULL DEFAULT '0' REFERENCES author_group(group_id),
 
   PRIMARY KEY ( author_id ),
   UNIQUE (author_name,author_email),
   UNIQUE ( author_email,group_id )
 
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 ################################################################################
 #
@@ -155,12 +155,12 @@ CREATE TABLE author_group (
 
    group_id     INT NOT NULL AUTO_INCREMENT,
    group_name     VARCHAR(100) NOT NULL default '',
-   group_email VARCHAR(50),
+   group_email VARCHAR(50) DEFAULT NULL,
 
    PRIMARY KEY ( group_id ),
    UNIQUE gn_idx ( group_name )
 
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 ################################################################################
 #
@@ -172,14 +172,14 @@ CREATE TABLE author_group (
 CREATE TABLE contig_info (
 
   contig_info_id    INT UNSIGNED NOT NULL AUTO_INCREMENT,
-  seq_region_id        INT(10) UNSIGNED NOT NULL REFERENCES seq_region_id(seq_region),
-  author_id        INT(10) UNSIGNED NOT NULL REFERENCES author(author_id),
+  seq_region_id        INT(10) UNSIGNED NOT NULL DEFAULT '0' REFERENCES seq_region_id(seq_region),
+  author_id        INT(10) UNSIGNED NOT NULL DEFAULT '0' REFERENCES author(author_id),
   created_date        DATETIME DEFAULT '0000-00-00 00:00:00' NOT NULL,
   is_current         BOOLEAN DEFAULT 1 NOT NULL,
 
   PRIMARY KEY ( contig_info_id )
 
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 ################################################################################
 #
@@ -197,27 +197,8 @@ CREATE TABLE contig_attrib (
 
    KEY ( contig_info_id,attrib_type_id )
 
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
-################################################################################
-#
-# Table structure for table 'contig_lock'
-# otter table
-# locks for a set of seq_region_id/s per annotator in a transaction
-#
-
-CREATE TABLE contig_lock (
-
-  contig_lock_id    INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
-  seq_region_id        INT(10) UNSIGNED NOT NULL REFERENCES seq_region(seq_region_id),
-  author_id        INT(10)    DEFAULT '0' NOT NULL REFERENCES author(author_id),
-  hostname        VARCHAR(100) NOT NULL,
-  timestamp        DATETIME DEFAULT '0000-00-00 00:00:00' NOT NULL,
-
-  PRIMARY KEY ( contig_lock_id ),
-  UNIQUE KEY seq_region_id (seq_region_id)
-
-) ENGINE=InnoDB;
 
 #################################################################################
 # Table structure for table 'assembly_tag'
@@ -228,29 +209,14 @@ CREATE TABLE assembly_tag (
 
   tag_id          INT(10) UNSIGNED NOT NULL auto_increment,
   seq_region_id          INT(10) UNSIGNED NOT NULL default '0' REFERENCES seq_region(seq_region_id),
-  seq_region_start        INT(10) NOT NULL,
-  seq_region_end          INT(10) NOT NULL,
-  seq_region_strand       tinyint(1) NOT NULL,
+  seq_region_start        INT(10) NOT NULL DEFAULT '0',
+  seq_region_end          INT(10) NOT NULL DEFAULT '0',
+  seq_region_strand       tinyint(1) NOT NULL DEFAULT '0',
   tag_type          ENUM('Unsure','Clone_left_end','Clone_right_end','Misc') NOT NULL DEFAULT 'Misc',
   tag_info          TEXT,
 
   PRIMARY KEY  ( tag_id ),
-  UNIQUE ( seq_region_id, seq_region_start, seq_region_end, seq_region_strand, tag_type, tag_info(250))
-) ENGINE=InnoDB ;
-
-
-#################################################################################
-# Table structure for table 'assembly_tagged_clone'
-# otter table
-#
-
-CREATE TABLE assembly_tagged_contig (
-
-  seq_region_id int(10) unsigned NOT NULL default '0',
-  transferred enum('yes','no') NOT NULL default 'no',
-
-  UNIQUE KEY seq_region_id (seq_region_id)
-
+  UNIQUE ( seq_region_id, seq_region_start, seq_region_end, seq_region_strand, tag_type, tag_info(500))
 ) ENGINE=InnoDB ;
 
 
@@ -285,10 +251,67 @@ CREATE TABLE sequence_set_access (
   author_id int(10) unsigned NOT NULL default '0',
   access_type enum('','R','RW') NOT NULL default 'R',
 
-  PRIMARY KEY  (`seq_region_id`,`author_id`)
+  PRIMARY KEY  (seq_region_id,author_id)
 
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 ##################################################################################
+
+
+
+#################################################################################
+# Table structure for table 'slice_lock'
+# otter table
+#
+# Transitions allowed: INSERT -> pre -> free(too_late),
+#    pre -> held -> free(finished | expired | interrupted)
+
+CREATE TABLE slice_lock (
+  slice_lock_id     INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  seq_region_id     INT UNSIGNED NOT NULL,
+  seq_region_start  INT UNSIGNED NOT NULL,
+  seq_region_end    INT UNSIGNED NOT NULL,
+  author_id         INT UNSIGNED NOT NULL,
+  ts_begin          DATETIME     NOT NULL,
+  ts_activity       DATETIME     NOT NULL,
+  active            ENUM('pre', 'held', 'free') NOT NULL,
+  freed             ENUM('too_late', 'finished', 'expired', 'interrupted') DEFAULT NULL,
+  freed_author_id   INT DEFAULT NULL,
+  intent            VARCHAR(100) NOT NULL,
+  hostname          VARCHAR(100) NOT NULL,
+  otter_version     VARCHAR(16) DEFAULT NULL,
+  ts_free           DATETIME DEFAULT NULL,
+
+  PRIMARY KEY (slice_lock_id),
+  KEY seq_region_idx (seq_region_id, seq_region_start),
+  KEY active_author_idx (active, author_id)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+
+
+#################################################################################
+# Table structure for table 'assembly_tagged_contig'
+# otter table
+# I am not sure this is still needed but it is still use in some part of the code
+
+CREATE TABLE assembly_tagged_contig (
+  seq_region_id int(10) unsigned NOT NULL DEFAULT '0',
+  transferred enum('yes','no') NOT NULL DEFAULT 'no',
+  UNIQUE KEY seq_region_id (seq_region_id)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+
+
+#################################################################################
+# Table structure for table 'gene_name_update'
+# otter table
+# I am not sure this is still needed but it is still use in some part of the code
+
+CREATE TABLE gene_name_update (
+  gene_id int(10) unsigned NOT NULL DEFAULT '0',
+  consortium_id varchar(20) NOT NULL DEFAULT '',
+  old_name varchar(25) NOT NULL DEFAULT '',
+  update_date datetime DEFAULT NULL,
+  UNIQUE KEY gene_id (gene_id)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+
 
 # all attributes in *_attrib tables are defined first in the file
 # ensembl/misc-scripts/attribute_types/attrib_type.txt

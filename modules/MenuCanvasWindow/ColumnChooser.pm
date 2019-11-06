@@ -30,6 +30,7 @@ use Bio::Otter::Lace::Chooser::SearchHistory;
 use MenuCanvasWindow::SessionWindow;
 use Tk::Utils::CanvasXPMs;
 use Tk::ScopedBusy;
+use Tk::Balloon;
 
 use base qw{
     MenuCanvasWindow
@@ -763,7 +764,6 @@ sub load_filters {
     }
 
     undef $busy; # i.e. Unbusy
-    # $top->withdraw;
     $self->zmap_select_destroy;
 
     return;

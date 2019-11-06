@@ -37,6 +37,7 @@ my @gff_keys = qw(
     gff_source
     gff_seqname
     url_string
+    author
     );
 
 my $SUBCLASS = {

@@ -46,12 +46,12 @@ sub new_from_otter {
         my $client = Bio::Otter::Lace::Defaults::make_Client();
         my $mapping_xml = $client->otter_response_content(
             'GET', 'get_mapping', {
-                dataset   => $dataset,
-                cs        => $csver_remote,
-                chr       => $chr,
-                start     => $start,
-                end       => $end,
-                'author'  => Bio::Otter::Lace::Client->author,
+                dataset => $dataset,
+                cs      => $csver_remote,
+                chr     => $chr,
+                start   => $start,
+                end     => $end,
+                'author'=> $client->author,
             });
         my $mapping = $pkg->new_from_xml($mapping_xml);
         return $mapping;

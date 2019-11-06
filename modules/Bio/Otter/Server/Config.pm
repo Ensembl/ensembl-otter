@@ -102,7 +102,7 @@ sub data_dir {
       unless -d $data;
 
     my $vsn = Bio::Otter::Version->version;
-    my @want = ("species.dat", "access.yaml",
+    my @want = ("species.dat",
                 "$vsn/otter_config", "$vsn/otter_styles.ini");
     my @lack = grep { ! -f "$data/$_" } @want;
     die "data_dir $data (from $src): lacks expected files (@lack)"
@@ -390,7 +390,7 @@ sub Databases {
           die "no dbspec in databases.yaml";
     } catch {
         die "Database passwords not available: $_";
-    }; 
+    };
     return $_DBS = Bio::Otter::SpeciesDat::Database->new_many_from_dbspec($dbs);
 }
 

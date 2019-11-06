@@ -1,11 +1,11 @@
 -- Copyright [2018-2019] EMBL-European Bioinformatics Institute
--- 
+--
 -- Licensed under the Apache License, Version 2.0 (the "License");
 -- you may not use this file except in compliance with the License.
 -- You may obtain a copy of the License at
--- 
+--
 --      http://www.apache.org/licenses/LICENSE-2.0
--- 
+--
 -- Unless required by applicable law or agreed to in writing, software
 -- distributed under the License is distributed on an "AS IS" BASIS,
 -- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -92,7 +92,7 @@ GROUP BY sr.name, g.biotype
     chr7-03  protein_coding             35
     chr7-03  unprocessed_pseudogene      4
 
-
+--AND cs.version = 'Otter'
 
 SELECT sr.name chr
   , t.biotype

@@ -1344,7 +1344,7 @@ sub _save_data {
 
         my $parser = Bio::Vega::Transform::XMLToRegion->new;
         $parser->analysis_from_transcript_class(1);
-        $parser->coord_system_factory(Bio::Vega::CoordSystemFactory->new);
+        $parser->coord_system_factory(Bio::Vega::CoordSystemFactory->new(dba => $adb->DB->vega_dba));
         my $region = $parser->parse($xml);
 
         $adb->unsaved_changes(0);
@@ -3461,7 +3461,16 @@ sub zircon_zmap_view_zoom_to_subseq_xml {
     my ($self, $subseq) = @_;
 
     my $xml = Hum::XmlWriter->new;
-    $xml->open_tag('featureset', { name => $subseq->GeneMethod->name });
+    my $feature_set_name = $subseq->GeneMethod->name;
+    if ($subseq->Locus->gene_type_prefix) {
+      if ($subseq->GeneMethod->name eq 'Predicted' and !$subseq->Locus->gene_type_prefix) {
+        $feature_set_name = 'ensembl:Predicted';
+      }
+      elsif ($subseq->Locus->gene_type_prefix) {
+        $feature_set_name = $subseq->Locus->gene_type_prefix.':'.$subseq->GeneMethod->name;
+      }
+    }
+    $xml->open_tag('featureset', { name => $feature_set_name });
     $subseq->zmap_xml_feature_tag($xml, $self->AceDatabase->offset);
     $xml->close_all_open_tags;
 

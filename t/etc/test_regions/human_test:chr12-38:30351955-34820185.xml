@@ -13,6 +13,8 @@
        <fragment_ori>-1</fragment_ori>
        <fragment_offset>1</fragment_offset>
        <clone_length>152951</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- Contains a pseudogene similar to part of transmembrane and tetratricopeptide repeat containing 1 (TMTC1).</remark>
        <remark>Annotation_remark- annotated</remark>
      </sequence_fragment>
@@ -27,6 +29,8 @@
        <fragment_ori>1</fragment_ori>
        <fragment_offset>186</fragment_offset>
        <clone_length>148610</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- Contains the 3&apos; end of the IPO8 gene for importin 8.</remark>
        <remark>Annotation_remark- annotated</remark>
      </sequence_fragment>
@@ -41,6 +45,8 @@
        <fragment_ori>-1</fragment_ori>
        <fragment_offset>1</fragment_offset>
        <clone_length>171</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
      </sequence_fragment>
      <sequence_fragment>
        <id>AC023426.29.1.148610</id>
@@ -53,6 +59,8 @@
        <fragment_ori>1</fragment_ori>
        <fragment_offset>71573</fragment_offset>
        <clone_length>148610</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- Contains the 3&apos; end of the IPO8 gene for importin 8.</remark>
        <remark>Annotation_remark- annotated</remark>
      </sequence_fragment>
@@ -67,6 +75,8 @@
        <fragment_ori>1</fragment_ori>
        <fragment_offset>1</fragment_offset>
        <clone_length>391</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
      </sequence_fragment>
      <sequence_fragment>
        <id>AC023426.29.1.148610</id>
@@ -79,6 +89,8 @@
        <fragment_ori>1</fragment_ori>
        <fragment_offset>91641</fragment_offset>
        <clone_length>148610</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- Contains the 3&apos; end of the IPO8 gene for importin 8.</remark>
        <remark>Annotation_remark- annotated</remark>
      </sequence_fragment>
@@ -93,6 +105,8 @@
        <fragment_ori>1</fragment_ori>
        <fragment_offset>2006</fragment_offset>
        <clone_length>47302</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- Contains the 5&apos; end of the IPO8 gene for importin 8.</remark>
        <remark>Annotation_remark- annotated</remark>
      </sequence_fragment>
@@ -107,6 +121,8 @@
        <fragment_ori>-1</fragment_ori>
        <fragment_offset>141702</fragment_offset>
        <clone_length>199070</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- Contains the CAPRIN2 gene for caprin family member 2, a peptidylprolyl isomerase A (cyclophilin A) (PPIA) pseudogene, and two novel genes.</remark>
        <remark>Annotation_remark- annotated</remark>
      </sequence_fragment>
@@ -121,6 +137,8 @@
        <fragment_ori>1</fragment_ori>
        <fragment_offset>1</fragment_offset>
        <clone_length>371</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
      </sequence_fragment>
      <sequence_fragment>
        <id>AC010198.8.1.199070</id>
@@ -133,6 +151,8 @@
        <fragment_ori>-1</fragment_ori>
        <fragment_offset>96919</fragment_offset>
        <clone_length>199070</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- Contains the CAPRIN2 gene for caprin family member 2, a peptidylprolyl isomerase A (cyclophilin A) (PPIA) pseudogene, and two novel genes.</remark>
        <remark>Annotation_remark- annotated</remark>
      </sequence_fragment>
@@ -147,6 +167,8 @@
        <fragment_ori>-1</fragment_ori>
        <fragment_offset>1</fragment_offset>
        <clone_length>264</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
      </sequence_fragment>
      <sequence_fragment>
        <id>AC010198.8.1.199070</id>
@@ -159,6 +181,8 @@
        <fragment_ori>-1</fragment_ori>
        <fragment_offset>1</fragment_offset>
        <clone_length>199070</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- Contains the CAPRIN2 gene for caprin family member 2, a peptidylprolyl isomerase A (cyclophilin A) (PPIA) pseudogene, and two novel genes.</remark>
        <remark>Annotation_remark- annotated</remark>
      </sequence_fragment>
@@ -173,6 +197,8 @@
        <fragment_ori>-1</fragment_ori>
        <fragment_offset>1</fragment_offset>
        <clone_length>68935</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- Contains the 5&apos; end of the TSPAN11 gene for tetraspanin 11.</remark>
        <remark>Annotation_remark- annotated</remark>
      </sequence_fragment>
@@ -187,6 +213,8 @@
        <fragment_ori>1</fragment_ori>
        <fragment_offset>214</fragment_offset>
        <clone_length>168986</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- Contains the 3&apos; end of the TSPAN11 gene for tetraspanin 11, the DDX11 gene for DEAD/H (Asp-Glu-Ala-Asp/His) box polypeptide 11, the 3&apos; end of an ovostatin (OVOS) pseudogene, and three novel genes.</remark>
        <remark>Annotation_remark- annotated</remark>
      </sequence_fragment>
@@ -201,6 +229,8 @@
        <fragment_ori>1</fragment_ori>
        <fragment_offset>1</fragment_offset>
        <clone_length>309</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
      </sequence_fragment>
      <sequence_fragment>
        <id>AC008013.8.1.168986</id>
@@ -213,6 +243,8 @@
        <fragment_ori>1</fragment_ori>
        <fragment_offset>4112</fragment_offset>
        <clone_length>168986</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- Contains the 3&apos; end of the TSPAN11 gene for tetraspanin 11, the DDX11 gene for DEAD/H (Asp-Glu-Ala-Asp/His) box polypeptide 11, the 3&apos; end of an ovostatin (OVOS) pseudogene, and three novel genes.</remark>
        <remark>Annotation_remark- annotated</remark>
      </sequence_fragment>
@@ -227,6 +259,8 @@
        <fragment_ori>-1</fragment_ori>
        <fragment_offset>1</fragment_offset>
        <clone_length>362</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
      </sequence_fragment>
      <sequence_fragment>
        <id>AC008013.8.1.168986</id>
@@ -239,6 +273,8 @@
        <fragment_ori>1</fragment_ori>
        <fragment_offset>54271</fragment_offset>
        <clone_length>168986</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- Contains the 3&apos; end of the TSPAN11 gene for tetraspanin 11, the DDX11 gene for DEAD/H (Asp-Glu-Ala-Asp/His) box polypeptide 11, the 3&apos; end of an ovostatin (OVOS) pseudogene, and three novel genes.</remark>
        <remark>Annotation_remark- annotated</remark>
      </sequence_fragment>
@@ -253,6 +289,8 @@
        <fragment_ori>1</fragment_ori>
        <fragment_offset>1</fragment_offset>
        <clone_length>392</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
      </sequence_fragment>
      <sequence_fragment>
        <id>AC008013.8.1.168986</id>
@@ -265,6 +303,8 @@
        <fragment_ori>1</fragment_ori>
        <fragment_offset>67306</fragment_offset>
        <clone_length>168986</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- Contains the 3&apos; end of the TSPAN11 gene for tetraspanin 11, the DDX11 gene for DEAD/H (Asp-Glu-Ala-Asp/His) box polypeptide 11, the 3&apos; end of an ovostatin (OVOS) pseudogene, and three novel genes.</remark>
        <remark>Annotation_remark- annotated</remark>
      </sequence_fragment>
@@ -279,6 +319,8 @@
        <fragment_ori>1</fragment_ori>
        <fragment_offset>3888</fragment_offset>
        <clone_length>24091</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- Contains part of an ovostatin (OVOS) pseudogene.</remark>
        <remark>Annotation_remark- annotated</remark>
      </sequence_fragment>
@@ -293,6 +335,8 @@
        <fragment_ori>-1</fragment_ori>
        <fragment_offset>1</fragment_offset>
        <clone_length>205952</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- Contains the 5&apos; end of an ovostatin (OVOS) pseudogene, a ribosomal protein L13a (RPL13A) pseudogene, the FAM60A gene for family with sequence similarity 60, member A; and a solute carrier family 25, member 13 (citrin) (SLC25A13) pseudogene.</remark>
        <remark>Annotation_remark- annotated</remark>
      </sequence_fragment>
@@ -307,6 +351,8 @@
        <fragment_ori>-1</fragment_ori>
        <fragment_offset>1</fragment_offset>
        <clone_length>106277</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- Contains 3&apos; end of the DENND5B gene for DENN/MADD domain containing 5B and a novel gene.</remark>
        <remark>Annotation_remark- annotated</remark>
      </sequence_fragment>
@@ -321,6 +367,8 @@
        <fragment_ori>1</fragment_ori>
        <fragment_offset>2016</fragment_offset>
        <clone_length>178217</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- Contains the 5&apos; end of the DENND5B gene for DENN/MADD domain containing 5B, a TAF10 RNA polymerase II, TATA box binding protein (TBP)-associated factor, 30kDa (TAF10) pseudogene, a mitochondrial ribosomal protein L30 (MRPL30) pseudogene, an ankyrin repeat domain 49 (ANKRD49) pseudogene, a ribosomal protein L31 (RPL31) pseudogene, an AK4P3 adenylate kinase 4 pseudogene 3 and a novel gene.</remark>
        <remark>Annotation_remark- annotated</remark>
      </sequence_fragment>
@@ -335,6 +383,8 @@
        <fragment_ori>-1</fragment_ori>
        <fragment_offset>1</fragment_offset>
        <clone_length>29789</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- Contains the 5&apos; end of the C12orf72 gene for chromosome 12 open reading frame 72.</remark>
        <remark>Annotation_remark- annotated</remark>
      </sequence_fragment>
@@ -349,6 +399,8 @@
        <fragment_ori>1</fragment_ori>
        <fragment_offset>2113</fragment_offset>
        <clone_length>122351</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- Contains the 3&apos; end of the C12orf72 gene for chromosome 12 open reading frame 72, the AMN1 gene for antagonist of mitotic exit network 1 homolog (S. cerevisiae), a stathmin 1 (STMN1) pseudogene, a dpy-30 homolog (C. elegans) (DPY30) pseudogene and an interferon induced transmembrane protein 3 (1-8U) (IFITM3) pseudogene.</remark>
        <remark>Annotation_remark- annotated</remark>
      </sequence_fragment>
@@ -363,6 +415,8 @@
        <fragment_ori>1</fragment_ori>
        <fragment_offset>2053</fragment_offset>
        <clone_length>186864</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- Contains the H3F3C gene for H3 histone, family 3C, a basic transcription factor 3-like 4 (BTF3L4) pseudogene, an Impact homolog (mouse) (IMPACT) pseudogene, a ribosomal protein, large, P2 (RPLP2) pseudogene, a ribosomal protein L12 (RPL12) pseudogene, a family with sequence similarity 98, member B (FAM98B) pseudogene, the 5&apos; end of the C12orf35 gene for chromosome 12 open reading frame 35 and a novel gene.</remark>
        <remark>Annotation_remark- annotated</remark>
      </sequence_fragment>
@@ -377,6 +431,8 @@
        <fragment_ori>1</fragment_ori>
        <fragment_offset>2005</fragment_offset>
        <clone_length>50743</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- Contains 3&apos; end of the C12orf35 gene for chromosome 12 open reading frame 35 and a COX assembly mitochondrial protein homolog (S. cerevisiae) (CMC1) pseudogene.</remark>
        <remark>Annotation_remark- annotated</remark>
      </sequence_fragment>
@@ -391,6 +447,8 @@
        <fragment_ori>1</fragment_ori>
        <fragment_offset>2005</fragment_offset>
        <clone_length>124427</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- Contains a gamma-aminobutyric acid (GABA) A receptor, pi (GABRP) pseudogene, the 5&apos; end of the BICD1 gene for bicaudal D homolog 1 (Drosophila) and a novel gene.</remark>
        <remark>Annotation_remark- annotated</remark>
      </sequence_fragment>
@@ -405,6 +463,8 @@
        <fragment_ori>-1</fragment_ori>
        <fragment_offset>1</fragment_offset>
        <clone_length>190195</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- Contains part of the BICD1 gene for bicaudal D homolog 1 (Drosophila) and a WW domain binding protein 2 (WBP2) pseudogene.</remark>
        <remark>Annotation_remark- annotated</remark>
      </sequence_fragment>
@@ -419,6 +479,8 @@
        <fragment_ori>-1</fragment_ori>
        <fragment_offset>1</fragment_offset>
        <clone_length>37490</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- Contains part of the BICD1 gene for bicaudal D homolog 1 (Drosophila).</remark>
        <remark>Annotation_remark- annotated</remark>
      </sequence_fragment>
@@ -433,6 +495,8 @@
        <fragment_ori>-1</fragment_ori>
        <fragment_offset>1</fragment_offset>
        <clone_length>7000</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- Contains part of the BICD1 gene for bicaudal D homolog 1 (Drosophila).</remark>
        <remark>Annotation_remark- annotated</remark>
      </sequence_fragment>
@@ -447,6 +511,8 @@
        <fragment_ori>1</fragment_ori>
        <fragment_offset>2000</fragment_offset>
        <clone_length>93342</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- Contains the 3&apos; end of the BICD1 gene for bicaudal D homolog 1 (Drosophila) and the 5&apos; end of the FGD4 gene for FYVE, RhoGEF and PH domain containing 4.</remark>
        <remark>Annotation_remark- annotated</remark>
      </sequence_fragment>
@@ -461,6 +527,8 @@
        <fragment_ori>1</fragment_ori>
        <fragment_offset>2005</fragment_offset>
        <clone_length>60429</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- Contains the 5&apos; end of the FGD4 gene for FYVE, RhoGEF and PH domain containing 4.</remark>
        <remark>Annotation_remark- annotated</remark>
      </sequence_fragment>
@@ -475,6 +543,8 @@
        <fragment_ori>1</fragment_ori>
        <fragment_offset>2004</fragment_offset>
        <clone_length>134628</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- Contains part of the FGD4 gene for FYVE, RhoGEF and PH domain containing 4.</remark>
        <remark>Annotation_remark- annotated</remark>
      </sequence_fragment>
@@ -489,6 +559,8 @@
        <fragment_ori>1</fragment_ori>
        <fragment_offset>2005</fragment_offset>
        <clone_length>98236</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- Contains the 3&apos; end of the FGD4 gene for FYVE, RhoGEF and PH domain containing 4, the 5&apos; end of the DNM1L gene for dynamin 1-like, a chromosome 7 open reading frame 30 (C7orf30) pseudogene, a nucleosome assembly protein 1-like 1 (NAP1L1) pseudogene and part of the YARS2 gene for tyrosyl-tRNA synthetase 2, mitochondrial.</remark>
        <remark>Annotation_remark- annotated</remark>
      </sequence_fragment>
@@ -503,6 +575,8 @@
        <fragment_ori>-1</fragment_ori>
        <fragment_offset>1</fragment_offset>
        <clone_length>146167</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- Contains the 3&apos; end of the DNM1L gene for dynamin 1-like, the YARS2 gene for tyrosyl-tRNA synthetase 2, mitochondrial, the 3&apos; end of the PKP2 gene for plakophilin 2 and a ribosomal protein L35a (RPL35A) pseudogene.</remark>
        <remark>Annotation_remark- annotated</remark>
      </sequence_fragment>
@@ -517,6 +591,8 @@
        <fragment_ori>-1</fragment_ori>
        <fragment_offset>1</fragment_offset>
        <clone_length>159688</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- Contains the 5&apos; end of the PKP2 gene for plakophilin 2, an argininosuccinate synthase 1 (ASS1) pseudogene and a novel gene.</remark>
        <remark>Annotation_remark- annotated</remark>
      </sequence_fragment>
@@ -531,6 +607,8 @@
        <fragment_ori>-1</fragment_ori>
        <fragment_offset>1</fragment_offset>
        <clone_length>88874</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- no genes</remark>
        <remark>Annotation_remark- annotated</remark>
      </sequence_fragment>
@@ -545,6 +623,8 @@
        <fragment_ori>1</fragment_ori>
        <fragment_offset>2006</fragment_offset>
        <clone_length>162978</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- no genes</remark>
        <remark>Annotation_remark- annotated</remark>
      </sequence_fragment>
@@ -559,6 +639,8 @@
        <fragment_ori>-1</fragment_ori>
        <fragment_offset>1</fragment_offset>
        <clone_length>383</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
      </sequence_fragment>
      <sequence_fragment>
        <id>AC021070.24.1.162978</id>
@@ -571,6 +653,8 @@
        <fragment_ori>1</fragment_ori>
        <fragment_offset>64286</fragment_offset>
        <clone_length>162978</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- no genes</remark>
        <remark>Annotation_remark- annotated</remark>
      </sequence_fragment>
@@ -585,6 +669,8 @@
        <fragment_ori>-1</fragment_ori>
        <fragment_offset>1</fragment_offset>
        <clone_length>146530</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- Contains the 3&apos; end of the SYT10 gene for synaptotagmin X and a novel gene.</remark>
        <remark>Annotation_remark- annotated</remark>
      </sequence_fragment>
@@ -599,6 +685,8 @@
        <fragment_ori>-1</fragment_ori>
        <fragment_offset>1</fragment_offset>
        <clone_length>86970</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- Contains the 5&apos; end of the SYT10 gene for synaptotagmin X and a suppression of tumorigenicity 13 (colon carcinoma) (Hsp70 interacting protein) (ST13) pseudogene.</remark>
        <remark>Annotation_remark- annotated</remark>
      </sequence_fragment>
@@ -613,6 +701,8 @@
        <fragment_ori>-1</fragment_ori>
        <fragment_offset>1</fragment_offset>
        <clone_length>50983</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- no genes</remark>
        <remark>Annotation_remark- annotated</remark>
      </sequence_fragment>
@@ -627,6 +717,8 @@
        <fragment_ori>1</fragment_ori>
        <fragment_offset>2043</fragment_offset>
        <clone_length>178905</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- no genes</remark>
        <remark>Annotation_remark- annotated</remark>
      </sequence_fragment>
@@ -641,6 +733,8 @@
        <fragment_ori>-1</fragment_ori>
        <fragment_offset>1</fragment_offset>
        <clone_length>186000</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- no genes</remark>
        <remark>Annotation_remark- annotated</remark>
      </sequence_fragment>
@@ -655,6 +749,8 @@
        <fragment_ori>1</fragment_ori>
        <fragment_offset>90455</fragment_offset>
        <clone_length>101027</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- no genes</remark>
        <remark>Annotation_remark- annotated</remark>
      </sequence_fragment>
@@ -669,6 +765,8 @@
        <fragment_ori>1</fragment_ori>
        <fragment_offset>208</fragment_offset>
        <clone_length>176600</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- Contains the ALG10 gene for asparagine-linked glycosylation 10, alpha-1,2-glucosyltransferase homolog (S. pombe) and two novel genes.</remark>
        <remark>Annotation_remark- annotated</remark>
      </sequence_fragment>
@@ -683,6 +781,8 @@
        <fragment_ori>-1</fragment_ori>
        <fragment_offset>1</fragment_offset>
        <clone_length>134878</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- Contains a family with sequence similarity 41, member A, Y-linked 1 (FAM41AY1) pseudogene, tubulin, beta 8 class VIII pseudogene 4 TUBB8P4, a double homeobox, 4-like (DUX4) pseudogene and two novel genes.</remark>
        <remark>Annotation_remark- annotated</remark>
      </sequence_fragment>
@@ -697,6 +797,8 @@
        <fragment_ori>-1</fragment_ori>
        <fragment_offset>1</fragment_offset>
        <clone_length>174598</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- Contains a TAF9 RNA polymerase II, TATA box binding protein (TBP)-associated factor, 32kDa (TAF9) pseudogene.</remark>
        <remark>Annotation_remark- annotated</remark>
      </sequence_fragment>
@@ -711,6 +813,8 @@
        <fragment_ori>1</fragment_ori>
        <fragment_offset>2012</fragment_offset>
        <clone_length>131101</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- no genes</remark>
        <remark>Annotation_remark- annotated</remark>
      </sequence_fragment>
@@ -725,6 +829,8 @@
        <fragment_ori>-1</fragment_ori>
        <fragment_offset>1</fragment_offset>
        <clone_length>156422</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
        <remark>EMBL_dump_info.DE_line- no genes</remark>
        <remark>Annotation_remark- annotated</remark>
      </sequence_fragment>
@@ -739,6 +845,8 @@
        <fragment_ori>1</fragment_ori>
        <fragment_offset>22467</fragment_offset>
        <clone_length>38114</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
      </sequence_fragment>
      <sequence_fragment>
        <id>ABBA01016732.1.1.3474</id>
@@ -751,6 +859,8 @@
        <fragment_ori>1</fragment_ori>
        <fragment_offset>1</fragment_offset>
        <clone_length>3474</clone_length>
+       <coord_system_name>chromosome</coord_system_name>
+       <coord_system_version>Otter</coord_system_version>
      </sequence_fragment>
      <feature_set>
        <feature>
@@ -2015,6 +2125,7 @@
        <description>pseudogene similar to part of  transmembrane and tetratricopeptide repeat containing 1 (TMTC1)</description>
        <name>RP11-776A13.2</name>
        <type>Unprocessed_pseudogene</type>
+       <source>havana</source>
        <known>0</known>
        <truncated>0</truncated>
        <author>mpk</author>
@@ -2023,6 +2134,8 @@
          <stable_id>OTTHUMT00000403575</stable_id>
          <author>mpk</author>
          <author_email>mpk</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Unprocessed_pseudogene</type>
          <transcript_class>Unprocessed_pseudogene</transcript_class>
          <name>RP11-776A13.2-001</name>
          <evidence_set>
@@ -2064,6 +2177,7 @@
        <description>importin 8</description>
        <name>IPO8</name>
        <type>Known_CDS</type>
+       <source>havana</source>
        <known>1</known>
        <truncated>0</truncated>
        <author>gm5</author>
@@ -2073,6 +2187,8 @@
          <author>gm5</author>
          <author_email>gm5</author_email>
          <remark>Annotation_remark- CCDS8719.1</remark>
+         <source>ensembl</source>
+         <type>ensembl:Known_CDS</type>
          <transcript_class>Known_CDS</transcript_class>
          <name>RP11-396L8.1-001</name>
          <translation_start>30695647</translation_start>
@@ -2316,6 +2432,8 @@
          <author>gm5</author>
          <author_email>gm5</author_email>
          <remark>Annotation_remark- more than 3 (independent) mRNA/EST support for novel TSS</remark>
+         <source>ensembl</source>
+         <type>ensembl:Putative_CDS</type>
          <transcript_class>Putative_CDS</transcript_class>
          <name>RP11-396L8.1-002</name>
          <translation_start>30676919</translation_start>
@@ -2516,6 +2634,8 @@
          <author_email>gm5</author_email>
          <mRNA_start_not_found>1</mRNA_start_not_found>
          <cds_start_not_found>1</cds_start_not_found>
+         <source>ensembl</source>
+         <type>ensembl:Putative_CDS</type>
          <transcript_class>Putative_CDS</transcript_class>
          <name>RP11-396L8.1-010</name>
          <translation_start>30637149</translation_start>
@@ -2561,6 +2681,8 @@
          <remark>Annotation_remark- Lies within novel first coding intron, so allowing novel first exon rules for CDS</remark>
          <mRNA_end_not_found>1</mRNA_end_not_found>
          <cds_end_not_found>1</cds_end_not_found>
+         <source>ensembl</source>
+         <type>ensembl:Putative_CDS</type>
          <transcript_class>Putative_CDS</transcript_class>
          <name>RP11-396L8.1-003</name>
          <translation_start>30677126</translation_start>
@@ -2629,6 +2751,8 @@
          <author_email>gm5</author_email>
          <mRNA_start_not_found>1</mRNA_start_not_found>
          <cds_start_not_found>1</cds_start_not_found>
+         <source>ensembl</source>
+         <type>ensembl:Non_stop_decay</type>
          <transcript_class>Non_stop_decay</transcript_class>
          <name>RP11-396L8.1-011</name>
          <translation_start>30681817</translation_start>
@@ -2665,6 +2789,8 @@
          <author_email>gm5</author_email>
          <mRNA_end_not_found>1</mRNA_end_not_found>
          <cds_end_not_found>1</cds_end_not_found>
+         <source>ensembl</source>
+         <type>ensembl:Putative_CDS</type>
          <transcript_class>Putative_CDS</transcript_class>
          <name>RP11-396L8.1-009</name>
          <translation_start>30684437</translation_start>
@@ -2718,6 +2844,8 @@
          <remark>not organism-supported</remark>
          <remark>Annotation_remark- Found in Sus scrofa (pig)</remark>
          <remark>Annotation_remark- truncated 2nd exon leads to an ORF that is 35AA, consequently leading to NMD</remark>
+         <source>ensembl</source>
+         <type>ensembl:Nonsense_mediated_decay</type>
          <transcript_class>Nonsense_mediated_decay</transcript_class>
          <name>RP11-396L8.1-008</name>
          <translation_start>30695647</translation_start>
@@ -2778,6 +2906,8 @@
          <author_email>gm5</author_email>
          <mRNA_end_not_found>1</mRNA_end_not_found>
          <cds_end_not_found>1</cds_end_not_found>
+         <source>ensembl</source>
+         <type>ensembl:Putative_CDS</type>
          <transcript_class>Putative_CDS</transcript_class>
          <name>RP11-396L8.1-007</name>
          <translation_start>30688456</translation_start>
@@ -2815,6 +2945,8 @@
          <remark>Annotation_remark- internal ATG utilized</remark>
          <mRNA_end_not_found>1</mRNA_end_not_found>
          <cds_end_not_found>1</cds_end_not_found>
+         <source>ensembl</source>
+         <type>ensembl:Putative_CDS</type>
          <transcript_class>Putative_CDS</transcript_class>
          <name>RP11-396L8.1-006</name>
          <translation_start>30684437</translation_start>
@@ -2859,6 +2991,8 @@
          <author_email>gm5</author_email>
          <mRNA_end_not_found>1</mRNA_end_not_found>
          <cds_end_not_found>1</cds_end_not_found>
+         <source>ensembl</source>
+         <type>ensembl:Putative_CDS</type>
          <transcript_class>Putative_CDS</transcript_class>
          <name>RP11-396L8.1-004</name>
          <translation_start>30695010</translation_start>
@@ -2902,6 +3036,8 @@
          <author>gm5</author>
          <author_email>gm5</author_email>
          <remark>Annotation_remark- novel ATG start leads to an ORF less than 35AA, therefore annotated as transcript</remark>
+         <source>ensembl</source>
+         <type>ensembl:Transcript</type>
          <transcript_class>Transcript</transcript_class>
          <name>RP11-396L8.1-005</name>
          <evidence_set>
@@ -2935,6 +3071,7 @@
        <description>caprin family member 2</description>
        <name>CAPRIN2</name>
        <type>Known_CDS</type>
+       <source>havana</source>
        <known>1</known>
        <truncated>0</truncated>
        <author>gm5</author>
@@ -2946,6 +3083,8 @@
          <remark>Annotation_remark- elongated third exon causes frameshift that leads to a premature stop codon, that subsequently leads to NMD</remark>
          <mRNA_start_not_found>1</mRNA_start_not_found>
          <cds_start_not_found>1</cds_start_not_found>
+         <source>ensembl</source>
+         <type>ensembl:Nonsense_mediated_decay</type>
          <transcript_class>Nonsense_mediated_decay</transcript_class>
          <name>RP11-77I22.1-006</name>
          <translation_start>30753659</translation_start>
@@ -3086,6 +3225,8 @@
          <author_email>gm5</author_email>
          <mRNA_start_not_found>1</mRNA_start_not_found>
          <cds_start_not_found>1</cds_start_not_found>
+         <source>ensembl</source>
+         <type>ensembl:Novel_CDS</type>
          <transcript_class>Novel_CDS</transcript_class>
          <name>RP11-77I22.1-015</name>
          <translation_start>30735014</translation_start>
@@ -3237,6 +3378,8 @@
          <remark>Annotation_remark- in exon 13</remark>
          <mRNA_start_not_found>1</mRNA_start_not_found>
          <cds_start_not_found>1</cds_start_not_found>
+         <source>ensembl</source>
+         <type>ensembl:Nonsense_mediated_decay</type>
          <transcript_class>Nonsense_mediated_decay</transcript_class>
          <name>RP11-77I22.1-017</name>
          <translation_start>30751124</translation_start>
@@ -3385,6 +3528,8 @@
          <author_email>gm5</author_email>
          <remark>Annotation_remark- CCDS8720.1</remark>
          <remark>Annotation_remark- UniProtKB isoform 2</remark>
+         <source>ensembl</source>
+         <type>ensembl:Known_CDS</type>
          <transcript_class>Known_CDS</transcript_class>
          <name>RP11-77I22.1-001</name>
          <translation_start>30753763</translation_start>
@@ -3544,6 +3689,8 @@
          <author>gm5</author>
          <author_email>gm5</author_email>
          <remark>Annotation_remark- absence of cassette exon causes a frameshift that leads to a premature stop codon, which subsequently leads to NMD</remark>
+         <source>ensembl</source>
+         <type>ensembl:Nonsense_mediated_decay</type>
          <transcript_class>Nonsense_mediated_decay</transcript_class>
          <name>RP11-77I22.1-003</name>
          <translation_start>30753763</translation_start>
@@ -3703,6 +3850,8 @@
          <author>gm5</author>
          <author_email>gm5</author_email>
          <remark>Annotation_remark- CCDS55816.1</remark>
+         <source>ensembl</source>
+         <type>ensembl:Known_CDS</type>
          <transcript_class>Known_CDS</transcript_class>
          <name>RP11-77I22.1-004</name>
          <translation_start>30753763</translation_start>
@@ -3867,6 +4016,8 @@
          <author_email>jel</author_email>
          <remark>Annotation_remark- CCDS41766.1 update pending</remark>
          <remark>Annotation_remark- UniProtKB isoform 3</remark>
+         <source>ensembl</source>
+         <type>ensembl:Known_CDS</type>
          <transcript_class>Known_CDS</transcript_class>
          <name>RP11-77I22.1-005</name>
          <translation_start>30753763</translation_start>
@@ -4033,6 +4184,8 @@
          <stable_id>OTTHUMT00000474539</stable_id>
          <author>gm5</author>
          <author_email>gm5</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Retained_intron</type>
          <transcript_class>Retained_intron</transcript_class>
          <name>RP11-77I22.1-018</name>
          <evidence_set>
@@ -4056,6 +4209,8 @@
          <stable_id>OTTHUMT00000474550</stable_id>
          <author>gm5</author>
          <author_email>gm5</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Transcript</type>
          <transcript_class>Transcript</transcript_class>
          <name>RP11-77I22.1-019</name>
          <evidence_set>
@@ -4125,6 +4280,8 @@
          <remark>Annotation_remark- splice donor site gga (first exon) shows good conservation in UCSC genome browser</remark>
          <mRNA_end_not_found>1</mRNA_end_not_found>
          <cds_end_not_found>1</cds_end_not_found>
+         <source>ensembl</source>
+         <type>ensembl:Putative_CDS</type>
          <transcript_class>Putative_CDS</transcript_class>
          <name>RP11-77I22.1-002</name>
          <translation_start>30753520</translation_start>
@@ -4263,6 +4420,8 @@
          <stable_id>OTTHUMT00000403384</stable_id>
          <author>gm5</author>
          <author_email>gm5</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Retained_intron</type>
          <transcript_class>Retained_intron</transcript_class>
          <name>RP11-77I22.1-016</name>
          <evidence_set>
@@ -4303,6 +4462,8 @@
          <author>gm5</author>
          <author_email>gm5</author_email>
          <remark>Annotation_remark- Would be NMD, but the lack of a downstream splice acceptor site from the premature stop codon precludes this possibility; therefore annotated as a transcript</remark>
+         <source>ensembl</source>
+         <type>ensembl:Transcript</type>
          <transcript_class>Transcript</transcript_class>
          <name>RP11-77I22.1-014</name>
          <evidence_set>
@@ -4342,6 +4503,8 @@
          <stable_id>OTTHUMT00000403326</stable_id>
          <author>gm5</author>
          <author_email>gm5</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Transcript</type>
          <transcript_class>Transcript</transcript_class>
          <name>RP11-77I22.1-012</name>
          <evidence_set>
@@ -4399,6 +4562,8 @@
          <author_email>gm5</author_email>
          <mRNA_end_not_found>1</mRNA_end_not_found>
          <cds_end_not_found>1</cds_end_not_found>
+         <source>ensembl</source>
+         <type>ensembl:Putative_CDS</type>
          <transcript_class>Putative_CDS</transcript_class>
          <name>RP11-77I22.1-007</name>
          <translation_start>30735167</translation_start>
@@ -4459,6 +4624,8 @@
          <author_email>gm5</author_email>
          <mRNA_end_not_found>1</mRNA_end_not_found>
          <cds_end_not_found>1</cds_end_not_found>
+         <source>ensembl</source>
+         <type>ensembl:Putative_CDS</type>
          <transcript_class>Putative_CDS</transcript_class>
          <name>RP11-77I22.1-013</name>
          <translation_start>30735167</translation_start>
@@ -4517,6 +4684,8 @@
          <stable_id>OTTHUMT00000403329</stable_id>
          <author>gm5</author>
          <author_email>gm5</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Transcript</type>
          <transcript_class>Transcript</transcript_class>
          <name>RP11-77I22.1-011</name>
          <evidence_set>
@@ -4566,6 +4735,8 @@
          <author_email>gm5</author_email>
          <mRNA_end_not_found>1</mRNA_end_not_found>
          <cds_end_not_found>1</cds_end_not_found>
+         <source>ensembl</source>
+         <type>ensembl:Putative_CDS</type>
          <transcript_class>Putative_CDS</transcript_class>
          <name>RP11-77I22.1-010</name>
          <translation_start>30753520</translation_start>
@@ -4630,6 +4801,8 @@
          <author_email>gm5</author_email>
          <mRNA_end_not_found>1</mRNA_end_not_found>
          <cds_end_not_found>1</cds_end_not_found>
+         <source>ensembl</source>
+         <type>ensembl:Putative_CDS</type>
          <transcript_class>Putative_CDS</transcript_class>
          <name>RP11-77I22.1-008</name>
          <translation_start>30753520</translation_start>
@@ -4690,6 +4863,8 @@
          <author_email>gm5</author_email>
          <mRNA_end_not_found>1</mRNA_end_not_found>
          <cds_end_not_found>1</cds_end_not_found>
+         <source>ensembl</source>
+         <type>ensembl:Putative_CDS</type>
          <transcript_class>Putative_CDS</transcript_class>
          <name>RP11-77I22.1-009</name>
          <translation_start>30753520</translation_start>
@@ -4750,6 +4925,7 @@
        <description>novel transcript</description>
        <name>RP11-77I22.2</name>
        <type>Transcript</type>
+       <source>havana</source>
        <known>0</known>
        <truncated>0</truncated>
        <author>dm4</author>
@@ -4758,6 +4934,8 @@
          <stable_id>OTTHUMT00000403385</stable_id>
          <author>dm4</author>
          <author_email>dm4</author_email>
+         <source>ensembl</source>
+         <type>ensembl:lincRNA</type>
          <transcript_class>lincRNA</transcript_class>
          <name>RP11-77I22.2-001</name>
          <evidence_set>
@@ -4791,6 +4969,7 @@
        <description>novel transcript</description>
        <name>RP11-77I22.3</name>
        <type>Transcript</type>
+       <source>havana</source>
        <known>0</known>
        <truncated>0</truncated>
        <remark>ASB_lincRNA</remark>
@@ -4800,6 +4979,8 @@
          <stable_id>OTTHUMT00000403386</stable_id>
          <author>dm4</author>
          <author_email>dm4</author_email>
+         <source>ensembl</source>
+         <type>ensembl:lincRNA</type>
          <transcript_class>lincRNA</transcript_class>
          <name>RP11-77I22.3-002</name>
          <evidence_set>
@@ -4831,6 +5012,8 @@
          <stable_id>OTTHUMT00000403387</stable_id>
          <author>dm4</author>
          <author_email>dm4</author_email>
+         <source>ensembl</source>
+         <type>ensembl:lincRNA</type>
          <transcript_class>lincRNA</transcript_class>
          <name>RP11-77I22.3-001</name>
          <evidence_set>
@@ -4886,6 +5069,8 @@
          <stable_id>OTTHUMT00000403388</stable_id>
          <author>dm4</author>
          <author_email>dm4</author_email>
+         <source>ensembl</source>
+         <type>ensembl:lincRNA</type>
          <transcript_class>lincRNA</transcript_class>
          <name>RP11-77I22.3-003</name>
          <evidence_set>
@@ -4919,6 +5104,7 @@
        <description>peptidylprolyl isomerase A (cyclophilin A) (PPIA) pseudogene</description>
        <name>RP11-77I22.4</name>
        <type>Processed_pseudogene</type>
+       <source>havana</source>
        <known>0</known>
        <truncated>0</truncated>
        <author>gm5</author>
@@ -4927,6 +5113,8 @@
          <stable_id>OTTHUMT00000403389</stable_id>
          <author>gm5</author>
          <author_email>gm5</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Processed_pseudogene</type>
          <transcript_class>Processed_pseudogene</transcript_class>
          <name>RP11-77I22.4-001</name>
          <evidence_set>
@@ -4968,6 +5156,7 @@
        <description>tetraspanin 11</description>
        <name>TSPAN11</name>
        <type>Known_CDS</type>
+       <source>havana</source>
        <known>1</known>
        <truncated>0</truncated>
        <author>gm5</author>
@@ -4976,6 +5165,8 @@
          <stable_id>OTTHUMT00000399885</stable_id>
          <author>gm5</author>
          <author_email>gm5</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Putative_CDS</type>
          <transcript_class>Putative_CDS</transcript_class>
          <name>RP11-551L14.3-003</name>
          <translation_start>30953992</translation_start>
@@ -5011,6 +5202,8 @@
          <author>gm5</author>
          <author_email>gm5</author_email>
          <remark>Annotation_remark- CCDS31765.1</remark>
+         <source>ensembl</source>
+         <type>ensembl:Known_CDS</type>
          <transcript_class>Known_CDS</transcript_class>
          <name>RP11-551L14.3-001</name>
          <translation_start>30953992</translation_start>
@@ -5097,6 +5290,8 @@
          <stable_id>OTTHUMT00000399887</stable_id>
          <author>gm5</author>
          <author_email>gm5</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Putative_CDS</type>
          <transcript_class>Putative_CDS</transcript_class>
          <name>RP11-551L14.3-004</name>
          <translation_start>30963955</translation_start>
@@ -5172,6 +5367,8 @@
          <author>gm5</author>
          <author_email>gm5</author_email>
          <remark>alternative 5&apos; UTR</remark>
+         <source>ensembl</source>
+         <type>ensembl:Known_CDS</type>
          <transcript_class>Known_CDS</transcript_class>
          <name>RP11-551L14.3-002</name>
          <translation_start>30953992</translation_start>
@@ -5320,6 +5517,7 @@
        <description>novel transcript, antisense to TSPAN11</description>
        <name>RP11-551L14.4</name>
        <type>Novel_Transcript</type>
+       <source>havana</source>
        <known>0</known>
        <truncated>0</truncated>
        <author>cas</author>
@@ -5328,6 +5526,8 @@
          <stable_id>OTTHUMT00000474551</stable_id>
          <author>cas</author>
          <author_email>cas</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Antisense</type>
          <transcript_class>Antisense</transcript_class>
          <name>RP11-551L14.4-005</name>
          <evidence_set>
@@ -5353,6 +5553,8 @@
          <author_email>cas</author_email>
          <remark>454 RNA-Seq supported</remark>
          <remark>Annotation_remark- IH8XKNN01D9Q7R</remark>
+         <source>ensembl</source>
+         <type>ensembl:Antisense</type>
          <transcript_class>Antisense</transcript_class>
          <name>RP11-551L14.4-004</name>
          <exon_set>
@@ -5410,6 +5612,8 @@
          <stable_id>OTTHUMT00000399889</stable_id>
          <author>cas</author>
          <author_email>cas</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Antisense</type>
          <transcript_class>Antisense</transcript_class>
          <name>RP11-551L14.4-001</name>
          <evidence_set>
@@ -5457,6 +5661,8 @@
          <stable_id>OTTHUMT00000399890</stable_id>
          <author>cas</author>
          <author_email>cas</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Antisense</type>
          <transcript_class>Antisense</transcript_class>
          <name>RP11-551L14.4-003</name>
          <evidence_set>
@@ -5496,6 +5702,8 @@
          <stable_id>OTTHUMT00000399891</stable_id>
          <author>cas</author>
          <author_email>cas</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Antisense</type>
          <transcript_class>Antisense</transcript_class>
          <name>RP11-551L14.4-002</name>
          <evidence_set>
@@ -5529,6 +5737,7 @@
        <description>novel transcript</description>
        <name>RP11-551L14.6</name>
        <type>Transcript</type>
+       <source>havana</source>
        <known>0</known>
        <truncated>0</truncated>
        <author>aeb</author>
@@ -5539,6 +5748,8 @@
          <author_email>aeb</author_email>
          <remark>QC splicing correct</remark>
          <remark>dotter confirmed</remark>
+         <source>ensembl</source>
+         <type>ensembl:lincRNA</type>
          <transcript_class>lincRNA</transcript_class>
          <name>RP11-551L14.6-001</name>
          <evidence_set>
@@ -5572,6 +5783,7 @@
        <description>antisense to DDX11</description>
        <name>RP11-551L14.5</name>
        <type>Novel_Transcript</type>
+       <source>havana</source>
        <known>0</known>
        <truncated>0</truncated>
        <author>gm5</author>
@@ -5580,6 +5792,8 @@
          <stable_id>OTTHUMT00000399893</stable_id>
          <author>dm4</author>
          <author_email>dm4</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Antisense</type>
          <transcript_class>Antisense</transcript_class>
          <name>RP11-551L14.5-001</name>
          <evidence_set>
@@ -5619,6 +5833,8 @@
          <stable_id>OTTHUMT00000399894</stable_id>
          <author>dm4</author>
          <author_email>dm4</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Antisense</type>
          <transcript_class>Antisense</transcript_class>
          <name>RP11-551L14.5-002</name>
          <evidence_set>
@@ -5650,6 +5866,8 @@
          <stable_id>OTTHUMT00000474553</stable_id>
          <author>gm5</author>
          <author_email>gm5</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Antisense</type>
          <transcript_class>Antisense</transcript_class>
          <name>RP11-551L14.5-003</name>
          <evidence_set>
@@ -5683,6 +5901,7 @@
        <description>DEAD/H (Asp-Glu-Ala-Asp/His) box polypeptide 11</description>
        <name>DDX11</name>
        <type>Known_CDS</type>
+       <source>havana</source>
        <known>1</known>
        <truncated>0</truncated>
        <author>aeb</author>
@@ -5691,6 +5910,8 @@
          <stable_id>OTTHUMT00000399720</stable_id>
          <author>gm5</author>
          <author_email>gm5</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Artifact</type>
          <transcript_class>Artifact</transcript_class>
          <name>RP11-551L14.2-004</name>
          <evidence_set>
@@ -5820,6 +6041,8 @@
          <author_email>gm5</author_email>
          <remark>Annotation_remark- CCDS41767.1</remark>
          <remark>Annotation_remark- UniProtKB isoform 2</remark>
+         <source>ensembl</source>
+         <type>ensembl:Known_CDS</type>
          <transcript_class>Known_CDS</transcript_class>
          <name>RP11-551L14.2-001</name>
          <translation_start>31078394</translation_start>
@@ -6059,6 +6282,8 @@
          <author>gm5</author>
          <author_email>gm5</author_email>
          <remark>Annotation_remark- absence of cassette exon causes a frameshift that leads to a premature stop codon downstream</remark>
+         <source>ensembl</source>
+         <type>ensembl:Nonsense_mediated_decay</type>
          <transcript_class>Nonsense_mediated_decay</transcript_class>
          <name>RP11-551L14.2-005</name>
          <translation_start>31078394</translation_start>
@@ -6174,6 +6399,8 @@
          <author>gm5</author>
          <author_email>gm5</author_email>
          <remark>Annotation_remark- UniProtKB isoform 3</remark>
+         <source>ensembl</source>
+         <type>ensembl:Known_CDS</type>
          <transcript_class>Known_CDS</transcript_class>
          <name>RP11-551L14.2-006</name>
          <translation_start>31078472</translation_start>
@@ -6414,6 +6641,8 @@
          <author_email>aeb</author_email>
          <mRNA_end_not_found>1</mRNA_end_not_found>
          <cds_end_not_found>1</cds_end_not_found>
+         <source>ensembl</source>
+         <type>ensembl:Novel_CDS</type>
          <transcript_class>Novel_CDS</transcript_class>
          <name>RP11-551L14.2-019</name>
          <translation_start>31078394</translation_start>
@@ -6499,6 +6728,8 @@
          <remark>QC splicing correct</remark>
          <remark>dotter confirmed</remark>
          <remark>Annotation_remark- presence of cassette exon causes a frameshift that causes a premature stop codon downstream</remark>
+         <source>ensembl</source>
+         <type>ensembl:Nonsense_mediated_decay</type>
          <transcript_class>Nonsense_mediated_decay</transcript_class>
          <name>RP11-551L14.2-002</name>
          <translation_start>31078394</translation_start>
@@ -6733,6 +6964,8 @@
          <stable_id>OTTHUMT00000399725</stable_id>
          <author>gm5</author>
          <author_email>gm5</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Nonsense_mediated_decay</type>
          <transcript_class>Nonsense_mediated_decay</transcript_class>
          <name>RP11-551L14.2-007</name>
          <translation_start>31078472</translation_start>
@@ -6833,6 +7066,8 @@
          <author_email>aeb</author_email>
          <remark>QC splicing correct</remark>
          <remark>dotter confirmed</remark>
+         <source>ensembl</source>
+         <type>ensembl:Nonsense_mediated_decay</type>
          <transcript_class>Nonsense_mediated_decay</transcript_class>
          <name>RP11-551L14.2-008</name>
          <translation_start>31078394</translation_start>
@@ -7027,6 +7262,8 @@
          <stable_id>OTTHUMT00000399727</stable_id>
          <author>gm5</author>
          <author_email>gm5</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Retained_intron</type>
          <transcript_class>Retained_intron</transcript_class>
          <name>RP11-551L14.2-009</name>
          <evidence_set>
@@ -7253,6 +7490,8 @@
          <remark>alternative 5&apos; UTR</remark>
          <mRNA_end_not_found>1</mRNA_end_not_found>
          <cds_end_not_found>1</cds_end_not_found>
+         <source>ensembl</source>
+         <type>ensembl:Known_CDS</type>
          <transcript_class>Known_CDS</transcript_class>
          <name>RP11-551L14.2-016</name>
          <translation_start>31078472</translation_start>
@@ -7333,6 +7572,8 @@
          <author_email>gm5</author_email>
          <remark>Annotation_remark- UniProtKB isoform 1</remark>
          <remark>Annotation_remark- near NAGNAG splice site at exon 9</remark>
+         <source>ensembl</source>
+         <type>ensembl:Known_CDS</type>
          <transcript_class>Known_CDS</transcript_class>
          <name>RP11-551L14.2-003</name>
          <translation_start>31078394</translation_start>
@@ -7572,6 +7813,8 @@
          <author>gm5</author>
          <author_email>gm5</author_email>
          <remark>Annotation_remark- UniProtKB isoform 4</remark>
+         <source>ensembl</source>
+         <type>ensembl:Known_CDS</type>
          <transcript_class>Known_CDS</transcript_class>
          <name>RP11-551L14.2-010</name>
          <translation_start>31078394</translation_start>
@@ -7806,6 +8049,8 @@
          <stable_id>OTTHUMT00000399730</stable_id>
          <author>gm5</author>
          <author_email>gm5</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Retained_intron</type>
          <transcript_class>Retained_intron</transcript_class>
          <name>RP11-551L14.2-011</name>
          <evidence_set>
@@ -7877,6 +8122,8 @@
          <stable_id>OTTHUMT00000399800</stable_id>
          <author>gm5</author>
          <author_email>gm5</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Nonsense_mediated_decay</type>
          <transcript_class>Nonsense_mediated_decay</transcript_class>
          <name>RP11-551L14.2-017</name>
          <translation_start>31078394</translation_start>
@@ -7935,6 +8182,8 @@
          <stable_id>OTTHUMT00000399731</stable_id>
          <author>gm5</author>
          <author_email>gm5</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Artifact</type>
          <transcript_class>Artifact</transcript_class>
          <name>RP11-551L14.2-012</name>
          <evidence_set>
@@ -8049,6 +8298,8 @@
          <remark>QC splicing correct</remark>
          <remark>dotter confirmed</remark>
          <remark>Annotation_remark- presence of cassette exon causes a frameshift in the CDS that consequently produces a premature stop codon downstream</remark>
+         <source>ensembl</source>
+         <type>ensembl:Nonsense_mediated_decay</type>
          <transcript_class>Nonsense_mediated_decay</transcript_class>
          <name>RP11-551L14.2-013</name>
          <translation_start>31078394</translation_start>
@@ -8142,6 +8393,8 @@
          <remark>downstream ATG</remark>
          <mRNA_end_not_found>1</mRNA_end_not_found>
          <cds_end_not_found>1</cds_end_not_found>
+         <source>ensembl</source>
+         <type>ensembl:Putative_CDS</type>
          <transcript_class>Putative_CDS</transcript_class>
          <name>RP11-551L14.2-015</name>
          <translation_start>31078185</translation_start>
@@ -8206,6 +8459,8 @@
          <remark>Annotation_remark- missing exons causes frameshift that causes a premature stop codon. However, the lack of a downstream splice acceptor site, greater than 50bp from the premature stop, precludes the possibility of NMD, therefore annotated as transcript</remark>
          <mRNA_start_not_found>1</mRNA_start_not_found>
          <cds_start_not_found>1</cds_start_not_found>
+         <source>ensembl</source>
+         <type>ensembl:Putative_CDS</type>
          <transcript_class>Putative_CDS</transcript_class>
          <name>RP11-551L14.2-020</name>
          <translation_start>31078520</translation_start>
@@ -8260,6 +8515,8 @@
          <remark>dotter confirmed</remark>
          <mRNA_start_not_found>1</mRNA_start_not_found>
          <cds_start_not_found>1</cds_start_not_found>
+         <source>ensembl</source>
+         <type>ensembl:Nonsense_mediated_decay</type>
          <transcript_class>Nonsense_mediated_decay</transcript_class>
          <name>RP11-551L14.2-018</name>
          <translation_start>31083828</translation_start>
@@ -8326,6 +8583,8 @@
          <stable_id>OTTHUMT00000399805</stable_id>
          <author>gm5</author>
          <author_email>gm5</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Retained_intron</type>
          <transcript_class>Retained_intron</transcript_class>
          <name>RP11-551L14.2-021</name>
          <evidence_set>
@@ -8365,6 +8624,8 @@
          <stable_id>OTTHUMT00000399806</stable_id>
          <author>gm5</author>
          <author_email>gm5</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Retained_intron</type>
          <transcript_class>Retained_intron</transcript_class>
          <name>RP11-551L14.2-014</name>
          <evidence_set>
@@ -8424,6 +8685,8 @@
          <stable_id>OTTHUMT00000399807</stable_id>
          <author>gm5</author>
          <author_email>gm5</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Transcript</type>
          <transcript_class>Transcript</transcript_class>
          <name>RP11-551L14.2-022</name>
          <evidence_set>
@@ -8471,6 +8734,8 @@
          <stable_id>OTTHUMT00000399808</stable_id>
          <author>gm5</author>
          <author_email>gm5</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Retained_intron</type>
          <transcript_class>Retained_intron</transcript_class>
          <name>RP11-551L14.2-023</name>
          <evidence_set>
@@ -8550,6 +8815,8 @@
          <stable_id>OTTHUMT00000399809</stable_id>
          <author>gm5</author>
          <author_email>gm5</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Transcript</type>
          <transcript_class>Transcript</transcript_class>
          <name>RP11-551L14.2-025</name>
          <evidence_set>
@@ -8637,6 +8904,8 @@
          <stable_id>OTTHUMT00000399810</stable_id>
          <author>gm5</author>
          <author_email>gm5</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Retained_intron</type>
          <transcript_class>Retained_intron</transcript_class>
          <name>RP11-551L14.2-024</name>
          <evidence_set>
@@ -8692,6 +8961,8 @@
          <stable_id>OTTHUMT00000399817</stable_id>
          <author>gm5</author>
          <author_email>gm5</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Retained_intron</type>
          <transcript_class>Retained_intron</transcript_class>
          <name>RP11-551L14.2-026</name>
          <evidence_set>
@@ -8741,6 +9012,8 @@
          <author_email>aeb</author_email>
          <remark>QC splicing correct</remark>
          <remark>dotter confirmed</remark>
+         <source>ensembl</source>
+         <type>ensembl:Retained_intron</type>
          <transcript_class>Retained_intron</transcript_class>
          <name>RP11-551L14.2-028</name>
          <evidence_set>
@@ -8788,6 +9061,8 @@
          <stable_id>OTTHUMT00000399819</stable_id>
          <author>gm5</author>
          <author_email>gm5</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Retained_intron</type>
          <transcript_class>Retained_intron</transcript_class>
          <name>RP11-551L14.2-027</name>
          <evidence_set>
@@ -8819,6 +9094,8 @@
          <stable_id>OTTHUMT00000399834</stable_id>
          <author>gm5</author>
          <author_email>gm5</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Retained_intron</type>
          <transcript_class>Retained_intron</transcript_class>
          <name>RP11-551L14.2-032</name>
          <evidence_set>
@@ -8850,6 +9127,8 @@
          <stable_id>OTTHUMT00000399820</stable_id>
          <author>gm5</author>
          <author_email>gm5</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Retained_intron</type>
          <transcript_class>Retained_intron</transcript_class>
          <name>RP11-551L14.2-029</name>
          <evidence_set>
@@ -8891,6 +9170,8 @@
          <author_email>gm5</author_email>
          <mRNA_start_not_found>1</mRNA_start_not_found>
          <cds_start_not_found>1</cds_start_not_found>
+         <source>ensembl</source>
+         <type>ensembl:Nonsense_mediated_decay</type>
          <transcript_class>Nonsense_mediated_decay</transcript_class>
          <name>RP11-551L14.2-031</name>
          <translation_start>31102268</translation_start>
@@ -8953,6 +9234,8 @@
          <remark>dotter confirmed</remark>
          <mRNA_start_not_found>1</mRNA_start_not_found>
          <cds_start_not_found>1</cds_start_not_found>
+         <source>ensembl</source>
+         <type>ensembl:Novel_CDS</type>
          <transcript_class>Novel_CDS</transcript_class>
          <name>RP11-551L14.2-030</name>
          <translation_start>31102268</translation_start>
@@ -9021,6 +9304,7 @@
        <description>WAS protein family homolog 4 pseudogene</description>
        <name>RP11-551L14.7</name>
        <type>Unprocessed_pseudogene</type>
+       <source>havana</source>
        <known>0</known>
        <truncated>0</truncated>
        <author>ib2</author>
@@ -9030,6 +9314,8 @@
          <author>ib2</author>
          <author_email>ib2</author_email>
          <remark>Annotation_remark- Contains exon structure similar to parental gene WASH4P which has been mistakenly called a pseudogene and actually a protein coding gene</remark>
+         <source>ensembl</source>
+         <type>ensembl:Unprocessed_pseudogene</type>
          <transcript_class>Unprocessed_pseudogene</transcript_class>
          <name>RP11-551L14.7-001</name>
          <evidence_set>
@@ -9095,6 +9381,7 @@
        <description>ovostatin (OVOS) pseudogene</description>
        <name>RP11-551L14.1</name>
        <type>Transcribed_unprocessed_pseudogene</type>
+       <source>havana</source>
        <known>1</known>
        <truncated>0</truncated>
        <author>gm5</author>
@@ -9103,6 +9390,8 @@
          <stable_id>OTTHUMT00000400342</stable_id>
          <author>gm5</author>
          <author_email>gm5</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Transcript</type>
          <transcript_class>Transcript</transcript_class>
          <name>RP11-551L14.1-003</name>
          <evidence_set>
@@ -9182,6 +9471,8 @@
          <stable_id>OTTHUMT00000400343</stable_id>
          <author>gm5</author>
          <author_email>gm5</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Transcript</type>
          <transcript_class>Transcript</transcript_class>
          <name>RP11-551L14.1-002</name>
          <evidence_set>
@@ -9238,6 +9529,8 @@
          <author>gm5</author>
          <author_email>gm5</author_email>
          <remark>Annotation_remark- There is an introduced stop codon (c to g) in this haplotype that gives a Tyrosine in other individuals. There is also a c/t SNP here rs61917095</remark>
+         <source>ensembl</source>
+         <type>ensembl:Transcribed_unprocessed_pseudogene</type>
          <transcript_class>Transcribed_unprocessed_pseudogene</transcript_class>
          <name>RP11-551L14.1-001</name>
          <evidence_set>
@@ -9517,6 +9810,8 @@
          <stable_id>OTTHUMT00000400344</stable_id>
          <author>gm5</author>
          <author_email>gm5</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Transcript</type>
          <transcript_class>Transcript</transcript_class>
          <name>RP11-551L14.1-004</name>
          <evidence_set>
@@ -9582,6 +9877,7 @@
        <description>NADH dehydrogenase (ubiquinone) 1 alpha subcomplex, 4, 9kDa (NDUFA4) pseudogene</description>
        <name>RP11-627K11.5</name>
        <type>Processed_pseudogene</type>
+       <source>havana</source>
        <known>0</known>
        <truncated>0</truncated>
        <author>clb</author>
@@ -9590,6 +9886,8 @@
          <stable_id>OTTHUMT00000469163</stable_id>
          <author>clb</author>
          <author_email>clb</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Processed_pseudogene</type>
          <transcript_class>Processed_pseudogene</transcript_class>
          <name>RP11-627K11.5-001</name>
          <evidence_set>
@@ -9615,6 +9913,7 @@
        <description>ribosomal protein L13a (RPL13A) pseudogene</description>
        <name>RP11-627K11.1</name>
        <type>Processed_pseudogene</type>
+       <source>havana</source>
        <known>0</known>
        <truncated>0</truncated>
        <author>jel</author>
@@ -9623,6 +9922,8 @@
          <stable_id>OTTHUMT00000349019</stable_id>
          <author>jel</author>
          <author_email>jel</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Processed_pseudogene</type>
          <transcript_class>Processed_pseudogene</transcript_class>
          <name>RP11-627K11.1-001</name>
          <evidence_set>
@@ -9656,6 +9957,7 @@
        <description>melanoregulin (MREG) pseudogene</description>
        <name>RP11-627K11.4</name>
        <type>Processed_pseudogene</type>
+       <source>havana</source>
        <known>0</known>
        <truncated>0</truncated>
        <author>ib2</author>
@@ -9664,6 +9966,8 @@
          <stable_id>OTTHUMT00000469134</stable_id>
          <author>ib2</author>
          <author_email>ib2</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Processed_pseudogene</type>
          <transcript_class>Processed_pseudogene</transcript_class>
          <name>RP11-627K11.4-001</name>
          <evidence_set>
@@ -9689,6 +9993,7 @@
        <description>novel transcript, overlapping 3&apos;UTR of FAM60A</description>
        <name>RP11-627K11.6</name>
        <type>Transcript</type>
+       <source>havana</source>
        <known>0</known>
        <truncated>0</truncated>
        <remark>overlapping locus</remark>
@@ -9698,6 +10003,8 @@
          <stable_id>OTTHUMT00000474559</stable_id>
          <author>gm5</author>
          <author_email>gm5</author_email>
+         <source>ensembl</source>
+         <type>ensembl:3&apos;_overlapping_ncRNA</type>
          <transcript_class>3&apos;_overlapping_ncRNA</transcript_class>
          <name>RP11-627K11.6-001</name>
          <evidence_set>
@@ -9727,6 +10034,7 @@
        <description>family with sequence similarity 60, member A</description>
        <name>FAM60A</name>
        <type>Known_CDS</type>
+       <source>havana</source>
        <known>1</known>
        <truncated>0</truncated>
        <remark>overlapping locus</remark>
@@ -9736,6 +10044,8 @@
          <stable_id>OTTHUMT00000400345</stable_id>
          <author>gm5</author>
          <author_email>gm5</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Retained_intron</type>
          <transcript_class>Retained_intron</transcript_class>
          <name>RP11-627K11.2-003</name>
          <evidence_set>
@@ -9791,6 +10101,8 @@
          <stable_id>OTTHUMT00000400346</stable_id>
          <author>gm5</author>
          <author_email>gm5</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Putative_CDS</type>
          <transcript_class>Putative_CDS</transcript_class>
          <name>RP11-627K11.2-002</name>
          <translation_start>31287695</translation_start>
@@ -9834,6 +10146,8 @@
          <author>gm5</author>
          <author_email>gm5</author_email>
          <remark>Annotation_remark- CCDS8723.1</remark>
+         <source>ensembl</source>
+         <type>ensembl:Known_CDS</type>
          <transcript_class>Known_CDS</transcript_class>
          <name>RP11-627K11.2-001</name>
          <translation_start>31298204</translation_start>
@@ -9909,6 +10223,8 @@
          <author>gm5</author>
          <author_email>gm5</author_email>
          <remark>alternative 5&apos; UTR</remark>
+         <source>ensembl</source>
+         <type>ensembl:Known_CDS</type>
          <transcript_class>Known_CDS</transcript_class>
          <name>RP11-627K11.2-004</name>
          <translation_start>31298204</translation_start>
@@ -9978,6 +10294,8 @@
          <remark>Annotation_remark- presence of casette exon leads to a premature stop codon in the CDS, which consequently causes an NMD</remark>
          <mRNA_start_not_found>1</mRNA_start_not_found>
          <cds_start_not_found>1</cds_start_not_found>
+         <source>ensembl</source>
+         <type>ensembl:Nonsense_mediated_decay</type>
          <transcript_class>Nonsense_mediated_decay</transcript_class>
          <name>RP11-627K11.2-009</name>
          <translation_start>31298175</translation_start>
@@ -10044,6 +10362,8 @@
          <stable_id>OTTHUMT00000400350</stable_id>
          <author>gm5</author>
          <author_email>gm5</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Putative_CDS</type>
          <transcript_class>Putative_CDS</transcript_class>
          <name>RP11-627K11.2-007</name>
          <translation_start>31287695</translation_start>
@@ -10105,6 +10425,8 @@
          <remark>alternative 5&apos; UTR</remark>
          <mRNA_end_not_found>1</mRNA_end_not_found>
          <cds_end_not_found>1</cds_end_not_found>
+         <source>ensembl</source>
+         <type>ensembl:Known_CDS</type>
          <transcript_class>Known_CDS</transcript_class>
          <name>RP11-627K11.2-006</name>
          <translation_start>31298204</translation_start>
@@ -10166,6 +10488,8 @@
          <remark>alternative 5&apos; UTR</remark>
          <mRNA_end_not_found>1</mRNA_end_not_found>
          <cds_end_not_found>1</cds_end_not_found>
+         <source>ensembl</source>
+         <type>ensembl:Known_CDS</type>
          <transcript_class>Known_CDS</transcript_class>
          <name>RP11-627K11.2-008</name>
          <translation_start>31298204</translation_start>
@@ -10224,6 +10548,8 @@
          <stable_id>OTTHUMT00000400353</stable_id>
          <author>gm5</author>
          <author_email>gm5</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Transcript</type>
          <transcript_class>Transcript</transcript_class>
          <name>RP11-627K11.2-005</name>
          <evidence_set>
@@ -10257,6 +10583,7 @@
        <description>solute carrier family 25, member 13 (citrin) (SLC25A13) pseudogene</description>
        <name>RP11-627K11.3</name>
        <type>Processed_pseudogene</type>
+       <source>havana</source>
        <known>0</known>
        <truncated>0</truncated>
        <author>gm5</author>
@@ -10265,6 +10592,8 @@
          <stable_id>OTTHUMT00000400354</stable_id>
          <author>gm5</author>
          <author_email>gm5</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Processed_pseudogene</type>
          <transcript_class>Processed_pseudogene</transcript_class>
          <name>RP11-627K11.3-001</name>
          <evidence_set>
@@ -10306,6 +10635,7 @@
        <description>novel transcript, antisense to FAM60A</description>
        <name>RP11-627K11.7</name>
        <type>Novel_Transcript</type>
+       <source>havana</source>
        <known>0</known>
        <truncated>0</truncated>
        <author>mh19</author>
@@ -10314,6 +10644,8 @@
          <stable_id>OTTHUMT00000475045</stable_id>
          <author>mh19</author>
          <author_email>mh19</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Antisense</type>
          <transcript_class>Antisense</transcript_class>
          <name>RP11-627K11.7-001</name>
          <evidence_set>
@@ -10351,6 +10683,7 @@
        <description>novel transcript</description>
        <name>RP11-771K4.1</name>
        <type>Transcript</type>
+       <source>havana</source>
        <known>0</known>
        <truncated>0</truncated>
        <author>th2</author>
@@ -10359,6 +10692,8 @@
          <stable_id>OTTHUMT00000402039</stable_id>
          <author>th2</author>
          <author_email>th2</author_email>
+         <source>ensembl</source>
+         <type>ensembl:lincRNA</type>
          <transcript_class>lincRNA</transcript_class>
          <name>RP11-771K4.1-001</name>
          <evidence_set>
@@ -10392,6 +10727,7 @@
        <description>DENN/MADD domain containing 5B</description>
        <name>DENND5B</name>
        <type>Known_CDS</type>
+       <source>havana</source>
        <known>1</known>
        <truncated>0</truncated>
        <remark>overlapping locus</remark>
@@ -10402,6 +10738,8 @@
          <author>th2</author>
          <author_email>th2</author_email>
          <remark>Annotation_remark- CCDS44857.1</remark>
+         <source>ensembl</source>
+         <type>ensembl:Known_CDS</type>
          <transcript_class>Known_CDS</transcript_class>
          <name>RP11-771K4.2-001</name>
          <translation_start>31590832</translation_start>
@@ -10640,6 +10978,8 @@
          <stable_id>OTTHUMT00000402041</stable_id>
          <author>th2</author>
          <author_email>th2</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Artifact</type>
          <transcript_class>Artifact</transcript_class>
          <name>RP11-771K4.2-005</name>
          <evidence_set>
@@ -10687,6 +11027,8 @@
          <stable_id>OTTHUMT00000402042</stable_id>
          <author>th2</author>
          <author_email>th2</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Known_CDS</type>
          <transcript_class>Known_CDS</transcript_class>
          <name>RP11-771K4.2-003</name>
          <translation_start>31500558</translation_start>
@@ -10893,6 +11235,8 @@
          <stable_id>OTTHUMT00000402043</stable_id>
          <author>th2</author>
          <author_email>th2</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Retained_intron</type>
          <transcript_class>Retained_intron</transcript_class>
          <name>RP11-771K4.2-008</name>
          <evidence_set>
@@ -10924,6 +11268,8 @@
          <stable_id>OTTHUMT00000402044</stable_id>
          <author>th2</author>
          <author_email>th2</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Known_CDS</type>
          <transcript_class>Known_CDS</transcript_class>
          <name>RP11-771K4.2-002</name>
          <translation_start>31590832</translation_start>
@@ -11020,6 +11366,8 @@
          <author_email>th2</author_email>
          <mRNA_start_not_found>1</mRNA_start_not_found>
          <cds_start_not_found>1</cds_start_not_found>
+         <source>ensembl</source>
+         <type>ensembl:Novel_CDS</type>
          <transcript_class>Novel_CDS</transcript_class>
          <name>RP11-771K4.2-004</name>
          <translation_start>31495902</translation_start>
@@ -11074,6 +11422,8 @@
          <stable_id>OTTHUMT00000402046</stable_id>
          <author>th2</author>
          <author_email>th2</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Transcript</type>
          <transcript_class>Transcript</transcript_class>
          <name>RP11-771K4.2-007</name>
          <evidence_set>
@@ -11117,6 +11467,8 @@
          <stable_id>OTTHUMT00000402047</stable_id>
          <author>th2</author>
          <author_email>th2</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Nonsense_mediated_decay</type>
          <transcript_class>Nonsense_mediated_decay</transcript_class>
          <name>RP11-771K4.2-006</name>
          <translation_start>31590832</translation_start>
@@ -11169,6 +11521,7 @@
        <description>novel transcript, sense intronic to DENND5B</description>
        <name>RP11-771K4.3</name>
        <type>Transcript</type>
+       <source>havana</source>
        <known>0</known>
        <truncated>0</truncated>
        <remark>overlapping locus</remark>
@@ -11178,6 +11531,8 @@
          <stable_id>OTTHUMT00000474570</stable_id>
          <author>gm5</author>
          <author_email>gm5</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Sense_intronic</type>
          <transcript_class>Sense_intronic</transcript_class>
          <name>RP11-771K4.3-001</name>
          <evidence_set>
@@ -11203,6 +11558,7 @@
        <description>TAF10 RNA polymerase II, TATA box binding protein (TBP)-associated factor, 30kDa (TAF10) pseudogene</description>
        <name>RP11-820K3.3</name>
        <type>Processed_pseudogene</type>
+       <source>havana</source>
        <known>0</known>
        <truncated>0</truncated>
        <author>th2</author>
@@ -11211,6 +11567,8 @@
          <stable_id>OTTHUMT00000402048</stable_id>
          <author>th2</author>
          <author_email>th2</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Processed_pseudogene</type>
          <transcript_class>Processed_pseudogene</transcript_class>
          <name>RP11-820K3.3-001</name>
          <evidence_set>
@@ -11236,6 +11594,7 @@
        <description>mitochondrial ribosomal protein L30 (MRPL30) pseudogene</description>
        <name>RP11-820K3.4</name>
        <type>Processed_pseudogene</type>
+       <source>havana</source>
        <known>0</known>
        <truncated>0</truncated>
        <author>th2</author>
@@ -11244,6 +11603,8 @@
          <stable_id>OTTHUMT00000402049</stable_id>
          <author>th2</author>
          <author_email>th2</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Processed_pseudogene</type>
          <transcript_class>Processed_pseudogene</transcript_class>
          <name>RP11-820K3.4-001</name>
          <evidence_set>
@@ -11269,6 +11630,7 @@
        <description>ankyrin repeat domain 49 (ANKRD49) pseudogene</description>
        <name>RP11-820K3.2</name>
        <type>Processed_pseudogene</type>
+       <source>havana</source>
        <known>0</known>
        <truncated>0</truncated>
        <remark>overlapping locus</remark>
@@ -11278,6 +11640,8 @@
          <stable_id>OTTHUMT00000402050</stable_id>
          <author>th2</author>
          <author_email>th2</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Processed_pseudogene</type>
          <transcript_class>Processed_pseudogene</transcript_class>
          <name>RP11-820K3.2-001</name>
          <evidence_set>
@@ -11307,6 +11671,7 @@
        <description>novel transcript</description>
        <name>RP11-820K3.5</name>
        <type>Novel_Transcript</type>
+       <source>havana</source>
        <known>0</known>
        <truncated>0</truncated>
        <author>th2</author>
@@ -11315,6 +11680,8 @@
          <stable_id>OTTHUMT00000402190</stable_id>
          <author>th2</author>
          <author_email>th2</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Antisense</type>
          <transcript_class>Antisense</transcript_class>
          <name>RP11-820K3.5-002</name>
          <evidence_set>
@@ -11354,6 +11721,8 @@
          <stable_id>OTTHUMT00000402191</stable_id>
          <author>th2</author>
          <author_email>th2</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Antisense</type>
          <transcript_class>Antisense</transcript_class>
          <name>RP11-820K3.5-001</name>
          <evidence_set>
@@ -11395,6 +11764,7 @@
        <description>ribosomal protein L31 (RPL31) pseudogene</description>
        <name>RP11-820K3.1</name>
        <type>Processed_pseudogene</type>
+       <source>havana</source>
        <known>0</known>
        <truncated>0</truncated>
        <author>mms</author>
@@ -11403,6 +11773,8 @@
          <stable_id>OTTHUMT00000349051</stable_id>
          <author>mms</author>
          <author_email>mms</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Processed_pseudogene</type>
          <transcript_class>Processed_pseudogene</transcript_class>
          <name>RP11-820K3.1-001</name>
          <evidence_set>
@@ -11440,6 +11812,7 @@
        <description>AK4P3 adenylate kinase 4 pseudogene 3</description>
        <name>RP11-820K3.6</name>
        <type>Processed_pseudogene</type>
+       <source>havana</source>
        <known>0</known>
        <truncated>0</truncated>
        <author>th2</author>
@@ -11448,6 +11821,8 @@
          <stable_id>OTTHUMT00000402192</stable_id>
          <author>th2</author>
          <author_email>th2</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Processed_pseudogene</type>
          <transcript_class>Processed_pseudogene</transcript_class>
          <name>RP11-820K3.6-001</name>
          <evidence_set>
@@ -11481,6 +11856,7 @@
        <description>chromosome 12 open reading frame 72</description>
        <name>C12orf72</name>
        <type>Known_CDS</type>
+       <source>havana</source>
        <known>1</known>
        <truncated>0</truncated>
        <author>th2</author>
@@ -11490,6 +11866,8 @@
          <author>th2</author>
          <author_email>th2</author_email>
          <remark>alternative 5&apos; UTR</remark>
+         <source>ensembl</source>
+         <type>ensembl:Known_CDS</type>
          <transcript_class>Known_CDS</transcript_class>
          <name>RP11-467L13.1-002</name>
          <translation_start>31661954</translation_start>
@@ -11541,6 +11919,8 @@
          <author>th2</author>
          <author_email>th2</author_email>
          <remark>Annotation_remark- CCDS8724.1</remark>
+         <source>ensembl</source>
+         <type>ensembl:Known_CDS</type>
          <transcript_class>Known_CDS</transcript_class>
          <name>RP11-467L13.1-001</name>
          <translation_start>31661954</translation_start>
@@ -11596,6 +11976,8 @@
          <author>th2</author>
          <author_email>th2</author_email>
          <remark>alternative 5&apos; UTR</remark>
+         <source>ensembl</source>
+         <type>ensembl:Known_CDS</type>
          <transcript_class>Known_CDS</transcript_class>
          <name>RP11-467L13.1-003</name>
          <translation_start>31661954</translation_start>
@@ -11655,6 +12037,8 @@
          <author>th2</author>
          <author_email>th2</author_email>
          <remark>alternative 5&apos; UTR</remark>
+         <source>ensembl</source>
+         <type>ensembl:Known_CDS</type>
          <transcript_class>Known_CDS</transcript_class>
          <name>RP11-467L13.1-004</name>
          <translation_start>31661954</translation_start>
@@ -11708,6 +12092,8 @@
          <remark>alternative 5&apos; UTR</remark>
          <mRNA_end_not_found>1</mRNA_end_not_found>
          <cds_end_not_found>1</cds_end_not_found>
+         <source>ensembl</source>
+         <type>ensembl:Known_CDS</type>
          <transcript_class>Known_CDS</transcript_class>
          <name>RP11-467L13.1-006</name>
          <translation_start>31661954</translation_start>
@@ -11742,6 +12128,8 @@
          <stable_id>OTTHUMT00000402198</stable_id>
          <author>th2</author>
          <author_email>th2</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Putative_CDS</type>
          <transcript_class>Putative_CDS</transcript_class>
          <name>RP11-467L13.1-005</name>
          <translation_start>31661954</translation_start>
@@ -11786,6 +12174,7 @@
        <description>antagonist of mitotic exit network 1 homolog (S. cerevisiae)</description>
        <name>AMN1</name>
        <type>Known_CDS</type>
+       <source>havana</source>
        <known>1</known>
        <truncated>0</truncated>
        <remark>overlapping locus</remark>
@@ -11796,6 +12185,8 @@
          <author>th2</author>
          <author_email>th2</author_email>
          <remark>Annotation_remark- CCDS44858.1</remark>
+         <source>ensembl</source>
+         <type>ensembl:Known_CDS</type>
          <transcript_class>Known_CDS</transcript_class>
          <name>RP11-467L13.2-001</name>
          <translation_start>31729008</translation_start>
@@ -11880,6 +12271,8 @@
          <author_email>th2</author_email>
          <remark>alternative 5&apos; UTR</remark>
          <remark>upstream uORF</remark>
+         <source>ensembl</source>
+         <type>ensembl:Putative_CDS</type>
          <transcript_class>Putative_CDS</transcript_class>
          <name>RP11-467L13.2-005</name>
          <translation_start>31709409</translation_start>
@@ -11978,6 +12371,8 @@
          <stable_id>OTTHUMT00000402809</stable_id>
          <author>th2</author>
          <author_email>th2</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Putative_CDS</type>
          <transcript_class>Putative_CDS</transcript_class>
          <name>RP11-467L13.2-002</name>
          <translation_start>31689109</translation_start>
@@ -12049,6 +12444,8 @@
          <author>th2</author>
          <author_email>th2</author_email>
          <remark>upstream uORF</remark>
+         <source>ensembl</source>
+         <type>ensembl:Putative_CDS</type>
          <transcript_class>Putative_CDS</transcript_class>
          <name>RP11-467L13.2-004</name>
          <translation_start>31709409</translation_start>
@@ -12141,6 +12538,8 @@
          <author_email>th2</author_email>
          <remark>upstream uORF</remark>
          <remark>Annotation_remark- There is a uORF in the novel exons of this transcript but due to a lack of conservation I&apos;ve used this downstream ATG</remark>
+         <source>ensembl</source>
+         <type>ensembl:Putative_CDS</type>
          <transcript_class>Putative_CDS</transcript_class>
          <name>RP11-467L13.2-003</name>
          <translation_start>31689109</translation_start>
@@ -12226,6 +12625,8 @@
          <remark>alternative 5&apos; UTR</remark>
          <mRNA_end_not_found>1</mRNA_end_not_found>
          <cds_end_not_found>1</cds_end_not_found>
+         <source>ensembl</source>
+         <type>ensembl:Putative_CDS</type>
          <transcript_class>Putative_CDS</transcript_class>
          <name>RP11-467L13.2-006</name>
          <translation_start>31709409</translation_start>
@@ -12302,6 +12703,8 @@
          <remark>not organism-supported</remark>
          <mRNA_end_not_found>1</mRNA_end_not_found>
          <cds_end_not_found>1</cds_end_not_found>
+         <source>ensembl</source>
+         <type>ensembl:Putative_CDS</type>
          <transcript_class>Putative_CDS</transcript_class>
          <name>RP11-467L13.2-012</name>
          <translation_start>31709409</translation_start>
@@ -12354,6 +12757,8 @@
          <author_email>aeb</author_email>
          <mRNA_end_not_found>1</mRNA_end_not_found>
          <cds_end_not_found>1</cds_end_not_found>
+         <source>ensembl</source>
+         <type>ensembl:Putative_CDS</type>
          <transcript_class>Putative_CDS</transcript_class>
          <name>RP11-467L13.2-009</name>
          <translation_start>31709409</translation_start>
@@ -12406,6 +12811,8 @@
          <author_email>aeb</author_email>
          <mRNA_end_not_found>1</mRNA_end_not_found>
          <cds_end_not_found>1</cds_end_not_found>
+         <source>ensembl</source>
+         <type>ensembl:Putative_CDS</type>
          <transcript_class>Putative_CDS</transcript_class>
          <name>RP11-467L13.2-010</name>
          <translation_start>31709409</translation_start>
@@ -12480,6 +12887,8 @@
          <stable_id>OTTHUMT00000402994</stable_id>
          <author>th2</author>
          <author_email>th2</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Transcript</type>
          <transcript_class>Transcript</transcript_class>
          <name>RP11-467L13.2-011</name>
          <evidence_set>
@@ -12527,6 +12936,8 @@
          <stable_id>OTTHUMT00000402995</stable_id>
          <author>th2</author>
          <author_email>th2</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Transcript</type>
          <transcript_class>Transcript</transcript_class>
          <name>RP11-467L13.2-008</name>
          <evidence_set>
@@ -12566,6 +12977,8 @@
          <stable_id>OTTHUMT00000402813</stable_id>
          <author>th2</author>
          <author_email>th2</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Transcript</type>
          <transcript_class>Transcript</transcript_class>
          <name>RP11-467L13.2-007</name>
          <evidence_set>
@@ -12631,6 +13044,7 @@
        <description>stathmin 1 pseudogene 1</description>
        <name>STMN1P1</name>
        <type>Processed_pseudogene</type>
+       <source>havana</source>
        <known>0</known>
        <truncated>0</truncated>
        <remark>overlapping locus</remark>
@@ -12640,6 +13054,8 @@
          <stable_id>OTTHUMT00000473565</stable_id>
          <author>jel</author>
          <author_email>jel</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Processed_pseudogene</type>
          <transcript_class>Processed_pseudogene</transcript_class>
          <name>RP11-467L13.6-001</name>
          <evidence_set>
@@ -12685,6 +13101,7 @@
        <description>novel transcript, antisense to AMN1</description>
        <name>RP11-467L13.7</name>
        <type>Novel_Transcript</type>
+       <source>havana</source>
        <known>0</known>
        <truncated>0</truncated>
        <author>gm5</author>
@@ -12693,6 +13110,8 @@
          <stable_id>OTTHUMT00000474575</stable_id>
          <author>gm5</author>
          <author_email>gm5</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Antisense</type>
          <transcript_class>Antisense</transcript_class>
          <name>RP11-467L13.7-001</name>
          <evidence_set>
@@ -12734,6 +13153,7 @@
        <description>dpy-30 homolog (C. elegans) (DPY30) pseudogene</description>
        <name>RP11-467L13.4</name>
        <type>Processed_pseudogene</type>
+       <source>havana</source>
        <known>0</known>
        <truncated>0</truncated>
        <author>aeb</author>
@@ -12744,6 +13164,8 @@
          <author_email>dm4</author_email>
          <remark>not for VEGA</remark>
          <remark>Annotation_remark- 3&apos; UTR for af2 pseudogene project  june 2012</remark>
+         <source>ensembl</source>
+         <type>ensembl:Transcript</type>
          <transcript_class>Transcript</transcript_class>
          <name>RP11-467L13.4-002</name>
          <exon_set>
@@ -12761,6 +13183,8 @@
          <stable_id>OTTHUMT00000402997</stable_id>
          <author>dm4</author>
          <author_email>dm4</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Processed_pseudogene</type>
          <transcript_class>Processed_pseudogene</transcript_class>
          <name>RP11-467L13.4-001</name>
          <evidence_set>
@@ -12794,6 +13218,7 @@
        <description>interferon induced transmembrane protein 3 (1-8U) (IFITM3) pseudogene</description>
        <name>RP11-467L13.5</name>
        <type>Processed_pseudogene</type>
+       <source>havana</source>
        <known>0</known>
        <truncated>0</truncated>
        <author>th2</author>
@@ -12802,6 +13227,8 @@
          <stable_id>OTTHUMT00000402998</stable_id>
          <author>th2</author>
          <author_email>th2</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Processed_pseudogene</type>
          <transcript_class>Processed_pseudogene</transcript_class>
          <name>RP11-467L13.5-001</name>
          <evidence_set>
@@ -12831,6 +13258,7 @@
        <description>H3 histone, family 3C</description>
        <name>H3F3C</name>
        <type>Known_CDS</type>
+       <source>havana</source>
        <known>1</known>
        <truncated>0</truncated>
        <author>th2</author>
@@ -12840,6 +13268,8 @@
          <author>th2</author>
          <author_email>th2</author_email>
          <remark>Annotation_remark- based on cDNA BC066906</remark>
+         <source>ensembl</source>
+         <type>ensembl:Known_CDS</type>
          <transcript_class>Known_CDS</transcript_class>
          <name>RP11-428G5.3-001</name>
          <translation_start>31792166</translation_start>
@@ -12876,6 +13306,7 @@
        <description>basic transcription factor 3-like 4 (BTF3L4) pseudogene</description>
        <name>RP11-428G5.4</name>
        <type>Processed_pseudogene</type>
+       <source>havana</source>
        <known>0</known>
        <truncated>0</truncated>
        <author>th2</author>
@@ -12884,6 +13315,8 @@
          <stable_id>OTTHUMT00000402999</stable_id>
          <author>th2</author>
          <author_email>th2</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Processed_pseudogene</type>
          <transcript_class>Processed_pseudogene</transcript_class>
          <name>RP11-428G5.4-001</name>
          <evidence_set>
@@ -12913,6 +13346,7 @@
        <description>novel transcript</description>
        <name>RP11-428G5.5</name>
        <type>Transcript</type>
+       <source>havana</source>
        <known>0</known>
        <truncated>0</truncated>
        <author>th2</author>
@@ -12921,6 +13355,8 @@
          <stable_id>OTTHUMT00000403000</stable_id>
          <author>th2</author>
          <author_email>th2</author_email>
+         <source>ensembl</source>
+         <type>ensembl:lincRNA</type>
          <transcript_class>lincRNA</transcript_class>
          <name>RP11-428G5.5-001</name>
          <evidence_set>
@@ -12954,6 +13390,7 @@
        <description>Impact homolog (mouse) (IMPACT) pseudogene</description>
        <name>RP11-428G5.6</name>
        <type>Processed_pseudogene</type>
+       <source>havana</source>
        <known>0</known>
        <truncated>0</truncated>
        <author>th2</author>
@@ -12962,6 +13399,8 @@
          <stable_id>OTTHUMT00000403001</stable_id>
          <author>th2</author>
          <author_email>th2</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Processed_pseudogene</type>
          <transcript_class>Processed_pseudogene</transcript_class>
          <name>RP11-428G5.6-001</name>
          <evidence_set>
@@ -12995,6 +13434,7 @@
        <description>ribosomal protein, large, P2 (RPLP2) pseudogene</description>
        <name>RP11-428G5.1</name>
        <type>Processed_pseudogene</type>
+       <source>havana</source>
        <known>0</known>
        <truncated>0</truncated>
        <author>mms</author>
@@ -13003,6 +13443,8 @@
          <stable_id>OTTHUMT00000349053</stable_id>
          <author>mms</author>
          <author_email>mms</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Processed_pseudogene</type>
          <transcript_class>Processed_pseudogene</transcript_class>
          <name>RP11-428G5.1-001</name>
          <evidence_set>
@@ -13036,6 +13478,7 @@
        <description>ribosomal protein L12 (RPL12) pseudogene</description>
        <name>RP11-428G5.2</name>
        <type>Processed_pseudogene</type>
+       <source>havana</source>
        <known>0</known>
        <truncated>0</truncated>
        <author>th2</author>
@@ -13044,6 +13487,8 @@
          <stable_id>OTTHUMT00000349059</stable_id>
          <author>th2</author>
          <author_email>th2</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Processed_pseudogene</type>
          <transcript_class>Processed_pseudogene</transcript_class>
          <name>RP11-428G5.2-001</name>
          <evidence_set>
@@ -13077,6 +13522,7 @@
        <description>family with sequence similarity 98, member B (FAM98B) pseudogene</description>
        <name>RP11-428G5.7</name>
        <type>Processed_pseudogene</type>
+       <source>havana</source>
        <known>0</known>
        <truncated>0</truncated>
        <author>th2</author>
@@ -13085,6 +13531,8 @@
          <stable_id>OTTHUMT00000403002</stable_id>
          <author>th2</author>
          <author_email>th2</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Processed_pseudogene</type>
          <transcript_class>Processed_pseudogene</transcript_class>
          <name>RP11-428G5.7-001</name>
          <evidence_set>
@@ -13114,6 +13562,7 @@
        <description>KIAA1551</description>
        <name>KIAA1551</name>
        <type>Known_CDS</type>
+       <source>havana</source>
        <known>1</known>
        <truncated>0</truncated>
        <synonym>C12orf35</synonym>
@@ -13123,6 +13572,8 @@
          <stable_id>OTTHUMT00000403333</stable_id>
          <author>th2</author>
          <author_email>th2</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Transcript</type>
          <transcript_class>Transcript</transcript_class>
          <name>AC016957.1-004</name>
          <evidence_set>
@@ -13165,6 +13616,8 @@
          <remark>alternative 5&apos; UTR</remark>
          <mRNA_end_not_found>1</mRNA_end_not_found>
          <cds_end_not_found>1</cds_end_not_found>
+         <source>ensembl</source>
+         <type>ensembl:Known_CDS</type>
          <transcript_class>Known_CDS</transcript_class>
          <name>AC016957.1-005</name>
          <translation_start>31980956</translation_start>
@@ -13214,6 +13667,8 @@
          <remark>Annotation_remark- CCDS8725.2</remark>
          <remark>Annotation_remark- corf</remark>
          <remark>Annotation_remark- extended by script extend_transcripts_to_polyA.pl</remark>
+         <source>ensembl</source>
+         <type>ensembl:Known_CDS</type>
          <transcript_class>Known_CDS</transcript_class>
          <name>AC016957.1-001</name>
          <translation_start>31980956</translation_start>
@@ -13408,6 +13863,8 @@
          <stable_id>OTTHUMT00000403335</stable_id>
          <author>th2</author>
          <author_email>th2</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Transcript</type>
          <transcript_class>Transcript</transcript_class>
          <name>AC016957.1-006</name>
          <evidence_set>
@@ -13467,6 +13924,8 @@
          <stable_id>OTTHUMT00000403336</stable_id>
          <author>th2</author>
          <author_email>th2</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Transcript</type>
          <transcript_class>Transcript</transcript_class>
          <name>AC016957.1-007</name>
          <evidence_set>
@@ -13514,6 +13973,8 @@
          <stable_id>OTTHUMT00000403337</stable_id>
          <author>th2</author>
          <author_email>th2</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Transcript</type>
          <transcript_class>Transcript</transcript_class>
          <name>AC016957.1-008</name>
          <evidence_set>
@@ -13557,6 +14018,8 @@
          <remark>not organism-supported</remark>
          <mRNA_end_not_found>1</mRNA_end_not_found>
          <cds_end_not_found>1</cds_end_not_found>
+         <source>ensembl</source>
+         <type>ensembl:Known_CDS</type>
          <transcript_class>Known_CDS</transcript_class>
          <name>AC016957.1-002</name>
          <translation_start>31980956</translation_start>
@@ -13599,6 +14062,8 @@
          <stable_id>OTTHUMT00000403339</stable_id>
          <author>th2</author>
          <author_email>th2</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Retained_intron</type>
          <transcript_class>Retained_intron</transcript_class>
          <name>AC016957.1-003</name>
          <evidence_set>
@@ -13632,6 +14097,7 @@
        <description>novel transcript</description>
        <name>RP11-50I19.2</name>
        <type>Transcript</type>
+       <source>havana</source>
        <known>0</known>
        <truncated>0</truncated>
        <author>gm5</author>
@@ -13640,6 +14106,8 @@
          <stable_id>OTTHUMT00000474578</stable_id>
          <author>gm5</author>
          <author_email>gm5</author_email>
+         <source>ensembl</source>
+         <type>ensembl:lincRNA</type>
          <transcript_class>lincRNA</transcript_class>
          <name>RP11-50I19.2-001</name>
          <evidence_set>
@@ -13669,6 +14137,7 @@
        <description>COX assembly mitochondrial protein homolog (S. cerevisiae) (CMC1) pseudogene</description>
        <name>RP11-50I19.1</name>
        <type>Processed_pseudogene</type>
+       <source>havana</source>
        <known>0</known>
        <truncated>0</truncated>
        <author>th2</author>
@@ -13677,6 +14146,8 @@
          <stable_id>OTTHUMT00000403340</stable_id>
          <author>th2</author>
          <author_email>th2</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Processed_pseudogene</type>
          <transcript_class>Processed_pseudogene</transcript_class>
          <name>RP11-50I19.1-001</name>
          <evidence_set>
@@ -13710,6 +14181,7 @@
        <description>gamma-aminobutyric acid (GABA) A receptor, pi (GABRP) pseudogene</description>
        <name>RP11-843B15.1</name>
        <type>Processed_pseudogene</type>
+       <source>havana</source>
        <known>0</known>
        <truncated>0</truncated>
        <author>th2</author>
@@ -13718,6 +14190,8 @@
          <stable_id>OTTHUMT00000403377</stable_id>
          <author>th2</author>
          <author_email>th2</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Processed_pseudogene</type>
          <transcript_class>Processed_pseudogene</transcript_class>
          <name>RP11-843B15.1-001</name>
          <evidence_set>
@@ -13751,6 +14225,7 @@
        <description>aurora kinase B (AURKB) pseudogene</description>
        <name>RP11-843B15.3</name>
        <type>Processed_pseudogene</type>
+       <source>havana</source>
        <known>0</known>
        <truncated>0</truncated>
        <author>ib2</author>
@@ -13759,6 +14234,8 @@
          <stable_id>OTTHUMT00000469137</stable_id>
          <author>ib2</author>
          <author_email>ib2</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Processed_pseudogene</type>
          <transcript_class>Processed_pseudogene</transcript_class>
          <name>RP11-843B15.3-001</name>
          <evidence_set>
@@ -13784,6 +14261,7 @@
        <description>novel transcript</description>
        <name>RP11-843B15.2</name>
        <type>Novel_Transcript</type>
+       <source>havana</source>
        <known>0</known>
        <truncated>0</truncated>
        <author>th2</author>
@@ -13792,6 +14270,8 @@
          <stable_id>OTTHUMT00000403378</stable_id>
          <author>th2</author>
          <author_email>th2</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Antisense</type>
          <transcript_class>Antisense</transcript_class>
          <name>RP11-843B15.2-001</name>
          <evidence_set>
@@ -13833,6 +14313,7 @@
        <description>bicaudal D homolog 1 (Drosophila)</description>
        <name>BICD1</name>
        <type>Known_CDS</type>
+       <source>havana</source>
        <known>1</known>
        <truncated>0</truncated>
        <remark>overlapping locus</remark>
@@ -13842,6 +14323,8 @@
          <stable_id>OTTHUMT00000403880</stable_id>
          <author>th2</author>
          <author_email>th2</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Putative_CDS</type>
          <transcript_class>Putative_CDS</transcript_class>
          <name>RP11-208B19.1-005</name>
          <translation_start>32107332</translation_start>
@@ -13868,6 +14351,8 @@
          <stable_id>OTTHUMT00000403881</stable_id>
          <author>th2</author>
          <author_email>th2</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Putative_CDS</type>
          <transcript_class>Putative_CDS</transcript_class>
          <name>RP11-208B19.1-007</name>
          <translation_start>32107332</translation_start>
@@ -13903,6 +14388,8 @@
          <author>th2</author>
          <author_email>th2</author_email>
          <remark>Annotation_remark- CCDS44859.1</remark>
+         <source>ensembl</source>
+         <type>ensembl:Known_CDS</type>
          <transcript_class>Known_CDS</transcript_class>
          <name>RP11-208B19.1-001</name>
          <translation_start>32107332</translation_start>
@@ -14006,6 +14493,8 @@
          <author>th2</author>
          <author_email>th2</author_email>
          <remark>Annotation_remark- CCDS8726.1</remark>
+         <source>ensembl</source>
+         <type>ensembl:Known_CDS</type>
          <transcript_class>Known_CDS</transcript_class>
          <name>RP11-208B19.1-002</name>
          <translation_start>32107332</translation_start>
@@ -14112,6 +14601,8 @@
          <stable_id>OTTHUMT00000403381</stable_id>
          <author>th2</author>
          <author_email>th2</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Nonsense_mediated_decay</type>
          <transcript_class>Nonsense_mediated_decay</transcript_class>
          <name>RP11-208B19.1-003</name>
          <translation_start>32107332</translation_start>
@@ -14210,6 +14701,8 @@
          <stable_id>OTTHUMT00000403882</stable_id>
          <author>th2</author>
          <author_email>th2</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Putative_CDS</type>
          <transcript_class>Putative_CDS</transcript_class>
          <name>RP11-208B19.1-006</name>
          <translation_start>32107332</translation_start>
@@ -14254,6 +14747,8 @@
          <author_email>mpk</author_email>
          <mRNA_start_not_found>1</mRNA_start_not_found>
          <cds_start_not_found>1</cds_start_not_found>
+         <source>ensembl</source>
+         <type>ensembl:Putative_CDS</type>
          <transcript_class>Putative_CDS</transcript_class>
          <name>RP11-208B19.1-008</name>
          <translation_start>32328402</translation_start>
@@ -14294,6 +14789,8 @@
          <author_email>gm5</author_email>
          <mRNA_start_not_found>1</mRNA_start_not_found>
          <cds_start_not_found>1</cds_start_not_found>
+         <source>ensembl</source>
+         <type>ensembl:Putative_CDS</type>
          <transcript_class>Putative_CDS</transcript_class>
          <name>RP11-208B19.1-004</name>
          <translation_start>32334517</translation_start>
@@ -14344,6 +14841,8 @@
          <stable_id>OTTHUMT00000403884</stable_id>
          <author>th2</author>
          <author_email>th2</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Retained_intron</type>
          <transcript_class>Retained_intron</transcript_class>
          <name>RP11-208B19.1-009</name>
          <evidence_set>
@@ -14375,6 +14874,8 @@
          <stable_id>OTTHUMT00000474639</stable_id>
          <author>gm5</author>
          <author_email>gm5</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Retained_intron</type>
          <transcript_class>Retained_intron</transcript_class>
          <name>RP11-208B19.1-010</name>
          <evidence_set>
@@ -14404,6 +14905,7 @@
        <description>novel transcript, sense intronic to BICD1</description>
        <name>RP11-843B15.4</name>
        <type>Transcript</type>
+       <source>havana</source>
        <known>0</known>
        <truncated>0</truncated>
        <remark>overlapping locus</remark>
@@ -14413,6 +14915,8 @@
          <stable_id>OTTHUMT00000474581</stable_id>
          <author>gm5</author>
          <author_email>gm5</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Sense_intronic</type>
          <transcript_class>Sense_intronic</transcript_class>
          <name>RP11-843B15.4-001</name>
          <evidence_set>
@@ -14438,6 +14942,7 @@
        <description>WW domain binding protein 2 (WBP2) pseudogene</description>
        <name>RP11-956A19.1</name>
        <type>Processed_pseudogene</type>
+       <source>havana</source>
        <known>0</known>
        <truncated>0</truncated>
        <author>th2</author>
@@ -14446,6 +14951,8 @@
          <stable_id>OTTHUMT00000403885</stable_id>
          <author>th2</author>
          <author_email>th2</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Processed_pseudogene</type>
          <transcript_class>Processed_pseudogene</transcript_class>
          <name>RP11-956A19.1-001</name>
          <evidence_set>
@@ -14479,6 +14986,7 @@
        <description>novel transcript, sense intronic to BICD1</description>
        <name>RP11-817I4.1</name>
        <type>Transcript</type>
+       <source>havana</source>
        <known>0</known>
        <truncated>0</truncated>
        <remark>overlapping locus</remark>
@@ -14488,6 +14996,8 @@
          <stable_id>OTTHUMT00000474620</stable_id>
          <author>gm5</author>
          <author_email>gm5</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Sense_intronic</type>
          <transcript_class>Sense_intronic</transcript_class>
          <name>RP11-817I4.1-001</name>
          <evidence_set>
@@ -14525,6 +15035,7 @@
        <description>novel transcript, sense intronic to BICD1</description>
        <name>RP11-817I4.2</name>
        <type>Transcript</type>
+       <source>havana</source>
        <known>0</known>
        <truncated>0</truncated>
        <remark>overlapping locus</remark>
@@ -14535,6 +15046,8 @@
          <author>gm5</author>
          <author_email>gm5</author_email>
          <remark>Annotation_remark- 3&apos; extended by approx. 13bp to cover polyAseq site (gm5, sept 2013)</remark>
+         <source>ensembl</source>
+         <type>ensembl:Sense_intronic</type>
          <transcript_class>Sense_intronic</transcript_class>
          <name>RP11-817I4.2-001</name>
          <evidence_set>
@@ -14576,6 +15089,7 @@
        <description>FYVE, RhoGEF and PH domain containing 4</description>
        <name>FGD4</name>
        <type>Known_CDS</type>
+       <source>havana</source>
        <known>1</known>
        <truncated>0</truncated>
        <remark>Annotation_remark- G2C</remark>
@@ -14586,6 +15100,8 @@
          <author>aeb</author>
          <author_email>aeb</author_email>
          <remark>not organism-supported</remark>
+         <source>ensembl</source>
+         <type>ensembl:Putative_CDS</type>
          <transcript_class>Putative_CDS</transcript_class>
          <name>AC090440.1-013</name>
          <translation_start>32399794</translation_start>
@@ -14748,6 +15264,8 @@
          <stable_id>OTTHUMT00000404119</stable_id>
          <author>th2</author>
          <author_email>th2</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Transcript</type>
          <transcript_class>Transcript</transcript_class>
          <name>AC090440.1-016</name>
          <evidence_set>
@@ -14787,6 +15305,8 @@
          <stable_id>OTTHUMT00000390887</stable_id>
          <author>th2</author>
          <author_email>th2</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Putative_CDS</type>
          <transcript_class>Putative_CDS</transcript_class>
          <name>AC090440.1-010</name>
          <translation_start>32486134</translation_start>
@@ -14946,6 +15466,8 @@
          <author>th2</author>
          <author_email>th2</author_email>
          <remark>alternative 5&apos; UTR</remark>
+         <source>ensembl</source>
+         <type>ensembl:Known_CDS</type>
          <transcript_class>Known_CDS</transcript_class>
          <name>AC090440.1-005</name>
          <translation_start>32576358</translation_start>
@@ -14996,6 +15518,8 @@
          <stable_id>OTTHUMT00000268022</stable_id>
          <author>th2</author>
          <author_email>th2</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Retained_intron</type>
          <transcript_class>Retained_intron</transcript_class>
          <name>AC090440.1-006</name>
          <evidence_set>
@@ -15039,6 +15563,8 @@
          <stable_id>OTTHUMT00000268023</stable_id>
          <author>th2</author>
          <author_email>th2</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Transcript</type>
          <transcript_class>Transcript</transcript_class>
          <name>AC090440.1-007</name>
          <evidence_set>
@@ -15086,6 +15612,8 @@
          <stable_id>OTTHUMT00000268018</stable_id>
          <author>th2</author>
          <author_email>th2</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Nonsense_mediated_decay</type>
          <transcript_class>Nonsense_mediated_decay</transcript_class>
          <name>AC090440.1-002</name>
          <translation_start>32576358</translation_start>
@@ -15251,6 +15779,8 @@
          <remark>QC splicing correct</remark>
          <remark>dotter confirmed</remark>
          <remark>not organism-supported</remark>
+         <source>ensembl</source>
+         <type>ensembl:Nonsense_mediated_decay</type>
          <transcript_class>Nonsense_mediated_decay</transcript_class>
          <name>AC090440.1-014</name>
          <translation_start>32576358</translation_start>
@@ -15398,6 +15928,8 @@
          <author>th2</author>
          <author_email>th2</author_email>
          <remark>Annotation_remark- CCDS8727.1</remark>
+         <source>ensembl</source>
+         <type>ensembl:Known_CDS</type>
          <transcript_class>Known_CDS</transcript_class>
          <name>AC090440.1-001</name>
          <translation_start>32576358</translation_start>
@@ -15668,6 +16200,8 @@
          <stable_id>OTTHUMT00000268024</stable_id>
          <author>th2</author>
          <author_email>th2</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Transcript</type>
          <transcript_class>Transcript</transcript_class>
          <name>AC090440.1-008</name>
          <evidence_set>
@@ -15715,6 +16249,8 @@
          <stable_id>OTTHUMT00000268019</stable_id>
          <author>th2</author>
          <author_email>th2</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Nonsense_mediated_decay</type>
          <transcript_class>Nonsense_mediated_decay</transcript_class>
          <name>AC090440.1-003</name>
          <translation_start>32576358</translation_start>
@@ -15869,6 +16405,8 @@
          <stable_id>OTTHUMT00000268025</stable_id>
          <author>th2</author>
          <author_email>th2</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Transcript</type>
          <transcript_class>Transcript</transcript_class>
          <name>AC090440.1-009</name>
          <evidence_set>
@@ -15925,6 +16463,8 @@
          <author>th2</author>
          <author_email>th2</author_email>
          <remark>not organism-supported</remark>
+         <source>ensembl</source>
+         <type>ensembl:Putative_CDS</type>
          <transcript_class>Putative_CDS</transcript_class>
          <name>AC090440.1-015</name>
          <translation_start>32582147</translation_start>
@@ -16075,6 +16615,8 @@
          <remark>Annotation_remark- gencode6_bVI_multi_698/chr12:32709808-32709929. novel RT-PCRseq exons checking for U Lausanne (23/02/2012 - ib2)</remark>
          <mRNA_end_not_found>1</mRNA_end_not_found>
          <cds_end_not_found>1</cds_end_not_found>
+         <source>ensembl</source>
+         <type>ensembl:Known_CDS</type>
          <transcript_class>Known_CDS</transcript_class>
          <name>AC090440.1-017</name>
          <translation_start>32576358</translation_start>
@@ -16125,6 +16667,8 @@
          <stable_id>OTTHUMT00000390888</stable_id>
          <author>th2</author>
          <author_email>th2</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Putative_CDS</type>
          <transcript_class>Putative_CDS</transcript_class>
          <name>AC090440.1-011</name>
          <translation_start>32534408</translation_start>
@@ -16289,6 +16833,8 @@
          <author_email>th2</author_email>
          <mRNA_start_not_found>1</mRNA_start_not_found>
          <cds_start_not_found>1</cds_start_not_found>
+         <source>ensembl</source>
+         <type>ensembl:Nonsense_mediated_decay</type>
          <transcript_class>Nonsense_mediated_decay</transcript_class>
          <name>AC090440.1-004</name>
          <translation_start>32582379</translation_start>
@@ -16461,6 +17007,7 @@
        <description>dynamin 1-like</description>
        <name>DNM1L</name>
        <type>Known_CDS</type>
+       <source>havana</source>
        <known>1</known>
        <truncated>0</truncated>
        <author>aeb</author>
@@ -16471,6 +17018,8 @@
          <author_email>th2</author_email>
          <remark>upstream ATG</remark>
          <remark>Annotation_remark- CCDS8730.1</remark>
+         <source>ensembl</source>
+         <type>ensembl:Known_CDS</type>
          <transcript_class>Known_CDS</transcript_class>
          <name>RP11-8P13.2-001</name>
          <translation_start>32679364</translation_start>
@@ -16666,6 +17215,8 @@
          <author>th2</author>
          <author_email>th2</author_email>
          <remark>Annotation_remark- There is a human swissprot isoform for this (O00429-6) but it&apos;s not in otterlace?</remark>
+         <source>ensembl</source>
+         <type>ensembl:Known_CDS</type>
          <transcript_class>Known_CDS</transcript_class>
          <name>RP11-8P13.2-002</name>
          <translation_start>32679364</translation_start>
@@ -16857,6 +17408,8 @@
          <author>th2</author>
          <author_email>th2</author_email>
          <remark>Annotation_remark- CCDS8729.1</remark>
+         <source>ensembl</source>
+         <type>ensembl:Known_CDS</type>
          <transcript_class>Known_CDS</transcript_class>
          <name>RP11-8P13.2-003</name>
          <translation_start>32679364</translation_start>
@@ -17040,6 +17593,8 @@
          <author>th2</author>
          <author_email>th2</author_email>
          <remark>not organism-supported</remark>
+         <source>ensembl</source>
+         <type>ensembl:Novel_CDS</type>
          <transcript_class>Novel_CDS</transcript_class>
          <name>RP11-8P13.2-004</name>
          <translation_start>32679364</translation_start>
@@ -17214,6 +17769,8 @@
          <stable_id>OTTHUMT00000404126</stable_id>
          <author>th2</author>
          <author_email>th2</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Transcript</type>
          <transcript_class>Transcript</transcript_class>
          <name>RP11-8P13.2-022</name>
          <evidence_set>
@@ -17286,6 +17843,8 @@
          <author>th2</author>
          <author_email>th2</author_email>
          <remark>Annotation_remark- CCDS8728.1</remark>
+         <source>ensembl</source>
+         <type>ensembl:Known_CDS</type>
          <transcript_class>Known_CDS</transcript_class>
          <name>RP11-8P13.2-005</name>
          <translation_start>32679364</translation_start>
@@ -17456,6 +18015,8 @@
          <stable_id>OTTHUMT00000404128</stable_id>
          <author>th2</author>
          <author_email>th2</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Retained_intron</type>
          <transcript_class>Retained_intron</transcript_class>
          <name>RP11-8P13.2-012</name>
          <evidence_set>
@@ -17499,6 +18060,8 @@
          <stable_id>OTTHUMT00000404129</stable_id>
          <author>th2</author>
          <author_email>th2</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Transcript</type>
          <transcript_class>Transcript</transcript_class>
          <name>RP11-8P13.2-013</name>
          <evidence_set>
@@ -17562,6 +18125,8 @@
          <stable_id>OTTHUMT00000404130</stable_id>
          <author>th2</author>
          <author_email>th2</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Nonsense_mediated_decay</type>
          <transcript_class>Nonsense_mediated_decay</transcript_class>
          <name>RP11-8P13.2-014</name>
          <translation_start>32679364</translation_start>
@@ -17622,6 +18187,8 @@
          <author_email>aeb</author_email>
          <mRNA_end_not_found>1</mRNA_end_not_found>
          <cds_end_not_found>1</cds_end_not_found>
+         <source>ensembl</source>
+         <type>ensembl:Novel_CDS</type>
          <transcript_class>Novel_CDS</transcript_class>
          <name>RP11-8P13.2-015</name>
          <translation_start>32679364</translation_start>
@@ -17698,6 +18265,8 @@
          <author_email>aeb</author_email>
          <mRNA_end_not_found>1</mRNA_end_not_found>
          <cds_end_not_found>1</cds_end_not_found>
+         <source>ensembl</source>
+         <type>ensembl:Novel_CDS</type>
          <transcript_class>Novel_CDS</transcript_class>
          <name>RP11-8P13.2-016</name>
          <translation_start>32679364</translation_start>
@@ -17756,6 +18325,8 @@
          <stable_id>OTTHUMT00000404133</stable_id>
          <author>th2</author>
          <author_email>th2</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Transcript</type>
          <transcript_class>Transcript</transcript_class>
          <name>RP11-8P13.2-017</name>
          <evidence_set>
@@ -17803,6 +18374,8 @@
          <stable_id>OTTHUMT00000404134</stable_id>
          <author>th2</author>
          <author_email>th2</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Nonsense_mediated_decay</type>
          <transcript_class>Nonsense_mediated_decay</transcript_class>
          <name>RP11-8P13.2-006</name>
          <translation_start>32679364</translation_start>
@@ -17893,6 +18466,8 @@
          <stable_id>OTTHUMT00000404135</stable_id>
          <author>th2</author>
          <author_email>th2</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Nonsense_mediated_decay</type>
          <transcript_class>Nonsense_mediated_decay</transcript_class>
          <name>RP11-8P13.2-007</name>
          <translation_start>32679364</translation_start>
@@ -17983,6 +18558,8 @@
          <stable_id>OTTHUMT00000404136</stable_id>
          <author>th2</author>
          <author_email>th2</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Known_CDS</type>
          <transcript_class>Known_CDS</transcript_class>
          <name>RP11-8P13.2-008</name>
          <translation_start>32679364</translation_start>
@@ -18157,6 +18734,8 @@
          <stable_id>OTTHUMT00000404137</stable_id>
          <author>th2</author>
          <author_email>th2</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Nonsense_mediated_decay</type>
          <transcript_class>Nonsense_mediated_decay</transcript_class>
          <name>RP11-8P13.2-009</name>
          <translation_start>32679364</translation_start>
@@ -18311,6 +18890,8 @@
          <stable_id>OTTHUMT00000404138</stable_id>
          <author>th2</author>
          <author_email>th2</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Novel_CDS</type>
          <transcript_class>Novel_CDS</transcript_class>
          <name>RP11-8P13.2-010</name>
          <translation_start>32679364</translation_start>
@@ -18491,6 +19072,8 @@
          <author_email>aeb</author_email>
          <mRNA_end_not_found>1</mRNA_end_not_found>
          <cds_end_not_found>1</cds_end_not_found>
+         <source>ensembl</source>
+         <type>ensembl:Novel_CDS</type>
          <transcript_class>Novel_CDS</transcript_class>
          <name>RP11-8P13.2-018</name>
          <translation_start>32679364</translation_start>
@@ -18565,6 +19148,8 @@
          <stable_id>OTTHUMT00000404140</stable_id>
          <author>th2</author>
          <author_email>th2</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Transcript</type>
          <transcript_class>Transcript</transcript_class>
          <name>RP11-8P13.2-019</name>
          <evidence_set>
@@ -18637,6 +19222,8 @@
          <remark>not organism-supported</remark>
          <mRNA_start_not_found>1</mRNA_start_not_found>
          <cds_start_not_found>1</cds_start_not_found>
+         <source>ensembl</source>
+         <type>ensembl:Nonsense_mediated_decay</type>
          <transcript_class>Nonsense_mediated_decay</transcript_class>
          <name>RP11-8P13.2-011</name>
          <translation_start>32701415</translation_start>
@@ -18791,6 +19378,8 @@
          <stable_id>OTTHUMT00000404142</stable_id>
          <author>th2</author>
          <author_email>th2</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Retained_intron</type>
          <transcript_class>Retained_intron</transcript_class>
          <name>RP11-8P13.2-020</name>
          <evidence_set>
@@ -18822,6 +19411,8 @@
          <stable_id>OTTHUMT00000404143</stable_id>
          <author>th2</author>
          <author_email>th2</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Retained_intron</type>
          <transcript_class>Retained_intron</transcript_class>
          <name>RP11-8P13.2-021</name>
          <evidence_set>
@@ -18869,6 +19460,8 @@
          <stable_id>OTTHUMT00000404144</stable_id>
          <author>th2</author>
          <author_email>th2</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Retained_intron</type>
          <transcript_class>Retained_intron</transcript_class>
          <name>RP11-8P13.2-024</name>
          <evidence_set>
@@ -18926,6 +19519,8 @@
          <author_email>th2</author_email>
          <mRNA_start_not_found>1</mRNA_start_not_found>
          <cds_start_not_found>1</cds_start_not_found>
+         <source>ensembl</source>
+         <type>ensembl:Nonsense_mediated_decay</type>
          <transcript_class>Nonsense_mediated_decay</transcript_class>
          <name>RP11-8P13.2-023</name>
          <translation_start>32731486</translation_start>
@@ -19000,6 +19595,8 @@
          <stable_id>OTTHUMT00000404146</stable_id>
          <author>th2</author>
          <author_email>th2</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Retained_intron</type>
          <transcript_class>Retained_intron</transcript_class>
          <name>RP11-8P13.2-025</name>
          <evidence_set>
@@ -19031,6 +19628,8 @@
          <stable_id>OTTHUMT00000404147</stable_id>
          <author>th2</author>
          <author_email>th2</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Retained_intron</type>
          <transcript_class>Retained_intron</transcript_class>
          <name>RP11-8P13.2-026</name>
          <evidence_set>
@@ -19070,6 +19669,8 @@
          <stable_id>OTTHUMT00000404148</stable_id>
          <author>th2</author>
          <author_email>th2</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Retained_intron</type>
          <transcript_class>Retained_intron</transcript_class>
          <name>RP11-8P13.2-027</name>
          <evidence_set>
@@ -19109,6 +19710,8 @@
          <stable_id>OTTHUMT00000404149</stable_id>
          <author>th2</author>
          <author_email>th2</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Retained_intron</type>
          <transcript_class>Retained_intron</transcript_class>
          <name>RP11-8P13.2-028</name>
          <evidence_set>
@@ -19148,6 +19751,8 @@
          <stable_id>OTTHUMT00000404150</stable_id>
          <author>th2</author>
          <author_email>th2</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Retained_intron</type>
          <transcript_class>Retained_intron</transcript_class>
          <name>RP11-8P13.2-029</name>
          <evidence_set>
@@ -19189,6 +19794,7 @@
        <description>mitochondrial assembly of ribosomal large subunit 1 (MALSU1) pseudogene</description>
        <name>RP11-278C7.2</name>
        <type>Processed_pseudogene</type>
+       <source>havana</source>
        <known>0</known>
        <truncated>0</truncated>
        <author>mms</author>
@@ -19197,6 +19803,8 @@
          <stable_id>OTTHUMT00000404151</stable_id>
          <author>th2</author>
          <author_email>th2</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Processed_pseudogene</type>
          <transcript_class>Processed_pseudogene</transcript_class>
          <name>RP11-278C7.2-001</name>
          <evidence_set>
@@ -19222,6 +19830,7 @@
        <description>novel transcript, antisense to DNM1L</description>
        <name>RP11-278C7.4</name>
        <type>Novel_Transcript</type>
+       <source>havana</source>
        <known>0</known>
        <truncated>0</truncated>
        <author>gm5</author>
@@ -19230,6 +19839,8 @@
          <stable_id>OTTHUMT00000474658</stable_id>
          <author>gm5</author>
          <author_email>gm5</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Antisense</type>
          <transcript_class>Antisense</transcript_class>
          <name>RP11-278C7.4-001</name>
          <evidence_set>
@@ -19255,6 +19866,7 @@
        <description>nucleosome assembly protein 1-like 1 (NAP1L1) pseudogene</description>
        <name>RP11-278C7.1</name>
        <type>Processed_pseudogene</type>
+       <source>havana</source>
        <known>0</known>
        <truncated>0</truncated>
        <author>th2</author>
@@ -19263,6 +19875,8 @@
          <stable_id>OTTHUMT00000404152</stable_id>
          <author>th2</author>
          <author_email>th2</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Processed_pseudogene</type>
          <transcript_class>Processed_pseudogene</transcript_class>
          <name>RP11-278C7.1-001</name>
          <evidence_set>
@@ -19288,6 +19902,7 @@
        <description>tyrosyl-tRNA synthetase 2, mitochondrial</description>
        <name>YARS2</name>
        <type>Known_CDS</type>
+       <source>havana</source>
        <known>1</known>
        <truncated>0</truncated>
        <remark>overlapping locus</remark>
@@ -19297,6 +19912,8 @@
          <stable_id>OTTHUMT00000404447</stable_id>
          <author>th2</author>
          <author_email>th2</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Transcript</type>
          <transcript_class>Transcript</transcript_class>
          <name>RP11-8P13.3-003</name>
          <evidence_set>
@@ -19337,6 +19954,8 @@
          <author>th2</author>
          <author_email>th2</author_email>
          <remark>Annotation_remark- CCDS31770.1</remark>
+         <source>ensembl</source>
+         <type>ensembl:Known_CDS</type>
          <transcript_class>Known_CDS</transcript_class>
          <name>RP11-8P13.3-001</name>
          <translation_start>32755874</translation_start>
@@ -19418,6 +20037,8 @@
          <remark>not organism-supported</remark>
          <mRNA_start_not_found>1</mRNA_start_not_found>
          <cds_start_not_found>1</cds_start_not_found>
+         <source>ensembl</source>
+         <type>ensembl:Nonsense_mediated_decay</type>
          <transcript_class>Nonsense_mediated_decay</transcript_class>
          <name>RP11-8P13.3-002</name>
          <translation_start>32755796</translation_start>
@@ -19482,6 +20103,7 @@
        <description>novel transcript, sense intronic to YARS2</description>
        <name>RP11-278C7.3</name>
        <type>Transcript</type>
+       <source>havana</source>
        <known>0</known>
        <truncated>0</truncated>
        <remark>overlapping locus</remark>
@@ -19491,6 +20113,8 @@
          <stable_id>OTTHUMT00000474649</stable_id>
          <author>gm5</author>
          <author_email>gm5</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Sense_intronic</type>
          <transcript_class>Sense_intronic</transcript_class>
          <name>RP11-278C7.3-001</name>
          <evidence_set>
@@ -19520,6 +20144,7 @@
        <description>novel transcript, sense intronic to YARS2</description>
        <name>RP11-278C7.5</name>
        <type>Transcript</type>
+       <source>havana</source>
        <known>0</known>
        <truncated>0</truncated>
        <remark>overlapping locus</remark>
@@ -19529,6 +20154,8 @@
          <stable_id>OTTHUMT00000474662</stable_id>
          <author>gm5</author>
          <author_email>gm5</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Sense_intronic</type>
          <transcript_class>Sense_intronic</transcript_class>
          <name>RP11-278C7.5-001</name>
          <evidence_set>
@@ -19554,6 +20181,7 @@
        <description>plakophilin 2</description>
        <name>PKP2</name>
        <type>Known_CDS</type>
+       <source>havana</source>
        <known>1</known>
        <truncated>0</truncated>
        <remark>overlapping locus</remark>
@@ -19564,6 +20192,8 @@
          <author>gm5</author>
          <author_email>gm5</author_email>
          <remark>Annotation_remark- CCDS31771.1</remark>
+         <source>ensembl</source>
+         <type>ensembl:Known_CDS</type>
          <transcript_class>Known_CDS</transcript_class>
          <name>RP11-8P13.4-001</name>
          <translation_start>32896731</translation_start>
@@ -19707,6 +20337,8 @@
          <author>th2</author>
          <author_email>th2</author_email>
          <remark>Annotation_remark- CCDS8731.1</remark>
+         <source>ensembl</source>
+         <type>ensembl:Known_CDS</type>
          <transcript_class>Known_CDS</transcript_class>
          <name>RP11-8P13.4-002</name>
          <translation_start>32896731</translation_start>
@@ -19845,6 +20477,8 @@
          <stable_id>OTTHUMT00000404492</stable_id>
          <author>th2</author>
          <author_email>th2</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Retained_intron</type>
          <transcript_class>Retained_intron</transcript_class>
          <name>RP11-8P13.4-007</name>
          <evidence_set>
@@ -19876,6 +20510,8 @@
          <stable_id>OTTHUMT00000404493</stable_id>
          <author>th2</author>
          <author_email>th2</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Retained_intron</type>
          <transcript_class>Retained_intron</transcript_class>
          <name>RP11-8P13.4-006</name>
          <evidence_set>
@@ -19907,6 +20543,8 @@
          <stable_id>OTTHUMT00000404494</stable_id>
          <author>th2</author>
          <author_email>th2</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Retained_intron</type>
          <transcript_class>Retained_intron</transcript_class>
          <name>RP11-8P13.4-005</name>
          <evidence_set>
@@ -19946,6 +20584,8 @@
          <stable_id>OTTHUMT00000404495</stable_id>
          <author>th2</author>
          <author_email>th2</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Retained_intron</type>
          <transcript_class>Retained_intron</transcript_class>
          <name>RP11-8P13.4-004</name>
          <evidence_set>
@@ -19987,6 +20627,8 @@
          <author_email>gm5</author_email>
          <mRNA_start_not_found>1</mRNA_start_not_found>
          <cds_start_not_found>1</cds_start_not_found>
+         <source>ensembl</source>
+         <type>ensembl:Putative_CDS</type>
          <transcript_class>Putative_CDS</transcript_class>
          <name>RP11-8P13.4-003</name>
          <translation_start>32896601</translation_start>
@@ -20035,6 +20677,7 @@
        <description>novel transcript, sense intronic to PKP2</description>
        <name>RP11-8P13.5</name>
        <type>Transcript</type>
+       <source>havana</source>
        <known>0</known>
        <truncated>0</truncated>
        <remark>overlapping locus</remark>
@@ -20044,6 +20687,8 @@
          <stable_id>OTTHUMT00000474669</stable_id>
          <author>gm5</author>
          <author_email>gm5</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Sense_intronic</type>
          <transcript_class>Sense_intronic</transcript_class>
          <name>RP11-8P13.5-001</name>
          <evidence_set>
@@ -20069,6 +20714,7 @@
        <description>ribosomal protein L35a (RPL35A) pseudogene</description>
        <name>RP11-8P13.1</name>
        <type>Processed_pseudogene</type>
+       <source>havana</source>
        <known>0</known>
        <truncated>0</truncated>
        <author>th2</author>
@@ -20077,6 +20723,8 @@
          <stable_id>OTTHUMT00000349073</stable_id>
          <author>th2</author>
          <author_email>th2</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Processed_pseudogene</type>
          <transcript_class>Processed_pseudogene</transcript_class>
          <name>RP11-8P13.1-001</name>
          <evidence_set>
@@ -20114,6 +20762,7 @@
        <description>argininosuccinate synthase 1 (ASS1) pseudogene</description>
        <name>RP11-267D19.2</name>
        <type>Processed_pseudogene</type>
+       <source>havana</source>
        <known>0</known>
        <truncated>0</truncated>
        <author>th2</author>
@@ -20122,6 +20771,8 @@
          <stable_id>OTTHUMT00000404497</stable_id>
          <author>th2</author>
          <author_email>th2</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Processed_pseudogene</type>
          <transcript_class>Processed_pseudogene</transcript_class>
          <name>RP11-267D19.2-001</name>
          <evidence_set>
@@ -20155,6 +20806,7 @@
        <description>novel transcript</description>
        <name>RP11-267D19.1</name>
        <type>Transcript</type>
+       <source>havana</source>
        <known>0</known>
        <truncated>0</truncated>
        <author>th2</author>
@@ -20163,6 +20815,8 @@
          <stable_id>OTTHUMT00000404498</stable_id>
          <author>th2</author>
          <author_email>th2</author_email>
+         <source>ensembl</source>
+         <type>ensembl:lincRNA</type>
          <transcript_class>lincRNA</transcript_class>
          <name>RP11-267D19.1-001</name>
          <evidence_set>
@@ -20196,6 +20850,7 @@
        <description>synaptotagmin X</description>
        <name>SYT10</name>
        <type>Known_CDS</type>
+       <source>havana</source>
        <known>1</known>
        <truncated>0</truncated>
        <remark>overlapping locus</remark>
@@ -20207,6 +20862,8 @@
          <author_email>dm4</author_email>
          <remark>not organism-supported</remark>
          <remark>Annotation_remark- CCDS8732.1</remark>
+         <source>ensembl</source>
+         <type>ensembl:Known_CDS</type>
          <transcript_class>Known_CDS</transcript_class>
          <name>RP11-438D14.1-001</name>
          <translation_start>33439522</translation_start>
@@ -20289,6 +20946,8 @@
          <stable_id>OTTHUMT00000403223</stable_id>
          <author>dm4</author>
          <author_email>dm4</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Nonsense_mediated_decay</type>
          <transcript_class>Nonsense_mediated_decay</transcript_class>
          <name>RP11-438D14.1-002</name>
          <translation_start>33439522</translation_start>
@@ -20381,6 +21040,8 @@
          <author_email>aeb</author_email>
          <remark>QC splicing correct</remark>
          <remark>dotter confirmed</remark>
+         <source>ensembl</source>
+         <type>ensembl:Putative</type>
          <transcript_class>Putative</transcript_class>
          <name>RP11-438D14.1-003</name>
          <evidence_set>
@@ -20414,6 +21075,7 @@
        <description>novel transcript, sense intronic to SYT10</description>
        <name>RP11-438D14.2</name>
        <type>Transcript</type>
+       <source>havana</source>
        <known>0</known>
        <truncated>0</truncated>
        <remark>overlapping locus</remark>
@@ -20423,6 +21085,8 @@
          <stable_id>OTTHUMT00000433919</stable_id>
          <author>gm5</author>
          <author_email>gm5</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Sense_intronic</type>
          <transcript_class>Sense_intronic</transcript_class>
          <name>RP11-438D14.2-001</name>
          <evidence_set>
@@ -20448,6 +21112,7 @@
        <description>novel transcript, sense intronic to SYT10</description>
        <name>RP11-438D14.3</name>
        <type>Transcript</type>
+       <source>havana</source>
        <known>0</known>
        <truncated>0</truncated>
        <remark>overlapping locus</remark>
@@ -20457,6 +21122,8 @@
          <stable_id>OTTHUMT00000474678</stable_id>
          <author>gm5</author>
          <author_email>gm5</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Sense_intronic</type>
          <transcript_class>Sense_intronic</transcript_class>
          <name>RP11-438D14.3-001</name>
          <evidence_set>
@@ -20482,6 +21149,7 @@
        <description>suppression of tumorigenicity 13 (colon carcinoma) (Hsp70 interacting protein) (ST13) pseudogene</description>
        <name>RP11-56H16.1</name>
        <type>Processed_pseudogene</type>
+       <source>havana</source>
        <known>0</known>
        <truncated>0</truncated>
        <author>dm4</author>
@@ -20490,6 +21158,8 @@
          <stable_id>OTTHUMT00000403224</stable_id>
          <author>dm4</author>
          <author_email>dm4</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Processed_pseudogene</type>
          <transcript_class>Processed_pseudogene</transcript_class>
          <name>RP11-56H16.1-001</name>
          <evidence_set>
@@ -20515,6 +21185,7 @@
        <description>R3H domain and coiled-coil containing 1-like (R3HCC1L) pseudogene</description>
        <name>RP13-359K18.1</name>
        <type>Processed_pseudogene</type>
+       <source>havana</source>
        <known>0</known>
        <truncated>0</truncated>
        <author>clb</author>
@@ -20523,6 +21194,8 @@
          <stable_id>OTTHUMT00000469160</stable_id>
          <author>clb</author>
          <author_email>clb</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Processed_pseudogene</type>
          <transcript_class>Processed_pseudogene</transcript_class>
          <name>RP13-359K18.1-001</name>
          <evidence_set>
@@ -20548,6 +21221,7 @@
        <description>asparagine-linked glycosylation 10, alpha-1,2-glucosyltransferase homolog (S. pombe)</description>
        <name>ALG10</name>
        <type>Known_CDS</type>
+       <source>havana</source>
        <known>1</known>
        <truncated>0</truncated>
        <author>gm5</author>
@@ -20556,6 +21230,8 @@
          <stable_id>OTTHUMT00000403309</stable_id>
          <author>gm5</author>
          <author_email>gm5</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Known_CDS</type>
          <transcript_class>Known_CDS</transcript_class>
          <name>RP11-847H18.1-001</name>
          <translation_start>34022600</translation_start>
@@ -20700,6 +21376,8 @@
          <author_email>aeb</author_email>
          <remark>QC splicing correct</remark>
          <remark>dotter confirmed</remark>
+         <source>ensembl</source>
+         <type>ensembl:Putative_CDS</type>
          <transcript_class>Putative_CDS</transcript_class>
          <name>RP11-847H18.1-004</name>
          <translation_start>34022600</translation_start>
@@ -20742,6 +21420,8 @@
          <stable_id>OTTHUMT00000403311</stable_id>
          <author>dm4</author>
          <author_email>dm4</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Retained_intron</type>
          <transcript_class>Retained_intron</transcript_class>
          <name>RP11-847H18.1-003</name>
          <evidence_set>
@@ -20777,6 +21457,8 @@
          <stable_id>OTTHUMT00000403312</stable_id>
          <author>dm4</author>
          <author_email>dm4</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Nonsense_mediated_decay</type>
          <transcript_class>Nonsense_mediated_decay</transcript_class>
          <name>RP11-847H18.1-002</name>
          <translation_start>34022600</translation_start>
@@ -20833,6 +21515,7 @@
        <description>novel transcript, antisense to ALG10</description>
        <name>RP11-847H18.2</name>
        <type>Novel_Transcript</type>
+       <source>havana</source>
        <known>0</known>
        <truncated>0</truncated>
        <author>al1</author>
@@ -20841,6 +21524,8 @@
          <stable_id>OTTHUMT00000403313</stable_id>
          <author>al1</author>
          <author_email>al1</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Antisense</type>
          <transcript_class>Antisense</transcript_class>
          <name>RP11-847H18.2-001</name>
          <evidence_set>
@@ -20878,6 +21563,7 @@
        <description>novel transcript</description>
        <name>RP11-847H18.3</name>
        <type>Transcript</type>
+       <source>havana</source>
        <known>0</known>
        <truncated>0</truncated>
        <author>al1</author>
@@ -20886,6 +21572,8 @@
          <stable_id>OTTHUMT00000403314</stable_id>
          <author>dm4</author>
          <author_email>dm4</author_email>
+         <source>ensembl</source>
+         <type>ensembl:lincRNA</type>
          <transcript_class>lincRNA</transcript_class>
          <name>RP11-847H18.3-001</name>
          <evidence_set>
@@ -20927,6 +21615,7 @@
        <description>novel transcript</description>
        <name>RP11-313F23.3</name>
        <type>Transcript</type>
+       <source>havana</source>
        <known>0</known>
        <truncated>0</truncated>
        <author>mms</author>
@@ -20935,6 +21624,8 @@
          <stable_id>OTTHUMT00000403315</stable_id>
          <author>mms</author>
          <author_email>mms</author_email>
+         <source>ensembl</source>
+         <type>ensembl:lincRNA</type>
          <transcript_class>lincRNA</transcript_class>
          <name>RP11-313F23.3-001</name>
          <evidence_set>
@@ -20976,6 +21667,7 @@
        <description>family with sequence similarity 41, member A, Y-linked 1 (FAM41AY1) pseudogene</description>
        <name>RP11-313F23.2</name>
        <type>Processed_pseudogene</type>
+       <source>havana</source>
        <known>0</known>
        <truncated>0</truncated>
        <author>dm4</author>
@@ -20984,6 +21676,8 @@
          <stable_id>OTTHUMT00000403316</stable_id>
          <author>dm4</author>
          <author_email>dm4</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Processed_pseudogene</type>
          <transcript_class>Processed_pseudogene</transcript_class>
          <name>RP11-313F23.2-001</name>
          <evidence_set>
@@ -21013,6 +21707,7 @@
        <description>tubulin, beta 8 class VIII pseudogene 4</description>
        <name>TUBB8P4</name>
        <type>Unprocessed_pseudogene</type>
+       <source>havana</source>
        <known>0</known>
        <truncated>0</truncated>
        <author>vb1</author>
@@ -21021,6 +21716,8 @@
          <stable_id>OTTHUMT00000373434</stable_id>
          <author>dm4</author>
          <author_email>dm4</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Unprocessed_pseudogene</type>
          <transcript_class>Unprocessed_pseudogene</transcript_class>
          <name>RP11-313F23.1-001</name>
          <evidence_set>
@@ -21082,6 +21779,7 @@
        <description>novel transcript</description>
        <name>RP11-313F23.4</name>
        <type>Transcript</type>
+       <source>havana</source>
        <known>0</known>
        <truncated>0</truncated>
        <remark>overlapping locus</remark>
@@ -21091,6 +21789,8 @@
          <stable_id>OTTHUMT00000403317</stable_id>
          <author>mms</author>
          <author_email>mms</author_email>
+         <source>ensembl</source>
+         <type>ensembl:lincRNA</type>
          <transcript_class>lincRNA</transcript_class>
          <name>RP11-313F23.4-001</name>
          <evidence_set>
@@ -21140,6 +21840,7 @@
        <description>double homeobox, 4-like (DUX4) pseudogene</description>
        <name>RP11-313F23.5</name>
        <type>Transcribed_processed_pseudogene</type>
+       <source>havana</source>
        <known>0</known>
        <truncated>0</truncated>
        <remark>overlapping locus</remark>
@@ -21150,6 +21851,8 @@
          <author>vb1</author>
          <author_email>vb1</author_email>
          <remark>Annotation_remark- changed biotype, extended transcript (vb1)</remark>
+         <source>ensembl</source>
+         <type>ensembl:Transcribed_processed_pseudogene</type>
          <transcript_class>Transcribed_processed_pseudogene</transcript_class>
          <name>RP11-313F23.5-001</name>
          <evidence_set>
@@ -21187,6 +21890,7 @@
        <description>TAF9 RNA polymerase II, TATA box binding protein (TBP)-associated factor, 32kDa (TAF9) pseudogene</description>
        <name>RP13-7D7.1</name>
        <type>Processed_pseudogene</type>
+       <source>havana</source>
        <known>0</known>
        <truncated>0</truncated>
        <author>dm4</author>
@@ -21195,6 +21899,8 @@
          <stable_id>OTTHUMT00000403318</stable_id>
          <author>dm4</author>
          <author_email>dm4</author_email>
+         <source>ensembl</source>
+         <type>ensembl:Processed_pseudogene</type>
          <transcript_class>Processed_pseudogene</transcript_class>
          <name>RP13-7D7.1-001</name>
          <evidence_set>

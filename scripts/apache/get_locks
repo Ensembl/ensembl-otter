@@ -1,12 +1,12 @@
 #!/usr/bin/perl -Tw
 # Copyright [2018-2019] EMBL-European Bioinformatics Institute
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-# 
+#
 #      http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -32,9 +32,11 @@ sub get_SliceLocks {
     my $SLdba = $server->otter_dba->get_SliceLockAdaptor;
     my $S_dba = $server->otter_dba->get_SliceAdaptor;
     my $chr = $server->require_argument('chr');
+    my $coord_system_name = $server->require_argument('coord_system_name') || 'chromosome';
+    my $coord_system_version = $server->require_argument('coord_system_version') || 'Otter';
     my $chr_slice = $S_dba->fetch_by_region
-      ('chromosome', $chr, undef, undef, undef, 'Otter', 1);
-    die "Cannot find chromosome:Otter:$chr" unless $chr_slice;
+      ($coord_system_name, $chr, undef, undef, undef, $coord_system_version, 1);
+    die "Cannot find $coord_system_name:$coord_system_version:$chr" unless $chr_slice;
     my $srid = $chr_slice->get_seq_region_id;
 
     my $slocks = $SLdba->fetch_by_seq_region_id($srid, 1); # extant = not freed
