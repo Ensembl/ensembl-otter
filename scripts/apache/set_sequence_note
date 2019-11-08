@@ -36,8 +36,17 @@ sub set_sequence_note {
     $server->otter_dba->get_AuthorAdaptor->store($author);
 
     my $odbc = $server->otter_dba->dbc;
+    my $cs = $server->otter_dba->get_CoordSystemAdaptor->fetch_by_name('seqlevel');
 
-    my $seq_region_sub_select = q{(SELECT seq_region_id FROM seq_region where name = ?)};
+    my $seq_region_sub_select = q{(SELECT seq_region_id FROM seq_region where name = ? AND coord_system_id =
+      (SELECT coord_system_id
+        FROM coord_system
+        WHERE name = "%s")
+      )};
+
+    $seq_region_sub_select = sprintf
+             $seq_region_sub_select,
+             $cs->name;
 
     if ($action=~/(change|modify|old)/) {
         warn "Changing a sequence_note\n";
