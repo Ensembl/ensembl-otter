@@ -1275,6 +1275,9 @@ sub _get_Locus_from_tk {
     if ($name =~ /^([^:]+):/) {
         $locus->gene_type_prefix($1);
     }
+    if (! $locus->gene_type_prefix) {
+        $locus->gene_type_prefix($self->{'_SubSeq'}{'_Locus'}{'_gene_type_prefix'});
+    }
     $locus->description($desc) if $desc;
     $locus->set_aliases(@aliases);
 
