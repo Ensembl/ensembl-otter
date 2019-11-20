@@ -68,7 +68,7 @@ sub _fetch_new_by_type {
         $meta_container->single_value_by_key('species.stable_id_prefix')
       . $type_prefix;
 
-    # Stable IDs are species prefix + type prefix + 11 digit number. This has been changed from the existing 18 digit stable id generation which Loutre DB based. 
+    # Stable IDs are species prefix + type prefix + 11 digit number. This has been changed from the existing 18 digit stable id generation which was Loutre DB based. 
     return $prefix . sprintf "\%011d", $num;
 }
 
