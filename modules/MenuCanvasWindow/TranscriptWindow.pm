@@ -48,7 +48,7 @@ use CanvasWindow::EvidencePaster;
 use EditWindow::PfamWindow;
 use Bio::Otter::Lace::Client;
 use Bio::Otter::UI::TextWindow::Peptide;
-use Data::Dumper;
+
 use base qw( MenuCanvasWindow );
 
 # "new" is in MenuCanvasWindow

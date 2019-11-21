@@ -71,7 +71,7 @@ use Tk::ArrayBar;
 use Tk::Screens;
 use Tk::ScopedBusy;
 use Bio::Vega::Utils::MacProxyConfig qw{ mac_os_x_set_proxy_vars };
-use Data::Dumper;
+
 use base qw{
     MenuCanvasWindow
     Bio::Otter::UI::ZMapSelectMixin
