@@ -2613,6 +2613,9 @@ sub _replace_SubSeq_sqlite {
                 $self->logger->debug("$new_subseq_name: diffs to original saved SubSeq.");
                 $self->_log_diffs($diffs, "SubSeq $new_subseq_name");
                 $from_HumAce->update_Transcript($new_subseq, $old_subseq, $diffs);
+                if ($self->_locus_cache->get($new_locus_name)->gene_type_prefix eq 'ensembl') {
+                    $self->_locus_cache->get($new_locus_name)->gene_type_prefix('');
+                }
             } else {
                 $self->logger->debug("$new_subseq_name: no diffs so nothing else to do.");
             }
