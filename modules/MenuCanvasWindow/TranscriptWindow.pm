@@ -48,7 +48,7 @@ use CanvasWindow::EvidencePaster;
 use EditWindow::PfamWindow;
 use Bio::Otter::Lace::Client;
 use Bio::Otter::UI::TextWindow::Peptide;
-
+use Data::Dumper;
 use base qw( MenuCanvasWindow );
 
 # "new" is in MenuCanvasWindow
@@ -1276,7 +1276,7 @@ sub _get_Locus_from_tk {
         $locus->gene_type_prefix($1);
     }
     if (! $locus->gene_type_prefix) {
-        $locus->gene_type_prefix($self->{'_SubSeq'}{'_Locus'}{'_gene_type_prefix'});
+        $locus->gene_type_prefix($self->SubSeq->Locus->gene_type_prefix);
     }
     $locus->description($desc) if $desc;
     $locus->set_aliases(@aliases);
