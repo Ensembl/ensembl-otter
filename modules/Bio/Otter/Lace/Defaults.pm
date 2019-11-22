@@ -638,7 +638,7 @@ Here's an example config file:
   max_coverage=12
 
 
-You can also specify options on the command line
+You can also specify options on the command line 
 using the B<cfgstr> option.  Thus:
 
     -cfgstr zebrafish.use_filters.est2genome_mouse=0
