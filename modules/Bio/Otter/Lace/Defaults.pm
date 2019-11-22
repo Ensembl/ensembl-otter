@@ -638,7 +638,7 @@ Here's an example config file:
   max_coverage=12
 
 
-You can also specify options on the command line 
+You can also specify options on the command line
 using the B<cfgstr> option.  Thus:
 
     -cfgstr zebrafish.use_filters.est2genome_mouse=0
@@ -687,7 +687,7 @@ __DATA__
 
 
 [client]
-url=http://otter-server.ebi.ac.uk:8005/cgi-bin/otter
+url=http://otter-server.ebi.ac.uk:8004/cgi-bin/otter
 write_access=1
 gff_version=3
 acedb_version=4.9.61
