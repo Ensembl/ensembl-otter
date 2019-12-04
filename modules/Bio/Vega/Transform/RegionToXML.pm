@@ -201,7 +201,7 @@ sub generate_SequenceFragment {
 
 sub generate_Locus {
     my ($self, $gene, $indent) = @_;
-
+    my $exon_set;
     return unless $gene;
 
     my $g=$self->prettyprint('locus');
@@ -258,7 +258,8 @@ sub generate_Locus {
         my $start = $gene->get_all_Exons->[0]->slice->start; 
         my $end = $gene->get_all_Exons->[0]->slice->end; 
         foreach my $tran (sort $by_start_end_strand @$transcripts) {
-            if ($tran->seq_region_start <= $end and $tran->seq_region_end >= $start) {
+            $exon_set = $tran->get_all_Exons;
+            if ($tran->seq_region_start <= $end and $tran->seq_region_end >= $start and @$exon_set > 0) {
                 $g->attribobjs($self->generate_Transcript($tran, $coord_offset));
             }
         }
