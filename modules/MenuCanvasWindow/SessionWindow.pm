@@ -2555,6 +2555,7 @@ sub _replace_SubSeq_sqlite {
     my $new_locus = $new_subseq->Locus;
     my $old_locus = $old_subseq->Locus;
 
+    my $new_locus_name = $new_locus->name;
     if (!$self->_locus_cache->get($new_locus_name) ) {
        $self->_locus_cache->set($new_locus);
     }
