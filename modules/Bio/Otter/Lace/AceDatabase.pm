@@ -49,6 +49,7 @@ use Bio::Otter::Lace::ProcessGFF;
 use Bio::Otter::Source::Filter;
 use Bio::Otter::Utils::Config::Ini qw( config_ini_format );
 
+use XML::Simple;
 use Hum::Ace::Assembly;
 use Hum::Ace::MethodCollection;
 use Hum::ZMapStyleCollection;
@@ -255,8 +256,27 @@ sub empty_acefile_list {
 
 sub init_AceDatabase {
     my ($self) = @_;
-
+    my ($locus_key, $transcript_key, $exon_hash);
     my $xml_string = $self->Client->get_region_xml($self->slice);
+    my $xml_data = XMLin($xml_string);
+    foreach $locus_key(keys $xml_data->{sequence_set}->{locus})  {
+        if (exists($xml_data->{sequence_set}->{locus}->{$locus_key}->{transcript}->{exon_set})) {
+            $exon_hash = $xml_data->{sequence_set}->{locus}->{$locus_key}->{transcript}->{exon_set};
+            if(!%$exon_hash) {
+                $self->logger->logdie("Cannot load exons for this region. Please reload a larger set of clones. If the issue persists, please report it on JIRA.'")
+            }
+        }
+        else {
+            foreach $transcript_key(keys $xml_data->{sequence_set}->{locus}->{$locus_key}{transcript}) {
+                if (exists($xml_data->{sequence_set}->{locus}->{$locus_key}->{transcript}->{$transcript_key}->{exon_set})) {
+                    $exon_hash = $xml_data->{sequence_set}->{locus}->{$locus_key}->{transcript}->{$transcript_key}->{exon_set};
+                    if(!%$exon_hash) {
+                        $self->logger->logdie("Cannot load exons for this region. Please reload a larger set of clones. If the issue persists, please report it on JIRA.'")
+                    }
+                }
+            }
+        }
+    }
     $self->write_file('01_before.xml', $xml_string);
 
     my $parser = Bio::Vega::Transform::XMLToRegion->new;
