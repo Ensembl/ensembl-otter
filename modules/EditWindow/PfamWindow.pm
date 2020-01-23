@@ -96,6 +96,7 @@ sub result_url {
 
 sub widg {
     my ($self, $name) = @_;
+
     if (!exists $self->{_widg}->{$name}) {
       confess "No widg($name)";
     }
