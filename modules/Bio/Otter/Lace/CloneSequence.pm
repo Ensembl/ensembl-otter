@@ -1,6 +1,6 @@
 =head1 LICENSE
 
-Copyright [2018-2019] EMBL-European Bioinformatics Institute
+Copyright [2018-2020] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -29,6 +29,24 @@ sub new {
     my ($pkg) = @_;
 
     return bless {}, $pkg;
+}
+
+sub coord_system_name {
+    my ($self, $coord_system_name) = @_;
+
+    if ($coord_system_name) {
+        $self->{'_coord_system_name'} = $coord_system_name;
+    }
+    return $self->{'_coord_system_name'};
+}
+
+sub coord_system_version {
+    my ($self, $coord_system_version) = @_;
+
+    if ($coord_system_version) {
+        $self->{'_coord_system_version'} = $coord_system_version;
+    }
+    return $self->{'_coord_system_version'};
 }
 
 sub accession {

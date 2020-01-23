@@ -1,6 +1,6 @@
 =head1 LICENSE
 
-Copyright [2018-2019] EMBL-European Bioinformatics Institute
+Copyright [2018-2020] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -90,8 +90,12 @@ sub do_search {
     my $qnames = [ grep { /\S/ } # remove blank term, due to leading space
                    split(/[\s,]+/, ${$self->search_field()} ) ];
 
+    my $ss;
+    $ss = $self->DataSet->get_all_SequenceSets->[0];
     my $result_list =
-        $self->Client->find_clones($self->DataSet->name, $qnames);
+        $self->Client->find_clones($self->DataSet->name,
+                                    $qnames,
+                                    $ss);
     my $result_hash = { };
     foreach (@{$result_list}) {
         if ($_->{text}) {

@@ -1,6 +1,6 @@
 =head1 LICENSE
 
-Copyright [2018-2019] EMBL-European Bioinformatics Institute
+Copyright [2018-2020] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -46,12 +46,12 @@ sub new_from_otter {
         my $client = Bio::Otter::Lace::Defaults::make_Client();
         my $mapping_xml = $client->otter_response_content(
             'GET', 'get_mapping', {
-                dataset   => $dataset,
-                cs        => $csver_remote,
-                chr       => $chr,
-                start     => $start,
-                end       => $end,
-                'author'  => Bio::Otter::Lace::Client->author,
+                dataset => $dataset,
+                cs      => $csver_remote,
+                chr     => $chr,
+                start   => $start,
+                end     => $end,
+                'author'=> $client->author,
             });
         my $mapping = $pkg->new_from_xml($mapping_xml);
         return $mapping;

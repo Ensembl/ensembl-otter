@@ -1,12 +1,12 @@
 #!/usr/bin/perl -Tw
-# Copyright [2018-2019] EMBL-European Bioinformatics Institute
-# 
+# Copyright [2018-2020] EMBL-European Bioinformatics Institute
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-# 
+#
 #      http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -22,14 +22,18 @@ use SangerPaths qw{ core bioperl123 otter };
 use Bio::Otter::Git qw{ :server_ensembl :match };
 
 use Bio::Otter::Server::Support::Web;
+use Bio::EnsEMBL::Utils::Slice qw(split_Slices);
 
 sub get_clonesequences {
     my ($server) = @_;
 
 my $dataset     = $server->require_argument('dataset');
 my $sequenceset = $server->require_argument('sequenceset');
+my $coord_system_name = $server->require_argument('coord_system_name');
+my $coord_system_version = $server->require_argument('coord_system_version');
 
-my $dbc = $server->otter_dba->dbc;
+my $otter_dba = $server->otter_dba;
+my $dbc = $otter_dba->dbc;
 
 # Allow local scripts to access without authorization
 unless ($server->local_user) {
@@ -95,16 +99,40 @@ my $sql = <<'SQL'
     ORDER BY chr2ctg.asm_start
 SQL
 ;
-
-# If the whole chromosome is missing, check that it has the chr attribute.
-# [ NO LONGER TRUE: If a clone is missing from the results, check that it has embl_acc and embl_version attributes. ]
-
-my $sth = $dbc->prepare($sql);
-$sth->execute($sequenceset);
-
-
 my @cs_list;
-while (
+
+my $misc_set = $otter_dba->get_MiscSetAdaptor->fetch_by_code('otter');
+if ($misc_set) {
+  my $slice = $otter_dba->get_SliceAdaptor->fetch_by_region($coord_system_name, $sequenceset, undef, undef, undef, $coord_system_version);
+  foreach my $feature (sort {$a->start <=> $b->start} @{$otter_dba->get_MiscFeatureAdaptor->fetch_all_by_Slice_and_set_code($slice, $misc_set->code)}) {
+    my $accession = $feature->get_scalar_attribute('name');
+    push(@cs_list, {
+      clone_name  => $feature->get_scalar_attribute('intl_clone_name') || $accession,
+      accession   => $feature->get_scalar_attribute('embl_acc'),
+      sv          => $feature->get_scalar_attribute('embl_version'),
+      contig_name => $accession,
+      length      => $feature->length,
+      chr         => {
+          name    =>  $sequenceset,
+          length  =>  $slice->seq_region_length,
+      },
+      chr_start     => $feature->start,
+      chr_end       => $feature->end,
+      contig_start  => $feature->get_scalar_attribute('inner_start'),
+      contig_end    => $feature->get_scalar_attribute('inner_end'),
+      contig_strand => $feature->strand,
+      coord_system_name => $coord_system_name,
+      coord_system_version => $coord_system_version,
+    });
+  }
+}
+
+if (!@cs_list) {
+
+ my $sth = $dbc->prepare($sql);
+ $sth->execute($sequenceset);
+
+ while (
     my (
         $cl_name,    $intl_name,     $acc,       $sv,          $ctg_name,  $ctg_length,
         $chr_name,   $chr_length,    $chr_start, $chr_end,     $ctg_start, $ctg_end,
@@ -146,6 +174,7 @@ while (
         }
     }
     push(@cs_list, $cs);
+ }
 }
 
 my $xml = '';
@@ -158,6 +187,7 @@ foreach my $cs (@cs_list) {
     foreach my $tag (
         qw{ clone_name accession sv contig_name length
         chr chr_start chr_end
+        coord_system_name coord_system_version
         contig_start contig_end contig_strand }
       )
     {

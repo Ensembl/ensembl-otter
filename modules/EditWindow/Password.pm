@@ -1,6 +1,6 @@
 =head1 LICENSE
 
-Copyright [2018-2019] EMBL-European Bioinformatics Institute
+Copyright [2018-2020] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -144,6 +144,8 @@ sub get_password {
     $self->top->toplevel->Busy;
     $self->password_field->focus;
     $self->set_minsize;     # Does an "update"
+    my ($width, $height) = $self->top->geometry =~ /^(\d+)x(\d+)/;
+    $self->top->geometry("${width}x$height+40+40");
 
     $$finref = '';
     ${ $self->passref } = '';

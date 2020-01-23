@@ -1,12 +1,12 @@
 #!/usr/bin/perl -Tw
-# Copyright [2018-2019] EMBL-European Bioinformatics Institute
-# 
+# Copyright [2018-2020] EMBL-European Bioinformatics Institute
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-# 
+#
 #      http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -63,7 +63,7 @@ sub get_possible_analyses {
 
 
 my $select_components_sql = <<'SQL'
-SELECT cmp.name, cs.version
+SELECT cmp.name, cmp.length
 FROM coord_system cs
   , seq_region cmp
   , assembly a
@@ -97,15 +97,12 @@ my $component_cs = $server->param('component_cs') || 'contig';
 my $pdbc = $server->dataset->pipeline_dba()->dbc();  # pipeline dbc
 
 my @input_ids = ();
+my @tmp_cmp_name = ();
 my $cmp_sth = $pdbc->prepare($select_components_sql);
 $cmp_sth->execute($assembly, $component_cs);
 
-while (my ($cmp_name, $cs_version) = $cmp_sth->fetchrow) {
-    my @syll = split(/\./, $cmp_name);
-    my $to = pop @syll;
-    my $from = pop @syll;
-    if(!defined($cs_version)) { $cs_version = ''; }
-    push @input_ids, join(':', $component_cs, $cs_version, $cmp_name, $from, $to, 1);
+while (my ($cmp_name, $seq_length) = $cmp_sth->fetchrow) {
+    push @input_ids, join(':', $component_cs, '', $cmp_name, 1, $seq_length, 1);
 }
 
 my %skeleton_hash = map { ($_ => []) } get_possible_analyses($pdbc);

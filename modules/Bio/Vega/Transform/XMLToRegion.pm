@@ -1,6 +1,6 @@
 =head1 LICENSE
 
-Copyright [2018-2019] EMBL-European Bioinformatics Institute
+Copyright [2018-2020] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -167,13 +167,7 @@ sub _create_or_extend_chr_slice {
 
     my $assembly_type = $self->parent_data->{'assembly_type'};
 
-    if (my $chrname = $chromosome_name{$self}) { # cached from the previous SequenceFragments
-        if($chrname ne $data->{'chromosome'}) {
-            die "Chromosome names '$chrname' and '".$data->{'chromosome'}."' are different - can't join in 1 slice";
-        }
-    } else { # cache it now
         $chromosome_name{$self} = $data->{'chromosome'};
-    }
 
     my $start          = $data->{'assembly_start'};
     my $end            = $data->{'assembly_end'};
@@ -183,7 +177,7 @@ sub _create_or_extend_chr_slice {
            ."assembly_type='$assembly_type' start='$start' end='$end'";
     }
 
-    my $chr_coord_system = $self->coord_system_factory->coord_system('chromosome');
+    my $chr_coord_system = $self->coord_system_factory->coord_system($data->{coord_system_name});
 
     if (my $chr_slice = $self->_chr_slice) {
         # Extend the cached version of the slice:
@@ -272,7 +266,7 @@ sub _build_clone_sequence {
     }
 
         ## FIXME: $cln_author may be passed in the XML, but is ultimately ignored by write_region
-    #my $cln_author=$self->_make_Author($data->{'author'}, $data->{'author_email'});
+    my $cln_author=$self->_make_Author('dummy', 'dummy');
 
     # create tiles (offset_in_slice + contig_component_slice + attributes)
     my $ctg_cmp_slice = Bio::EnsEMBL::Slice->new(
@@ -281,7 +275,7 @@ sub _build_clone_sequence {
         -end                => $cmp_end,
         -strand             => $strand,
         -seq_region_length  => $cln_length,
-        -coord_system       => $self->coord_system_factory->coord_system('contig'),
+        -coord_system       => $self->coord_system_factory->coord_system('contig') || $self->coord_system_factory->coord_system('dna_contig'),
     );
 
     my $cs = Bio::Otter::Lace::CloneSequence->new;
@@ -299,7 +293,7 @@ sub _build_clone_sequence {
 
     my $ci = Bio::Vega::ContigInfo->new(
         -slice      => $ctg_cmp_slice,
-        # -author   => $cln_author, # see FIXME above about $cln_author
+        -author    => $cln_author, # see FIXME above about $cln_author
         -attributes => $cln_attrib_list,
         );
     $cs->ContigInfo($ci);
@@ -367,7 +361,7 @@ sub _build_Feature {            ## no critic (Subroutines::ProhibitUnusedPrivate
         -strand        => $data->{'strand'},
         -analysis      => $ana,
         -score         => $data->{'score'},
-        -display_label => $data->{'label'},
+        -display_label => $data->{'label'} || 'rank = filler',
         -slice         => $chr_slice,
     );
     $region{$self}->add_seq_features($feature);
@@ -498,6 +492,9 @@ sub _build_Transcript {         ## no critic (Subroutines::ProhibitUnusedPrivate
         $transcript->biotype($biotype);
         $transcript->status($status);
     }
+    if (my $source = $data->{'source'}) {
+      $transcript->source($source);
+    }
 
     if ($data->{'author'}) {
         my $transcript_author = $self->_make_Author($data->{'author'}, $data->{'author_email'});
@@ -614,6 +611,9 @@ sub _build_Locus {              ## no critic (Subroutines::ProhibitUnusedPrivate
     my ($biotype, $status) = method2biotype_status($type);
     $status = 'KNOWN' if $data->{'known'};
 
+    if (my $gene_source = $data->{source}) {
+      $source = $gene_source;
+    }
     $gene->source($source);
     $gene->biotype($biotype);
     $gene->status($status);
@@ -625,7 +625,6 @@ sub _build_Locus {              ## no critic (Subroutines::ProhibitUnusedPrivate
 
     ##share exons among transcripts of this gene
     foreach my $tran (@$transcripts) {
-        $tran->source($source); # copy from $gene, we don't need them to differ
         $gene->add_Transcript($tran);
     }
     $gene->prune_Exons;
@@ -652,7 +651,7 @@ sub _build_Locus {              ## no critic (Subroutines::ProhibitUnusedPrivate
         $transcript->end(  $transcript->end   - $slice_offset);
 
         my $logic_name = $transcript->analysis->logic_name;
-        if ($self->analysis_from_transcript_class and $source ne 'havana' and $logic_name ne 'Otter') {
+        if ($self->analysis_from_transcript_class and $source ne 'havana' and $source ne 'ensembl_havana' and $logic_name ne 'Otter') {
             $logic_name = sprintf('%s:%s', $source, $logic_name);
         }
         if ($truncated) {

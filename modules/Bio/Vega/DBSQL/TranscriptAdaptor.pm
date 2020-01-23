@@ -1,6 +1,6 @@
 =head1 LICENSE
 
-Copyright [2018-2019] EMBL-European Bioinformatics Institute
+Copyright [2018-2020] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -68,14 +68,22 @@ sub store_Evidence {
       throw("evidence_list and transcript_id must be supplied");
   }
   # Insert new evidence
-  my $sth = $self->prepare(q{
-        INSERT INTO evidence(transcript_id, name, type) VALUES (?,?,?)
-        });
-
-  foreach my $evidence (@$evidence_list) {
-      my $name = $evidence->name;
-      my $type = $evidence->type;
-      $sth->execute($transcript_id, $name, $type);
+  my $select_sth = $self->prepare(q{
+     SELECT * FROM evidence WHERE transcript_id = ?
+  });
+  $select_sth->execute($transcript_id);
+  if($select_sth->fetchrow_array) {
+      return;
+  }
+  else {
+      my $sth = $self->prepare(q{
+      INSERT INTO evidence(transcript_id, name, type) VALUES (?,?,?)
+  });
+      foreach my $evidence (@$evidence_list) {
+          my $name = $evidence->name;
+          my $type = $evidence->type;
+          $sth->execute($transcript_id, $name, $type);
+      }
   }
 
   return;

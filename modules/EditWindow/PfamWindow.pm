@@ -1,6 +1,6 @@
 =head1 LICENSE
 
-Copyright [2018-2019] EMBL-European Bioinformatics Institute
+Copyright [2018-2020] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@ package EditWindow::PfamWindow;
 
 use strict;
 use warnings;
-use Carp;
+use Carp qw(confess);
 use POSIX ();
 use URI;
 use Try::Tiny;
@@ -97,7 +97,7 @@ sub result_url {
 sub widg {
     my ($self, $name) = @_;
 
-    if (! exists $self->{_widg}->{$name}) {
+    if (!exists $self->{_widg}->{$name}) {
       confess "No widg($name)";
     }
     return $self->{_widg}->{$name};

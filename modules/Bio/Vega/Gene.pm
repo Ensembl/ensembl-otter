@@ -1,6 +1,6 @@
 =head1 LICENSE
 
-Copyright [2018-2019] EMBL-European Bioinformatics Institute
+Copyright [2018-2020] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ use strict;
 use warnings;
 use Bio::EnsEMBL::Utils::Argument  qw ( rearrange );
 use Bio::EnsEMBL::Utils::Exception qw ( throw warning );
+use Bio::EnsEMBL::Attribute;
 use Bio::Vega::Utils::Attribute    qw ( get_first_Attribute_value get_name_Attribute_value );
 use Bio::Vega::Utils::AttributesMixin;
 use base 'Bio::EnsEMBL::Gene';
@@ -30,8 +31,9 @@ use base 'Bio::EnsEMBL::Gene';
 sub new {
   my ($class, @args) = @_;
   my $self = $class->SUPER::new(@args);
-  my ($gene_author)  = rearrange([qw(AUTHOR)],@args);
+  my ($gene_author, $status)  = rearrange([qw(AUTHOR STATUS)],@args);
   $self->gene_author($gene_author);
+  $self->status($status) if ($status);
   return $self;
 }
 
@@ -364,6 +366,54 @@ sub set_biotype_status_from_transcripts {
     return;
 }
 
+
+=head2 status
+
+ Arg [1]    : String (optional), status of the gene, KNOWN, PUTATIVE,...
+ Description: Return or set the status of the gene. The value will
+              be stored as an attribute.
+ Returntype : String
+ Exceptions : None
+
+=cut
+
+sub status {
+  my ($self, $status) = @_;
+
+  my $attributes = $self->get_all_Attributes('status');
+  if ($status) {
+    $self->{status} = $status;
+    if (@$attributes) {
+      $attributes->[0]->value($status);
+    }
+    else {
+      $self->add_Attributes(Bio::EnsEMBL::Attribute->new(-code => 'status', -value => $status));
+    }
+  }
+  elsif (!$self->{status} and @$attributes) {
+    if (@$attributes > 1) {
+      warning('You have multiple status attributes, using the first one '.$attributes->[0]);
+    }
+    $self->{status} = $attributes->[0]->value;
+  }
+  return $self->{status};
+}
+
+
+=head2 is_known
+
+ Arg [1]    : None
+ Description: Return true if the gene is of status 'KNOWN'
+ Returntype : Boolean
+ Exceptions : None
+
+=cut
+
+sub is_known {
+  my ($self) = @_;
+
+  return ($self->status eq 'KNOWN' || $self->status eq 'KNOWN_BY_PROJECTION');
+}
 
 
 1;

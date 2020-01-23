@@ -1,6 +1,6 @@
 =head1 LICENSE
 
-Copyright [2018-2019] EMBL-European Bioinformatics Institute
+Copyright [2018-2020] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -41,8 +41,8 @@ sub _sfg {
 
     # FIXME: require_args
     my %opts;
-    @opts{qw(cs name start end csver      feature_kind logic_name gff_source gff_version)} = $self->read_args(
-          qw(cs chr  start end csver_orig feature_kind analysis   gff_source gff_version) );
+    @opts{qw(cs name start end csver feature_kind logic_name gff_source gff_version)} = $self->read_args(
+          qw(cs chr  start end csver feature_kind analysis   gff_source gff_version) );
 
     my $sfg = Bio::Otter::Utils::SliceFeaturesGFF->new(
         dba          => $self->local_db->vega_dba,

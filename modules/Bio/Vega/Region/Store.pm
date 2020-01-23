@@ -1,6 +1,6 @@
 =head1 LICENSE
 
-Copyright [2018-2019] EMBL-European Bioinformatics Institute
+Copyright [2018-2020] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -72,8 +72,6 @@ sub store {
         # we do it here. The correct coord_system_factory will store the instantiated
         # coord_systems in the database.
         #
-        $self->coord_system_factory->instantiate_all;
-
         my $slice = $region->slice;
 
         # Take chromosome name from first CloneSequence
@@ -164,8 +162,8 @@ sub slice_stored_if_needed {
             coord_system      => $cs_dna_contig,
         };
         my $contig_seq_region = Bio::EnsEMBL::Slice->new_fast($contig_seq_region_parameters);
-        $slice_adaptor->store($contig_seq_region, \$dna);
 
+        $slice_adaptor->store($contig_seq_region, \$dna);
         $slice_adaptor->store_assembly($region_slice, $contig_seq_region);
     }
 
@@ -197,57 +195,61 @@ sub _store_clone_sequence {
 
     my $cs_factory       = $self->coord_system_factory;
     my $clone_coord_sys  = $cs_factory->coord_system('clone');
-    my $contig_coord_sys = $cs_factory->coord_system('contig');
 
-    my $clone = $slice_adaptor->fetch_by_region(
-        $clone_coord_sys->name,
-        $cs->accession_dot_sv,
-        );
+    if ($clone_coord_sys) {
+      my $contig_coord_sys = $cs_factory->coord_system('contig');
 
-    unless ($clone) {
-        $clone = Bio::EnsEMBL::Slice->new_fast({
-            seq_region_name   => $cs->accession_dot_sv,
-            strand            => 1,
-            start             => 1,
-            end               => $cs->length,
-            seq_region_length => $cs->length,
-            coord_system      => $clone_coord_sys,
-                                               });
-        $slice_adaptor->store($clone);
+      my $clone = $slice_adaptor->fetch_by_region(
+          $clone_coord_sys->name,
+          $cs->accession_dot_sv,
+          );
 
-        my $attrib_adaptor = $vega_dba->get_AttributeAdaptor;
-        my @cln_attribs = map { @{ $cs->ContigInfo->get_all_Attributes($_) } }
-                              qw( embl_acc embl_version intl_clone_name );
-        $attrib_adaptor->store_on_Slice($clone, \@cln_attribs);
-    }
+      unless ($clone) {
+          $clone = Bio::EnsEMBL::Slice->new_fast({
+              seq_region_name   => $cs->accession_dot_sv,
+              strand            => 1,
+              start             => 1,
+              end               => $cs->length,
+              seq_region_length => $cs->length,
+              coord_system      => $clone_coord_sys,
+                                                 });
+          $slice_adaptor->store($clone);
 
-    my $db_contig = $slice_adaptor->fetch_by_region(
-        $contig_coord_sys->name,
-        $cs->contig_name,
-        );
+          my $attrib_adaptor = $vega_dba->get_AttributeAdaptor;
+          my @cln_attribs = map { @{ $cs->ContigInfo->get_all_Attributes($_) } }
+                                qw( embl_acc embl_version intl_clone_name );
+          $attrib_adaptor->store_on_Slice($clone, \@cln_attribs);
+      }
 
-    unless ($db_contig) {
-        $db_contig = Bio::EnsEMBL::Slice->new_fast({
-            seq_region_name   => $cs->contig_name,
-            strand            => 1,
-            start             => 1,
-            end               => $cs->length,
-            seq_region_length => $cs->length,
-            coord_system      => $contig_coord_sys,
-                                                   });
-        $slice_adaptor->store($db_contig);
-        $slice_adaptor->store_assembly($clone, $db_contig);
-    }
+      my $db_contig = $slice_adaptor->fetch_by_region(
+          $contig_coord_sys->name,
+          $cs->contig_name,
+          );
 
-    my $chr_map_slice = $db_slice->seq_region_Slice->sub_Slice($cs->chr_start,    $cs->chr_end,    1);
-    my $ctg_map_slice = $db_contig->sub_Slice(                 $cs->contig_start, $cs->contig_end, $cs->contig_strand);
-    $slice_adaptor->store_assembly($chr_map_slice, $ctg_map_slice);
+      unless ($db_contig) {
+          $db_contig = Bio::EnsEMBL::Slice->new_fast({
+              seq_region_name   => $cs->contig_name,
+              strand            => 1,
+              start             => 1,
+              end               => $cs->length,
+              seq_region_length => $cs->length,
+              coord_system      => $contig_coord_sys,
+                                                     });
 
-    if (my $ci = $cs->ContigInfo) {
-        my $contig_info_adaptor = $vega_dba->get_ContigInfoAdaptor;
-        $ci->slice($ctg_map_slice);
-        $ci->author(Bio::Vega::Author->new(-name => 'dummy', -email => 'dummy')); # FIXME - what to use here?
-        $contig_info_adaptor->store($ci);
+          $slice_adaptor->store($db_contig);
+          $slice_adaptor->store_assembly($clone, $db_contig);
+      }
+
+      my $chr_map_slice = $db_slice->seq_region_Slice->sub_Slice($cs->chr_start,    $cs->chr_end,    1);
+      my $ctg_map_slice = $db_contig->sub_Slice(                 $cs->contig_start, $cs->contig_end, $cs->contig_strand);
+      $slice_adaptor->store_assembly($chr_map_slice, $ctg_map_slice);
+
+      if (my $ci = $cs->ContigInfo) {
+          my $contig_info_adaptor = $vega_dba->get_ContigInfoAdaptor;
+          $ci->slice($ctg_map_slice);
+          $ci->author(Bio::Vega::Author->new(-name => 'dummy', -email => 'dummy')); # FIXME - what to use here?
+          $contig_info_adaptor->store($ci);
+      }
     }
 
     return;

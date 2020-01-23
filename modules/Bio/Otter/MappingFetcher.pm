@@ -1,6 +1,6 @@
 =head1 LICENSE
 
-Copyright [2018-2019] EMBL-European Bioinformatics Institute
+Copyright [2018-2020] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -169,12 +169,12 @@ sub map_remote_slice_back {
             # chromosomes are equivalent, re-create the slice on loutre_db:
 
         my $local_slice = $local_sa->fetch_by_region(
-            'chromosome',
+            $cs,
             $otter_chr_name,
             $remote_slice->start(),
             $remote_slice->end(),
             $remote_slice->strand(),
-            'Otter',
+            $csver_remote,
         );
 
         return [ $local_slice ];
@@ -190,7 +190,7 @@ sub map_remote_slice_back {
             );
 
         my @local_slices = ();
-        foreach my $proj_segment (@{ $remote_slice_2->project('chromosome', 'Otter') }) {
+        foreach my $proj_segment (@{ $remote_slice_2->project($cs, $csver_remote) }) {
             my $local_slice_2 = $proj_segment->to_Slice();
 
             my $local_slice = $local_sa->fetch_by_region(
@@ -238,10 +238,6 @@ sub fetch_mapped_features_ensembl {
     my ($cs, $name, $chr, $start, $end, $csver_orig, $csver_remote) =
         @{$map}{qw( cs name chr start end csver csver_remote )};
 
-    confess "invalid coordinate system: '${cs}'"
-        unless $cs eq 'chromosome';
-    confess "invalid coordinate system version: '${csver_orig}'"
-        unless $csver_orig eq 'Otter';
 
     my $adaptor_class = $self->ensembl_adaptor_class;
 
@@ -334,11 +330,6 @@ sub fetch_mapped_features_das {
 
     my ($cs, $name, $chr, $start, $end, $csver_orig, $csver_remote) =
         @{$map}{qw( cs name chr start end csver csver_remote )};
-
-    confess "invalid coordinate system: '${cs}'"
-        unless $cs eq 'chromosome';
-    confess "invalid coordinate system version: '${csver_orig}'"
-        unless $csver_orig eq 'Otter';
 
     if( ($self->otter_assembly_equiv_hash()->{$csver_remote}{$name} || '') eq $chr) {
         warn "fetch_mapped_features_das(): no mapping\n";

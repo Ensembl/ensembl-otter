@@ -1,6 +1,6 @@
 =head1 LICENSE
 
-Copyright [2018-2019] EMBL-European Bioinformatics Institute
+Copyright [2018-2020] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -15,6 +15,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 
 =cut
+
+### Bio::Otter::Lace::OnTheFly::QueryValidator
 
 package Bio::Otter::Lace::OnTheFly::QueryValidator;
 
@@ -236,41 +238,68 @@ sub Client {
 # Adds sequences to $self->seqs
 #
 sub _fetch_sequences {
-  my ($self, @to_fetch) = @_;
+    my ($self, @to_fetch) = @_;
 
-  my $cache = $self->accession_type_cache;
+    my $cache = $self->accession_type_cache;
 
-  @to_fetch = uniq @to_fetch;
-  $self->logger->debug('Need seq for: ', join(',', @to_fetch) || '<none>');
-  my $client = Bio::Otter::Lace::Defaults::make_Client();
-  my $seqs = $client->fetch_fasta_sequence(@to_fetch);
-  my @seq_array = split('>', $seqs);
+    @to_fetch = uniq @to_fetch;
+    $self->logger->debug('Need seq for: ', join(',', @to_fetch) || '<none>');
+    my $client = Bio::Otter::Lace::Defaults::make_Client();
+    foreach my $acc (@to_fetch) {
 
+        my $seq = $client->fetch_fasta_seqence($acc);
+        if (substr($seq, 0, 1) eq ">") {
+          $seq = $self->parse_fasta_sequence($seq);
+          push(@{$self->seqs}, $seq);
+          my ($type, $full) = @{$self->_acc_type_full($acc)};
+          unless ($type) {
+              $self->_add_missing_warning($acc => 'illegal evidence type');
+              next;
+          }
+          $seq->type($type);
+          $seq->name($acc);
+        } else {
+          $self->_add_missing_warning($acc, "unknown accession or illegal evidence type");
+        }
 
-  foreach my $sequence (@seq_array) {
-      if (length($sequence) < 2) {
-          next;
-      };
+#        my ($type, $full) = @{$self->_acc_type_full($acc)};
+#        unless ($type) {
+#            $self->_add_missing_warning($acc => 'illegal evidence type');
+#            next;
+#        }
 
-      my $seq = $self->parse_fasta_sequence('>' . $sequence);
-      my $iteration = 0;
-      my @to_fetch_cut = @to_fetch;
-      @to_fetch_cut = map { m/\-/ && s/\.\d+$//; $_ } @to_fetch_cut;
-      while ((index $seq->name, $to_fetch_cut[$iteration]) == -1 && $iteration < scalar(@to_fetch)) {
-            $iteration++;
-      }
+#        my $info = $cache->feature_accession_info($acc);
+#        unless ($info) {
+#            $self->logger->error("No info for '$acc' - this should not happen");
+#            $self->_add_missing_warning($acc => 'internal error');
+#            next;
+#        }
 
-      my ($type, $full) = @{$self->_acc_type_full($to_fetch[$iteration])};
-      unless ($type) {
-          $self->_add_missing_warning($to_fetch[$iteration] => 'illegal evidence type');
-          next;
-      }
-      $seq->type($type);
-      $seq->name($full);
-      push(@{$self->seqs}, $seq);
-  }
+#        unless ($info->{currency} and $info->{currency} eq 'current') {
+#            $self->_add_missing_warning($acc => 'obsolete SV');
+#            next;
+#        }
 
-  return;
+#        unless ($info->{sequence}) {
+#            $self->_add_missing_warning($acc => 'no sequence');
+#            next;
+#        }
+
+#        my $seq = Hum::Sequence->new;
+#        $seq->name($full);
+#        $seq->type($type);
+#        $seq->sequence_string($info->{sequence});
+
+#        # Will this ever get hit?
+#        if ($full ne $acc) {
+#            $self->logger->error("_fetch_sequences called with partial acc.sv for '$acc','$full'");
+#            $self->_add_remap_warning($acc => $full);
+#        }
+
+#        push(@{$self->seqs}, $seq);
+    }
+
+    return;
 }
 
 sub parse_fasta_sequence {

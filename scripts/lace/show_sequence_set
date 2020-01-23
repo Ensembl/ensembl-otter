@@ -1,12 +1,12 @@
 #!/usr/bin/env perl
-# Copyright [2018-2019] EMBL-European Bioinformatics Institute
-# 
+# Copyright [2018-2020] EMBL-European Bioinformatics Institute
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-# 
+#
 #      http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -225,7 +225,7 @@ will print out the same set in AGP format.
   ./show_sequence_set -dataset human -set 21 -agp -agp_cs_ver NCBI36
 
 will print out the set named "21" with coord system version NCBI36.
-(-agp_cs_ver defaults to "Otter".)
+(-agp_cs_ver defaults to 'Otter'.)
 
 =head1 AUTHOR
 

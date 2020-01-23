@@ -1,12 +1,12 @@
 #!/usr/bin/perl -Tw
-# Copyright [2018-2019] EMBL-European Bioinformatics Institute
-# 
+# Copyright [2018-2020] EMBL-European Bioinformatics Institute
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-# 
+#
 #      http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -26,7 +26,9 @@ use Bio::Otter::ServerAction::LoutreDB;
 
 sub get_db_info {
     my ($server) = @_;
-    return Bio::Otter::ServerAction::LoutreDB->new($server)->get_db_info;
+    my $coord_system_name = $server->require_argument('coord_system_name') || 'chromosome';
+    my $coord_system_version = $server->require_argument('coord_system_version') || 'Otter';
+    return Bio::Otter::ServerAction::LoutreDB->new($server)->get_db_info($coord_system_name, $coord_system_version);
 }
 
 Bio::Otter::Server::Support::Web->send_response(-content_type => 'application/json', \&get_db_info);

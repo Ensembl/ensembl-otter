@@ -1,6 +1,6 @@
 =head1 LICENSE
 
-Copyright [2018-2019] EMBL-European Bioinformatics Institute
+Copyright [2018-2020] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -36,7 +36,7 @@ use Bio::Vega::Transcript;
 use Bio::Vega::Translation;
 use Bio::Vega::Exon;
 use Bio::Vega::ContigInfo;
-use Bio::Vega::Utils::Attribute qw( add_EnsEMBL_Attributes get_name_Attribute_value );
+use Bio::Vega::Utils::Attribute qw( add_EnsEMBL_Attributes get_name_Attribute_value add_selenocystein_Attr_from_Remark );
 
 use Bio::Otter::Lace::CloneSequence;
 
@@ -481,9 +481,11 @@ sub add_remarks {
     my ($self, $ace, $obj) = @_;
 
     foreach my $value ($ace->get_values('Remark')) {
+        add_selenocystein_Attr_from_Remark($obj, $value->[0]);
         add_EnsEMBL_Attributes($obj, 'remark', $value->[0]);
     }
     foreach my $value ($ace->get_values('Annotation_remark')) {
+        add_selenocystein_Attr_from_Remark($obj, $value->[0]);
         add_EnsEMBL_Attributes($obj, 'hidden_remark', $value->[0]);
     }
 

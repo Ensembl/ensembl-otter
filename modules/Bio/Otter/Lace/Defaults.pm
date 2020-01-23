@@ -1,6 +1,6 @@
 =head1 LICENSE
 
-Copyright [2018-2019] EMBL-European Bioinformatics Institute
+Copyright [2018-2020] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -685,8 +685,9 @@ __DATA__
 # e.g. short_window_title_prefix and password_timeout accept -1 to
 # disable.
 
+
 [client]
-url=http://193.62.52.185:82/cgi-bin/otter
+url=http://otter-server.ebi.ac.uk:8004/cgi-bin/otter
 write_access=1
 gff_version=3
 acedb_version=4.9.61

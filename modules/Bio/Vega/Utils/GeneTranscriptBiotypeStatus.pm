@@ -1,6 +1,6 @@
 =head1 LICENSE
 
-Copyright [2018-2019] EMBL-European Bioinformatics Institute
+Copyright [2018-2020] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -49,7 +49,14 @@ my @method_biotype_status = qw{
     Transcript                      processed_transcript    -
         Ambiguous_ORF               =                       -
         IG_gene                     =                       -
+        IG_J_gene                     =                       -
+        IG_C_gene                     =                       -
+        IG_D_gene                     =                       -
+        IG_V_gene                     =                       -
         IG_pseudogene               =                       -
+        IG_J_pseudogene                     =                       -
+        IG_C_pseudogene                     =                       -
+        IG_D_pseudogene                     =                       -
         TR_gene                     =                       -
         TR_pseudogene               =                       -
         Putative                    processed_transcript    PUTATIVE
@@ -60,6 +67,7 @@ my @method_biotype_status = qw{
         Antisense                   =                       -
         3'_overlapping_ncRNA        =                       -
         Bidirectional_promoter_lncRNA   =                   -
+        lncRNA                      =                       -
 
     Known_ncRNA                     =                       -
         miRNA                       =                       -
@@ -71,6 +79,11 @@ my @method_biotype_status = qw{
         snoRNA                      =                       -
         tRNA                        =                       -
         vaultRNA                    =                       -
+        rRNA_pseudogene             =                       -
+        misc_RNA                    =                       -
+        ribozyme                    =                       -
+        sRNA                        =                       -
+        scaRNA                      =                       -
 
     TEC                             =                       -
 

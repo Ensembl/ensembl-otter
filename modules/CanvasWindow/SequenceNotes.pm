@@ -1,6 +1,6 @@
 =head1 LICENSE
 
-Copyright [2018-2019] EMBL-European Bioinformatics Institute
+Copyright [2018-2020] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -60,7 +60,6 @@ sub Client {
 
 sub SequenceSet {
     my ($self, $SequenceSet) = @_;
-
     if ($SequenceSet) {
         $self->{'_SequenceSet'} = $SequenceSet;
     }
@@ -139,7 +138,7 @@ sub refresh_lock_columns {
     my ($self) = @_;
 
     my $top = $self->canvas->toplevel;
-    my $busy = Tk::ScopedBusy->new($top);
+    my $busy = Tk::ScopedBusy->new_if_not_busy($top);
     $self->refresh_column(7);   # Padlock icon column
     $self->refresh_column(8);   # Lock author name column
 
@@ -767,9 +766,9 @@ sub open_SequenceSet {
     my ($self, $name) = @_;
 
         # using Lace::Slice instead of Lace::SequenceSet is encouraged wherever possible
-    my ($dsname, $ssname, $chr_name, $chr_start, $chr_end) = $self->SequenceSet->selected_CloneSequences_parameters;
+    my ($dsname, $ssname, $chr_name, $chr_start, $chr_end, $cs_name, $cs_version) = $self->SequenceSet->selected_CloneSequences_parameters;
     my $slice = Bio::Otter::Lace::Slice->new($self->Client, $dsname, $ssname,
-        'chromosome', 'Otter', $chr_name, $chr_start, $chr_end);
+        $cs_name, $cs_version, $chr_name, $chr_start, $chr_end);
 
     return $self->Bio::Otter::Utils::OpenSliceMixin::open_Slice(
         slice        => $slice,

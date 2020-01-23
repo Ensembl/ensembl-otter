@@ -1,6 +1,6 @@
 =head1 LICENSE
 
-Copyright [2018-2019] EMBL-European Bioinformatics Institute
+Copyright [2018-2020] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -56,7 +56,8 @@ sub new {
     $self->{_qnames}       = [ split ',', $server->require_argument('qnames') ];
     $self->{_results}      = {};
     $self->{_result_count} = 0;
-
+    $self->{ coord_system_name } = $server->require_argument('coord_system_name');
+    $self->{ coord_system_version } = $server->require_argument('coord_system_version');
     die "Too many query terms"
       if @{ $self->qnames } > $MAX_TERMS;
 
@@ -102,8 +103,8 @@ my $FIND_CONTAINING_CHROMOSOMES_SQL_TEMPLATE = <<'SQL'
     FROM      assembly a,
               seq_region chr,
               coord_system cs
-    WHERE     cs.name='chromosome'
-    AND       cs.version='Otter'
+    WHERE     cs.name="%s"
+    AND       cs.version="%s"
     AND       cs.coord_system_id=chr.coord_system_id
     AND       chr.seq_region_id=a.asm_seq_region_id
     AND       a.cmp_seq_region_id IN ( %s )
@@ -128,6 +129,8 @@ sub find_containing_chromosomes {
     # now map those contig_ids back onto a chromosome
     my $sql = sprintf
         $FIND_CONTAINING_CHROMOSOMES_SQL_TEMPLATE,
+        $self->{ coord_system_name },
+        $self->{ coord_system_version },
         (join ' , ', ('?') x @{$seq_level_slice_ids});
     my $sth = $sa->dbc->prepare($sql);
     $sth->execute(@{$seq_level_slice_ids});

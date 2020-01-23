@@ -1,6 +1,6 @@
 =head1 LICENSE
 
-Copyright [2018-2019] EMBL-European Bioinformatics Institute
+Copyright [2018-2020] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -30,6 +30,7 @@ use Bio::Otter::Lace::Chooser::SearchHistory;
 use MenuCanvasWindow::SessionWindow;
 use Tk::Utils::CanvasXPMs;
 use Tk::ScopedBusy;
+use Tk::Balloon;
 
 use base qw{
     MenuCanvasWindow
@@ -763,7 +764,6 @@ sub load_filters {
     }
 
     undef $busy; # i.e. Unbusy
-    # $top->withdraw;
     $self->zmap_select_destroy;
 
     return;

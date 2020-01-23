@@ -1,6 +1,6 @@
 =head1 LICENSE
 
-Copyright [2018-2019] EMBL-European Bioinformatics Institute
+Copyright [2018-2020] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -298,6 +298,7 @@ sub load_dataset_info {
 
     my $dbh = $dbh{$self};
 
+    my $select_sth = $dbh->prepare(q{ SELECT species_id, meta_key, meta_value FROM meta WHERE species_id = ? AND meta_key = ? AND meta_value = ? });
     my $meta_sth = $dbh->prepare(q{ INSERT INTO meta (species_id, meta_key, meta_value) VALUES (?, ?, ?) });
     my $meta_hash = $dataset->meta_hash;
 
@@ -307,15 +308,6 @@ sub load_dataset_info {
 
     # I'm not really sure we need to do this - we could just use a local version
     #
-    my $cs_chr  = $dataset->get_db_info_item('coord_system.chromosome');
-    my $local_cs_spec = {
-        $cs_chr->{name} => {
-            '-version'        => $cs_chr->{version},
-            '-rank'           => $cs_chr->{rank},
-            '-default'        => $cs_chr =~ m/default_version/,
-            '-sequence_level' => $cs_chr =~ m/sequence_level/,
-        },
-    };
 
     my @at_cols = qw(                                       attrib_type_id  code  name  description );
     my $at_sth  = $dbh->prepare(q{ INSERT INTO attrib_type (attrib_type_id, code, name, description)
@@ -323,30 +315,44 @@ sub load_dataset_info {
     my $at_list = $dataset->get_db_info_item('attrib_type');
 
     my $_dba = $self->_dba('_coords');     # we throw this one away
+    my $override_specs = $dataset->get_db_info_item('coord_systems');
+    my $dna_cs_rank;
+    foreach my $value (values %$override_specs) {
+      if ($value->{'-sequence_level'}) {
+        $value->{'-sequence_level'} = 0;
+        $dna_cs_rank = $value->{'-rank'}+1;
+      }
+    }
 
     my $cs_factory = Bio::Vega::CoordSystemFactory->new(
         dba           => $_dba,
         create_in_db  => 1,
-        override_spec => $local_cs_spec,
+        override_spec => $override_specs,
         );
+    my $toplevel_cs = $dataset->get_db_info_item('coord_system.chromosome');
 
-    my %local_meta = (
-        'assembly.mapping' => {
-            species_id => 1,
-            values     => [
-                $cs_factory->assembly_mappings,
-            ],
-        },
-        );
+    $override_specs->{dna_contig} = {
+      '-rank' => $dna_cs_rank,
+      '-sequence_level' => 1,
+      '-default' => 1,
+      'version'  => $toplevel_cs->{version},
+    };
+    $meta_hash->{'assembly.mapping'}->{species_id} = $meta_hash->{'species.classification'}->{species_id};
+    push(@{$meta_hash->{'assembly.mapping'}->{values}}, $toplevel_cs->{name}.':'.$toplevel_cs->{version}.'|dna_contig:'.$toplevel_cs->{version});
 
     $dbh->begin_work;
 
     # Meta first, so that CoordSystemAdaptor doesn't complain about missing schema_version
     #
     while (my ($key, $details) = each %$meta_hash) {
-        next if $key eq 'assembly.mapping'; # we do our own mapping, below...
         foreach my $value (@{$details->{values}}) {
-            $meta_sth->execute($details->{species_id}, $key, $value);
+            $select_sth->execute($details->{species_id}, $key, $value);
+            if($select_sth->fetchrow_array) {
+                next;
+            }
+            else {
+                $meta_sth->execute($details->{species_id}, $key, $value);
+            }
         }
     }
 
@@ -358,22 +364,14 @@ sub load_dataset_info {
 
     $dbh->commit;
 
-    $dbh->begin_work;
 
     # Coord systems via factory
     #
+    $cs_factory->known;
     $cs_factory->instantiate_all;
 
     # Mappings
     #
-    my $mca = $_dba->get_MetaContainer;
-    while (my ($key, $details) = each %local_meta) {
-        foreach my $value (@{$details->{values}}) {
-            $mca->store_key_value($key, $value);
-        }
-    }
-
-    $dbh->commit;
 
     $self->_is_loaded('dataset_info', 1);
 

@@ -1,6 +1,6 @@
 =head1 LICENSE
 
-Copyright [2018-2019] EMBL-European Bioinformatics Institute
+Copyright [2018-2020] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -280,7 +280,12 @@ sub _init {
                 throw("Argument [$newval] is not a Bio::Vega::Author")
                   if $author{$field} && defined $newval &&
                     !try { $newval->isa("Bio::Vega::Author") };
-                $self->{$field} = $newval;
+                if ($field eq 'otter_version') {
+                  $self->{$field} = substr($newval, 0, 16);
+                }
+                else {
+                  $self->{$field} = $newval;
+                }
             }
             return $self->{$field};
         };

@@ -1,12 +1,12 @@
 #!/usr/bin/env perl
-# Copyright [2018-2019] EMBL-European Bioinformatics Institute
-# 
+# Copyright [2018-2020] EMBL-European Bioinformatics Institute
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-# 
+#
 #      http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -31,8 +31,15 @@ sub do_it {
 
     $self->do_requires;
 
+    my $cs_name;
+    if ($self->vega_slice->adaptor->db->get_CoordSystemAdaptor->fetch_by_name('contig')) {
+      $cs_name = 'contig';
+    }
+    else {
+      $cs_name = 'seqlevel';
+    }
     my $tiler = Bio::Vega::Tiler->new($self->vega_slice);
-    my @features = $tiler->simple_features('contig');
+    my @features = $tiler->simple_features($cs_name);
     $self->send_feature_gff(\@features);
 
     return;

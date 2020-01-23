@@ -1,6 +1,6 @@
 =head1 LICENSE
 
-Copyright [2018-2019] EMBL-European Bioinformatics Institute
+Copyright [2018-2020] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -24,6 +24,8 @@ use warnings;
 use Bio::Vega::Transform::XMLToRegion;
 use Bio::Vega::Transform::RegionToXML;
 use Bio::Vega::CoordSystemFactory;
+use Bio::Otter::ServerAction::LoutreDB;
+use XML::Simple;
 
 use base 'Bio::Otter::ServerAction::Region';
 
@@ -51,8 +53,16 @@ sub serialise_region {
 sub deserialise_region {
     my ($self, $xml_string) = @_;
 
+    my $xml_data = XMLin($xml_string);
+    my $odba = $self->server;
+    my $cs_cache = Bio::Otter::ServerAction::LoutreDB->new($odba)->
+                   get_db_info($xml_data->{sequence_set}->{sequence_fragment}->{coord_system_name}, 
+                   $xml_data->{sequence_set}->{sequence_fragment}->{coord_system_version});
+
     my $cs_factory = Bio::Vega::CoordSystemFactory->new;
     my $parser = Bio::Vega::Transform::XMLToRegion->new;
+    $cs_factory->{'_cache'} = $cs_cache->{'coord_systems'};
+
     $parser->coord_system_factory($cs_factory);
 
     my $region = $parser->parse($xml_string);

@@ -1,6 +1,6 @@
 =head1 LICENSE
 
-Copyright [2018-2019] EMBL-European Bioinformatics Institute
+Copyright [2018-2020] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ use strict;
 use warnings;
 use Bio::EnsEMBL::Utils::Argument qw ( rearrange );
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
+use Bio::EnsEMBL::Attribute;
 use Bio::Vega::Utils::AttributesMixin;
 use Bio::Vega::Evidence;
 use Bio::Vega::Translation;
@@ -31,7 +32,7 @@ use base 'Bio::EnsEMBL::Transcript';
 sub new {
   my ($class, @args) = @_;
   my $self = $class->SUPER::new(@args);
-  my ($transcript_author,$evidence_list)  = rearrange([qw(AUTHOR EVIDENCE)],@args);
+  my ($transcript_author,$evidence_list, $status)  = rearrange([qw(AUTHOR EVIDENCE STATUS)],@args);
   $self->transcript_author($transcript_author);
   if (defined($evidence_list)) {
       if (ref($evidence_list) eq "ARRAY") {
@@ -40,6 +41,7 @@ sub new {
           $self->throw( "Argument to evidence must be an array ref. Currently [$evidence_list]");
       }
   }
+  $self->status($status) if ($status);
   return $self;
 }
 
@@ -298,6 +300,55 @@ sub last_db_version {
         $self->{_last_db_version} = shift @args;
     }
     return $self->{_last_db_version};
+}
+
+
+=head2 status
+
+ Arg [1]    : String (optional), status of the transcript, KNOWN, PUTATIVE,...
+ Description: Return or set the status of the transcript. The value will
+              be stored as an attribute.
+ Returntype : String
+ Exceptions : None
+
+=cut
+
+sub status {
+  my ($self, $status) = @_;
+
+  my $attributes = $self->get_all_Attributes('status');
+  if ($status) {
+    $self->{status} = $status;
+    if (@$attributes) {
+      $attributes->[0]->value($status);
+    }
+    else {
+      $self->add_Attributes(Bio::EnsEMBL::Attribute->new(-code => 'status', -value => $status));
+    }
+  }
+  elsif (!$self->{status} and @$attributes) {
+    if (@$attributes > 1) {
+      warning('You have multiple status attributes, using the first one '.$attributes->[0]);
+    }
+    $self->{status} = $attributes->[0]->value;
+  }
+  return $self->{status};
+}
+
+
+=head2 is_known
+
+ Arg [1]    : None
+ Description: Return true if the transcript is of status 'KNOWN'
+ Returntype : Boolean
+ Exceptions : None
+
+=cut
+
+sub is_known {
+  my ($self) = @_;
+
+  return ($self->status eq 'KNOWN' || $self->status eq 'KNOWN_BY_PROJECTION');
 }
 
 
