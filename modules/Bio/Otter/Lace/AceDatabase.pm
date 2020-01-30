@@ -267,7 +267,7 @@ sub init_AceDatabase {
             }
         }
         else {
-            foreach $transcript_key(keys {$xml_data->{sequence_set}->{locus}->{$locus_key}{transcript}}) {
+            foreach $transcript_key(keys %{$xml_data->{sequence_set}->{locus}->{$locus_key}{transcript}}) {
                 if (exists($xml_data->{sequence_set}->{locus}->{$locus_key}->{transcript}->{$transcript_key}->{exon_set})) {
                     $exon_hash = $xml_data->{sequence_set}->{locus}->{$locus_key}->{transcript}->{$transcript_key}->{exon_set};
                     if(!%$exon_hash) {
