@@ -1,6 +1,6 @@
 =head1 LICENSE
 
-Copyright [2018-2019] EMBL-European Bioinformatics Institute
+Copyright [2018-2020] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -58,7 +58,7 @@ sub _fetch_new_by_type {
     my $poolid = $type . "_pool_id";
     my $table  = $type . "_stable_id_pool";
 
-    my $sql = "insert into $table () values()";
+    my $sql = "insert into $table DEFAULT VALUES";
     my $sth = $self->prepare($sql);
     $sth->execute;
     my $num = $self->last_insert_id($poolid, undef, $table) or throw("Failed to get autoincremented '$poolid'");
