@@ -57,8 +57,15 @@ sub _fetch_new_by_type {
     my $id     = $type . "_id";
     my $poolid = $type . "_pool_id";
     my $table  = $type . "_stable_id_pool";
-
-    my $sql = "insert into $table () values()";
+	
+    my $sql = "";
+    
+    # On the clones load SQLite db is used, on the transcript save - Mysql db, they require different syntax;
+    if ($self->db->dbc->_driver_object->isa('Bio::EnsEMBL::DBSQL::Driver::mysql')) {
+        $sql = "insert into $table () values()";
+    } elsif ($self->db->dbc->_driver_object->isa('Bio::EnsEMBL::DBSQL::Driver::SQLite')) {
+    	$sql = "insert into $table DEFAULT VALUES";
+    }
     my $sth = $self->prepare($sql);
     $sth->execute;
     my $num = $self->last_insert_id($poolid, undef, $table) or throw("Failed to get autoincremented '$poolid'");
