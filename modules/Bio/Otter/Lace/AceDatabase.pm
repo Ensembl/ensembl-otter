@@ -259,6 +259,15 @@ sub init_AceDatabase {
     my ($locus_key, $transcript_key, $exon_hash);
     my $xml_string = $self->Client->get_region_xml($self->slice);
     my $xml_data = XMLin($xml_string);
+
+    #Sometimes we don't have array of locus entries, but only one hash ref. So here we convert it to array
+    if($xml_data->{sequence_set}->{locus}->{name}) {
+        my $locus_entry = $xml_data->{sequence_set}->{locus};
+        my $locus_name = $xml_data->{sequence_set}->{locus}->{name};
+        $xml_data->{sequence_set}->{locus} = {};
+        $xml_data->{sequence_set}->{locus}->{$locus_name} = $locus_entry;
+    }
+
     foreach $locus_key(keys %{$xml_data->{sequence_set}->{locus}})  {
         if (exists($xml_data->{sequence_set}->{locus}->{$locus_key}->{transcript}->{exon_set})) {
             $exon_hash = $xml_data->{sequence_set}->{locus}->{$locus_key}->{transcript}->{exon_set};
