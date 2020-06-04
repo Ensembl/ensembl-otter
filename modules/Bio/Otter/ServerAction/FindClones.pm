@@ -113,6 +113,7 @@ SQL
     ;
 
 sub find_containing_chromosomes {
+    warn('start finding containing chromosomes');
     my ($self, $slice) = @_;
 
         # EnsEMBL as of rel46 cannot perform ambigous clone|subregion->contig->chromosome mapping correctly.
@@ -120,7 +121,7 @@ sub find_containing_chromosomes {
 
     my $sa = $slice->adaptor;
 
-        # map the original slice onto contig_ids
+    # map the original slice onto contig_ids
     my $seq_level_slice_ids = [ $slice->coord_system->is_sequence_level
         ? $sa->get_seq_region_id($slice)
         : map { $sa->get_seq_region_id($_->to_Slice) } @{$slice->project('seqlevel')}
@@ -133,14 +134,23 @@ sub find_containing_chromosomes {
         $self->{ coord_system_version },
         (join ' , ', ('?') x @{$seq_level_slice_ids});
     my $sth = $sa->dbc->prepare($sql);
+    warn($sql);
     $sth->execute(@{$seq_level_slice_ids});
 
     my @chr_slices = ();
     while( my ($atype, $joined_cmps) = $sth->fetchrow ) {
         my @cmps = split(/,/, $joined_cmps);
+        warn($joined_cmps);
+        warn('compare with');
+        use Data::Dumper;
+        warn(Dumper(@$seq_level_slice_ids));
         if(scalar(@cmps) == scalar(@$seq_level_slice_ids)) {
-                    # let's hope the default coord_system_version is set correctly:
+        
+            # let's hope the default coord_system_version is set correctly:
             my $chr_slice = $sa->fetch_by_region('chromosome', $atype);
+            warn('We got after fetch by region');
+            warn($atype);
+            warn(Dumper($chr_slice));
             push @chr_slices, $chr_slice;
         }
     }
@@ -181,12 +191,15 @@ sub register_slice {
 sub register_local_slice {
     warn ("SLice register started");
     my ($self, $qname, $qtype, $feature_slice) = @_;
-
+    use Data::Dumper;
     my $cs_name = $feature_slice->coord_system_name;
-
+    warn('$cs_name = ');
+    warn($cs_name);
     my @component_names;
     if ($cs_name eq $TARGET_COMPONENT_TYPE) {
         @component_names = ( $feature_slice->seq_region_name );
+        warn("cs_name eq TARGET_COMPONENT_TYPE");
+        warn(Dumper(@component_names));
     } else {
         # NOTE: order of projection segments WAS strand-dependent
         my @sorted_projections =
@@ -194,6 +207,8 @@ sub register_local_slice {
                  @{ $feature_slice->project($TARGET_COMPONENT_TYPE) };
 
         @component_names = map { $_->to_Slice->seq_region_name } @sorted_projections;
+        warn("cs_name NOT eq TARGET_COMPONENT_TYPE");
+        warn(Dumper(@component_names));
     }
 
     my $found_chromosome_slices = ($cs_name eq 'chromosome')
