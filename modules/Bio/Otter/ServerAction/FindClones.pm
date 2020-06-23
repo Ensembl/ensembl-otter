@@ -113,7 +113,6 @@ SQL
     ;
 
 sub find_containing_chromosomes {
-    warn('start finding containing chromosomes');
     my ($self, $slice) = @_;
 
         # EnsEMBL as of rel46 cannot perform ambigous clone|subregion->contig->chromosome mapping correctly.
@@ -128,29 +127,25 @@ sub find_containing_chromosomes {
     ];
 
     # now map those contig_ids back onto a chromosome
+    
+    # cs must be alway chromosome, as this function is targeted to find chromosomes only. 
+    # Otherwise if we find non-chromosome - even search will work, client will not be able to open containing dataSet,
+    # as it includes only chromosomes
     my $sql = sprintf
         $FIND_CONTAINING_CHROMOSOMES_SQL_TEMPLATE,
-        $self->{ coord_system_name },
+        'chromosome',
         $self->{ coord_system_version },
         (join ' , ', ('?') x @{$seq_level_slice_ids});
     my $sth = $sa->dbc->prepare($sql);
-    warn($sql);
     $sth->execute(@{$seq_level_slice_ids});
 
     my @chr_slices = ();
     while( my ($atype, $joined_cmps) = $sth->fetchrow ) {
         my @cmps = split(/,/, $joined_cmps);
-        warn($joined_cmps);
-        warn('compare with');
-        use Data::Dumper;
-        warn(Dumper(@$seq_level_slice_ids));
         if(scalar(@cmps) == scalar(@$seq_level_slice_ids)) {
         
             # let's hope the default coord_system_version is set correctly:
             my $chr_slice = $sa->fetch_by_region('chromosome', $atype);
-            warn('We got after fetch by region');
-            warn($atype);
-            warn(Dumper($chr_slice));
             push @chr_slices, $chr_slice;
         }
     }
@@ -189,17 +184,12 @@ sub register_slice {
 }
 
 sub register_local_slice {
-    warn ("SLice register started");
     my ($self, $qname, $qtype, $feature_slice) = @_;
     use Data::Dumper;
     my $cs_name = $feature_slice->coord_system_name;
-    warn('$cs_name = ');
-    warn($cs_name);
     my @component_names;
     if ($cs_name eq $TARGET_COMPONENT_TYPE) {
         @component_names = ( $feature_slice->seq_region_name );
-        warn("cs_name eq TARGET_COMPONENT_TYPE");
-        warn(Dumper(@component_names));
     } else {
         # NOTE: order of projection segments WAS strand-dependent
         my @sorted_projections =
@@ -207,8 +197,6 @@ sub register_local_slice {
                  @{ $feature_slice->project($TARGET_COMPONENT_TYPE) };
 
         @component_names = map { $_->to_Slice->seq_region_name } @sorted_projections;
-        warn("cs_name NOT eq TARGET_COMPONENT_TYPE");
-        warn(Dumper(@component_names));
     }
 
     my $found_chromosome_slices = ($cs_name eq 'chromosome')
@@ -220,8 +208,6 @@ sub register_local_slice {
         next if $hidden;
         my $chr_name = $chr_slice->seq_region_name;
         my $key = join ',', @component_names;
-        warn ("we got the result");
-        warn($chr_name);
         my $valref = \$self->results->{uc($qname)}->{$chr_name}->{$qtype}->{$key};
 
         if (!$$valref) {
@@ -305,9 +291,6 @@ sub _find_by_stable_ids {
         my $feature_slice  = $feature->feature_Slice;
         my $analysis_logic = $feature->analysis->logic_name; 
         my $qtype = "${qtype_prefix}${analysis_logic}:${id}";
-        warn("SEARCH DEBUG _find_by_stable_ids");
-        use Data::Dumper;
-        warn(Dumper($feature_slice));
         $self->register_slice($qname, $qtype, $feature_slice);
     }
 
@@ -344,9 +327,6 @@ sub _find_by_feature_attributes {
     while( my ($feature_id, $qname) = $sth->fetchrow ) {
         $adaptor ||= $self->otter_dba->$adaptor_call; # only do it if we found something
         my $feature = $adaptor->fetch_by_dbID($feature_id);
-        warn("SEARCH DEBUG _find_by_feature_attributes");
-        use Data::Dumper;
-        warn(Dumper($feature));
         $self->register_local_slice($qname, $qtype, $feature->feature_Slice);
     }
 
@@ -382,9 +362,6 @@ sub _find_by_seqregion_names {
     while( my ($cs_name, $sr_name) = $sth->fetchrow ) {
         $adaptor ||= $self->otter_dba->get_SliceAdaptor;
         my $slice = $adaptor->fetch_by_region($cs_name, $sr_name);
-        warn("SEARCH DEBUG _find_by_seqregion_names");
-        use Data::Dumper;
-        warn(Dumper($slice));
         $self->register_local_slice($sr_name, $cs_name.'_name', $slice);
     }
 
@@ -424,9 +401,6 @@ sub _find_by_seqregion_attributes {
     while( my ($sr_name, $qname) = $sth->fetchrow ) {
         $adaptor ||= $self->otter_dba->get_SliceAdaptor;
         my $slice = $adaptor->fetch_by_region($cs_name, $sr_name);
-        warn ("SEARCH DEBUG _find_by_seqregion_attributes");
-        use Data::Dumper;
-        warn(Dumper($slice));
         $self->register_local_slice($qname, $qtype, $slice);
     }
 
@@ -497,9 +471,6 @@ sub _find_by_xref {
         $adaptor ||= $satellite_dba->get_SliceAdaptor;
         my $slice = $adaptor->fetch_by_region($cs_name, $sr_name, $start, $end, 1, $cs_version);
         my $qtype = "${prefix}${db_name}:";
-        warn("SEARCH DEBUG _find_by_xref");
-        use Data::Dumper;
-        warn(Dumper($slice));
         $self->register_slice($qname, $qtype, $slice);
     }
 
@@ -562,9 +533,6 @@ sub _find_by_hit_name {
         my $slice = $adaptor->fetch_by_region(
             $cs_name, $sr_name, $start, $end, $strand, $cs_version);
         my $qtype = "Pipeline_${kind}_hit:${analysis_name}(score=$score)";
-        warn("SEARCH DEBUG _find_by_hit_name");
-        use Data::Dumper;
-        warn(Dumper($slice));
         $self->register_slice($qname, $qtype, $slice);
     }
 
@@ -628,7 +596,6 @@ sub find {
       map { __fa_add_dupsfx($_) } @{$names};
     my $fa_args = [ map { __tamecard_like($_) } @fa_name ];
     my $fa_condition = join ' OR ', (('( value LIKE ? )') x @$fa_args);
-	warn("SRAT SEARCH DEBUG");
     $self->find_by_seqregion_names($names);
 
     $self->find_by_otter_stable_ids;
