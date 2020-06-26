@@ -31,7 +31,6 @@ use Bio::Vega::SliceLockBroker;
 use Bio::Vega::Region;
 use Bio::Vega::Tiler;
 use Bio::Vega::Utils::Attribute qw( get_name_Attribute_value );
-
 use base 'Bio::Otter::ServerAction';
 
 =head1 NAME
@@ -373,9 +372,16 @@ sub _write_region_exclusive { # runs under $slb->exclusive_work
         $gene->slice($db_slice);
         # update author in gene and transcript
         $gene->gene_author($author_obj);
+
         foreach my $tran (@{ $gene->get_all_Transcripts }) {
             $tran->slice($db_slice);
             $tran->transcript_author($author_obj);
+
+            foreach my $exon (@{ $tran->get_all_Exons }) {
+                $exon->slice($db_slice);
+                $self->fill_exon_align_evidence($exon, $tran);
+
+            }
         }
         foreach my $exon (@{ $gene->get_all_Exons }) {
             $exon->slice($db_slice);
@@ -403,9 +409,6 @@ sub _write_region_exclusive { # runs under $slb->exclusive_work
         foreach my $tran (@{ $dbgene->get_all_Transcripts }) {
             $tran->slice($db_slice);
             $tran->transcript_author($author_obj);
-        }
-        foreach my $exon (@{ $dbgene->get_all_Exons }) {
-            $exon->slice($db_slice);
         }
         ##update all gene and its components in db (del)
 
@@ -461,6 +464,504 @@ sub _write_region_exclusive { # runs under $slb->exclusive_work
     $current_region->fetch_CloneSequences;
 
     return $current_region;
+}
+
+sub fill_exon_align_evidence() {
+  my ($self, $exon, $transcript) = @_;
+
+  my $pipeline_db = $self->server->dataset->pipeline_dba;
+
+
+  my $protein_adaptor = $pipeline_db->get_ProteinAlignFeatureAdaptor;
+  my $dna_adaptor = $pipeline_db->get_DnaAlignFeatureAdaptor;
+  my $transformed_exon = $exon->transform('seqlevel');
+
+  my $start_Exon;
+  my $end_Exon;
+  my $target_slice = $transcript->slice;
+
+  my $exon_projection_slice = $transformed_exon->slice;
+  my $exon_projection_slice_name = $exon_projection_slice->seq_region_name;
+  my $target_slice_contig = $target_slice->adaptor->fetch_by_region('seqlevel', $exon_projection_slice_name, $exon_projection_slice->start, $exon_projection_slice->end, $exon_projection_slice->strand);
+  if ($transformed_exon) {
+#       If we could transfer the exon on the sequence level (contig), we are trying to find the contig in the pipeline database and the target database.
+#       Then we can get all supporting evidence which overlap the exon, add them to the exon and transfer them all to the top level
+      my $exon_projection_slice = $transformed_exon->slice;
+      my $exon_projection_slice_name = $exon_projection_slice->seq_region_name;
+#       Loutre contigs have the start and add concatented to the accession: AL671879.2.1.176995
+#       but we do not want that.
+#       They can also use old data so we need some checks first
+
+        $exon_projection_slice_name =~ s/\.\d+\.\d+$//;
+        my $pipeline_slice = $pipeline_db->get_SliceAdaptor->fetch_by_region('seqlevel', $exon_projection_slice->seq_region_name, $exon_projection_slice->start, $exon_projection_slice->end, $exon_projection_slice->strand);
+        if ($pipeline_slice) {
+
+
+          my %supporting_evidences;
+          foreach my $evidence (@{$transcript->evidence_list}) {
+            my $evidence_name = $evidence->name;
+            $evidence_name =~ s/^\w+://;
+            my $sfs;
+            if ($evidence->type eq 'Protein') {
+              $sfs = $protein_adaptor->fetch_all_by_Slice_constraint($pipeline_slice, "hit_name = '$evidence_name'");
+            }
+            else {
+              $sfs = $dna_adaptor->fetch_all_by_Slice_constraint($pipeline_slice, "hit_name = '$evidence_name'");
+            }
+            my $added_feature = 0;
+            foreach my $sf (@$sfs) {
+              next if ($sf->analysis->logic_name =~ /_raw$/);
+              my $strand = $sf->strand;
+              if (defined $sf->hstrand) {
+                $strand *= $sf->hstrand;
+              }
+            if ($sf->slice->seq_region_name eq $exon_projection_slice->seq_region_name and $strand == $transformed_exon->strand and $sf->start <= $transformed_exon->end and $sf->end >= $transformed_exon->start) {
+                $supporting_evidences{$sf->hseqname} = $sf;
+                $added_feature = 1;
+              }
+            }
+              }
+          $transformed_exon->add_supporting_features(values %supporting_evidences);
+          my $toplevel_exon = $transformed_exon->transform('toplevel');
+          if ($toplevel_exon) {
+
+            $self->check_all_supporting_evidences($toplevel_exon, $target_slice, \%supporting_evidences, $exon, $start_Exon, $end_Exon, $pipeline_slice, $transcript);
+          }
+          else {
+            my $target_contig_projection;
+            eval {
+              $target_contig_projection = $target_slice_contig->project($target_slice->coord_system->name, $target_slice->coord_system->version);
+            };
+            if ($target_contig_projection) {
+              if (@$target_contig_projection == 1) {
+                my $target_contig_proj_toplevel = $target_contig_projection->[0]->to_Slice;
+                my $min_start = $transformed_exon->start;
+                my $max_end = $transformed_exon->end;
+                foreach my $sf (@{$transformed_exon->get_all_supporting_features}) {
+                  $min_start = $sf->start if ($sf->start < $min_start);
+                  $max_end = $sf->end if ($sf->end > $max_end);
+                }
+                if (($target_contig_proj_toplevel->strand == 1 and $transformed_exon->start < $target_contig_projection->[0]->from_start)
+                    or ($target_contig_proj_toplevel->strand == -1 and $transformed_exon->end > $target_contig_projection->[0]->from_end)) {
+                  my $diff = $target_contig_projection->[0]->from_start-$min_start;
+                  $transformed_exon->start($diff+$transformed_exon->start);
+                  $transformed_exon->end($diff+$transformed_exon->end);
+                  foreach my $sf (@{$transformed_exon->get_all_supporting_features}) {
+                    $sf->start($diff+$sf->start);
+                    $sf->end($diff+$sf->end);
+                  }
+                  $toplevel_exon = $transformed_exon->transfer($target_slice);
+                  if ($toplevel_exon) {
+                    $toplevel_exon->start($toplevel_exon->start-abs($diff));
+                    $toplevel_exon->end($toplevel_exon->end-abs($diff));
+                    foreach my $sf (@{$toplevel_exon->get_all_supporting_features}) {
+                      $sf->start($sf->start-abs($diff));
+                      $sf->end($sf->end-abs($diff));
+                    }
+                    $self->check_all_supporting_evidences($toplevel_exon, $target_slice, \%supporting_evidences, $exon, $start_Exon, $end_Exon, $pipeline_slice, $transcript);
+                  }
+                  else {
+                    warn('NOT SURE WHAT TO DO NOW');
+                  }
+                }
+                elsif (($target_contig_proj_toplevel->strand == 1 and $transformed_exon->end > $target_contig_projection->[0]->from_end)
+                    or ($target_contig_proj_toplevel->strand == -1 and $transformed_exon->start < $target_contig_projection->[0]->from_start)) {
+                  my $diff = $max_end-$target_contig_projection->[0]->from_end;
+                  $transformed_exon->start($transformed_exon->start-$diff);
+                  $transformed_exon->end($transformed_exon->end-$diff);
+                  foreach my $sf (@{$transformed_exon->get_all_supporting_features}) {
+                    $sf->start($sf->start-$diff);
+                    $sf->end($sf->start-$diff);
+                  }
+                  $toplevel_exon = $transformed_exon->transfer($target_slice);
+                  if ($toplevel_exon) {
+                    warn(' TDONE');
+                    $toplevel_exon->start($toplevel_exon->start+abs($diff));
+                    $toplevel_exon->end($toplevel_exon->end+abs($diff));
+                  foreach my $sf (@{$toplevel_exon->get_all_supporting_features}) {
+                      $sf->start($sf->start+abs($diff));
+                      $sf->end($sf->start+abs($diff));
+                    }
+                    check_all_supporting_evidences($toplevel_exon, $target_slice, \%supporting_evidences, $exon, $start_Exon, $end_Exon, $pipeline_slice, $transcript);
+                  }
+                  else {
+                    warn('NOT SURE WHAT TO DO NOW');
+                  }
+                }
+                else {
+                  return;
+                }
+              }
+              else {
+                return;
+              }
+            }
+            else {
+              error('COULD NOT PROJECT target_slice_contig TO toplevel');
+            }
+          }
+        }
+        else {
+          warn('Could not retrieve an exon slice from the pipeline db '.$exon_projection_slice->seq_region_name);
+        }
+    }
+    else {
+      my $exon_slice = $exon->slice;
+      $exon->slice($target_slice);
+      my $slice = $exon_slice->adaptor->fetch_by_region($exon_slice->coord_system->name, $exon_slice->seq_region_name, $exon->seq_region_start, $exon->seq_region_end, $exon_slice->strand, $exon_slice->coord_system->version);
+      my $slice_projection = $slice->project('seqlevel');
+      if ($slice_projection) {
+        my %features;
+        foreach my $elm (@$slice_projection) {
+          my $exon_projection_slice = $elm->to_Slice;
+          my $pipeline_slice = $pipeline_db->get_SliceAdaptor->fetch_by_region('seqlevel', $exon_projection_slice->seq_region_name, $exon_projection_slice->start, $exon_projection_slice->end, $exon_projection_slice->strand);
+          if ($pipeline_slice) {
+            foreach my $evidence (@{$transcript->evidence_list}) {
+              my $evidence_name = $evidence->name;
+              $evidence_name =~ s/^\w+://;
+              my $sfs;
+              if ($evidence->type eq 'Protein') {
+                $sfs = $protein_adaptor->fetch_all_by_Slice_constraint($pipeline_slice, "hit_name = '$evidence_name'");
+              }
+              else {
+                $sfs = $dna_adaptor->fetch_all_by_Slice_constraint($pipeline_slice, "hit_name = '$evidence_name'");
+              }
+              foreach my $sf (@$sfs) {
+                next if ($sf->analysis->logic_name =~ /_raw$/);
+                my $strand = $sf->strand;
+                if (defined $sf->hstrand) {
+                  $strand *= $sf->hstrand;
+                }
+                  $sf->slice($exon_projection_slice);
+                my $transformed_sf;
+                my $cut_sf;
+                if ($sf->start < 1 or $sf->end > $exon_projection_slice->length or $sf->end > $exon_projection_slice->end) {
+                  my %tmp_sf = %$sf;
+                  $cut_sf = ref($sf)->new_fast(\%tmp_sf);
+                  if ($cut_sf->start < 1) {
+                    $cut_sf->start(1);
+                  }
+                  if ($cut_sf->end > $exon_projection_slice->length or $cut_sf->length > $exon_projection_slice->length) {
+                    $cut_sf->end($exon_projection_slice->length);
+                  }
+                  set_hstart_hend($sf, $cut_sf);
+                  $sf = $cut_sf;
+                }
+                my ($target_exon_projection_slice_name) = $exon_projection_slice->seq_region_name =~ /^([^.]+\.\d+)/;
+                my $target_exon_projection_slice = $target_slice->adaptor->fetch_by_region($exon_projection_slice->coord_system->name, $target_exon_projection_slice_name, $exon_projection_slice->start, $exon_projection_slice->end);
+                if ($target_exon_projection_slice) {
+                  $sf->slice($target_exon_projection_slice);
+                }
+                else {
+                  warn('Could not find contig '.$exon_projection_slice->name);
+                }
+                $transformed_sf = $sf->transfer($target_slice);
+                if ($transformed_sf) {
+          #                    if ($strand == $exon->strand) {
+                    $transformed_sf->slice($target_slice);
+                    push(@{$features{$evidence_name}}, $transformed_sf);
+#                    }
+#                    else {
+#                      warn($transformed_sf->hseqname.' '.$transformed_sf->slice->seq_region_name.' '.$transformed_sf->start.' '.$transformed_sf->end.' '.$transformed_sf->strand.' '.$transformed_sf->hstart.' '.$transformed_sf->hend.' '. $transformed_sf->hstrand);
+#                    }
+                }
+                else {
+                  warn('Could not project evidence '.$sf->hseqname.' to slice '.$slice->name);
+                }
+              }
+            }
+          }
+          else {
+            warn('Could not retrieve an exon slice from the pipeline db '.$exon_projection_slice->seq_region_name);
+          }
+        }
+        foreach my $feature_name (keys %features) {
+          if (@{$features{$feature_name}}) {
+            my $new_feature;
+            my $hstart = $features{$feature_name}->[0]->hstart;
+            my $hend = $features{$feature_name}->[0]->hend;
+            foreach my $sf (sort {$a->start <=> $b->start} @{$features{$feature_name}}) {
+              if ($new_feature) {
+                $hstart = $sf->hstart if ($sf->hstart < $hstart);
+                $hend = $sf->hend if ($sf->hend < $hend);
+                $new_feature->end($sf->end);
+              }
+              else {
+                $new_feature = $sf;
+              }
+            }
+            $new_feature->hstart($hstart);
+            $new_feature->hend($hend);
+          $exon->add_supporting_features($new_feature);
+            $exon->start($new_feature->start);
+            $exon->end($new_feature->end);
+          }
+          else {
+            warn('No match for '.$feature_name.' '.$exon->start.' '.$exon->end.' '.$exon->strand.' '.$exon->slice->name);
+          }
+        }
+      }
+      else {
+        warn('Could not transform exon '.$exon->stable_id_version.' '.$exon->start.' '.$exon->end.' '.$exon->strand.' '.$exon->slice->name);
+      }
+      if ($exon->slice->is_toplevel) {
+        $transcript->add_Exon($exon);
+        if ($start_Exon) {
+          $transcript->translation->start_Exon($exon) if ($start_Exon == $exon);
+          $transcript->translation->end_Exon($exon) if ($end_Exon == $exon);
+        }
+      }
+      else {
+        my $exon_toplevel = $exon->transform('toplevel', $exon->slice->coord_system->version);
+        if ($exon_toplevel) {
+          $transcript->add_Exon($exon_toplevel);
+          if ($start_Exon) {
+            $transcript->translation->start_Exon($exon_toplevel) if ($start_Exon == $exon);
+            $transcript->translation->end_Exon($exon_toplevel) if ($end_Exon == $exon);
+          }
+        }
+        else {
+          warn('Failed to transform exon to toplevel for '.$exon->display_id.' '.$exon->slice->name);
+        }
+      }
+    }
+  return;
+}
+
+sub add_translation_attributes {
+  my ($self, $transcript) = @_;
+
+  my @translation_attributes;
+  warn(' GETTING ATTRIBUTES');
+  foreach my $attribute (@{$transcript->get_all_Attributes('hidden_remark')}, @{$transcript->get_all_Attributes('remark')}) {
+    my $value = $attribute->value;
+    if ($value =~ /^selenocystein\w+\s+\d+/) {
+      warn(' SELENO '.$value);
+      while($value =~ / (\d+)/gc) {
+        my $seq_edit = Bio::EnsEMBL::SeqEdit->new(
+                                        -CODE    => '_selenocysteine',
+                                        -NAME    => 'Selenocysteine',
+                                        -DESC    => 'Selenocysteine',
+                                        -START   => $1,
+                                        -END     => $1,
+                                        -ALT_SEQ => 'U'
+                                        );
+        push(@translation_attributes, $seq_edit->get_Attribute);
+      }
+    }
+  }
+  if (scalar(@translation_attributes)) {
+    warn(' ADDING '.scalar(@translation_attributes).' ATTRIBUTES');
+    $transcript->translation->add_Attributes(@translation_attributes);
+  }
+}
+
+
+sub check_all_supporting_evidences {
+  my ($self, $toplevel_exon, $target_slice, $supporting_evidences, $exon, $start_Exon, $end_Exon, $pipeline_slice, $transcript) = @_;
+# When we have transfered the exon, we need to make sure that it is on the top level sequence
+# we aim for and that the slice object is on the forward (1) strand. Otherwise it might cause
+# problems later
+  if ($toplevel_exon->slice->strand != -1  && $toplevel_exon->slice->name eq $target_slice->name) {
+#   If a supporting evidence has not been transfered, there will be an undef value in the array
+#   It can happened when the feature is longer than the exon and is overlapping two contigs in
+#   the assembly or if there is a small sequence to correct the clone
+    my $sfs = $toplevel_exon->get_all_supporting_features;
+    foreach my $sf (@$sfs) {
+      if ($sf) {
+        delete $supporting_evidences->{$sf->hseqname};
+      }
+    }
+    if (keys %$supporting_evidences) {
+      $toplevel_exon->flush_supporting_features;
+      $toplevel_exon->add_supporting_features(grep {defined $_} @$sfs);
+      foreach my $sf (values %$supporting_evidences) {
+#       We will try to project the contig to the top level, then for each of the top level region
+#       we will resize the feature to make it fit on the region and we will transfer the feature
+#       to the top level.
+        my $sf_slice = $sf->slice->sub_Slice($sf->start, $sf->end);
+        my $sf_on_sf_slice = $sf->transfer($sf_slice);
+        my $projected_slice = $sf_on_sf_slice->slice->project($target_slice->coord_system->name, $target_slice->coord_system->version);
+        if ($projected_slice) {
+          my $region_start = $projected_slice->[0]->from_start;
+          my $region_end = $projected_slice->[-1]->from_end;
+          my $previous_end = 0;
+          my $new_start;
+          my $new_end;
+          my @slices_to_project;
+          my @sf_fragments;
+          foreach my $elm (@$projected_slice) {
+            next unless ($elm->to_Slice->seq_region_name eq $target_slice->seq_region_name);
+            my %tmp_sf = %$sf_on_sf_slice;
+            my $cut_sf = ref($sf_on_sf_slice)->new_fast(\%tmp_sf);
+            my $exon_sub_slice;
+            if ($elm->from_start > 1) {
+              if ($region_start == $elm->from_start or $previous_end) {
+                $exon_sub_slice = $exon->slice->sub_Slice($previous_end || $elm->to_Slice->start-$elm->from_start, $elm->to_Slice->start-1);
+                if (!$exon_sub_slice) {
+                  my $tmp_slice = $target_slice->sub_Slice($previous_end || $elm->to_Slice->start-$elm->from_start, $elm->to_Slice->start-1);
+                  if ($tmp_slice) {
+                    my $tmp_eps = $tmp_slice->project('seqlevel');
+                    if ($tmp_eps and @$tmp_eps == 1) {
+                      my $tmp_eps_slice = $tmp_eps->[0]->to_Slice;
+                      my $tmp_eps_contig = $exon->slice->adaptor->fetch_by_region($tmp_eps_slice->coord_system->name, $tmp_eps_slice->seq_region_name, $tmp_eps_slice->start, $tmp_eps_slice->end, $tmp_eps_slice->strand);
+                      if ($tmp_eps_contig) {
+                        my $teps_contig_proj = $tmp_eps_contig->project($exon->coord_system->name, $exon->coord_system->version);
+                        if ($teps_contig_proj and @$teps_contig_proj == 1) {
+                          $exon_sub_slice = $teps_contig_proj->[0]->to_Slice;
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+            if ($elm->from_end < $sf_on_sf_slice->end) {
+              if ($region_end == $elm->from_end) {
+                $exon_sub_slice = $exon->slice->sub_Slice($elm->to_Slice->end+1, $elm->to_Slice->end+$sf_on_sf_slice->end);
+              }
+            }
+            push(@slices_to_project, $exon_sub_slice) if ($exon_sub_slice);
+            $cut_sf->start($elm->from_start);
+            $cut_sf->end($elm->from_end);
+            $previous_end = $elm->to_Slice->end+1;
+            set_hstart_hend($sf_on_sf_slice, $cut_sf);
+            my $sf_to_add = $cut_sf->transfer($target_slice);
+            if ($sf_to_add) {
+#             If I could transfer the feature to the target top level, I want to check
+#             that the feature I created exists in the pipeline database.
+#             So I need to project the top level slice to the sequence level. Then I can
+#             fetch the feature on the contig if it exists
+      #              info(__LINE__.' '.'SLICES '.$exon->slice->name.' '.$new_start.' '.$new_end);
+              push(@sf_fragments, $sf_to_add);
+            }
+            else {
+              warn('WEIRD it was cut to fit');
+            }
+          }
+          foreach my $loutre_side_slice (@slices_to_project) {
+            my $loutre_side_projection = $loutre_side_slice->project('seqlevel');
+            if ($loutre_side_projection) {
+              foreach my $lsp (@$loutre_side_projection) {
+                my $loutre_side_contig = $lsp->to_Slice;
+                my $short_contig_name = $loutre_side_contig->seq_region_name;
+                $short_contig_name =~ s/\.\d+\.\d+$//;
+                my $target_side_slice = $target_slice->adaptor->fetch_by_region('seqlevel', $short_contig_name, $loutre_side_contig->start, $loutre_side_contig->end, $loutre_side_contig->strand);
+                if ($target_side_slice) {
+                  my $pipeline_side_slice = $pipeline_slice->adaptor->fetch_by_region('seqlevel', $loutre_side_contig->seq_region_name, $loutre_side_contig->start, $loutre_side_contig->end, $loutre_side_contig->strand);
+                  if ($pipeline_side_slice) {
+                    my $side_sfs = $sf_on_sf_slice->adaptor->fetch_all_by_Slice_constraint($pipeline_side_slice, 'hit_name = "'.$sf_on_sf_slice->hseqname.'"', $sf_on_sf_slice->analysis->logic_name);
+                    if (@$side_sfs) {
+                      foreach my $side_sf (@$side_sfs) {
+                        if ($side_sf->start <= $lsp->from_end and $side_sf->end >= $lsp->from_start) {
+                          my %sidetmp_sf = %$side_sf;
+                          my $sidecut_sf = ref($side_sf)->new_fast(\%sidetmp_sf);
+                          if (1 > $sidecut_sf->start) {
+                            $sidecut_sf->start(1);
+                          }
+                          if ($lsp->from_end < $sidecut_sf->end) {
+                            $sidecut_sf->end($lsp->from_end);
+                          }
+                          set_hstart_hend($side_sf, $sidecut_sf);
+                          $sidecut_sf->slice($target_side_slice);
+                          my $sub_sf = $sidecut_sf->transfer($target_slice);
+                          if ($sub_sf) {
+                            push(@sf_fragments, $sub_sf);
+                          }
+                          else {
+                            warn('WEIRD: a sub object could not be transfered to the target_slice');
+                          }
+                        }
+                        else {
+                          warn('This does not fit here');
+                        }
+                      }
+                    }
+                    else {
+                      my %sidetmp_sf = %$sf_on_sf_slice;
+                      my $sidecut_sf = ref($sf_on_sf_slice)->new_fast(\%sidetmp_sf);
+                      $sidecut_sf->hseqname('dummy');
+                      $sidecut_sf->slice($target_side_slice);
+                      $sidecut_sf->start(1);
+                      $sidecut_sf->end($target_side_slice->length);
+                      my $sub_sf = $sidecut_sf->transfer($target_slice);
+                      if ($sub_sf) {
+                        warn(' SUBD SF '.$sub_sf->hseqname.' '.$sub_sf->slice->seq_region_name.' '.$sub_sf->start.' '.$sub_sf->end.' '.$sub_sf->strand.' '.$sub_sf->hstart.' '.$sub_sf->hend.' '.$sub_sf->hstrand.' '.$sub_sf->cigar_string);
+                        push(@sf_fragments, $sub_sf);
+                      }
+                      else {
+                        warn('WEIRD: a sub object could not be transfered to the target_slice');
+                      }
+                    }
+                  }
+                  else {
+                    warn('Could not find '.$loutre_side_contig->name.' in pipeline db');
+                  }
+                }
+                else {
+                  warn('Could not find '.$loutre_side_contig->name.' in target_db');
+                }
+              }
+            }
+            else {
+              warn('Could not find seqlevel for '.$loutre_side_slice->name);
+            }
+          }
+          my $future_start = $sf_fragments[0]->start;
+          my $future_end = $sf_fragments[-1]->end;
+          my $has_gap = 0;
+          my $last_sf_end;
+          foreach my $future_sf (sort {$a->start <=> $b->start} @sf_fragments) {
+            $future_start = $future_sf->start if ($future_start > $future_sf->start);
+            $future_end = $future_sf->end if ($future_end < $future_sf->end);
+            if ($last_sf_end) {
+              ++$has_gap if ($last_sf_end+1 != $future_sf->start);
+            }
+            $last_sf_end = $future_sf->end;
+          }
+          if ($sf_on_sf_slice->length == ($future_end-$future_start+1)) {
+            $sf_on_sf_slice->slice($sf_fragments[0]->slice);
+            $sf_on_sf_slice->start($future_start);
+            $sf_on_sf_slice->end($future_end);
+          }
+          elsif ($sf_on_sf_slice->length > ($future_end-$future_start+1)) {
+            $sf_on_sf_slice->slice($sf_fragments[0]->slice);
+            $sf_on_sf_slice->start($future_start);
+            $sf_on_sf_slice->end($future_end);
+          }
+          else {
+            $sf_on_sf_slice->slice($sf_fragments[0]->slice);
+            $sf_on_sf_slice->start($future_start);
+            $sf_on_sf_slice->end($future_end);
+          }
+          $toplevel_exon->add_supporting_features($sf_on_sf_slice);
+        }
+        else {
+          warn("FAILED PROJECTION");
+        }
+      }
+    }
+    if ($toplevel_exon->slice->is_toplevel) {
+      $transcript->add_Exon($toplevel_exon);
+      if ($start_Exon) {
+        $transcript->translation->start_Exon($toplevel_exon) if ($start_Exon == $exon);
+        $transcript->translation->end_Exon($toplevel_exon) if ($end_Exon == $exon);
+      }
+    }
+    else {
+      my $exon_toplevel = $toplevel_exon->transform('toplevel', $toplevel_exon->slice->coord_system->version);
+      if ($exon_toplevel) {
+        $transcript->add_Exon($exon_toplevel);
+        if ($start_Exon) {
+          $transcript->translation->start_Exon($exon_toplevel) if ($start_Exon == $exon);
+          $transcript->translation->end_Exon($exon_toplevel) if ($end_Exon == $exon);
+        }
+      }
+      else {
+        warn('Failed to transform exon to toplevel for '.$toplevel_exon->display_id.' '.$toplevel_exon->slice->name);
+      }
+    }
+  }
 }
 
 sub _slice_lock_broker {
