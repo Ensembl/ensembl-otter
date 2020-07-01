@@ -107,12 +107,11 @@ Create a L<Bio::EnsEMBL::Attribute> with the given C<$code> and C<$value>.
 
 sub make_EnsEMBL_Attribute {
     my ($code, $value) = @_;
-
     return
         Bio::EnsEMBL::Attribute->new(
             -CODE   => $code,
             -VALUE  => $value,
-        );S
+        );
 }
 
 =item get_first_Attribute_value($feature, $code, [confess_if_multiple => 1])
