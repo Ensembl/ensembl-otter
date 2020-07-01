@@ -1,6 +1,6 @@
 =head1 LICENSE
 
-Copyright [2018-2019] EMBL-European Bioinformatics Institute
+Copyright [2018-2020] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -106,12 +106,23 @@ Create a L<Bio::EnsEMBL::Attribute> with the given C<$code> and C<$value>.
 =cut
 
 sub make_EnsEMBL_Attribute {
-    my ($code, $value) = @_;
+    my ($code, $value, $description, $name) = @_;
+
+    if ($description and $name) {
+        return
+           Bio::EnsEMBL::Attribute->new(
+            -CODE   => $code,
+            -VALUE  => $value,
+            -NAME   => $name,
+            -DESCRIPTION => $description
+           );
+    } else {
     return
         Bio::EnsEMBL::Attribute->new(
             -CODE   => $code,
             -VALUE  => $value,
         );
+    }
 }
 
 =item get_first_Attribute_value($feature, $code, [confess_if_multiple => 1])

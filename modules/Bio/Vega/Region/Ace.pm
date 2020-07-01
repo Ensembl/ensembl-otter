@@ -1,6 +1,6 @@
 =head1 LICENSE
 
-Copyright [2018-2019] EMBL-European Bioinformatics Institute
+Copyright [2018-2020] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -298,7 +298,6 @@ sub _add_genes {
 
             $self->_add_attributes_to_HumAce($tsct => 'remark',        $subseq => 'set_remarks');
             $self->_add_attributes_to_HumAce($tsct => 'hidden_remark', $subseq => 'set_annotation_remarks');
-
             foreach my $exon (@{$tsct->get_all_Exons}) {
 
                 my $ha_exon = Hum::Ace::Exon->new;

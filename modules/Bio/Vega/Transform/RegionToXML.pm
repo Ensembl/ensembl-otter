@@ -1,6 +1,6 @@
 =head1 LICENSE
 
-Copyright [2018-2019] EMBL-European Bioinformatics Institute
+Copyright [2018-2020] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -165,12 +165,6 @@ sub generate_SequenceFragment {
     # ensure it is the correct one, but then ignores ContigInfo.
 
     if (my $ci = $cs->ContigInfo) {
-        # Commented out adding author since this is ignored on client side
-        # if (my $contig_author = $ci->author) {
-        #     $sf->attribvals($self->prettyprint('author',        $contig_author->name    ));
-        #     $sf->attribvals($self->prettyprint('author_email',  $contig_author->email   ));
-        # }
-
         my $ci_attribs = $ci->get_all_Attributes;
 
         foreach my $cia (@$ci_attribs) {
@@ -207,6 +201,21 @@ sub generate_Locus {
     my $g=$self->prettyprint('locus');
     if (defined $indent) {
         $g->indent($indent);
+    }
+
+    # Fetch gene attributes that do not persist.
+    my @persistent_attributes = ['name', 'remark', 'hidden_remark', 'cds_start_NF', 'cds_end_NF', 'mRNA_start_NF', 'mRNA_end_NF', 'status', 'synonym', 'otter_truncated'];
+    foreach my $attr1 ($gene->{'attributes'}) {
+       foreach my $ele1 (@$attr1) {
+          if ($ele1->{'code'} ~~ @persistent_attributes )
+          {
+            next;
+          }
+          else
+          {
+            $g->attribvals($self->prettyprint($ele1->{'code'}, $ele1->{'value'}));
+          }
+       }
     }
 
     if($gene->stable_id) {
@@ -277,6 +286,27 @@ sub generate_Transcript {
         $t->attribvals($self->prettyprint('stable_id',$tran->stable_id));
     }
 
+    # Fetch transcript attributes that do not persist
+    my %hash;
+    my @current_persistent_attributes = ['name', 'remark', 'hidden_remark', 'cds_start_NF', 'cds_end_NF', 'mRNA_start_NF', 'mRNA_end_NF', 'status'];
+    foreach my $attributes ($tran->{'attributes'}) {
+       foreach my $attribute (@$attributes) {
+          if ($attribute->{'code'} ~~ @current_persistent_attributes )
+          {
+           next;
+          }
+          else
+          { 
+            $hash{$attribute->{'value'}} = $attribute->{'code'};
+          }
+       }
+    }
+
+    foreach my $attrib_value (keys %hash) {
+       my $attrib_code = $hash{$attrib_value};
+       $t->attribvals($self->prettyprint($attrib_code,$attrib_value));
+    }
+
     if (my $tsct_author = $tran->transcript_author) {
         $t->attribvals($self->prettyprint('author',       $tsct_author->name));
         $t->attribvals($self->prettyprint('author_email', $tsct_author->email));
@@ -289,10 +319,11 @@ sub generate_Transcript {
   }
   if(my $remarks = $tran->get_all_Attributes('hidden_remark')){
       foreach my $rem (sort { $a->value cmp $b->value } @$remarks){
-          $t->attribvals($self->prettyprint('remark','Annotation_remark- '.$rem->value));
+          my $val = $rem->value;
+             $val =~ s/\s+$//;
+          $t->attribvals($self->prettyprint('remark','Annotation_remark- '.$val));
       }
   }
-
   $self->add_start_end_not_found_tags($t, $tran);
 
   ##in future <transcript_class> tag will be replaced by trancript <biotype> and <status> tags
