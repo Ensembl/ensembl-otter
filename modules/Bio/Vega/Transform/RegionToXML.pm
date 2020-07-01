@@ -204,7 +204,7 @@ sub generate_Locus {
     }
 
     # Fetch gene attributes that do not persist.
-    my @persistent_attributes = ['name', 'remark', 'hidden_remark', 'cds_start_NF', 'cds_end_NF', 'mRNA_start_NF', 'mRNA_end_NF', 'status', 'synonym', 'otter_truncated'];
+    my @current_persistent_attributes = ['name', 'remark', 'hidden_remark', 'cds_start_NF', 'cds_end_NF', 'mRNA_start_NF', 'mRNA_end_NF', 'status', 'synonym', 'otter_truncated'];
     foreach my $attributes ($gene->{'attributes'}) {
        foreach my $attribute (@$attributes) {
           if ($attribute->{'code'} ~~ @persistent_attributes )
