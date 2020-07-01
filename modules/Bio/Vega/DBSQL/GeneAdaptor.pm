@@ -944,7 +944,7 @@ sub add_persistent_attributes {
     my @persistent_attributes = ('vega_name');
     my $sth = $self->prepare("SELECT DISTINCT (ga.value) FROM ".
                              "gene g, gene_attrib ga, attrib_type at ".
-                             "WHERE g.gene_id=ga.transcript_id AND ".
+                             "WHERE g.gene_id=ga.gene_id AND ".
                              "ga.attrib_type_id=at.attrib_type_id AND ".
                              "g.stable_id = ? and at.code = ?;");
 
