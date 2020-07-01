@@ -298,6 +298,7 @@ sub _add_genes {
 
             $self->_add_attributes_to_HumAce($tsct => 'remark',        $subseq => 'set_remarks');
             $self->_add_attributes_to_HumAce($tsct => 'hidden_remark', $subseq => 'set_annotation_remarks');
+
             foreach my $exon (@{$tsct->get_all_Exons}) {
 
                 my $ha_exon = Hum::Ace::Exon->new;
