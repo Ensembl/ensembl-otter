@@ -283,7 +283,7 @@ sub add_persistent_attributes {
     #Find attributes for the transcript and add them to the transcript
     my $stable_id = $tran->stable_id;
     my @persistent_attributes = ('vega_name', 'TAGENE_transcript', 'MANE_Select', 'ccds_transcript', 
-                                 'miRNA', 'ncRNA', 'Frameshift', 'tshift');
+                                 'miRNA', 'ncRNA', 'Frameshift');
     my $sth = $self->prepare("SELECT DISTINCT (ta.value) FROM ".
                              "transcript t, transcript_attrib ta, attrib_type at ".
                              "WHERE t.transcript_id=ta.transcript_id AND ".
