@@ -207,7 +207,7 @@ sub generate_Locus {
     my @current_persistent_attributes = ['name', 'remark', 'hidden_remark', 'cds_start_NF', 'cds_end_NF', 'mRNA_start_NF', 'mRNA_end_NF', 'status', 'synonym', 'otter_truncated'];
     foreach my $attributes ($gene->{'attributes'}) {
        foreach my $attribute (@$attributes) {
-          if ($attribute->{'code'} ~~ @persistent_attributes )
+          if ($attribute->{'code'} ~~ @current_persistent_attributes )
           {
             next;
           }
