@@ -205,15 +205,15 @@ sub generate_Locus {
 
     # Fetch gene attributes that do not persist.
     my @persistent_attributes = ['name', 'remark', 'hidden_remark', 'cds_start_NF', 'cds_end_NF', 'mRNA_start_NF', 'mRNA_end_NF', 'status', 'synonym', 'otter_truncated'];
-    foreach my $attr1 ($gene->{'attributes'}) {
-       foreach my $ele1 (@$attr1) {
-          if ($ele1->{'code'} ~~ @persistent_attributes )
+    foreach my $attributes ($gene->{'attributes'}) {
+       foreach my $attribute (@$attributes) {
+          if ($attribute->{'code'} ~~ @persistent_attributes )
           {
             next;
           }
           else
           {
-            $g->attribvals($self->prettyprint($ele1->{'code'}, $ele1->{'value'}));
+            $g->attribvals($self->prettyprint($attribute->{'code'}, $attribute->{'value'}));
           }
        }
     }
@@ -322,6 +322,7 @@ sub generate_Transcript {
           $t->attribvals($self->prettyprint('remark','Annotation_remark- '.$rem->value));
       }
   }
+
   $self->add_start_end_not_found_tags($t, $tran);
 
   ##in future <transcript_class> tag will be replaced by trancript <biotype> and <status> tags
