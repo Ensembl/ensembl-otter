@@ -250,8 +250,7 @@ sub _build_clone_sequence {
             $rem = $1;
             if ($rem =~ /annotated/){
                 $cln_attrib = make_EnsEMBL_Attribute('annotated', 'T');
-            }
-            else {
+            } else {
                 $cln_attrib = make_EnsEMBL_Attribute('hidden_remark', $rem);
             }
         } else {
@@ -570,7 +569,7 @@ sub _build_transcript_attributes
         foreach my $rem (@$remarks){
             my $attrib;
             if($rem=~/Annotation_remark-\s+(.+)/) {
-                my $rem=$1;
+                $rem=$1;
                 $attrib=make_EnsEMBL_Attribute('hidden_remark', $rem);
             } else {
                 $attrib=make_EnsEMBL_Attribute('remark', $rem);
