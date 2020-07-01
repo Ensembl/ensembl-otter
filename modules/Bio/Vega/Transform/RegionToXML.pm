@@ -319,9 +319,7 @@ sub generate_Transcript {
   }
   if(my $remarks = $tran->get_all_Attributes('hidden_remark')){
       foreach my $rem (sort { $a->value cmp $b->value } @$remarks){
-          my $val = $rem->value;
-             $val =~ s/\s+$//;
-          $t->attribvals($self->prettyprint('remark','Annotation_remark- '.$val));
+          $t->attribvals($self->prettyprint('remark','Annotation_remark- '.$rem->value));
       }
   }
   $self->add_start_end_not_found_tags($t, $tran);
