@@ -1,4 +1,4 @@
-# Copyright [2018-2019] EMBL-European Bioinformatics Institute
+# Copyright [2018-2020] EMBL-European Bioinformatics Institute
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -148,12 +148,11 @@ case "$osname" in
     Darwin)
         anasoft_distro=
         otter_perl=
-        PERL5LIB="${PERL5LIB}:\
-$anasoft/lib/site_perl:\
-$anasoft/lib/perl5/site_perl:\
-$anasoft/lib/perl5/vendor_perl:\
-$anasoft/lib/perl5\
-"
+        # If Perl has been compiled on a Mac, we need to make sure we have the correct libraries
+        # I used '=' for the substitution but anything can be used except '/'
+        # It expects Perl to be 5.14+
+        perl_inc=$($anasoft/bin/perl -e "print join(':', map {s=/Users[^:]*\.app/Contents/Resources=$anasoft=gr} @INC)")
+        PERL5LIB="${PERL5LIB}:${perl_inc}"
         if [ -z "$OTTER_MACOS" ]
         then
             source "$ensembl_otter_home/scripts/client/_otter_macos_env.sh"

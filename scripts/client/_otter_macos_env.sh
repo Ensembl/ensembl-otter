@@ -1,4 +1,4 @@
-# Copyright [2018-2019] EMBL-European Bioinformatics Institute
+# Copyright [2018-2020] EMBL-European Bioinformatics Institute
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -50,20 +50,6 @@ export GDK_PIXBUF_MODULE_FILE="$dot_otter_etc/gdk-pixbuf.loaders"
 
 GDK_PIXBUF_MODULEDIR="${lib_path}/gdk-pixbuf-2.0/2.10.0/loaders" \
 gdk-pixbuf-query-loaders > "$GDK_PIXBUF_MODULE_FILE"
-
-# Create config files for pango font handling library
-pango_module_file="$dot_otter_etc/pango.modules"
-export PANGO_RC_FILE="$dot_otter_etc/pangorc"
-
-cat > $PANGO_RC_FILE << PANGO_RC
-
-[Pango]
-ModuleFiles = $pango_module_file
-
-PANGO_RC
-
-find "${lib_path}" -name 'libpango*.dylib' -print0 \
-| xargs -0 pango-querymodules > "$pango_module_file"
 
 # Need the X11 locale directory
 export XLOCALEDIR="${OTTER_SWAC}/share/X11/locale"
