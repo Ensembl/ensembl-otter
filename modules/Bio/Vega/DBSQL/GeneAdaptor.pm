@@ -946,7 +946,7 @@ sub add_persistent_attributes {
                              "gene g, gene_attrib ga, attrib_type at ".
                              "WHERE g.gene_id=ga.gene_id AND ".
                              "ga.attrib_type_id=at.attrib_type_id AND ".
-                             "g.stable_id = ? and at.code = ?;");
+                             "g.stable_id = ? and g.is_current = 1 and at.code = ?;");
 
     foreach my $attrib (@persistent_attributes) {
             $sth->execute($stable_id, $attrib);

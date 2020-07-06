@@ -32,7 +32,7 @@ use Bio::Vega::Region;
 use Bio::Vega::Tiler;
 use Bio::Vega::Utils::Attribute qw( get_name_Attribute_value );
 use base 'Bio::Otter::ServerAction';
-
+use Data::Dumper;
 =head1 NAME
 
 Bio::Otter::ServerAction::Region - server requests on a region
@@ -467,14 +467,14 @@ sub _write_region_exclusive { # runs under $slb->exclusive_work
 }
 
 sub fill_exon_align_evidence() {
-  my ($self, $exon, $transcript) = @_;
+  my ($self, $exon, $transcript) = @_;#warn "exon1=", Dumper($exon), "\n";
 
   my $pipeline_db = $self->server->dataset->pipeline_dba;
 
 
   my $protein_adaptor = $pipeline_db->get_ProteinAlignFeatureAdaptor;
   my $dna_adaptor = $pipeline_db->get_DnaAlignFeatureAdaptor;
-  my $transformed_exon = $exon->transform('seqlevel');
+  my $transformed_exon = $exon->transform('seqlevel');warn "exon2=", Dumper($transformed_exon), "\n";
 
   my $start_Exon;
   my $end_Exon;

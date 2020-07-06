@@ -288,7 +288,7 @@ sub add_persistent_attributes {
                              "transcript t, transcript_attrib ta, attrib_type at ".
                              "WHERE t.transcript_id=ta.transcript_id AND ".
                              "ta.attrib_type_id=at.attrib_type_id AND ".
-                             "t.stable_id = ? and at.code = ?;");
+                             "t.stable_id = ? and t.is_current = 1 and at.code = ?;");
 
     foreach my $attrib (@persistent_attributes) {
             $sth->execute($stable_id, $attrib);
