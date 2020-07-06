@@ -14,10 +14,6 @@ use Bio::Otter::Utils::AccessionInfo;
 
     eval {
         $q = CGI->new;
-
-        my $sw = SangerWeb->new({ cgi => $q });
-        die "Not authorized\n"
-          unless $sw->username;
     };
 
     if ($@) {
