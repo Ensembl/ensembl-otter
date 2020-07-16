@@ -61,7 +61,7 @@ sub vega_hashkey_structure {
 sub vega_hashkey {
     my ($self) = @_;
 
-    return join('-',
+    return lc join('-',
         $self->seq_region_name,
         $self->seq_region_start,
         $self->seq_region_end,

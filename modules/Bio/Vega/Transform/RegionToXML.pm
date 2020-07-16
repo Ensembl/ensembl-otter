@@ -204,7 +204,7 @@ sub generate_Locus {
     }
 
     # Fetch gene attributes that do not persist.
-    my @current_persistent_attributes = ['name', 'remark', 'hidden_remark', 'cds_start_NF', 'cds_end_NF', 'mRNA_start_NF', 'mRNA_end_NF', 'status', 'synonym', 'otter_truncated'];
+    my @current_persistent_attributes = ('name', 'remark', 'hidden_remark', 'cds_start_NF', 'cds_end_NF', 'mRNA_start_NF', 'mRNA_end_NF', 'status', 'synonym', 'otter_truncated');
     foreach my $attributes ($gene->{'attributes'}) {
        foreach my $attribute (@$attributes) {
           if ($attribute->{'code'} ~~ @current_persistent_attributes )
@@ -288,7 +288,7 @@ sub generate_Transcript {
 
     # Fetch transcript attributes that do not persist
     my %hash;
-    my @current_persistent_attributes = ['name', 'remark', 'hidden_remark', 'cds_start_NF', 'cds_end_NF', 'mRNA_start_NF', 'mRNA_end_NF', 'status'];
+    my @current_persistent_attributes = ('name', 'remark', 'hidden_remark', 'cds_start_NF', 'cds_end_NF', 'mRNA_start_NF', 'mRNA_end_NF', 'status');
     foreach my $attributes ($tran->{'attributes'}) {
        foreach my $attribute (@$attributes) {
           if ($attribute->{'code'} ~~ @current_persistent_attributes )

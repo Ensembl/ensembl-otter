@@ -53,8 +53,8 @@ sub compare {
         my $class = ref($obj1);
         throw("I need to run 'vega_hashkey' method on the objects, which is not available for class $class.");
     }
-    my $obj1_hash_key= lc $obj1->vega_hashkey;
-    my $obj2_hash_key= lc $obj2->vega_hashkey;
+    my $obj1_hash_key= $obj1->vega_hashkey;
+    my $obj2_hash_key= $obj2->vega_hashkey;
 
     ## First compare the main keys. If failed, try vega_hashkey_sub:
     if ($obj1_hash_key ne $obj2_hash_key) {

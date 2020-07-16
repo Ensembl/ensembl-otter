@@ -241,7 +241,7 @@ sub vega_hashkey {
 
   my $evidence_count = scalar(@{$self->evidence_list});
 
-  return join '-'
+  return lc join '-'
       , $seq_region_name, $seq_region_start, $seq_region_end, $seq_region_strand
       , $biotype, $status, $source, $exon_count, $description, $evidence_count, $attrib_string
       ;
