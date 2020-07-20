@@ -480,14 +480,13 @@ sub fill_exon_align_evidence() {
   my $end_Exon;
   my $target_slice = $transcript->slice;
 
-  my $exon_projection_slice = $transformed_exon->slice;
-  my $exon_projection_slice_name = $exon_projection_slice->seq_region_name;
-  my $target_slice_contig = $target_slice->adaptor->fetch_by_region('seqlevel', $exon_projection_slice_name, $exon_projection_slice->start, $exon_projection_slice->end, $exon_projection_slice->strand);
   if ($transformed_exon) {
 #       If we could transfer the exon on the sequence level (contig), we are trying to find the contig in the pipeline database and the target database.
 #       Then we can get all supporting evidence which overlap the exon, add them to the exon and transfer them all to the top level
-      my $exon_projection_slice = $transformed_exon->slice;
-      my $exon_projection_slice_name = $exon_projection_slice->seq_region_name;
+	my $exon_projection_slice = $transformed_exon->slice;
+	my $exon_projection_slice_name = $exon_projection_slice->seq_region_name;
+  	my $target_slice_contig = $target_slice->adaptor->fetch_by_region('seqlevel', $exon_projection_slice_name, $exon_projection_slice->start, 	$exon_projection_slice->end, $exon_projection_slice->strand);
+
 #       Loutre contigs have the start and add concatented to the accession: AL671879.2.1.176995
 #       but we do not want that.
 #       They can also use old data so we need some checks first
@@ -495,7 +494,6 @@ sub fill_exon_align_evidence() {
         $exon_projection_slice_name =~ s/\.\d+\.\d+$//;
         my $pipeline_slice = $pipeline_db->get_SliceAdaptor->fetch_by_region('seqlevel', $exon_projection_slice->seq_region_name, $exon_projection_slice->start, $exon_projection_slice->end, $exon_projection_slice->strand);
         if ($pipeline_slice) {
-
 
           my %supporting_evidences;
           foreach my $evidence (@{$transcript->evidence_list}) {
@@ -521,10 +519,10 @@ sub fill_exon_align_evidence() {
               }
             }
               }
+         
           $transformed_exon->add_supporting_features(values %supporting_evidences);
           my $toplevel_exon = $transformed_exon->transform('toplevel');
           if ($toplevel_exon) {
-
             $self->check_all_supporting_evidences($toplevel_exon, $target_slice, \%supporting_evidences, $exon, $start_Exon, $end_Exon, $pipeline_slice, $transcript);
           }
           else {
@@ -561,7 +559,7 @@ sub fill_exon_align_evidence() {
                     $self->check_all_supporting_evidences($toplevel_exon, $target_slice, \%supporting_evidences, $exon, $start_Exon, $end_Exon, $pipeline_slice, $transcript);
                   }
                   else {
-                    warn('NOT SURE WHAT TO DO NOW');
+                  	warn('No top level exon');
                   }
                 }
                 elsif (($target_contig_proj_toplevel->strand == 1 and $transformed_exon->end > $target_contig_projection->[0]->from_end)
@@ -575,7 +573,6 @@ sub fill_exon_align_evidence() {
                   }
                   $toplevel_exon = $transformed_exon->transfer($target_slice);
                   if ($toplevel_exon) {
-                    warn(' TDONE');
                     $toplevel_exon->start($toplevel_exon->start+abs($diff));
                     $toplevel_exon->end($toplevel_exon->end+abs($diff));
                   foreach my $sf (@{$toplevel_exon->get_all_supporting_features}) {
@@ -585,7 +582,7 @@ sub fill_exon_align_evidence() {
                     check_all_supporting_evidences($toplevel_exon, $target_slice, \%supporting_evidences, $exon, $start_Exon, $end_Exon, $pipeline_slice, $transcript);
                   }
                   else {
-                    warn('NOT SURE WHAT TO DO NOW');
+                    warn('No top level exon');
                   }
                 }
                 else {
@@ -675,6 +672,7 @@ sub fill_exon_align_evidence() {
             warn('Could not retrieve an exon slice from the pipeline db '.$exon_projection_slice->seq_region_name);
           }
         }
+
         foreach my $feature_name (keys %features) {
           if (@{$features{$feature_name}}) {
             my $new_feature;
@@ -705,7 +703,6 @@ sub fill_exon_align_evidence() {
         warn('Could not transform exon '.$exon->stable_id_version.' '.$exon->start.' '.$exon->end.' '.$exon->strand.' '.$exon->slice->name);
       }
       if ($exon->slice->is_toplevel) {
-        $transcript->add_Exon($exon);
         if ($start_Exon) {
           $transcript->translation->start_Exon($exon) if ($start_Exon == $exon);
           $transcript->translation->end_Exon($exon) if ($end_Exon == $exon);
@@ -714,7 +711,6 @@ sub fill_exon_align_evidence() {
       else {
         my $exon_toplevel = $exon->transform('toplevel', $exon->slice->coord_system->version);
         if ($exon_toplevel) {
-          $transcript->add_Exon($exon_toplevel);
           if ($start_Exon) {
             $transcript->translation->start_Exon($exon_toplevel) if ($start_Exon == $exon);
             $transcript->translation->end_Exon($exon_toplevel) if ($end_Exon == $exon);
@@ -832,11 +828,11 @@ sub check_all_supporting_evidences {
 #             that the feature I created exists in the pipeline database.
 #             So I need to project the top level slice to the sequence level. Then I can
 #             fetch the feature on the contig if it exists
-      #              info(__LINE__.' '.'SLICES '.$exon->slice->name.' '.$new_start.' '.$new_end);
+#              info(__LINE__.' '.'SLICES '.$exon->slice->name.' '.$new_start.' '.$new_end);
               push(@sf_fragments, $sf_to_add);
             }
             else {
-              warn('WEIRD it was cut to fit');
+              warn('It was cut to fit');
             }
           }
           foreach my $loutre_side_slice (@slices_to_project) {
@@ -869,7 +865,7 @@ sub check_all_supporting_evidences {
                             push(@sf_fragments, $sub_sf);
                           }
                           else {
-                            warn('WEIRD: a sub object could not be transfered to the target_slice');
+                            warn('A sub object could not be transfered to the target_slice');
                           }
                         }
                         else {
@@ -890,7 +886,7 @@ sub check_all_supporting_evidences {
                         push(@sf_fragments, $sub_sf);
                       }
                       else {
-                        warn('WEIRD: a sub object could not be transfered to the target_slice');
+                        warn('A sub object could not be transfered to the target_slice');
                       }
                     }
                   }
@@ -942,7 +938,6 @@ sub check_all_supporting_evidences {
       }
     }
     if ($toplevel_exon->slice->is_toplevel) {
-      $transcript->add_Exon($toplevel_exon);
       if ($start_Exon) {
         $transcript->translation->start_Exon($toplevel_exon) if ($start_Exon == $exon);
         $transcript->translation->end_Exon($toplevel_exon) if ($end_Exon == $exon);
@@ -951,7 +946,6 @@ sub check_all_supporting_evidences {
     else {
       my $exon_toplevel = $toplevel_exon->transform('toplevel', $toplevel_exon->slice->coord_system->version);
       if ($exon_toplevel) {
-        $transcript->add_Exon($exon_toplevel);
         if ($start_Exon) {
           $transcript->translation->start_Exon($exon_toplevel) if ($start_Exon == $exon);
           $transcript->translation->end_Exon($exon_toplevel) if ($end_Exon == $exon);
