@@ -559,7 +559,7 @@ sub fill_exon_align_evidence() {
                     $self->check_all_supporting_evidences($toplevel_exon, $target_slice, \%supporting_evidences, $exon, $start_Exon, $end_Exon, $pipeline_slice, $transcript);
                   }
                   else {
-                  	warn('No top level exon');
+                    warn('No top level exon');
                   }
                 }
                 elsif (($target_contig_proj_toplevel->strand == 1 and $transformed_exon->end > $target_contig_projection->[0]->from_end)
@@ -711,6 +711,7 @@ sub fill_exon_align_evidence() {
       else {
         my $exon_toplevel = $exon->transform('toplevel', $exon->slice->coord_system->version);
         if ($exon_toplevel) {
+          $exon = $exon_toplevel;
           if ($start_Exon) {
             $transcript->translation->start_Exon($exon_toplevel) if ($start_Exon == $exon);
             $transcript->translation->end_Exon($exon_toplevel) if ($end_Exon == $exon);
@@ -946,6 +947,7 @@ sub check_all_supporting_evidences {
     else {
       my $exon_toplevel = $toplevel_exon->transform('toplevel', $toplevel_exon->slice->coord_system->version);
       if ($exon_toplevel) {
+        $toplevel_exon = $exon_toplevel;
         if ($start_Exon) {
           $transcript->translation->start_Exon($exon_toplevel) if ($start_Exon == $exon);
           $transcript->translation->end_Exon($exon_toplevel) if ($end_Exon == $exon);
