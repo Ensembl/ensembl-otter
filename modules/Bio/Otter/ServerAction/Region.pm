@@ -712,10 +712,6 @@ sub fill_exon_align_evidence() {
         my $exon_toplevel = $exon->transform('toplevel', $exon->slice->coord_system->version);
         if ($exon_toplevel) {
           $exon = $exon_toplevel;
-          if ($start_Exon) {
-            $transcript->translation->start_Exon($exon) if ($start_Exon == $exon);
-            $transcript->translation->end_Exon($exon) if ($end_Exon == $exon);
-          }
         }
         else {
           warn('Failed to transform exon to toplevel for '.$exon->display_id.' '.$exon->slice->name);
@@ -948,10 +944,6 @@ sub check_all_supporting_evidences {
       my $exon_toplevel = $toplevel_exon->transform('toplevel', $toplevel_exon->slice->coord_system->version);
       if ($exon_toplevel) {
         $exon = $exon_toplevel;
-        if ($start_Exon) {
-          $transcript->translation->start_Exon($exon_toplevel) if ($start_Exon == $exon);
-          $transcript->translation->end_Exon($exon_toplevel) if ($end_Exon == $exon);
-        }
       }
       else {
         warn('Failed to transform exon to toplevel for '.$toplevel_exon->display_id.' '.$toplevel_exon->slice->name);
