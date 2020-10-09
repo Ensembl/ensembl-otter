@@ -521,10 +521,10 @@ sub _authorize {
       Bio::Otter::Auth::SSO->login($self->get_UserAgent, $user, $password);
     $self->{'_cookie_jar'}{'expiry'} = time + (24 * 60 * 60);
     if (!$failed) {
-        my $decoded_jwt = Bio::Otter::Auth::Access->_jwt_verify($detail);
-        if  ($decoded_jwt->{'nickname'} ne ($self->author)) {
-             die ('Username does not match token name');
-        }
+#        my $decoded_jwt = Bio::Otter::Auth::Access->_jwt_verify($detail);
+#        if  ($decoded_jwt->{'nickname'} ne ($self->author)) {
+#             die ('Username does not match token name');
+#        }
         # Cookie will have been given to UserAgent
         $self->logger->info(sprintf("Authenticated as %s: %s\n", $self->author, $status));
         $self->_save_CookieJar;
