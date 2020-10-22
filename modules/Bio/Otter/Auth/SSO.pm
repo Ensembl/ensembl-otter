@@ -61,7 +61,7 @@ sub login {
     my $ua  = LWP::UserAgent->new();
     my $req = HTTP::Request->new;
     $req->method('GET');
-    $req->uri("https://explore.api.aai.ebi.ac.uk/auth");
+    $req->uri("https://api.aai.ebi.ac.uk/auth");
     $req->content_type('application/json;charset=UTF-8');
     $req->authorization_basic($user, $orig_password);
 

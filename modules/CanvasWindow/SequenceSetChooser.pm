@@ -315,9 +315,10 @@ sub open_sequence_set_by_ssname_subset {
         $sn->top_window()->deiconify();
         $sn->top_window()->raise();
     } else {
-        my $top = $self->top_window()->Toplevel
-          (-title => $Bio::Otter::Lace::Client::PFX."Assembly $ss_name");
+
         my $ss = $self->DataSet->get_SequenceSet_by_name($ss_name);
+        my $top = $self->top_window()->Toplevel
+          (-title => $Bio::Otter::Lace::Client::PFX.ucfirst($ss->coord_system_name)." $ss_name");
 
         $sn = CanvasWindow::SequenceNotes->new($top, 820, 100);
         $sn->name($ss_name);
