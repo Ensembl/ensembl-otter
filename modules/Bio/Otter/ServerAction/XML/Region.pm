@@ -57,7 +57,7 @@ sub deserialise_region {
 
     my $parser = Bio::Vega::Transform::XMLToRegion->new;
 
-    my $cs_factory = Bio::Vega::CoordSystemFactory->new(dba => $self->server->odba);
+    my $cs_factory = Bio::Vega::CoordSystemFactory->new(dba => $self->server->otter_dba);
     $parser->coord_system_factory($cs_factory);
 
     my $region = $parser->parse($xml_string);
