@@ -519,7 +519,7 @@ sub fill_exon_align_evidence() {
               }
             }
               }
-         
+
           $transformed_exon->add_supporting_features(values %supporting_evidences);
           my $toplevel_exon = $transformed_exon->transform('toplevel');
           if ($toplevel_exon) {
@@ -719,6 +719,16 @@ sub fill_exon_align_evidence() {
       }
     }
   return;
+}
+
+sub set_hstart_hend {
+  my ($sf, $cut_sf) = @_;
+
+  my $query_unit = $cut_sf->_query_unit;
+  if ($cut_sf->start > $sf->start) {
+    $cut_sf->hstart($cut_sf->hstart+int(($cut_sf->start-$sf->start)/$query_unit));
+  }
+  $cut_sf->hend($cut_sf->hstart+int($cut_sf->length/$query_unit));
 }
 
 sub add_translation_attributes {
