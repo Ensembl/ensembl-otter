@@ -558,9 +558,6 @@ sub fill_exon_align_evidence() {
                     }
                     $self->check_all_supporting_evidences($toplevel_exon, $target_slice, \%supporting_evidences, $exon, $start_Exon, $end_Exon, $pipeline_slice, $transcript);
                   }
-                  else {
-                    warn('No top level exon (transformed exon start)');
-                  }
                 }
                 elsif (($target_contig_proj_toplevel->strand == 1 and $transformed_exon->end > $target_contig_projection->[0]->from_end)
                     or ($target_contig_proj_toplevel->strand == -1 and $transformed_exon->start < $target_contig_projection->[0]->from_start)) {
@@ -581,9 +578,6 @@ sub fill_exon_align_evidence() {
                     }
                     check_all_supporting_evidences($toplevel_exon, $target_slice, \%supporting_evidences, $exon, $start_Exon, $end_Exon, $pipeline_slice, $transcript);
                   }
-                  else {
-                    warn('No top level exon (transformed exon end)');
-                  }
                 }
                 else {
                   return;
@@ -593,13 +587,7 @@ sub fill_exon_align_evidence() {
                 return;
               }
             }
-            else {
-              error('COULD NOT PROJECT target_slice_contig TO toplevel');
-            }
           }
-        }
-        else {
-          warn('Could not retrieve an exon slice from the pipeline db '.$exon_projection_slice->seq_region_name);
         }
     }
     else {
@@ -649,9 +637,6 @@ sub fill_exon_align_evidence() {
                 if ($target_exon_projection_slice) {
                   $sf->slice($target_exon_projection_slice);
                 }
-                else {
-                  warn('Could not find contig '.$exon_projection_slice->name);
-                }
                 $transformed_sf = $sf->transfer($target_slice);
                 if ($transformed_sf) {
           #                    if ($strand == $exon->strand) {
@@ -662,14 +647,8 @@ sub fill_exon_align_evidence() {
 #                      warn($transformed_sf->hseqname.' '.$transformed_sf->slice->seq_region_name.' '.$transformed_sf->start.' '.$transformed_sf->end.' '.$transformed_sf->strand.' '.$transformed_sf->hstart.' '.$transformed_sf->hend.' '. $transformed_sf->hstrand);
 #                    }
                 }
-                else {
-                  warn('Could not project evidence '.$sf->hseqname.' to slice '.$slice->name);
-                }
               }
             }
-          }
-          else {
-            warn('Could not retrieve an exon slice from the pipeline db '.$exon_projection_slice->seq_region_name);
           }
         }
 
@@ -694,13 +673,7 @@ sub fill_exon_align_evidence() {
             $exon->start($new_feature->start);
             $exon->end($new_feature->end);
           }
-          else {
-            warn('No match for '.$feature_name.' '.$exon->start.' '.$exon->end.' '.$exon->strand.' '.$exon->slice->name);
-          }
         }
-      }
-      else {
-        warn('Could not transform exon '.$exon->stable_id_version.' '.$exon->start.' '.$exon->end.' '.$exon->strand.' '.$exon->slice->name);
       }
       if ($exon->slice->is_toplevel) {
         if ($start_Exon) {
@@ -712,9 +685,6 @@ sub fill_exon_align_evidence() {
         my $exon_toplevel = $exon->transform('toplevel', $exon->slice->coord_system->version);
         if ($exon_toplevel) {
           $exon = $exon_toplevel;
-        }
-        else {
-          warn('Failed to transform exon to toplevel for '.$exon->display_id.' '.$exon->slice->name);
         }
       }
     }
@@ -735,11 +705,9 @@ sub add_translation_attributes {
   my ($self, $transcript) = @_;
 
   my @translation_attributes;
-  warn(' GETTING ATTRIBUTES');
   foreach my $attribute (@{$transcript->get_all_Attributes('hidden_remark')}, @{$transcript->get_all_Attributes('remark')}) {
     my $value = $attribute->value;
     if ($value =~ /^selenocystein\w+\s+\d+/) {
-      warn(' SELENO '.$value);
       while($value =~ / (\d+)/gc) {
         my $seq_edit = Bio::EnsEMBL::SeqEdit->new(
                                         -CODE    => '_selenocysteine',
@@ -754,7 +722,6 @@ sub add_translation_attributes {
     }
   }
   if (scalar(@translation_attributes)) {
-    warn(' ADDING '.scalar(@translation_attributes).' ATTRIBUTES');
     $transcript->translation->add_Attributes(@translation_attributes);
   }
 }
@@ -838,9 +805,6 @@ sub check_all_supporting_evidences {
 #              info(__LINE__.' '.'SLICES '.$exon->slice->name.' '.$new_start.' '.$new_end);
               push(@sf_fragments, $sf_to_add);
             }
-            else {
-              warn('It was cut to fit');
-            }
           }
           foreach my $loutre_side_slice (@slices_to_project) {
             my $loutre_side_projection = $loutre_side_slice->project('seqlevel');
@@ -871,12 +835,6 @@ sub check_all_supporting_evidences {
                           if ($sub_sf) {
                             push(@sf_fragments, $sub_sf);
                           }
-                          else {
-                            warn('A sub object could not be transfered to the target_slice');
-                          }
-                        }
-                        else {
-                          warn('This does not fit here');
                         }
                       }
                     }
@@ -889,25 +847,12 @@ sub check_all_supporting_evidences {
                       $sidecut_sf->end($target_side_slice->length);
                       my $sub_sf = $sidecut_sf->transfer($target_slice);
                       if ($sub_sf) {
-                        warn(' SUBD SF '.$sub_sf->hseqname.' '.$sub_sf->slice->seq_region_name.' '.$sub_sf->start.' '.$sub_sf->end.' '.$sub_sf->strand.' '.$sub_sf->hstart.' '.$sub_sf->hend.' '.$sub_sf->hstrand.' '.$sub_sf->cigar_string);
                         push(@sf_fragments, $sub_sf);
-                      }
-                      else {
-                        warn('A sub object could not be transfered to the target_slice');
                       }
                     }
                   }
-                  else {
-                    warn('Could not find '.$loutre_side_contig->name.' in pipeline db');
-                  }
-                }
-                else {
-                  warn('Could not find '.$loutre_side_contig->name.' in target_db');
                 }
               }
-            }
-            else {
-              warn('Could not find seqlevel for '.$loutre_side_slice->name);
             }
           }
           my $future_start = $sf_fragments[0]->start;
@@ -939,9 +884,6 @@ sub check_all_supporting_evidences {
           }
           $toplevel_exon->add_supporting_features($sf_on_sf_slice);
         }
-        else {
-          warn("FAILED PROJECTION");
-        }
       }
     }
     if ($toplevel_exon->slice->is_toplevel) {
@@ -954,9 +896,6 @@ sub check_all_supporting_evidences {
       my $exon_toplevel = $toplevel_exon->transform('toplevel', $toplevel_exon->slice->coord_system->version);
       if ($exon_toplevel) {
         $exon = $exon_toplevel;
-      }
-      else {
-        warn('Failed to transform exon to toplevel for '.$toplevel_exon->display_id.' '.$toplevel_exon->slice->name);
       }
     }
   }
