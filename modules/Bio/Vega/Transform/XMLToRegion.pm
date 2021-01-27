@@ -268,19 +268,6 @@ sub _build_clone_sequence {
         ## FIXME: $cln_author may be passed in the XML, but is ultimately ignored by write_region
     my $cln_author=$self->_make_Author('dummy', 'dummy');
 
-    # First I try to get the contig or dna_contig coord system, as it tells me that either I'm in Otter
-    # or the species have contigs
-    # If they don't exist I'm asking for seqlevel as it means I'm on the server and the species only has
-    # the toplevel regions loaded. For these species I need to trick a bit the system for the server to do
-    # its checks
-    my $coord_system = $self->coord_system_factory->coord_system('contig') or $self->coord_system_factory->coord_system('dna_contig');
-    if (!$coord_system) {
-      $coord_system = $self->coord_system_factory->coord_system('seqlevel');
-      $ctg_name = $data->{chromosome};
-      $cmp_start = $start;
-      $cmp_end = $end;
-    }
-
     # create tiles (offset_in_slice + contig_component_slice + attributes)
     my $ctg_cmp_slice = Bio::EnsEMBL::Slice->new(
         -seq_region_name    => $ctg_name,
@@ -288,7 +275,7 @@ sub _build_clone_sequence {
         -end                => $cmp_end,
         -strand             => $strand,
         -seq_region_length  => $cln_length,
-        -coord_system       => $coord_system,
+        -coord_system       => $self->coord_system_factory->coord_system('contig') || $self->coord_system_factory->coord_system('dna_contig'),
     );
 
     my $cs = Bio::Otter::Lace::CloneSequence->new;

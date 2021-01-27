@@ -1000,7 +1000,7 @@ sub _fetch_db_region {
     my $db_region = Bio::Vega::Region->new;
     $db_region->slice($db_slice);
 
-    my @db_tiles = sort { $a->from_start() <=> $b->from_start() } @{ $db_slice->project('seqlevel') };
+    my @db_tiles = sort { $a->from_start() <=> $b->from_start() } @{ $db_slice->project('contig') };
 
     my @db_clone_sequences;
     foreach my $tile ( @db_tiles ) {
