@@ -192,7 +192,7 @@ sub fetch_CloneSequences {
       my $synonym = $slice->get_all_synonyms();
       my $accession_version = $slice->seq_region_name;
       if (@$synonym) {
-        $synonym = $slice->get_all_synonyms('insdc');
+        $synonym = $slice->get_all_synonyms('INSDC');
         if (@$synonym) {
           $accession_version = $synonym->[0]->name;
         }
@@ -238,7 +238,7 @@ sub fetch_CloneSeq {
       }
     }
     else {
-      my $synonym = $contig_slice->get_all_synonyms('insdc');
+      my $synonym = $contig_slice->get_all_synonyms('INSDC');
       my $accession_version = $contig_slice->seq_region_name;
       if (@$synonym) {
         $accession_version = $synonym->[0]->name;
