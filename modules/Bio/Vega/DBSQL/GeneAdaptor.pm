@@ -30,6 +30,7 @@ use Bio::Vega::Utils::Comparator qw( compare );
 use Bio::Vega::Utils::Attribute  qw( get_name_Attribute_value );
 use Bio::Vega::AnnotationBroker;
 use Bio::Otter::MappingFetcher;
+use Bio::Vega::Utils::Attribute qw(add_EnsEMBL_Attributes );
 
 use base 'Bio::EnsEMBL::DBSQL::GeneAdaptor';
 
@@ -758,6 +759,7 @@ sub store {
     $gene->modified_date($time_now);
 
     # Actually save the gene to the database
+    $self->add_persistent_attributes($gene); #Add attributes only for edited gene
     $self->store_only($gene);
 
     warn sprintf $log_pattern, $gene_state, $gene->stable_id, $gene->version;
@@ -933,6 +935,28 @@ sub fetch_all_genes_on_reference_slice {
 
     return $transformed_genes;
 }
+
+sub add_persistent_attributes {
+    my($self, $gene) = @_;
+
+    #Find attributes for the gene and add them to gene_attrib
+    my $stable_id = $gene->stable_id;
+    my @persistent_attributes = ('vega_name');
+    my $sth = $self->prepare("SELECT DISTINCT (ga.value) FROM ".
+                             "gene g, gene_attrib ga, attrib_type at ".
+                             "WHERE g.gene_id=ga.gene_id AND ".
+                             "ga.attrib_type_id=at.attrib_type_id AND ".
+                             "g.stable_id = ? and g.is_current = 1 and at.code = ?;");
+
+    foreach my $attrib (@persistent_attributes) {
+            $sth->execute($stable_id, $attrib);
+            while (my @row = $sth->fetchrow_array) {
+                  add_EnsEMBL_Attributes($gene, $attrib => @row);
+            }
+    }
+
+    $sth->finish();
+ }
 
 1;
 

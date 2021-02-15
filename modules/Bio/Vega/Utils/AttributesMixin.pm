@@ -53,11 +53,15 @@ BEGIN {
 sub all_Attributes_string {
     my ($self) = @_;
 
-    return join ('-',
-        map {$_->code . '=' . $_->value}
+    #Create an array with sorted attributes
+    my @new_array = map  {$_->code . '='. $_->value}
         sort {$a->code cmp $b->code || $a->value cmp $b->value}
         grep {not($is_boolean{$_->code}) or $_->value}
-        @{$self->get_all_Attributes});
+        @{$self->get_all_Attributes};
+
+    #Remove trailing white space for each element in the array
+    @new_array = map{(s/\s*$//) && $_} @new_array;
+    return join('-', @new_array);
 }
 
 1;

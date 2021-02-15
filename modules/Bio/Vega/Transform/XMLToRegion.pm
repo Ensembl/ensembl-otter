@@ -111,7 +111,7 @@ sub initialize {
 
     $self->set_multi_value_tags([
         [ locus             => qw{ remark synonym } ],
-        [ transcript        => qw{ remark         } ],
+        [ transcript        => qw{ remark miRNA Frameshift } ],
         [ sequence_fragment => qw{ remark keyword } ],
     ]);
 
@@ -550,6 +550,34 @@ sub _build_transcript_attributes
         push @transcript_attributes, make_EnsEMBL_Attribute('cds_end_NF', $cds_end_not_found);
     }
 
+    # If it exists, add 'vega_name', 'TAGENE_transcript', 'MANE_Select', 'ccds_transcript', 
+    # 'miRNA', 'ncRNA', 'Frameshift' attributes for the transcript
+    if (my $vega_name = $data->{'vega_name'}) {
+        push @transcript_attributes, make_EnsEMBL_Attribute('vega_name', $vega_name);
+    }
+    if (my $tagene_tsct = $data->{'TAGENE_transcript'}) {
+        push @transcript_attributes, make_EnsEMBL_Attribute('TAGENE_transcript', $tagene_tsct);
+    }
+    if (my $mane_select = $data->{'MANE_Select'}) {
+        push @transcript_attributes, make_EnsEMBL_Attribute('MANE_Select', $mane_select);
+    }
+    if (my $ccds_transcript = $data->{'ccds_transcript'}) {
+        push @transcript_attributes, make_EnsEMBL_Attribute('ccds_transcript', $ccds_transcript);
+    }
+    if (my $miRNA_array = $data->{'miRNA'}) {
+        foreach my $miRNA_row (@$miRNA_array) {
+          push @transcript_attributes, make_EnsEMBL_Attribute('miRNA', $miRNA_row);
+        }
+    }
+    if (my $ncRNA = $data->{'ncRNA'}) {
+        push @transcript_attributes, make_EnsEMBL_Attribute('ncRNA', $ncRNA);
+    }
+    if (my $frameshift_array = $data->{'Frameshift'}) {
+        foreach my $frameshift_row (@$frameshift_array) {
+          push @transcript_attributes, make_EnsEMBL_Attribute('Frameshift', $frameshift_row);
+        }
+    }
+
     if(my $remarks=$data->{'remark'}) {
         foreach my $rem (@$remarks){
             my $attrib;
@@ -706,6 +734,11 @@ sub _build_gene_attributes
             my $syn_attrib=make_EnsEMBL_Attribute('synonym', $a);
             push @gene_attributes,$syn_attrib;
         }
+    }
+
+    #If it exists, add 'vega_name' attribute for the gene
+    if (my $vega_name = $data->{'vega_name'}) {
+        push @gene_attributes, make_EnsEMBL_Attribute('vega_name', $vega_name);
     }
 
     if(my $remarks=$data->{'remark'}) {
