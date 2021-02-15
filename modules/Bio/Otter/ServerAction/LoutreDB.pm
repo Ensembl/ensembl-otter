@@ -1,6 +1,6 @@
 =head1 LICENSE
 
-Copyright [2018-2019] EMBL-European Bioinformatics Institute
+Copyright [2018-2021] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -159,6 +159,11 @@ sub get_db_info {
     $at_sth->execute;
     my $at_rows = $at_sth->fetchall_arrayref({});
     $results{'attrib_type'} = $at_rows;
+
+    my $ed_sth = $dbc->prepare('SELECT * FROM external_db WHERE db_name IN ("INSDC")');
+    $ed_sth->execute;
+    my $ed_rows = $ed_sth->fetchall_arrayref({});
+    $results{'external_db'} = $ed_rows;
 
     return \%results;
 }

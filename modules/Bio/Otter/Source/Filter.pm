@@ -1,6 +1,6 @@
 =head1 LICENSE
 
-Copyright [2018-2019] EMBL-European Bioinformatics Institute
+Copyright [2018-2021] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -99,6 +99,11 @@ my @server_params = (
     qw(
     file
     strand
+    ),
+
+    # Compara
+    qw(
+    method_link
     ),
 
     );
@@ -323,6 +328,12 @@ sub feature_type {
     my ($self, $feature_type) = @_;
     $self->{_feature_type} = $feature_type if $feature_type;
     return $self->{_feature_type};
+}
+
+sub method_link {
+    my ($self, $method_link) = @_;
+    $self->{_method_link} = $method_link if $method_link;
+    return $self->{_method_link};
 }
 
 # session handling

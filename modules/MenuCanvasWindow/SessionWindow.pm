@@ -1,6 +1,6 @@
 =head1 LICENSE
 
-Copyright [2018-2019] EMBL-European Bioinformatics Institute
+Copyright [2018-2021] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -2617,8 +2617,8 @@ sub _replace_SubSeq_sqlite {
                 $self->logger->debug("$new_subseq_name: diffs to original saved SubSeq.");
                 $self->_log_diffs($diffs, "SubSeq $new_subseq_name");
                 $from_HumAce->update_Transcript($new_subseq, $old_subseq, $diffs);
-                if ($self->_locus_cache->get($new_locus_name)->gene_type_prefix eq 'ensembl') {
-                    $self->_locus_cache->get($new_locus_name)->gene_type_prefix('');
+                if ($new_locus->gene_type_prefix eq 'ensembl') {
+                    $new_locus->gene_type_prefix('');
                 }
             } else {
                 $self->logger->debug("$new_subseq_name: no diffs so nothing else to do.");

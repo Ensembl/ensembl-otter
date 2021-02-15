@@ -1,6 +1,6 @@
 =head1 LICENSE
 
-Copyright [2018-2019] EMBL-European Bioinformatics Institute
+Copyright [2018-2021] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -97,6 +97,11 @@ sub new_dissociated_copy {
         push @evidence_list, $ev_pkg->new(-name => $ev->name, -type => $ev->type);
     }
     $copy->evidence_list(\@evidence_list);
+    foreach my $tsf (@{$self->get_all_supporting_features}) {
+      my %tmp_tsf = %$tsf;
+      my $new_tsf = ref($tsf)->new_fast(\%tmp_tsf);
+      $copy->add_supporting_features($new_tsf);
+    }
 
     $copy->translation($translation->new_dissociated_copy($copy, $new_start_exon, $new_end_exon)) if $translation;
 

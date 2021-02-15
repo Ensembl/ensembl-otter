@@ -1,6 +1,6 @@
 =head1 LICENSE
 
-Copyright [2018-2019] EMBL-European Bioinformatics Institute
+Copyright [2018-2021] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -1106,7 +1106,7 @@ sub trim_cds_coord_to_first_stop {
 
     # Convert from peptide to CDS coordinates
     my $cds_coord = $sub->start_phase - 1 + ($stop_pos * 3);
-    warn sprintf "CDS coord = (%d x 3) + %d - 1 = $cds_coord\n",
+    warn sprintf "CDS coord = (%d x 3) + %d - 1 = %d\n",
         $stop_pos, $sub->start_phase, $cds_coord;
 
     # Get a list of exons in translation order

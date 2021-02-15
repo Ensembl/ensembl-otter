@@ -1,6 +1,6 @@
 =head1 LICENSE
 
-Copyright [2018-2019] EMBL-European Bioinformatics Institute
+Copyright [2018-2021] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -43,6 +43,11 @@ sub new_dissociated_copy {
         )
                                });
 
+    foreach my $sf (@{$self->get_all_supporting_features}) {
+      my %tmp_sf = %$sf;
+      my $new_sf = ref($sf)->new_fast(\%tmp_sf);
+      $copy->add_supporting_features($new_sf);
+    }
     return $copy;
 }
 
