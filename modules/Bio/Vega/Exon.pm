@@ -43,11 +43,7 @@ sub new_dissociated_copy {
         )
                                });
 
-    foreach my $sf (@{$self->get_all_supporting_features}) {
-      my %tmp_sf = %$sf;
-      my $new_sf = ref($sf)->new_fast(\%tmp_sf);
-      $copy->add_supporting_features($new_sf);
-    }
+  
     return $copy;
 }
 
@@ -111,4 +107,3 @@ __END__
 =head1 AUTHOR
 
 Ana Code B<email> anacode@sanger.ac.uk
-
