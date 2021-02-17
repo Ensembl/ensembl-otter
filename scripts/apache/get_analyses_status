@@ -91,18 +91,13 @@ SQL
 sub get_analyses_status {
     my ($server) = @_;
 
-# If the corrd_system of rank 1 is primary_assembly, we have a post NoMerge species
-# and we don't have the rule_* tables from ensembl-pipeline
-if ($server->dataset->pipeline_dba->get_CoordSystemAdaptor->fetch_by_rank(1)->name eq 'primary_assembly') {
-  return $server->otter_wrap_response('');
-}
-
 my $assembly = $server->require_argument('chr');
 my $component_cs = $server->param('component_cs') || 'contig';
 
 my $pdbc = $server->dataset->pipeline_dba()->dbc();  # pipeline dbc
 
 my @input_ids = ();
+my @tmp_cmp_name = ();
 my $cmp_sth = $pdbc->prepare($select_components_sql);
 $cmp_sth->execute($assembly, $component_cs);
 
