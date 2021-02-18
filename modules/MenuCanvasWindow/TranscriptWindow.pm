@@ -356,20 +356,7 @@ sub initialise {
         # Widget for changing transcript type (acedb method).
         my $current_method = $self->SubSeq->GeneMethod->name;
         $self->_method_name_var(\$current_method);
-
         my @mutable_gene_methods = $self->SessionWindow->get_all_mutable_GeneMethods;
-	# We need to exclude from dropdown some biotypes just for annotators convenience
-	my @exclude_biotypes_list = (
-            'Novel_Transcript'
-        );
-	foreach my $exclude_type (@exclude_biotypes_list) {
-	    my $index = 0;
-	    for my $index (reverse 0..$#mutable_gene_methods) {
-                if ( $mutable_gene_methods[$index]->name eq $exclude_type ) {
-                splice(@mutable_gene_methods, $index, 1, ());
-                }
-	    }
-	}
 
         my $type_frame = $frame->Frame(
             -border => 3,

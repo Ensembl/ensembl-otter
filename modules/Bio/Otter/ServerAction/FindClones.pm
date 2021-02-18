@@ -120,20 +120,16 @@ sub find_containing_chromosomes {
 
     my $sa = $slice->adaptor;
 
-    # map the original slice onto contig_ids
+        # map the original slice onto contig_ids
     my $seq_level_slice_ids = [ $slice->coord_system->is_sequence_level
         ? $sa->get_seq_region_id($slice)
         : map { $sa->get_seq_region_id($_->to_Slice) } @{$slice->project('seqlevel')}
     ];
 
     # now map those contig_ids back onto a chromosome
-    
-    # cs must be alway chromosome, as this function is targeted to find chromosomes only. 
-    # Otherwise if we find non-chromosome - even search will work, client will not be able to open containing dataSet,
-    # as it includes only chromosomes
     my $sql = sprintf
         $FIND_CONTAINING_CHROMOSOMES_SQL_TEMPLATE,
-        'chromosome',
+        $self->{ coord_system_name },
         $self->{ coord_system_version },
         (join ' , ', ('?') x @{$seq_level_slice_ids});
     my $sth = $sa->dbc->prepare($sql);
@@ -143,8 +139,7 @@ sub find_containing_chromosomes {
     while( my ($atype, $joined_cmps) = $sth->fetchrow ) {
         my @cmps = split(/,/, $joined_cmps);
         if(scalar(@cmps) == scalar(@$seq_level_slice_ids)) {
-        
-            # let's hope the default coord_system_version is set correctly:
+                    # let's hope the default coord_system_version is set correctly:
             my $chr_slice = $sa->fetch_by_region('chromosome', $atype);
             push @chr_slices, $chr_slice;
         }
@@ -185,8 +180,9 @@ sub register_slice {
 
 sub register_local_slice {
     my ($self, $qname, $qtype, $feature_slice) = @_;
-    use Data::Dumper;
+
     my $cs_name = $feature_slice->coord_system_name;
+
     my @component_names;
     if ($cs_name eq $TARGET_COMPONENT_TYPE) {
         @component_names = ( $feature_slice->seq_region_name );
@@ -596,6 +592,7 @@ sub find {
       map { __fa_add_dupsfx($_) } @{$names};
     my $fa_args = [ map { __tamecard_like($_) } @fa_name ];
     my $fa_condition = join ' OR ', (('( value LIKE ? )') x @$fa_args);
+
     $self->find_by_seqregion_names($names);
 
     $self->find_by_otter_stable_ids;
