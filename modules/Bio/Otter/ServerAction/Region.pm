@@ -670,14 +670,6 @@ sub fill_exon_align_evidence() {
             $new_feature->hstart($hstart);
             $new_feature->hend($hend);
             $exon->add_supporting_features($new_feature);
-            if ($exon->start != $new_feature->start) {
-               warn("MIRA1: " . $exon->start . " " . $new_feature->start);        
-            }
-            if ($exon->end != $new_feature->end) {
-               warn("MIRA2: " . $exon->end . " " . $new_feature->end);        
-            }
-            $exon->start($new_feature->start);
-            $exon->end($new_feature->end);
           }
         }
       }
@@ -690,12 +682,6 @@ sub fill_exon_align_evidence() {
       else {
         my $exon_toplevel = $exon->transform('toplevel', $exon->slice->coord_system->version);
         if ($exon_toplevel) {
-          if ($exon->start != $exon_toplevel->start) {
-               warn("MIRA3: " . $exon->start . " " . $exon_toplevel->start);        
-            }
-            if ($exon->end != $exon_toplevel->end) {
-               warn("MIRA4: " . $exon->end . " " . $exon_toplevel->end);        
-            }
           $exon = $exon_toplevel;
         }
       }
@@ -907,12 +893,6 @@ sub check_all_supporting_evidences {
     else {
       my $exon_toplevel = $toplevel_exon->transform('toplevel', $toplevel_exon->slice->coord_system->version);
       if ($exon_toplevel) {
-      	if ($exon->start != $exon_toplevel->start) {
-               warn("MIRA5: " . $exon->start . " " . $exon_toplevel->start);        
-            }
-            if ($exon->end != $exon_toplevel->end) {
-               warn("MIRA6: " . $exon->end . " " . $exon_toplevel->end);        
-            }
         $exon = $exon_toplevel;
       }
     }
