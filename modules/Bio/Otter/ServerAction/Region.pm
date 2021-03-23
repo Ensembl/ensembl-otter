@@ -669,9 +669,7 @@ sub fill_exon_align_evidence() {
             }
             $new_feature->hstart($hstart);
             $new_feature->hend($hend);
-          $exon->add_supporting_features($new_feature);
-            $exon->start($new_feature->start);
-            $exon->end($new_feature->end);
+            $exon->add_supporting_features($new_feature);
           }
         }
       }
