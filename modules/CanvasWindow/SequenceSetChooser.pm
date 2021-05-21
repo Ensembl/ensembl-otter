@@ -315,6 +315,7 @@ sub open_sequence_set_by_ssname_subset {
         $sn->top_window()->deiconify();
         $sn->top_window()->raise();
     } else {
+
         my $ss = $self->DataSet->get_SequenceSet_by_name($ss_name);
         my $top = $self->top_window()->Toplevel
           (-title => $Bio::Otter::Lace::Client::PFX.ucfirst($ss->coord_system_name)." $ss_name");
@@ -380,4 +381,3 @@ __END__
 =head1 AUTHOR
 
 Ana Code B<email> anacode@sanger.ac.uk
-

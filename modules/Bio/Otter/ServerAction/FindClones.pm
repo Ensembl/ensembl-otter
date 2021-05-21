@@ -127,8 +127,8 @@ sub find_containing_chromosomes {
     ];
 
     # now map those contig_ids back onto a chromosome
-    
-    # cs must be alway chromosome, as this function is targeted to find chromosomes only. 
+
+    # cs must be alway chromosome, as this function is targeted to find chromosomes only.
     # Otherwise if we find non-chromosome - even search will work, client will not be able to open containing dataSet,
     # as it includes only chromosomes
     my $sql = sprintf
@@ -143,7 +143,7 @@ sub find_containing_chromosomes {
     while( my ($atype, $joined_cmps) = $sth->fetchrow ) {
         my @cmps = split(/,/, $joined_cmps);
         if(scalar(@cmps) == scalar(@$seq_level_slice_ids)) {
-        
+
             # let's hope the default coord_system_version is set correctly:
             my $chr_slice = $sa->fetch_by_region('chromosome', $atype);
             push @chr_slices, $chr_slice;
@@ -185,8 +185,9 @@ sub register_slice {
 
 sub register_local_slice {
     my ($self, $qname, $qtype, $feature_slice) = @_;
-    use Data::Dumper;
+
     my $cs_name = $feature_slice->coord_system_name;
+
     my @component_names;
     if ($cs_name eq $TARGET_COMPONENT_TYPE) {
         @component_names = ( $feature_slice->seq_region_name );
@@ -289,7 +290,7 @@ sub _find_by_stable_ids {
         next unless $feature;
 
         my $feature_slice  = $feature->feature_Slice;
-        my $analysis_logic = $feature->analysis->logic_name; 
+        my $analysis_logic = $feature->analysis->logic_name;
         my $qtype = "${qtype_prefix}${analysis_logic}:${id}";
         $self->register_slice($qname, $qtype, $feature_slice);
     }
@@ -596,6 +597,7 @@ sub find {
       map { __fa_add_dupsfx($_) } @{$names};
     my $fa_args = [ map { __tamecard_like($_) } @fa_name ];
     my $fa_condition = join ' OR ', (('( value LIKE ? )') x @$fa_args);
+
     $self->find_by_seqregion_names($names);
 
     $self->find_by_otter_stable_ids;
@@ -683,4 +685,3 @@ __END__
 =head1 AUTHOR
 
 Ana Code B<email> anacode@sanger.ac.uk
-
