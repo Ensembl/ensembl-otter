@@ -120,16 +120,20 @@ sub find_containing_chromosomes {
 
     my $sa = $slice->adaptor;
 
-        # map the original slice onto contig_ids
+    # map the original slice onto contig_ids
     my $seq_level_slice_ids = [ $slice->coord_system->is_sequence_level
         ? $sa->get_seq_region_id($slice)
         : map { $sa->get_seq_region_id($_->to_Slice) } @{$slice->project('seqlevel')}
     ];
 
     # now map those contig_ids back onto a chromosome
+
+    # cs must be alway chromosome, as this function is targeted to find chromosomes only.
+    # Otherwise if we find non-chromosome - even search will work, client will not be able to open containing dataSet,
+    # as it includes only chromosomes
     my $sql = sprintf
         $FIND_CONTAINING_CHROMOSOMES_SQL_TEMPLATE,
-        $self->{ coord_system_name },
+        'chromosome',
         $self->{ coord_system_version },
         (join ' , ', ('?') x @{$seq_level_slice_ids});
     my $sth = $sa->dbc->prepare($sql);
@@ -139,7 +143,8 @@ sub find_containing_chromosomes {
     while( my ($atype, $joined_cmps) = $sth->fetchrow ) {
         my @cmps = split(/,/, $joined_cmps);
         if(scalar(@cmps) == scalar(@$seq_level_slice_ids)) {
-                    # let's hope the default coord_system_version is set correctly:
+
+            # let's hope the default coord_system_version is set correctly:
             my $chr_slice = $sa->fetch_by_region('chromosome', $atype);
             push @chr_slices, $chr_slice;
         }
@@ -285,7 +290,7 @@ sub _find_by_stable_ids {
         next unless $feature;
 
         my $feature_slice  = $feature->feature_Slice;
-        my $analysis_logic = $feature->analysis->logic_name; 
+        my $analysis_logic = $feature->analysis->logic_name;
         my $qtype = "${qtype_prefix}${analysis_logic}:${id}";
         $self->register_slice($qname, $qtype, $feature_slice);
     }
@@ -680,4 +685,3 @@ __END__
 =head1 AUTHOR
 
 Ana Code B<email> anacode@sanger.ac.uk
-
