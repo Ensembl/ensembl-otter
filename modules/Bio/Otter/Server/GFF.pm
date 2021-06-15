@@ -49,6 +49,7 @@ my $SUBCLASS = {
     grc_issues       => 'GRCIssues',
     patch_features   => 'Patches',
     psl_sql_features => 'PslSql',
+    constrained_elements => 'Compara',
 };
 
 sub send_requested_features {

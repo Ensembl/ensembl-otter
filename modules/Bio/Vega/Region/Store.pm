@@ -79,6 +79,15 @@ sub store {
         my $chromosome = $clone_seqs[0]->chromosome;
 
         my $db_slice = $self->slice_stored_if_needed($slice, $dna, $chromosome);
+        # If we are on a primary assembly, we need to store the INSDC accession as a synonym
+        # in order to keep the correct information
+        if ($db_slice->coord_system->name eq 'primary_assembly') {
+          my $seq_region_synonym = $clone_seqs[0]->accession.'.'.$clone_seqs[0]->sv;
+          my $external_db_id = $vega_dba->get_DBEntryAdaptor->get_external_db_id('INSDC', undef, 1);
+          my $full_slice = $db_slice->seq_region_Slice;
+          $full_slice->add_synonym($seq_region_synonym, $external_db_id);
+          $full_slice->adaptor->update($full_slice);
+        }
 
         my $reattach = ($db_slice != $slice);
 

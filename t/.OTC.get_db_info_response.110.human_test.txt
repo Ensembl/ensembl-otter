@@ -1921,6 +1921,20 @@
          "name" : "Otter truncated feature"
       }
    ],
+   "external_db" : [
+     {
+       "external_db_id" : "50710",
+       "db_name" : "INSDC",
+       "db_release" : "0",
+       "status" : "KNOWNXREF",
+       "priority" : "5",
+       "db_display_name" : "International Nucleotide Sequence Database Collaboration",
+       "type" : "MISC",
+       "secondary_db_name" : "INSDC",
+       "secondary_db_table" : "NULL",
+       "description" : "This external_db_id was initially made for use in the seq_region_synonym table. For species such as human, cow, dog we store chromosome names (1-22, X,Y) in the name column of the seq_region table. The INSDC accession is stored as a synonym."
+     }
+   ],
    "coord_system.chromosome" : {
       "name" : "chromosome",
       "attrib" : "default_version",

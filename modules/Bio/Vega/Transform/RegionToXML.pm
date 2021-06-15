@@ -165,12 +165,6 @@ sub generate_SequenceFragment {
     # ensure it is the correct one, but then ignores ContigInfo.
 
     if (my $ci = $cs->ContigInfo) {
-        # Commented out adding author since this is ignored on client side
-        # if (my $contig_author = $ci->author) {
-        #     $sf->attribvals($self->prettyprint('author',        $contig_author->name    ));
-        #     $sf->attribvals($self->prettyprint('author_email',  $contig_author->email   ));
-        # }
-
         my $ci_attribs = $ci->get_all_Attributes;
 
         foreach my $cia (@$ci_attribs) {
@@ -207,6 +201,21 @@ sub generate_Locus {
     my $g=$self->prettyprint('locus');
     if (defined $indent) {
         $g->indent($indent);
+    }
+
+    # Fetch gene attributes that do not persist.
+    my @current_persistent_attributes = ('name', 'remark', 'hidden_remark', 'cds_start_NF', 'cds_end_NF', 'mRNA_start_NF', 'mRNA_end_NF', 'status', 'synonym', 'otter_truncated');
+    foreach my $attributes ($gene->{'attributes'}) {
+       foreach my $attribute (@$attributes) {
+          if ($attribute->{'code'} ~~ @current_persistent_attributes )
+          {
+            next;
+          }
+          else
+          {
+            $g->attribvals($self->prettyprint($attribute->{'code'}, $attribute->{'value'}));
+          }
+       }
     }
 
     if($gene->stable_id) {
@@ -275,6 +284,27 @@ sub generate_Transcript {
     my $t=$self->prettyprint('transcript');
     if($tran->stable_id) {
         $t->attribvals($self->prettyprint('stable_id',$tran->stable_id));
+    }
+
+    # Fetch transcript attributes that do not persist
+    my %hash;
+    my @current_persistent_attributes = ('name', 'remark', 'hidden_remark', 'cds_start_NF', 'cds_end_NF', 'mRNA_start_NF', 'mRNA_end_NF', 'status');
+    foreach my $attributes ($tran->{'attributes'}) {
+       foreach my $attribute (@$attributes) {
+          if ($attribute->{'code'} ~~ @current_persistent_attributes )
+          {
+           next;
+          }
+          else
+          { 
+            $hash{$attribute->{'value'}} = $attribute->{'code'};
+          }
+       }
+    }
+
+    foreach my $attrib_value (keys %hash) {
+       my $attrib_code = $hash{$attrib_value};
+       $t->attribvals($self->prettyprint($attrib_code,$attrib_value));
     }
 
     if (my $tsct_author = $tran->transcript_author) {

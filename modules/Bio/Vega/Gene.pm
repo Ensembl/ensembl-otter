@@ -123,7 +123,7 @@ sub vega_hashkey {
     my $description = $self->description || '';
     my $attrib_string = $self->Bio::Vega::Utils::AttributesMixin::all_Attributes_string;
 
-    return join '-'
+    return lc join '-'
         , $seq_region_name, $start, $end, $strand
         , $biotype, $status, $source, $description, $tran_count, $attrib_string
         ;

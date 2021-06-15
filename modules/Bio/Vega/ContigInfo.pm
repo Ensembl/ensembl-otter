@@ -106,7 +106,7 @@ sub vega_hashkey_sub {
 sub vega_hashkey {
     my ($self) = @_;
 
-    return scalar @{$self->get_all_Attributes};
+    return lc scalar @{$self->get_all_Attributes};
 }
 
 sub get_all_Attributes  {
