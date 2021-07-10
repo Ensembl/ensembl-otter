@@ -59,7 +59,7 @@ Readonly my %CLASS_TO_SOURCE => (
     );
 
 Readonly my %DEFAULT_OPTIONS => (
-    host => '193.62.52.185',
+    host => '45.88.81.151',
     port => 3310,
     user => 'mm_readonly',
     name => 'mm_ini',
