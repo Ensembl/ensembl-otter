@@ -59,8 +59,8 @@ Readonly my %CLASS_TO_SOURCE => (
     );
 
 Readonly my %DEFAULT_OPTIONS => (
-    host => '193.62.52.185',
-    port => 3310,
+    host => '45.88.81.151',
+    port => 3306,
     user => 'mm_readonly',
     name => 'mm_ini',
     db_categories => [ @SEQ_DB_CATEGORIES ],
