@@ -687,7 +687,7 @@ __DATA__
 
 
 [client]
-url=http://otter-server.ebi.ac.uk:8005/cgi-bin/otter
+url=http://45.88.81.139:8081/cgi-bin/otter
 write_access=1
 gff_version=3
 acedb_version=4.9.61
