@@ -93,8 +93,6 @@ show tables like 'rule_goal'
 SQL
 ;
 
-
-
 sub get_analyses_status {
     my ($server) = @_;
 
