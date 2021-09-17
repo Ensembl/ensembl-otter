@@ -88,19 +88,34 @@ WHERE a.analysis_id = i.analysis_id
 SQL
     ;
 
+my $check_rules_table = <<'SQL'
+show tables like 'rule_goal'
+SQL
+;
+
+
+
 sub get_analyses_status {
     my ($server) = @_;
 
+
+my $pdbc = $server->dataset->pipeline_dba()->dbc();  # pipeline dbc
+
+
+my $rule_table_exist = $pdbc->prepare($check_rules_table);
+$rule_table_exist->execute();
+my $rule_table_result = $rule_table_exist->fetchrow;
+
 # If the corrd_system of rank 1 is primary_assembly, we have a post NoMerge species
 # and we don't have the rule_* tables from ensembl-pipeline
-if ($server->dataset->pipeline_dba->get_CoordSystemAdaptor->fetch_by_rank(1)->name eq 'primary_assembly') {
+if (!$rule_table_result) {
   return $server->otter_wrap_response('');
 }
 
 my $assembly = $server->require_argument('chr');
 my $component_cs = $server->param('component_cs') || 'contig';
 
-my $pdbc = $server->dataset->pipeline_dba()->dbc();  # pipeline dbc
+
 
 my @input_ids = ();
 my $cmp_sth = $pdbc->prepare($select_components_sql);
