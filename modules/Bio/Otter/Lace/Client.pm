@@ -28,6 +28,8 @@ use Try::Tiny;
 
 use Net::Domain qw{ hostname hostfqdn };
 use Proc::ProcessTable;
+use HTTP::Request ();
+use JSON::MaybeXS qw(encode_json);
 
 use List::MoreUtils qw( uniq );
 use Bio::Otter::Log::Log4perl 'logger';
@@ -1008,8 +1010,29 @@ sub lock_refresh_for_DataSet_SequenceSet {
             'coord_system_version' => $ss->coord_system_version,
             'author' => $self->author
         });
-    my @slice_lock = map { Bio::Vega::SliceLock->new_from_json($_) }
-      @{ $response->{SliceLock} || [] };
+
+        my $url = 'http://127.0.0.1:8081/sliceLock/';
+        my $header = ['Content-Type' => 'application/json; charset=UTF-8'];
+        my $data = {csName => $ss->coord_system_name, csVersion => $ss->coord_system_version, name => $ss->name };
+        my $encoded_data = encode_json($data);
+
+        my $r = HTTP::Request->new('POST', $url, $header, $encoded_data);
+        my $ua = LWP::UserAgent->new();
+        my $result = $ua->request($r);
+
+        if (!$result->is_success || (substr($result->decoded_content, 0, 5) eq "ERROR")) {
+            return
+        }
+
+        my $decodedRes = $self->_json_content($result);
+
+        my $result;
+        foreach my $ret ($decodedRes) {
+          $result = $ret;
+        }
+
+        my @slice_lock = map { Bio::Vega::SliceLock->new_from_json($_) }
+           @{ $result || [] };
 
     # O(N^2) in (clones*locks) but should still be plenty fast
     foreach my $cs (@{$ss->CloneSequence_list()}) {
@@ -1822,4 +1845,3 @@ An ordinary constructor, making instances as requested.
 =head1 AUTHOR
 
 Ana Code B<email> anacode@sanger.ac.uk
-
