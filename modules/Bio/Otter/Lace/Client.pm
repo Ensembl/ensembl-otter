@@ -1403,31 +1403,30 @@ sub get_all_SequenceSets_for_DataSet {
 
   my $dataset_name = $ds->name;
 
-  my $sequencesets_xml =
-      $self->http_response_content(
-          'GET', 'get_sequencesets', {'dataset' => $dataset_name, 'author' => $self->author});
+          my $url = 'http://127.0.0.1:8081/seqRegion/topVisible/';
 
-  local $XML::Simple::PREFERRED_PARSER = 'XML::Parser';
-  # configure expat for speed, also used in Bio::Vega::XML::Parser
+          my $r = HTTP::Request->new('GET', $url);
+          my $ua = LWP::UserAgent->new();
+          my $result = $ua->request($r);
 
-  my $sequencesets_hash =
-      XMLin($sequencesets_xml,
-            ForceArray => [ qw(
-                dataset
-                sequenceset
-                subregion
-                ) ],
-            KeyAttr => {
-                dataset     => 'name',
-                sequenceset => 'name',
-                subregion   => 'name',
-            },
-      )->{dataset}{$dataset_name}{sequencesets}{sequenceset};
+          if (!$result->is_success || (substr($result->decoded_content, 0, 5) eq "ERROR")) {
+              return
+          }
+
+    my $decodedRes = $self->_json_content($result);
+    my $data = @{$decodedRes}[0];
+    my $sequencesets_hash;
+
+    for my $data (@{$decodedRes}) {
+      my $name = delete $data->{name};
+      $sequencesets_hash->{$name} = $data;
+    };
 
   my $sequencesets = [
       map {
           $self->_make_SequenceSet(
               $_, $dataset_name, $sequencesets_hash->{$_});
+
       } keys %{$sequencesets_hash} ];
 
   if ($ds->READONLY) {
@@ -1435,6 +1434,9 @@ sub get_all_SequenceSets_for_DataSet {
           $ss->write_access(0);
       }
   }
+  my $size = @$sequencesets;
+  warn("*********************** ********************");
+
 
   return $sequencesets;
 }

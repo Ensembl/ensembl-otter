@@ -330,7 +330,6 @@ should cover this.
 
 sub describe {
     my ($self, $rolledback) = @_;
-    die("Describe function of slice lock is called!");
     # should make no reference to ->adaptor, because we may want to
     # run it on a serialised-to-client copy
 
@@ -484,16 +483,16 @@ sub new_from_json {
         }
     }
 
-    my @prop =  qw( seq_region_id seq_region_start seq_region_end ),
+    my @prop =  (qw( dbID, seq_region_id seq_region_start seq_region_end ),
                 qw( ts_begin ts_activity ts_free ), # unixtimes
                 qw( active freed ),                 # enums
-                qw( intent hostname ), # text
+                qw( intent ), # text
                 qw( author freed_author ));
 
-    my @propDb = qw( seqRegionId seqRegionStart seqRegionEnd ),
+    my @propDb =(qw( sliceLockId, seqRegionId seqRegionStart seqRegionEnd ),
                 qw( tsBegin tsActivity tsFree ), # unixtimes
                 qw( active freed ),                 # enums
-                qw( intent hostname ), # text
+                qw( intent ), # text
                 qw( author freedAuthor ));
 
     @obj{@prop} = delete @info{@propDb};

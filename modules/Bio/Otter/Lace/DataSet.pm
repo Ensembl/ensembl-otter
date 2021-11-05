@@ -561,6 +561,12 @@ sub get_all_visible_SequenceSets {
         push @$visible, $ss;
      }
   }
+  
+  use Data::Dumper;
+  my $size = @$visible;
+  warn("_____________+++++____________________________WHAT WE LOST__________++++++_________________________________");
+  warn($size);
+  
   return $visible;
 }
 

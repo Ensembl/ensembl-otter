@@ -71,6 +71,7 @@ XML
     my $attribute_adaptor = $odba->get_AttributeAdaptor();
 
     foreach my $ss_slice (@{$slice_adaptor->fetch_all('toplevel', undef, 1, 1)}) {
+       
         my $coord_system_version = $ss_slice->coord_system->version;
         if ($default_coord_system_version eq $coord_system_version) {
           my $chr_name = $ss_slice->seq_region_name();
