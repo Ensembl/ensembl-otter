@@ -1422,21 +1422,18 @@ sub get_all_SequenceSets_for_DataSet {
       $sequencesets_hash->{$name} = $data;
     };
 
-  my $sequencesets = [
+    my $sequencesets = [
       map {
           $self->_make_SequenceSet(
               $_, $dataset_name, $sequencesets_hash->{$_});
 
       } keys %{$sequencesets_hash} ];
 
-  if ($ds->READONLY) {
+    if ($ds->READONLY) {
       foreach my $ss (@$sequencesets) {
           $ss->write_access(0);
       }
   }
-  my $size = @$sequencesets;
-  warn("*********************** ********************");
-
 
   return $sequencesets;
 }
