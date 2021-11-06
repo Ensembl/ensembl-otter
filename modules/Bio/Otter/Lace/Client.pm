@@ -1003,13 +1003,6 @@ sub get_db_info {
 sub lock_refresh_for_DataSet_SequenceSet {
     my ($self, $ds, $ss) = @_;
     my $response =
-       $self->_DataSet_SequenceSet_response_content(
-           $ds, $ss, 'GET', 'get_locks',
-        {
-            'coord_system_name' => $ss->coord_system_name,
-            'coord_system_version' => $ss->coord_system_version,
-            'author' => $self->author
-        });
 
         my $url = 'http://127.0.0.1:8081/sliceLock/';
         my $header = ['Content-Type' => 'application/json; charset=UTF-8'];
@@ -1021,6 +1014,7 @@ sub lock_refresh_for_DataSet_SequenceSet {
         my $result = $ua->request($r);
 
         if (!$result->is_success || (substr($result->decoded_content, 0, 5) eq "ERROR")) {
+            die("Failed request to server: sliceLock/");
             return
         }
 
@@ -1410,6 +1404,7 @@ sub get_all_SequenceSets_for_DataSet {
           my $result = $ua->request($r);
 
           if (!$result->is_success || (substr($result->decoded_content, 0, 5) eq "ERROR")) {
+              die("Failed request to server: seqRegion/topVisible/");
               return
           }
 
