@@ -29,7 +29,6 @@ use Try::Tiny;
 use Net::Domain qw{ hostname hostfqdn };
 use Proc::ProcessTable;
 use HTTP::Request ();
-use JSON::MaybeXS qw(encode_json);
 
 use List::MoreUtils qw( uniq );
 use Bio::Otter::Log::Log4perl 'logger';
@@ -1020,13 +1019,8 @@ sub lock_refresh_for_DataSet_SequenceSet {
 
         my $decodedRes = $self->_json_content($result);
 
-        my $result;
-        foreach my $ret ($decodedRes) {
-          $result = $ret;
-        }
-
         my @slice_lock = map { Bio::Vega::SliceLock->new_from_json($_) }
-           @{ $result || [] };
+           @{$decodedRes};
 
     # O(N^2) in (clones*locks) but should still be plenty fast
     foreach my $cs (@{$ss->CloneSequence_list()}) {
