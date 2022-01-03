@@ -1748,7 +1748,35 @@ sub get_region_xml {
         'get_region',
         { $self->slice_query($slice), 'author' => $self->author },
         );
-    return $xml;
+
+        my $url = 'http://127.0.0.1:8081/region/getBySeqRegionNameAndCoordSystem';
+        my $header = ['Content-Type' => 'application/json; charset=UTF-8'];
+        my $data = {
+
+          csName =>   $slice->csname(),
+          csVersion =>  $slice->csver(),
+          seqRegionName =>  $slice->seqname(),
+          seqRegionStart => $slice->start(),
+          seqRegionEnd => $slice->end()};
+        my $encoded_data = encode_json($data);
+
+        my $r = HTTP::Request->new('POST', $url, $header, $encoded_data);
+        my $ua = LWP::UserAgent->new();
+        my $result = $ua->request($r);
+
+        if (!$result->is_success || (substr($result->decoded_content, 0, 5) eq "ERROR")) {
+            die("Failed request to server: get_region/");
+            return
+        }
+
+        my $decodedRes = $result->decoded_content();
+        use Data::Dumper;
+        print("MIRA AND MISHA DEBUG!!!!");
+        print("THEIR RESULT!!!!!!");
+        print(Dumper($xml));
+        print("OUR RESULT!!!!!!");
+        print(Dumper($decodedRes));
+    return $decodedRes;
 }
 
 sub get_assembly_dna {

@@ -268,7 +268,10 @@ sub init_AceDatabase {
         $xml_data->{sequence_set}->{locus}->{$locus_name} = $locus_entry;
     }
 
+
     foreach $locus_key(keys %{$xml_data->{sequence_set}->{locus}})  {
+        print("WE PARSE LOCUS!!!!");
+        print($locus_key);
         if (exists($xml_data->{sequence_set}->{locus}->{$locus_key}->{transcript}->{exon_set})) {
             $exon_hash = $xml_data->{sequence_set}->{locus}->{$locus_key}->{transcript}->{exon_set};
             if(!%$exon_hash) {
@@ -521,25 +524,25 @@ sub colour {
 my $gtkrc = <<'GTKRC'
 
 style "zmap-focus-view-frame" {
-  bg[NORMAL] = "gold" 
+  bg[NORMAL] = "gold"
 }
 
 widget "*.zmap-focus-view" style "zmap-focus-view-frame"
 
 style "infopanel-labels" {
-  bg[NORMAL] = "white" 
+  bg[NORMAL] = "white"
 }
 
 widget "*.zmap-control-infopanel" style "infopanel-labels"
 
 style "menu-titles" {
-  fg[INSENSITIVE] = "blue" 
+  fg[INSENSITIVE] = "blue"
 }
 
 widget "*.zmap-menu-title.*" style "menu-titles"
 
 style "default-species" {
-  bg[NORMAL] = "gold" 
+  bg[NORMAL] = "gold"
 }
 GTKRC
     ;
@@ -1225,4 +1228,3 @@ __END__
 =head1 AUTHOR
 
 Ana Code B<email> anacode@sanger.ac.uk
-
