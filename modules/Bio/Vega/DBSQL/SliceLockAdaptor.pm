@@ -257,20 +257,20 @@ sub _sane_db {
     # Things to check
     my %info = (RaiseError => $dbh->{'RaiseError'});
     my $row = $dbh->selectall_arrayref(q{
-      SELECT @@tx_isolation, engine
+      SELECT @@transaction_isolation, engine
       FROM information_schema.tables
       WHERE table_schema=database() and table_name='slice_lock'
     });
 
     throw("_sane_db expected one row for `slice_lock`, got ".@$row)
       unless 1 == @$row; # happens when the table is missing!
-    @info{qw{ tx_isolation engine }} = @{ $row->[0] };
+    @info{qw{ transaction_isolation engine }} = @{ $row->[0] };
 
     if ($info{engine} eq 'InnoDB' &&
         $info{RaiseError} &&
         # READ-UNCOMMITTED READ-COMMITTED can't be tested with our
         # slave setup and we don't need them - reject
-        (grep { $_ eq $info{tx_isolation} }
+        (grep { $_ eq $info{transaction_isolation} }
          qw{ REPEATABLE-READ SERIALIZABLE })) {
         return 1;
     } else {
