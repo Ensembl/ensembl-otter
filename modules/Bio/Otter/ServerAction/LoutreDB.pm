@@ -93,13 +93,13 @@ sub get_meta {
 =cut
 
 my $select_cs_sql = <<'SQL';
-    SELECT 'coord_system_id', 'species_id', 'name', 'version', 'rank', 'attrib'
+    SELECT coord_system_id, species_id, name, version, `rank`, attrib
       FROM coord_system
-     WHERE 'name' = 'chromosome' AND 'version' = 'Otter'
+     WHERE name = 'chromosome' AND version = 'Otter'
 SQL
 
 my $select_at_sql = <<'SQL';
-    SELECT 'attrib_type_id', 'code', 'name', 'description'
+    SELECT attrib_type_id, code, name, description
       FROM attrib_type
 SQL
 
@@ -109,14 +109,14 @@ sub get_db_info {
     my (%results, $select_cs_sql);
 
     if ($coord_system_name and $coord_system_version) {
-        $select_cs_sql = "SELECT 'coord_system_id', 'species_id', 'name', 'version', 'rank', 'attrib'".
+        $select_cs_sql = "SELECT coord_system_id, species_id, name, version, `rank`, attrib".
         ' FROM coord_system'.
-        " WHERE 'name' = '$coord_system_name' AND 'version' = '$coord_system_version'";
+        " WHERE name = '$coord_system_name' AND version = '$coord_system_version'";
     }
     else {
-         $select_cs_sql = "SELECT 'coord_system_id', 'species_id', 'name', 'version', 'rank', 'attrib'".
+         $select_cs_sql = "SELECT coord_system_id, species_id, name, version, `rank`, attrib".
         ' FROM coord_system'.
-        " WHERE 'attrib' = 'default_version' AND 'rank' = 1";
+        " WHERE attrib = 'default_version' AND `rank` = 1";
     }
 
     my $dbc = $self->server->otter_dba()->dbc();
