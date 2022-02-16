@@ -94,7 +94,7 @@ activity.
 =item 7. L</unlock>; COMMIT
 
 As with C<is_held_sync>, this can fail, so be prepared to roll back.
-
+	
 XXX: no, it must not if we checked is_held_sync already!  it would be too late to roll back
 
 XXX: presumably if the lock is in use elsewhere (then not if you didn't commit after work), or something else freed it already - this should return not fail.
@@ -128,7 +128,7 @@ sub _generic_sql_fetch {
           , seq_region_start
           , seq_region_end
           , author_id
-          , UNIX_TIMESTAMP(ts_begin)
+          , FROM_UNIXTIME(ts_begin)
           , UNIX_TIMESTAMP(ts_activity)
           , active
           , freed
@@ -424,6 +424,8 @@ sub do_lock {
         AND seq_region_end >= ?
         AND seq_region_start <= ?
     });
+    
+
     $sth_check->execute($ts_begin, $srID, $sr_start, $sr_end);
     while (my $row = $sth_check->fetch) {
         my ($ch_slid, $ch_act, $ch_freed) = @$row;
