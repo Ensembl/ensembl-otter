@@ -40,8 +40,15 @@ sub serialise_output {
         while (my ($chr_name, $chr_name_results) = each %{$qname_results}) {
             while (my ($qtype, $qtype_results) = each %{$chr_name_results}) {
                 while (my ($components, $count) = each %{$qtype_results}) {
-                    $tsv_string .=
-                        join("\t", $qname, $qtype, $components, $chr_name)."\n";
+                    if (ref $count) {
+                        $tsv_string .=
+                            join("\t", $qname, $qtype, $components, $chr_name,
+                                $count->{start}, $count->{end}
+                            )."\n";
+                    } else {
+                        $tsv_string .=
+                            join("\t", $qname, $qtype, $components, $chr_name)."\n";
+                    }
                 }
             }
         }

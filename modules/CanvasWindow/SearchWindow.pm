@@ -205,10 +205,17 @@ sub _clones_button {
 sub _clones_button_command {
     my ($self, $result) = @_;
 
-    my ($qname, $ssname, $clone_names) =
-        @{$result}{qw( qname assembly components )};
+    my ($qname, $ssname, $clone_names, $start, $end) =
+        @{$result}{qw( qname assembly components start end )};
+    $start //= '';
+    $end //= '';
     my $ss = $self->DataSet->get_SequenceSet_by_name($ssname);
     my $subset_tag = "${ssname}:Found:${qname}";
+
+    if ($start) {
+        $subset_tag .= ":$start:$end";
+        $clone_names = [$ss->{_description}];
+    }
 
     $ss->set_subset($subset_tag, $clone_names);
     $self->SequenceSetChooser->open_sequence_set_by_ssname_subset($ssname, $subset_tag);
@@ -327,6 +334,7 @@ sub new {
     $window->bind('<Destroy>', sub { $self = undef });
 
     $self->fix_window_min_max_sizes;
+    $search_entry->focus;
 
     return $self;
 }
@@ -338,7 +346,6 @@ sub show_me {
 
     $window->deiconify();
     $window->raise();
-    $window->focus();
 
     return;
 }

@@ -971,7 +971,7 @@ sub find_clones {
 
 sub _find_clone_result {
     my ($line) = @_;
-    my ($qname, $qtype, $component_names, $assembly) = split /\t/, $line;
+    my ($qname, $qtype, $component_names, $assembly, $start, $end) = split /\t/, $line;
     if ($qname eq '') {
         return { text => $line };
     } else {
@@ -981,6 +981,8 @@ sub _find_clone_result {
                 qtype      => $qtype,
                 components => $components,
                 assembly   => $assembly,
+                'start' => $start,
+                'end' => $end,
                };
     }
 }
@@ -1444,16 +1446,16 @@ sub _make_SequenceSet {
 }
 
 sub get_all_CloneSequences_for_DataSet_SequenceSet { # without any lock info
-  my ($self, $ds, $ss) = @_;
-  return [] unless $ss ;
-  my $csl = $ss->CloneSequence_list;
-  return $csl if (defined $csl && scalar @$csl);
+    my ($self, $ds, $ss) = @_;
+    return [] unless $ss ;
+    my $csl = $ss->CloneSequence_list;
+    return $csl if (defined $csl && scalar @$csl);
 
-  my $dataset_name     = $ds->name;
-  my $sequenceset_name = $ss->name;
-  $ds->selected_SequenceSet($ss);
+    my $dataset_name     = $ds->name;
+    my $sequenceset_name = $ss->name;
+    $ds->selected_SequenceSet($ss);
 
-  my $clonesequences_xml = $self->http_response_content(
+    my $clonesequences_xml = $self->http_response_content(
         'GET',
         'get_clonesequences',
         {
@@ -1466,29 +1468,77 @@ sub get_all_CloneSequences_for_DataSet_SequenceSet { # without any lock info
         }
     );
 
-  local $XML::Simple::PREFERRED_PARSER = 'XML::Parser';
-  # configure expat for speed, also used in Bio::Vega::XML::Parser
+    local $XML::Simple::PREFERRED_PARSER = 'XML::Parser';
+    # configure expat for speed, also used in Bio::Vega::XML::Parser
 
-  my $clonesequences_array =
-      XMLin($clonesequences_xml,
-            ForceArray => [ qw(
-                dataset
-                sequenceset
-                clonesequence
-                ) ],
-            KeyAttr => {
-                dataset       => 'name',
-                sequenceset   => 'name',
-            },
-      )->{dataset}{$dataset_name}{sequenceset}{$sequenceset_name}{clonesequences}{clonesequence};
+    my $clonesequences_array =
+    XMLin($clonesequences_xml,
+        ForceArray => [ qw(
+            dataset
+            sequenceset
+            clonesequence
+            ) ],
+        KeyAttr => {
+            dataset       => 'name',
+            sequenceset   => 'name',
+        },
+    )->{dataset}{$dataset_name}{sequenceset}{$sequenceset_name}{clonesequences}{clonesequence};
 
-  my $clonesequences = [
-      map {
-          $self->_make_CloneSequence(
-              $dataset_name, $sequenceset_name, $_);
-      } @{$clonesequences_array} ];
-  $ss->CloneSequence_list($clonesequences);
- return $clonesequences;
+    my $clonesequences = [
+        map {
+            $self->_make_CloneSequence(
+            $dataset_name, $sequenceset_name, $_);
+        } @{$clonesequences_array} ];
+
+    my $belong = $ss->{'_belongs_to'};
+
+    my $renumbered = 0;
+    foreach my $key (keys %$belong) {
+        # if we have a search result with a start:end relating to a contig
+        # (probably a primary_assembly), then the belongs_to search result hash
+        # must be updated and the clone list must be extended. We append the clone
+        # number to the sv like "sv-idx"
+        if ($key =~ /:.*:*:(?<start>\d+):(?<end>\d+)/) {
+            my ($special_start, $special_end);
+            $special_start = $+{start};
+            $special_end = $+{end};
+
+            # for this case, there should always only be one result
+            my $contig_name = (keys %{$belong->{$key}})[0];
+
+            my $i = 1;
+            my ($index_first, $index_last);
+            foreach my $cs (@$clonesequences) {
+                if (! $renumbered and
+                    $cs->coord_system_name eq 'primary_assembly' and
+                    $cs->contig_name =~ /\d+:\d+-\d+/
+                ) {
+                    $cs->sv($cs->sv . "-$i");
+                }
+                # special case eg herring
+                if ($special_start) {
+                    if ($cs->{_chr_start} <= $special_end) {
+                        $index_last = $i;
+                    }
+                    if ($cs->{_chr_end} >= $special_start) {
+                        $index_first //= $i;
+                    }
+                    $i++;
+                }
+            }
+            $renumbered = 1;
+
+            for my $idx ($index_first .. $index_last) {
+                $belong->{$key}->{$contig_name . "-$idx"} = 1;
+            }
+            delete $belong->{$key}->{$contig_name};
+        }
+
+    }
+
+
+    $ss->CloneSequence_list($clonesequences);
+    return $clonesequences;
 }
 
 sub _make_CloneSequence {
