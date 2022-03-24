@@ -1446,16 +1446,16 @@ sub _make_SequenceSet {
 }
 
 sub get_all_CloneSequences_for_DataSet_SequenceSet { # without any lock info
-    my ($self, $ds, $ss) = @_;
-    return [] unless $ss ;
-    my $csl = $ss->CloneSequence_list;
-    return $csl if (defined $csl && scalar @$csl);
+  my ($self, $ds, $ss) = @_;
+  return [] unless $ss ;
+  my $csl = $ss->CloneSequence_list;
+  return $csl if (defined $csl && scalar @$csl);
 
-    my $dataset_name     = $ds->name;
-    my $sequenceset_name = $ss->name;
-    $ds->selected_SequenceSet($ss);
+  my $dataset_name     = $ds->name;
+  my $sequenceset_name = $ss->name;
+  $ds->selected_SequenceSet($ss);
 
-    my $clonesequences_xml = $self->http_response_content(
+  my $clonesequences_xml = $self->http_response_content(
         'GET',
         'get_clonesequences',
         {
@@ -1468,27 +1468,27 @@ sub get_all_CloneSequences_for_DataSet_SequenceSet { # without any lock info
         }
     );
 
-    local $XML::Simple::PREFERRED_PARSER = 'XML::Parser';
-    # configure expat for speed, also used in Bio::Vega::XML::Parser
+  local $XML::Simple::PREFERRED_PARSER = 'XML::Parser';
+  # configure expat for speed, also used in Bio::Vega::XML::Parser
 
-    my $clonesequences_array =
-    XMLin($clonesequences_xml,
-        ForceArray => [ qw(
-            dataset
-            sequenceset
-            clonesequence
-            ) ],
-        KeyAttr => {
-            dataset       => 'name',
-            sequenceset   => 'name',
-        },
-    )->{dataset}{$dataset_name}{sequenceset}{$sequenceset_name}{clonesequences}{clonesequence};
+  my $clonesequences_array =
+      XMLin($clonesequences_xml,
+            ForceArray => [ qw(
+                dataset
+                sequenceset
+                clonesequence
+                ) ],
+            KeyAttr => {
+                dataset       => 'name',
+                sequenceset   => 'name',
+            },
+      )->{dataset}{$dataset_name}{sequenceset}{$sequenceset_name}{clonesequences}{clonesequence};
 
-    my $clonesequences = [
-        map {
-            $self->_make_CloneSequence(
-            $dataset_name, $sequenceset_name, $_);
-        } @{$clonesequences_array} ];
+  my $clonesequences = [
+      map {
+          $self->_make_CloneSequence(
+              $dataset_name, $sequenceset_name, $_);
+      } @{$clonesequences_array} ];
 
     my $belong = $ss->{'_belongs_to'};
 
@@ -1536,9 +1536,8 @@ sub get_all_CloneSequences_for_DataSet_SequenceSet { # without any lock info
 
     }
 
-
-    $ss->CloneSequence_list($clonesequences);
-    return $clonesequences;
+  $ss->CloneSequence_list($clonesequences);
+ return $clonesequences;
 }
 
 sub _make_CloneSequence {
