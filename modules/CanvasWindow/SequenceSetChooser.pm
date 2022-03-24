@@ -305,29 +305,36 @@ sub open_sequence_set {
     return;
 }
 
+# Retrieves the CanvasWindow::SequenceNotes for SequenceSet $ss_name
+# Returns an existing one if it already exists, creates it otherwise
+sub get_sn {
+    my ($self, $ss_name) = @_;
+    my $sn = $self->find_cached_SequenceNotes_by_name($ss_name);
+    return $sn if $sn;
+
+    my $ss = $self->DataSet->get_SequenceSet_by_name($ss_name);
+    my $top = $self->top_window()->Toplevel
+    (-title => $Bio::Otter::Lace::Client::PFX.ucfirst($ss->coord_system_name)." $ss_name");
+
+    $sn = CanvasWindow::SequenceNotes->new($top, 820, 100);
+    $sn->name($ss_name);
+    $sn->Client($self->Client);
+    $sn->SequenceSet($ss);
+    $sn->SequenceSetChooser($self);
+    $sn->initialise;
+    $self->add_SequenceNotes($sn);
+
+    return $sn;
+}
+
 sub open_sequence_set_by_ssname_subset {
     my ($self, $ss_name, $subset_name) = @_;
 
     my $busy = Tk::ScopedBusy->new($self->canvas->toplevel);
-    my $sn = $self->find_cached_SequenceNotes_by_name($ss_name);
+    my $sn = $self->get_sn($ss_name);
 
-    if($sn) {
-        $sn->top_window()->deiconify();
-        $sn->top_window()->raise();
-    } else {
-
-        my $ss = $self->DataSet->get_SequenceSet_by_name($ss_name);
-        my $top = $self->top_window()->Toplevel
-          (-title => $Bio::Otter::Lace::Client::PFX.ucfirst($ss->coord_system_name)." $ss_name");
-
-        $sn = CanvasWindow::SequenceNotes->new($top, 820, 100);
-        $sn->name($ss_name);
-        $sn->Client($self->Client);
-        $sn->SequenceSet($ss);
-        $sn->SequenceSetChooser($self);
-        $sn->initialise;
-        $self->add_SequenceNotes($sn);
-    }
+    $sn->top_window()->deiconify();
+    $sn->top_window()->raise();
 
     if( $subset_name ) {
         # we assume that whoever calls this has set the subset previously

@@ -971,16 +971,18 @@ sub find_clones {
 
 sub _find_clone_result {
     my ($line) = @_;
-    my ($qname, $qtype, $component_names, $assembly) = split /\t/, $line;
+    my ($qname, $qtype, $component_names, $assembly, $start, $end) = split /\t/, $line;
     if ($qname eq '') {
         return { text => $line };
     } else {
         my $components = $component_names ? [ split /,/, $component_names ] : [];
         return {
-                qname      => $qname,
-                qtype      => $qtype,
-                components => $components,
-                assembly   => $assembly,
+                'qname'      => $qname,
+                'qtype'      => $qtype,
+                'components' => $components,
+                'assembly'   => $assembly,
+                'start' => $start,
+                'end' => $end,
                };
     }
 }
@@ -1487,6 +1489,7 @@ sub get_all_CloneSequences_for_DataSet_SequenceSet { # without any lock info
           $self->_make_CloneSequence(
               $dataset_name, $sequenceset_name, $_);
       } @{$clonesequences_array} ];
+
   $ss->CloneSequence_list($clonesequences);
  return $clonesequences;
 }
