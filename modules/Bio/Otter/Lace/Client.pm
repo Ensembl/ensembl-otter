@@ -977,10 +977,10 @@ sub _find_clone_result {
     } else {
         my $components = $component_names ? [ split /,/, $component_names ] : [];
         return {
-                qname      => $qname,
-                qtype      => $qtype,
-                components => $components,
-                assembly   => $assembly,
+                'qname'      => $qname,
+                'qtype'      => $qtype,
+                'components' => $components,
+                'assembly'   => $assembly,
                 'start' => $start,
                 'end' => $end,
                };
