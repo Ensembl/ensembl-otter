@@ -212,9 +212,43 @@ sub _clones_button_command {
     my $ss = $self->DataSet->get_SequenceSet_by_name($ssname);
     my $subset_tag = "${ssname}:Found:${qname}";
 
+
+    # make sure the CloneSequence list has been loaded
+    my $sn = $self->SequenceSetChooser->get_sn($ssname);
+
+    # If we have a search result ending with ':start:end' we have a species with
+    # no chromosome and no clones. The SequenceSetChooser constructs a 'virtual
+    # clone list' where we use the accession name as clone name. To enable
+    # search highlighting, this must be extended. We append the index from the
+    # virtual clone list to the sv like "sv-idx"
     if ($start) {
         $subset_tag .= ":$start:$end";
-        $clone_names = [$ss->{_description}];
+
+        my $i = 1;
+        my ($index_first, $index_last, $clone_name);
+        my $clonesequences = $sn->get_CloneSequence_list;
+
+        my @cn_list;
+        foreach my $cs (@$clonesequences) {
+            $clone_name //= $cs->accession_dot_sv;
+
+            if ($cs->coord_system_name eq 'primary_assembly' and
+                $cs->contig_name =~ /\d+:\d+-\d+/ and
+                ! ($cs->sv =~ /-\d+$/)
+            ) {
+                # Clone name from search is always 'primary_assembly', not
+                # useful. We will use accession dot sv, so change sv here
+                $cs->sv($cs->sv . "-$i");
+            }
+
+            if ($cs->{_chr_start} <= $end and $cs->{_chr_end} >= $start) {
+                push @cn_list, $cs->accession_dot_sv;
+            }
+
+            $i++;
+        }
+
+        $clone_names = \@cn_list;
     }
 
     $ss->set_subset($subset_tag, $clone_names);
