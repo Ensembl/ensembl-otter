@@ -1006,10 +1006,10 @@ sub lock_refresh_for_DataSet_SequenceSet {
     my @slice_lock;
 
     if  ($ss->dataset_name eq "human_test") {
-        $self->logger->info('REQUEST http://127.0.0.1:8081/sliceLock/');
+        $self->logger->info('REQUEST http://45.88.80.120:8083/sliceLock/');
         my $response =
 
-          my $url = 'http://127.0.0.1:8081/sliceLock/';
+          my $url = 'http://45.88.80.120:8083/sliceLock/';
           my $header = ['Content-Type' => 'application/json; charset=UTF-8'];
           my $data = {csName => $ss->coord_system_name, csVersion => $ss->coord_system_version, name => $ss->name };
           my $encoded_data = encode_json($data);
@@ -1422,8 +1422,8 @@ sub get_all_SequenceSets_for_DataSet {
   my $sequencesets_hash;
 
   if  ($dataset_name eq "human_test") {
-    my $url = 'http://127.0.0.1:8081/seqRegion/topVisible/';
-    $self->logger->info('REQUEST http://127.0.0.1:8081/seqRegion/topVisible/');
+    my $url = 'http://45.88.80.120:8083/seqRegion/topVisible/';
+    $self->logger->info('REQUEST http://45.88.80.120:8083/seqRegion/topVisible/');
     my $r = HTTP::Request->new('GET', $url);
     my $ua = LWP::UserAgent->new();
     my $result = $ua->request($r);
@@ -1801,8 +1801,8 @@ sub get_region_xml {
 
     if  ($slice->dsname() eq "human_test") {
 
-        my $url = 'http://127.0.0.1:8081/region/getBySeqRegionNameAndCoordSystem';
-        $self->logger->info('REQUEST http://127.0.0.1:8081/region/getBySeqRegionNameAndCoordSystem');
+        my $url = 'http://45.88.80.120:8083/region/getBySeqRegionNameAndCoordSystem';
+        $self->logger->info('REQUEST http://45.88.80.120:8083/region/getBySeqRegionNameAndCoordSystem');
 
         my $header = ['Content-Type' => 'application/json; charset=UTF-8'];
         my $data = {
