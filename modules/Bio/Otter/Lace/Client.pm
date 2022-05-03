@@ -1,6 +1,6 @@
 =head1 LICENSE
 
-Copyright [2018-2021] EMBL-European Bioinformatics Institute
+Copyright [2018-2022] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -28,6 +28,7 @@ use Try::Tiny;
 
 use Net::Domain qw{ hostname hostfqdn };
 use Proc::ProcessTable;
+use HTTP::Request ();
 
 use List::MoreUtils qw( uniq );
 use Bio::Otter::Log::Log4perl 'logger';
@@ -971,16 +972,18 @@ sub find_clones {
 
 sub _find_clone_result {
     my ($line) = @_;
-    my ($qname, $qtype, $component_names, $assembly) = split /\t/, $line;
+    my ($qname, $qtype, $component_names, $assembly, $start, $end) = split /\t/, $line;
     if ($qname eq '') {
         return { text => $line };
     } else {
         my $components = $component_names ? [ split /,/, $component_names ] : [];
         return {
-                qname      => $qname,
-                qtype      => $qtype,
-                components => $components,
-                assembly   => $assembly,
+                'qname'      => $qname,
+                'qtype'      => $qtype,
+                'components' => $components,
+                'assembly'   => $assembly,
+                'start' => $start,
+                'end' => $end,
                };
     }
 }
@@ -1000,16 +1003,53 @@ sub get_db_info {
 
 sub lock_refresh_for_DataSet_SequenceSet {
     my ($self, $ds, $ss) = @_;
-    my $response =
-       $self->_DataSet_SequenceSet_response_content(
-           $ds, $ss, 'GET', 'get_locks',
-        {
-            'coord_system_name' => $ss->coord_system_name,
-            'coord_system_version' => $ss->coord_system_version,
-            'author' => $self->author
-        });
-    my @slice_lock = map { Bio::Vega::SliceLock->new_from_json($_) }
-      @{ $response->{SliceLock} || [] };
+    my @slice_lock;
+
+    if  ($ss->dataset_name eq "human_test") {
+        $self->logger->info('REQUEST http://45.88.80.120:8083/sliceLock/');
+        my $response =
+
+          my $url = 'http://45.88.80.120:8083/sliceLock/';
+          my $header = ['Content-Type' => 'application/json; charset=UTF-8'];
+          my $data = {csName => $ss->coord_system_name, csVersion => $ss->coord_system_version, name => $ss->name };
+          my $encoded_data = encode_json($data);
+
+          my $r = HTTP::Request->new('POST', $url, $header, $encoded_data);
+          my $ua = LWP::UserAgent->new();
+          my $result = $ua->request($r);
+
+          if (!$result->is_success || (substr($result->decoded_content, 0, 5) eq "ERROR")) {
+              die("Failed request to server: sliceLock/");
+              return
+          }
+
+          my $decodedRes = $self->_json_content($result);
+
+          my @slice_lock = map { Bio::Vega::SliceLock->new_from_json($_) }
+             @{$decodedRes};
+
+          # O(N^2) in (clones*locks) but should still be plenty fast
+          foreach my $cs (@{$ss->CloneSequence_list()}) {
+              my ($chr, $start, $end) = $ss->region_coordinates([ $cs ]);
+              my @overlap = grep { $_->seq_region_start <= $end &&
+                                     $_->seq_region_end >= $start } @slice_lock;
+              $cs->set_SliceLocks(@overlap);
+          }
+          return;
+
+     } else {
+           my $response =
+              $self->_DataSet_SequenceSet_response_content(
+                  $ds, $ss, 'GET', 'get_locks',
+               {
+                   'coord_system_name' => $ss->coord_system_name,
+                   'coord_system_version' => $ss->coord_system_version,
+                   'author' => $self->author
+               });
+           my @slice_lock = map { Bio::Vega::SliceLock->new_from_json($_) }
+             @{ $response->{SliceLock} || [] };
+
+
 
     # O(N^2) in (clones*locks) but should still be plenty fast
     foreach my $cs (@{$ss->CloneSequence_list()}) {
@@ -1018,7 +1058,7 @@ sub lock_refresh_for_DataSet_SequenceSet {
                                $_->seq_region_end >= $start } @slice_lock;
         $cs->set_SliceLocks(@overlap);
     }
-
+  }
     return;
 }
 
@@ -1379,15 +1419,38 @@ sub get_all_SequenceSets_for_DataSet {
   return [] unless $ds;
 
   my $dataset_name = $ds->name;
+  my $sequencesets_hash;
 
-  my $sequencesets_xml =
+  if  ($dataset_name eq "human_test") {
+    my $url = 'http://45.88.80.120:8083/seqRegion/topVisible/';
+    $self->logger->info('REQUEST http://45.88.80.120:8083/seqRegion/topVisible/');
+    my $r = HTTP::Request->new('GET', $url);
+    my $ua = LWP::UserAgent->new();
+    my $result = $ua->request($r);
+
+    if (!$result->is_success || (substr($result->decoded_content, 0, 5) eq "ERROR")) {
+      die("Failed request to server: seqRegion/topVisible/");
+      return
+    }
+
+    my $decodedRes = $self->_json_content($result);
+    my $data = @{$decodedRes}[0];
+
+    for my $data (@{$decodedRes}) {
+      my $name = delete $data->{name};
+      $sequencesets_hash->{$name} = $data;
+    };
+
+  } else {
+
+    my $sequencesets_xml =
       $self->http_response_content(
           'GET', 'get_sequencesets', {'dataset' => $dataset_name, 'author' => $self->author});
 
-  local $XML::Simple::PREFERRED_PARSER = 'XML::Parser';
-  # configure expat for speed, also used in Bio::Vega::XML::Parser
+    local $XML::Simple::PREFERRED_PARSER = 'XML::Parser';
+    # configure expat for speed, also used in Bio::Vega::XML::Parser
 
-  my $sequencesets_hash =
+    $sequencesets_hash =
       XMLin($sequencesets_xml,
             ForceArray => [ qw(
                 dataset
@@ -1400,6 +1463,7 @@ sub get_all_SequenceSets_for_DataSet {
                 subregion   => 'name',
             },
       )->{dataset}{$dataset_name}{sequencesets}{sequenceset};
+  }
 
   my $sequencesets = [
       map {
@@ -1410,8 +1474,8 @@ sub get_all_SequenceSets_for_DataSet {
   if ($ds->READONLY) {
       foreach my $ss (@$sequencesets) {
           $ss->write_access(0);
+        }
       }
-  }
 
   return $sequencesets;
 }
@@ -1487,6 +1551,7 @@ sub get_all_CloneSequences_for_DataSet_SequenceSet { # without any lock info
           $self->_make_CloneSequence(
               $dataset_name, $sequenceset_name, $_);
       } @{$clonesequences_array} ];
+
   $ss->CloneSequence_list($clonesequences);
  return $clonesequences;
 }
@@ -1732,11 +1797,41 @@ sub recover_session {
 
 sub get_region_xml {
     my ($self, $slice) = @_;
-    my $xml = $self->http_response_content(
-        'GET',
-        'get_region',
-        { $self->slice_query($slice), 'author' => $self->author },
-        );
+    my $xml;
+
+    if  ($slice->dsname() eq "human_test") {
+
+        my $url = 'http://45.88.80.120:8083/region/getBySeqRegionNameAndCoordSystem';
+        $self->logger->info('REQUEST http://45.88.80.120:8083/region/getBySeqRegionNameAndCoordSystem');
+
+        my $header = ['Content-Type' => 'application/json; charset=UTF-8'];
+        my $data = {
+
+          csName =>   $slice->csname(),
+          csVersion =>  $slice->csver(),
+          seqRegionName =>  $slice->seqname(),
+          seqRegionStart => $slice->start(),
+          seqRegionEnd => $slice->end()};
+        my $encoded_data = encode_json($data);
+
+        my $r = HTTP::Request->new('POST', $url, $header, $encoded_data);
+        my $ua = LWP::UserAgent->new();
+        my $result = $ua->request($r);
+
+        if (!$result->is_success || (substr($result->decoded_content, 0, 5) eq "ERROR")) {
+            die("Failed request to server: get_region/");
+            return
+        }
+
+        $xml = $result->decoded_content();
+
+    } else {
+             $xml = $self->http_response_content(
+              'GET',
+              'get_region',
+              { $self->slice_query($slice), 'author' => $self->author },
+              );
+    }
     return $xml;
 }
 
@@ -1822,4 +1917,3 @@ An ordinary constructor, making instances as requested.
 =head1 AUTHOR
 
 Ana Code B<email> anacode@sanger.ac.uk
-

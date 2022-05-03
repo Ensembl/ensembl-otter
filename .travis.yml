@@ -10,9 +10,9 @@ install:
     - mkdir app
     - cp -r $ROOT_PATH/ensembl-otter ./app
     - cd app
-    - git clone --branch master --depth 1 https://github.com/Ensembl/team_tools.git
-    - git clone --branch master --depth 1 https://github.com/Ensembl/webvm.git
-    - git clone --branch master --depth 1 https://github.com/Ensembl/webvm-deps.git
+    - git clone --branch main --depth 1 https://github.com/Ensembl/team_tools.git
+    - git clone --branch main --depth 1 https://github.com/Ensembl/webvm.git
+    - git clone --branch main --depth 1 https://github.com/Ensembl/webvm-deps.git
     - cd webvm-deps/
     - mkdir ensembl-branch-99/
     - cd ensembl-branch-99/
@@ -21,8 +21,8 @@ install:
     - git clone --branch release/99 https://github.com/Ensembl/ensembl-funcgen.git
     - git clone --branch release/99 https://github.com/Ensembl/ensembl-compara.git
     - cd ../../
-    - git clone --branch master --depth 1 https://github.com/Ensembl/zircon.git
-    - git clone --branch master --depth 1 https://github.com/Ensembl/PerlModules.git
+    - git clone --branch main --depth 1 https://github.com/Ensembl/zircon.git
+    - git clone --branch main --depth 1 https://github.com/Ensembl/PerlModules.git
 
 
 script: "docker run -i --name devtest -v $ROOT_PATH/app:/loutre smmebi/otter_test_nomerge:latest"

@@ -1,6 +1,6 @@
 =head1 LICENSE
 
-Copyright [2018-2021] EMBL-European Bioinformatics Institute
+Copyright [2018-2022] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -117,6 +117,9 @@ sub _local_cs {
         return $cs;
     }
     else {
+        if (!$self->override_spec) {
+		return;
+        }
         my $spec = $self->override_spec->{$name};
         my $cs = Bio::EnsEMBL::CoordSystem->new('-name' => $name, %$spec);
         return $cs;

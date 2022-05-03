@@ -1,6 +1,6 @@
 =head1 LICENSE
 
-Copyright [2018-2021] EMBL-European Bioinformatics Institute
+Copyright [2018-2022] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -127,8 +127,8 @@ sub find_containing_chromosomes {
     ];
 
     # now map those contig_ids back onto a chromosome
-    
-    # cs must be alway chromosome, as this function is targeted to find chromosomes only. 
+
+    # cs must be alway chromosome, as this function is targeted to find chromosomes only.
     # Otherwise if we find non-chromosome - even search will work, client will not be able to open containing dataSet,
     # as it includes only chromosomes
     my $sql = sprintf
@@ -143,7 +143,7 @@ sub find_containing_chromosomes {
     while( my ($atype, $joined_cmps) = $sth->fetchrow ) {
         my @cmps = split(/,/, $joined_cmps);
         if(scalar(@cmps) == scalar(@$seq_level_slice_ids)) {
-        
+
             # let's hope the default coord_system_version is set correctly:
             my $chr_slice = $sa->fetch_by_region('chromosome', $atype);
             push @chr_slices, $chr_slice;
@@ -185,10 +185,16 @@ sub register_slice {
 
 sub register_local_slice {
     my ($self, $qname, $qtype, $feature_slice) = @_;
-    use Data::Dumper;
+
     my $cs_name = $feature_slice->coord_system_name;
+
     my @component_names;
-    if ($cs_name eq $TARGET_COMPONENT_TYPE) {
+    my $found_chromosome_slices;
+
+    if ($cs_name eq 'primary_assembly') {
+            $found_chromosome_slices = [ $feature_slice ];
+            @component_names = ( $feature_slice->seq_region_name );
+    } elsif ($cs_name eq $TARGET_COMPONENT_TYPE) {
         @component_names = ( $feature_slice->seq_region_name );
     } else {
         # NOTE: order of projection segments WAS strand-dependent
@@ -199,9 +205,11 @@ sub register_local_slice {
         @component_names = map { $_->to_Slice->seq_region_name } @sorted_projections;
     }
 
-    my $found_chromosome_slices = ($cs_name eq 'chromosome')
-        ? [ $feature_slice ]
-        : $self->find_containing_chromosomes($feature_slice);
+    if (! $found_chromosome_slices) {
+        $found_chromosome_slices = ($cs_name eq 'chromosome')
+            ? [ $feature_slice ]
+            : $self->find_containing_chromosomes($feature_slice);
+    }
 
     foreach my $chr_slice (@$found_chromosome_slices) {
         my $hidden = get_first_Attribute_value($chr_slice, 'hidden');
@@ -209,6 +217,18 @@ sub register_local_slice {
         my $chr_name = $chr_slice->seq_region_name;
         my $key = join ',', @component_names;
         my $valref = \$self->results->{uc($qname)}->{$chr_name}->{$qtype}->{$key};
+
+        my $value;
+        if ($cs_name eq 'primary_assembly') {
+            delete $self->results->{uc($qname)}->{$chr_name}->{$qtype}->{$key};
+            $key = 'primary_assembly';
+            $value = {
+                'start' => $chr_slice->start,
+                'end' => $chr_slice->end
+            };
+            $self->results->{uc($qname)}->{$chr_name}->{$qtype}->{$key} = $value;
+            last;
+        }
 
         if (!$$valref) {
             die "Too many hits" # will be caught per find_by_*
@@ -289,7 +309,7 @@ sub _find_by_stable_ids {
         next unless $feature;
 
         my $feature_slice  = $feature->feature_Slice;
-        my $analysis_logic = $feature->analysis->logic_name; 
+        my $analysis_logic = $feature->analysis->logic_name;
         my $qtype = "${qtype_prefix}${analysis_logic}:${id}";
         $self->register_slice($qname, $qtype, $feature_slice);
     }
@@ -596,6 +616,7 @@ sub find {
       map { __fa_add_dupsfx($_) } @{$names};
     my $fa_args = [ map { __tamecard_like($_) } @fa_name ];
     my $fa_condition = join ' OR ', (('( value LIKE ? )') x @$fa_args);
+
     $self->find_by_seqregion_names($names);
 
     $self->find_by_otter_stable_ids;
@@ -683,4 +704,3 @@ __END__
 =head1 AUTHOR
 
 Ana Code B<email> anacode@sanger.ac.uk
-
