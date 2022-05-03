@@ -70,22 +70,22 @@ my @method_biotype_status = qw{
         lncRNA                      =                       -
 
     Known_ncRNA                     =                       -
-        miRNA                       =                       -
-        piRNA                       =                       -
-        rRNA                        =                       -
-        scRNA                       =                       -
-        siRNA                       =                       -
-        snRNA                       =                       -
-        snoRNA                      =                       -
-        tRNA                        =                       -
-        vaultRNA                    =                       -
-        rRNA_pseudogene             =                       -
-        misc_RNA                    =                       -
-        ribozyme                    =                       -
-        sRNA                        =                       -
-        scaRNA                      =                       -
+        miRNA                       =                       PREDICTED
+        piRNA                       =                       PREDICTED
+        rRNA                        =                       PREDICTED
+        scRNA                       =                       PREDICTED
+        siRNA                       =                       PREDICTED
+        snRNA                       =                       PREDICTED
+        snoRNA                      =                       PREDICTED
+        tRNA                        =                       PREDICTED
+        vaultRNA                    =                       PREDICTED
+        rRNA_pseudogene             =                       PREDICTED
+        misc_RNA                    =                       PREDICTED
+        ribozyme                    =                       PREDICTED
+        sRNA                        =                       PREDICTED
+        scaRNA                      =                       PREDICTED
 
-    TEC                             =                       -
+    TEC                             =                       UNKNOWN
 
     Predicted                       protein_coding          PREDICTED
 

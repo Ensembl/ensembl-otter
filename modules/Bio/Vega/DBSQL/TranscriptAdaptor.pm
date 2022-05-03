@@ -25,6 +25,7 @@ use Bio::EnsEMBL::DBSQL::BaseAdaptor;
 use Bio::Vega::Transcript;
 use Bio::Vega::Evidence;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
+use Bio::Vega::Utils::Attribute qw(add_EnsEMBL_Attributes );
 
 use base 'Bio::EnsEMBL::DBSQL::TranscriptAdaptor';
 
@@ -276,6 +277,28 @@ sub remove {
 
 1;
 
+sub add_persistent_attributes {
+    my($self, $tran) = @_;
+
+    #Find attributes for the transcript and add them to the transcript
+    my $stable_id = $tran->stable_id;
+    my @persistent_attributes = ('vega_name', 'TAGENE_transcript', 'MANE_Select', 'ccds_transcript', 
+                                 'miRNA', 'ncRNA', 'Frameshift');
+    my $sth = $self->prepare("SELECT DISTINCT (ta.value) FROM ".
+                             "transcript t, transcript_attrib ta, attrib_type at ".
+                             "WHERE t.transcript_id=ta.transcript_id AND ".
+                             "ta.attrib_type_id=at.attrib_type_id AND ".
+                             "t.stable_id = ? and t.is_current = 1 and at.code = ?;");
+
+    foreach my $attrib (@persistent_attributes) {
+            $sth->execute($stable_id, $attrib);
+            while (my @row = $sth->fetchrow_array) {
+                  add_EnsEMBL_Attributes($tran, $attrib => @row);
+            }
+    }
+
+    $sth->finish();
+ }
 __END__
 
 =head1 AUTHOR

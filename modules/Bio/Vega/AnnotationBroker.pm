@@ -390,7 +390,7 @@ sub transcripts_diff {
 
     my $transcripts_any_changes = 0;
     my $transcripts_seq_changes = 0;
-
+    my $ta = $self->db->get_TranscriptAdaptor;
     my $shared_exons = {};
     foreach my $tran (@{ $gene->get_all_Transcripts }) {
 
@@ -425,6 +425,7 @@ sub transcripts_diff {
                 $tran->modified_date($self->current_time);
 
                 $tran->version($db_transcript->version + $this_transcript_seq_changes);
+                $ta->add_persistent_attributes($tran); #Add persistent_attributes only for edited transcripts
             }
             else {
                 $tran->modified_date($db_transcript->modified_date());

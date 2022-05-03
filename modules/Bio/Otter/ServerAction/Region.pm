@@ -501,7 +501,8 @@ sub _fetch_db_region {
     my $db_region = Bio::Vega::Region->new;
     $db_region->slice($db_slice);
 
-     if ($new_slice->coord_system->name eq "primary_assembly") { # we don't need clone sequences build when we have primary assembly
+
+    if ($new_slice->coord_system->name eq "primary_assembly") { # we don't need clone sequences build when we have primary assembly
       return $db_region;
     }
     

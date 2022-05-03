@@ -63,7 +63,7 @@ sub vega_hashkey {
   my $tl_start =$self->start;
   my $tl_end   =$self->end;
 
-  return "$start_exon_hash_key-$end_exon_hash_key-$tl_start-$tl_end";
+  return lc "$start_exon_hash_key-$end_exon_hash_key-$tl_start-$tl_end";
 }
 
 sub vega_hashkey_structure {
