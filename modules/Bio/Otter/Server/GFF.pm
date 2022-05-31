@@ -48,7 +48,7 @@ my $SUBCLASS = {
     genes            => 'Genes',
     grc_issues       => 'GRCIssues',
     patch_features   => 'Patches',
-    psl_sql_features => 'PslSql'
+    psl_sql_features => 'PslSql',
 };
 
 sub send_requested_features {

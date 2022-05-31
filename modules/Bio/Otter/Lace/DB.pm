@@ -356,6 +356,11 @@ sub load_dataset_info {
         }
     }
 
+    # Attributes
+    #
+    foreach my $row (@$at_list) {
+        $at_sth->execute(@$row{@at_cols});
+    }
     $dbh->commit;
 
 

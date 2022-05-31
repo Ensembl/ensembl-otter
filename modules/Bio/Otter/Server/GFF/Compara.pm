@@ -53,7 +53,7 @@ sub get_requested_features {
     my $feature_kind    = $self->require_argument('feature_kind');
     die "feature_kind '$feature_kind' not supported" unless $feature_kind eq 'SimpleFeature';
 
-    my $metakey = $self->require_argument('metakey'); # to find compara db
+    my $metakey = $self->require_argument('metakey'); # to find funcgen db
     my $method_link = $self->require_argument('method_link');
     my $assembly_name = $self->param('csver');
     my $cs_name = $self->param('cs');
