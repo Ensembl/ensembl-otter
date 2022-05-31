@@ -314,11 +314,6 @@ sub load_dataset_info {
                                                     VALUES (?, ?, ?, ?) });
     my $at_list = $dataset->get_db_info_item('attrib_type');
 
-    my @ed_cols = qw(                                       external_db_id  db_name  db_release  status  priority  db_display_name  type  secondary_db_name  secondary_db_table  description);
-    my $ed_sth  = $dbh->prepare(q{ INSERT INTO external_db (external_db_id, db_name, db_release, status, priority, db_display_name, type, secondary_db_name, secondary_db_table, description)
-                                                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) });
-    my $ed_list = $dataset->get_db_info_item('external_db');
-
     my $_dba = $self->_dba('_coords');     # we throw this one away
     my $override_specs = $dataset->get_db_info_item('coord_systems');
     my $dna_cs_rank;
@@ -359,18 +354,6 @@ sub load_dataset_info {
                 $meta_sth->execute($details->{species_id}, $key, $value);
             }
         }
-    }
-
-    # Attributes
-    #
-    foreach my $row (@$at_list) {
-        $at_sth->execute(@$row{@at_cols});
-    }
-
-    # External DB, needed for species with primary_assembly
-    #
-    foreach my $row (@$ed_list) {
-        $ed_sth->execute(@$row{@ed_cols});
     }
 
     $dbh->commit;

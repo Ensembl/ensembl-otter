@@ -1625,6 +1625,8 @@ sub save_otter_xml {
     $self->logger->logconfess("Cannot save_otter_xml without a lock_token")
       unless $lock_token && $lock_token !~ /^unlocked /;
 
+
+
     my $content = $self->http_response_content(
         'POST',
         'write_region',

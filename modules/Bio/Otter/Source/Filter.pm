@@ -101,11 +101,6 @@ my @server_params = (
     strand
     ),
 
-    # Compara
-    qw(
-    method_link
-    ),
-
     );
 
 sub from_config {
@@ -328,12 +323,6 @@ sub feature_type {
     my ($self, $feature_type) = @_;
     $self->{_feature_type} = $feature_type if $feature_type;
     return $self->{_feature_type};
-}
-
-sub method_link {
-    my ($self, $method_link) = @_;
-    $self->{_method_link} = $method_link if $method_link;
-    return $self->{_method_link};
 }
 
 # session handling

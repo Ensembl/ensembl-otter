@@ -160,11 +160,6 @@ sub get_db_info {
     my $at_rows = $at_sth->fetchall_arrayref({});
     $results{'attrib_type'} = $at_rows;
 
-    my $ed_sth = $dbc->prepare('SELECT * FROM external_db WHERE db_name IN ("INSDC")');
-    $ed_sth->execute;
-    my $ed_rows = $ed_sth->fetchall_arrayref({});
-    $results{'external_db'} = $ed_rows;
-
     return \%results;
 }
 

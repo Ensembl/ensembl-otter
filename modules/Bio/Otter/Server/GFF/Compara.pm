@@ -49,12 +49,12 @@ use base qw( Bio::Otter::Server::GFF );
 sub get_requested_features {
     my ($self) = @_;
 
-    my $feature_kind = $self->require_argument('feature_kind');
+    my $map = $self->make_map;
+    my $feature_kind    = $self->require_argument('feature_kind');
     die "feature_kind '$feature_kind' not supported" unless $feature_kind eq 'SimpleFeature';
 
     my $metakey = $self->require_argument('metakey'); # to find compara db
     my $method_link = $self->require_argument('method_link');
-    my $analysis = $self->require_argument('analysis');
     my $assembly_name = $self->param('csver');
     my $cs_name = $self->param('cs');
     my $seq_region_name = $self->param('name');
@@ -67,15 +67,17 @@ sub get_requested_features {
     my $sth = $compara_dba->dbc->prepare(
       'SELECT ce.dnafrag_start, ce.dnafrag_end, ce.dnafrag_strand, ce.p_value, ce.constrained_element_id'.
       ' FROM constrained_element ce, dnafrag d, method_link_species_set mlss, method_link ml, species_set ss, genome_db gd'.
-      ' WHERE gd.assembly = ? AND ml.type = ? AND mlss.name = ?'.
+      ' WHERE gd.assembly = ? AND ml.type = ?'.
       ' AND ce.dnafrag_id = d.dnafrag_id AND ce.method_link_species_set_id = mlss.method_link_species_set_id'.
       ' AND mlss.method_link_id = ml.method_link_id AND mlss.species_set_id = ss.species_set_id'.
       ' AND ss.genome_db_id = gd.genome_db_id AND d.genome_db_id = gd.genome_db_id'.
       ' AND d.name = ? AND ce.dnafrag_start >= ? AND ce.dnafrag_end <= ?'
     );
-    $sth->execute($assembly_name, $method_link, $analysis, $seq_region_name, $seq_region_start, $seq_region_end);
+    warn(join(':', $assembly_name, $method_link, $seq_region_name, $seq_region_start, $seq_region_end));
+    $sth->execute($assembly_name, $method_link, $seq_region_name, $seq_region_start, $seq_region_end);
     my @features;
     while(my $row = $sth->fetch) {
+      warn(join(':', @$row));
       push(@features, Bio::EnsEMBL::SimpleFeature->new(
         -start => $row->[0],
         -end => $row->[1],
