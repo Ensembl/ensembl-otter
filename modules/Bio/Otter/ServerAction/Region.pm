@@ -371,11 +371,13 @@ sub _write_region_exclusive { # runs under $slb->exclusive_work
     foreach my $gene (@new_genes) {
         # attach gene and its components to the right slice
         $gene->slice($db_slice);
-        # update author in gene and transcript
-        $gene->gene_author($author_obj);
+
+        # commenting author name set here as it resets original author
+        # $gene->gene_author($author_obj);
         foreach my $tran (@{ $gene->get_all_Transcripts }) {
             $tran->slice($db_slice);
-            $tran->transcript_author($author_obj);
+            # commenting author name set here as it resets original author
+            # $tran->transcript_author($author_obj);
         }
         foreach my $exon (@{ $gene->get_all_Exons }) {
             $exon->slice($db_slice);

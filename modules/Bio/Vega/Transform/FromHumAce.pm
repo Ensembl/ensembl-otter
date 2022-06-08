@@ -377,13 +377,14 @@ sub update_Gene {
     my $gene_adaptor = $self->vega_dba->get_GeneAdaptor;
     my $old_gene = $gene_adaptor->fetch_by_dbID($old_locus->ensembl_dbID);
 
+    my $old_author_name = $old_gene->gene_author();
     $self->logger->logconfess("Cannot find gene for ", $self->_debug_hum_ace($old_locus)) unless $old_gene;
 
     my $old_transcripts = $old_gene->get_all_Transcripts;
     $self->logger->debug("update_Gene: old locus ", $self->_debug_hum_ace($old_locus),
                          " has transcript_ids: ", join ',', map { $_->dbID } @$old_transcripts );
 
-    my $new_gene = $self->_gene_from_Locus($new_locus, $old_transcripts); # transcripts for setting coords
+    my $new_gene = $self->_gene_from_Locus($new_locus, $old_transcripts, $old_author_name); # transcripts for setting coords
     $new_gene->source($old_gene->source);
     if ($old_gene->source eq 'ensembl') {
       $new_gene->source('ensembl_havana');
@@ -421,28 +422,33 @@ sub update_Gene {
 }
 
 sub _gene_from_Locus {
-    my ($self, $locus, $transcripts) = @_;
+    my ($self, $locus, $transcripts, $old_author_name) = @_;
 
     my $gene = Bio::Vega::Gene->new(
         -transcripts => $transcripts,
         -stable_id   => $locus->otter_id,
         -description => $locus->description,
         -source      => $locus->gene_type_prefix,
-        );
+    );
     add_EnsEMBL_Attributes($gene, 'name' => $locus->name);
 
     $gene->truncated_flag(1) if $locus->is_truncated;
-    $gene->status('KNOWN')   if $locus->known;
+    $gene->status('KNOWN') if $locus->known;
 
     $gene->set_biotype_status_from_transcripts;
 
     $self->_add_remarks($gene, $locus);
 
-    my @synonyms = map { ('synonym' => $_) } $locus->list_aliases;
+    my @synonyms = map {('synonym' => $_)} $locus->list_aliases;
     add_EnsEMBL_Attributes($gene, @synonyms);
 
-    $gene->analysis   ($self->_get_Analysis('Otter'));
-    $gene->gene_author($self->_author_object );
+    $gene->analysis($self->_get_Analysis('Otter'));
+
+    if($old_author_name) {
+        $gene->gene_author($old_author_name);
+    } else {
+        $gene->gene_author($self->_author_object );
+    }
 
     $self->logger->debug(
         sprintf("Created gene for '%s', [%d-%d:%d]",
