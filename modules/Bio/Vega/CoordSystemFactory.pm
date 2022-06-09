@@ -117,6 +117,9 @@ sub _local_cs {
         return $cs;
     }
     else {
+        if (!$self->override_spec) {
+		return;
+        }
         my $spec = $self->override_spec->{$name};
         my $cs = Bio::EnsEMBL::CoordSystem->new('-name' => $name, %$spec);
         return $cs;

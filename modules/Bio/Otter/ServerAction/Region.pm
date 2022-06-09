@@ -501,6 +501,10 @@ sub _fetch_db_region {
     my $db_region = Bio::Vega::Region->new;
     $db_region->slice($db_slice);
 
+     if ($new_slice->coord_system->name eq "primary_assembly") { # we don't need clone sequences build when we have primary assembly
+      return $db_region;
+    }
+    
     my @db_tiles = sort { $a->from_start() <=> $b->from_start() } @{ $db_slice->project('contig') };
 
     my @db_clone_sequences;
@@ -527,6 +531,15 @@ sub _fetch_db_region {
 sub _compare_region_create_ci_hash {
     my ($self, $new_region, $db_region) = @_;
 
+    my %contig_info_hash;
+    if (!$new_region->clone_sequences || !$db_region->clone_sequences) { # with primary assembly we have created empty clone sequences 
+        return \%contig_info_hash;                                       # for display proposes, that should be ignored on save
+    }
+   
+    if (!$db_region->slice) {
+        return \%contig_info_hash;
+    }
+    
     my $db_slice = $db_region->slice;
 
     my @new_clone_sequences = $new_region->clone_sequences;
@@ -535,8 +548,6 @@ sub _compare_region_create_ci_hash {
     if (@db_clone_sequences != @new_clone_sequences) {
         die "The numbers of tiles in new_region and DB_region do not match";
     }
-
-    my %contig_info_hash;
 
     for (my $i = 0; $i < @db_clone_sequences; $i++) {
 

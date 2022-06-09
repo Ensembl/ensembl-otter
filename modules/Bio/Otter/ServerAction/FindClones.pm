@@ -189,7 +189,12 @@ sub register_local_slice {
     my $cs_name = $feature_slice->coord_system_name;
 
     my @component_names;
-    if ($cs_name eq $TARGET_COMPONENT_TYPE) {
+    my $found_chromosome_slices;
+
+    if ($cs_name eq 'primary_assembly') {
+            $found_chromosome_slices = [ $feature_slice ];
+            @component_names = ( $feature_slice->seq_region_name );
+    } elsif ($cs_name eq $TARGET_COMPONENT_TYPE) {
         @component_names = ( $feature_slice->seq_region_name );
     } else {
         # NOTE: order of projection segments WAS strand-dependent
@@ -200,9 +205,11 @@ sub register_local_slice {
         @component_names = map { $_->to_Slice->seq_region_name } @sorted_projections;
     }
 
-    my $found_chromosome_slices = ($cs_name eq 'chromosome')
-        ? [ $feature_slice ]
-        : $self->find_containing_chromosomes($feature_slice);
+    if (! $found_chromosome_slices) {
+        $found_chromosome_slices = ($cs_name eq 'chromosome')
+            ? [ $feature_slice ]
+            : $self->find_containing_chromosomes($feature_slice);
+    }
 
     foreach my $chr_slice (@$found_chromosome_slices) {
         my $hidden = get_first_Attribute_value($chr_slice, 'hidden');
@@ -210,6 +217,18 @@ sub register_local_slice {
         my $chr_name = $chr_slice->seq_region_name;
         my $key = join ',', @component_names;
         my $valref = \$self->results->{uc($qname)}->{$chr_name}->{$qtype}->{$key};
+
+        my $value;
+        if ($cs_name eq 'primary_assembly') {
+            delete $self->results->{uc($qname)}->{$chr_name}->{$qtype}->{$key};
+            $key = 'primary_assembly';
+            $value = {
+                'start' => $chr_slice->start,
+                'end' => $chr_slice->end
+            };
+            $self->results->{uc($qname)}->{$chr_name}->{$qtype}->{$key} = $value;
+            last;
+        }
 
         if (!$$valref) {
             die "Too many hits" # will be caught per find_by_*

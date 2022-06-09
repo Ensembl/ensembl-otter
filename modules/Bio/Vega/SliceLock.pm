@@ -330,7 +330,6 @@ should cover this.
 
 sub describe {
     my ($self, $rolledback) = @_;
-
     # should make no reference to ->adaptor, because we may want to
     # run it on a serialised-to-client copy
 
@@ -464,40 +463,80 @@ sub TO_JSON { # for JSON->new->convert_blessed->encode or direct call
 # The JSON probably came over plain HTTP, so untrusted
 sub new_from_json {
     my ($pkg, @info) = @_;
+
+
     my %info = (1 == @info ? %{$info[0]} : @info);
     my %obj;
+    if ($info{slice_name}) {
+        my @nonscalar = grep { ref($info{$_}) } keys %info;
+        die "Non-scalar incoming properties (@nonscalar)" if @nonscalar;
 
-    my @nonscalar = grep { ref($info{$_}) } keys %info;
-    die "Non-scalar incoming properties (@nonscalar)" if @nonscalar;
+        delete @info{qw{ iso8601_ts_begin iso8601_ts_activity iso8601_ts_free }};
 
-    delete @info{qw{ iso8601_ts_begin iso8601_ts_activity iso8601_ts_free }};
+        # Make approximate author objects
+        foreach my $atype (qw( author freed_author )) {
+            my $id = delete $info{"${atype}_id"};
+            my $email = delete $info{"${atype}_email"};
+            if (defined $id) {
+                my %auth = (dbID => $id,
+                            name => $email,
+                            email => $email);
+                $info{$atype} = Bio::Vega::Author->new_fast(\%auth);
+            }
+        }
 
-    # Make approximate author objects
-    foreach my $atype (qw( author freed_author )) {
-        my $id = delete $info{"${atype}_id"};
-        my $email = delete $info{"${atype}_email"};
+        my @prop = (qw( dbID ),
+                    qw( seq_region_id seq_region_start seq_region_end ),
+                    qw( ts_begin ts_activity ts_free ), # unixtimes
+                    qw( active freed ),                 # enums
+                    qw( intent hostname otter_version ), # text
+                    qw( author freed_author ));
+        @obj{@prop} = delete @info{@prop};
+        $obj{_clientside_describe_slice} = delete $info{slice_name};
+
+        $obj{_unweaken_adaptor} = # 'adaptor' will be weakened, take an extra ref
+          $obj{adaptor} = ['BOGUS'];
+
+        my @bad = sort keys %info;
+        die "Unrecognised incoming properties (@bad)" if @bad;
+        my $self = $pkg->new_fast(\%obj);
+
+        return $self;
+
+    }
+
+    # Make author objects
+    foreach my $atype (qw( author freedAuthor )) {
+
+        my $id = delete $info{${atype}}{authorId};
+        my $email =  delete $info{${atype}}{authorEmail};
+        my $name =  delete $info{${atype}}{authorName};
+
         if (defined $id) {
             my %auth = (dbID => $id,
                         name => $email,
-                        email => $email);
+                        email => $name);
             $info{$atype} = Bio::Vega::Author->new_fast(\%auth);
         }
     }
 
-    my @prop = (qw( dbID ),
-                qw( seq_region_id seq_region_start seq_region_end ),
+    my @prop =  (qw( dbID seq_region_id seq_region_start seq_region_end ),
                 qw( ts_begin ts_activity ts_free ), # unixtimes
                 qw( active freed ),                 # enums
-                qw( intent hostname otter_version ), # text
+                qw( intent ), # text
                 qw( author freed_author ));
-    @obj{@prop} = delete @info{@prop};
-    $obj{_clientside_describe_slice} = delete $info{slice_name};
+
+    my @propDb =(qw( sliceLockId seqRegionId seqRegionStart seqRegionEnd ),
+                qw( tsBegin tsActivity tsFree ), # unixtimes
+                qw( active freed ),                 # enums
+                qw( intent ), # text
+                qw( author freedAuthor ));
+
+    @obj{@prop} = delete @info{@propDb};
 
     $obj{_unweaken_adaptor} = # 'adaptor' will be weakened, take an extra ref
       $obj{adaptor} = ['BOGUS'];
 
-    my @bad = sort keys %info;
-    die "Unrecognised incoming properties (@bad)" if @bad;
     my $self = $pkg->new_fast(\%obj);
 
     return $self;
