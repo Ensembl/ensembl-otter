@@ -55,6 +55,10 @@ my $MASK_TARGET_NONE    = 'none';
 my $MASK_TARGET_SOFT    = 'soft';
 my $MASK_TARGET_DEFAULT = $MASK_TARGET_NONE;
 
+my $SEQ_TARGET_PROTEIN   = 'protein';
+my $SEQ_TARGET_DNA    = 'dna';
+my $SEQ_TARGET_DEFAULT = $SEQ_TARGET_DNA;
+
 my $INITIAL_DIR = (getpwuid($<))[7];
 
 sub initialise {
@@ -186,6 +190,11 @@ sub initialise {
            [ 'Unmasked',    $MASK_TARGET_NONE ],
            [ 'Soft masked', $MASK_TARGET_SOFT ],
           ] ],
+        [ '_sequence_target', $SEQ_TARGET_DEFAULT, 'Sequence',
+          [
+           [ 'Protein', $SEQ_TARGET_PROTEIN ],
+           [ 'DNA', $SEQ_TARGET_DNA ],
+          ] ]
         ];
 
     for (@{$input_widgets}) {
@@ -520,6 +529,7 @@ sub launch_exonerate {
         repeat_masker   => sub { my $apply_mask_sub = shift; $self->_repeat_masker($apply_mask_sub); },
 
         softmask_target => ($self->{_mask_target} eq $MASK_TARGET_SOFT),
+        sequence_target => $self->{_sequence_target},
         bestn           => $bestn,
         maxintron       => $maxintron,
 
@@ -700,4 +710,3 @@ __END__
 =head1 AUTHOR
 
 Ana Code B<email> anacode@sanger.ac.uk
-

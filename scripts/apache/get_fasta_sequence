@@ -29,6 +29,7 @@ sub get_fasta_sequence {
     my ($server) = @_;
 
     my $id = $server->require_argument('id');
+    my $seq_target = $server->require_argument('sequence_target');
 
     my @raw_id_array = split (',', $id);
     $id = "";
@@ -66,6 +67,11 @@ sub get_fasta_sequence {
         if ($i == 0) {
             $cut_id =~ s/\.\d+//;
         }
+        
+        if($seq_target eq 'dna' && index($queries[$i], 'uniprotkb') != -1 ) {
+            $i++;
+            next;
+        }
 
         $response = fetch_ids_from_external_db($queries[$i] . $cut_id);
         $concat_response = $concat_response . $response;
@@ -94,3 +100,4 @@ sub web_fetch {
 }
 
 Bio::Otter::Server::Support::Web->send_response(\&get_fasta_sequence);
+
