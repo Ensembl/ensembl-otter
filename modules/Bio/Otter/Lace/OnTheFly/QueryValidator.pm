@@ -39,7 +39,7 @@ has accession_type_cache => ( is => 'ro', isa => 'Bio::Otter::Lace::AccessionTyp
 has seqs                 => ( is => 'ro', isa => 'ArrayRef[Hum::Sequence]', default => sub{ [] } );
 has accessions           => ( is => 'ro', isa => 'ArrayRef[Str]',           default => sub{ [] } );
 
-has sequence_target      => ( is => 'ro', isa => 'Str', default => 'dna');
+has sequence_type      => ( is => 'ro', isa => 'Str', default => 'dna');
 
 has lowercase_poly_a_t_tails => ( is => 'ro', isa => 'Bool', default => undef );
 
@@ -97,10 +97,10 @@ sub _build_confirmed_seqs {     ## no critic (Subroutines::ProhibitUnusedPrivate
         $cache->populate(\@accessions);
     }
 
-    my $seq_target = $self->sequence_target;
+    my $seq_type = $self->sequence_type;
     $self->_augment_supplied_sequences;
     my @to_fetch = $self->_check_augment_supplied_accessions;
-    $self->_fetch_sequences($seq_target, @to_fetch);
+    $self->_fetch_sequences($seq_type, @to_fetch);
 
     # tell the user about any missing sequences or remapped accessions
 
@@ -241,7 +241,7 @@ sub Client {
 # Adds sequences to $self->seqs
 #
 sub _fetch_sequences {
-    my ($self, $seq_target, @to_fetch) = @_;
+    my ($self, $seq_type, @to_fetch) = @_;
 
     my $cache = $self->accession_type_cache;
 
@@ -250,7 +250,7 @@ sub _fetch_sequences {
     my $client = Bio::Otter::Lace::Defaults::make_Client();
     foreach my $acc (@to_fetch) {
 
-        my $seq = $client->fetch_fasta_seqence($acc, $seq_target);
+        my $seq = $client->fetch_fasta_seqence($acc, $seq_type);
         if (substr($seq, 0, 1) eq ">") {
           $seq = $self->parse_fasta_sequence($seq);
           push(@{$self->seqs}, $seq);
