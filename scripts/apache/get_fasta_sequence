@@ -47,11 +47,12 @@ sub get_fasta_sequence {
         push @queries, $query;
     }
 
-    $query = 'http://www.ebi.ac.uk/Tools/dbfetch/dbfetch?format=fasta&style=raw&db=refseqn&id=';
-    push @queries, $query;
-    $query = 'http://www.ebi.ac.uk/Tools/dbfetch/dbfetch?db=ena_sequence&format=fasta&style=raw&Retrieve=Retrieve&id=';
-
-    push @queries, $query;
+    if($seq_type eq 'dna') {
+        $query = 'http://www.ebi.ac.uk/Tools/dbfetch/dbfetch?format=fasta&style=raw&db=refseqn&id=';
+        push @queries, $query;
+        $query = 'http://www.ebi.ac.uk/Tools/dbfetch/dbfetch?db=ena_sequence&format=fasta&style=raw&Retrieve=Retrieve&id=';
+        push @queries, $query;
+    }
 
     my $response;
     my $concat_response = '';
@@ -99,4 +100,3 @@ sub web_fetch {
 }
 
 Bio::Otter::Server::Support::Web->send_response(\&get_fasta_sequence);
-
