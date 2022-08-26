@@ -261,7 +261,7 @@ sub _fetch_sequences {
           }
 
           if($seq_type eq 'protein' && $type ne 'Protein') {
-              $self->_add_accession_type_warning($acc, " Accession evidence type is $type");
+              $self->_add_accession_type_warning($acc, " Evidence $type and manual $seq_type type mismatch");
               next;
           }
 
@@ -439,7 +439,7 @@ sub _format_warnings {
         my @accession_type = @{$warnings->{accession_type}};
         $accession_type_msg = join("\n", map { sprintf("  %s %s", @{$_}) } @accession_type);
         $accession_type_msg =
-            "The following sequences were fetched, evidence (protein) and manual (dna) type mismatch:\n\n$accession_type_msg\n"
+            "The following sequences were fetched, type mismatch:\n\n$accession_type_msg\n"
     }
 
     if ($warnings->{missing}) {
