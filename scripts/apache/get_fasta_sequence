@@ -29,6 +29,7 @@ sub get_fasta_sequence {
     my ($server) = @_;
 
     my $id = $server->require_argument('id');
+    my $seq_type = $server->require_argument('sequence_type');
 
     my @raw_id_array = split (',', $id);
     $id = "";
@@ -41,12 +42,16 @@ sub get_fasta_sequence {
 
     my @queries;
     my $query = 'http://www.ebi.ac.uk/Tools/dbfetch/dbfetch?format=fasta&style=raw&db=uniprotkb&id=';
-    push @queries, $query;
-    $query = 'http://www.ebi.ac.uk/Tools/dbfetch/dbfetch?format=fasta&style=raw&db=refseqn&id=';
-    push @queries, $query;
-    $query = 'http://www.ebi.ac.uk/Tools/dbfetch/dbfetch?db=ena_sequence&format=fasta&style=raw&Retrieve=Retrieve&id=';
+    if($seq_type eq 'protein') {
+        push @queries, $query;
+    }
 
-    push @queries, $query;
+    if($seq_type eq 'dna') {
+        $query = 'http://www.ebi.ac.uk/Tools/dbfetch/dbfetch?format=fasta&style=raw&db=refseqn&id=';
+        push @queries, $query;
+        $query = 'http://www.ebi.ac.uk/Tools/dbfetch/dbfetch?db=ena_sequence&format=fasta&style=raw&Retrieve=Retrieve&id=';
+        push @queries, $query;
+    }
 
     my $response;
     my $concat_response = '';

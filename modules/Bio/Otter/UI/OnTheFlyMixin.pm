@@ -27,7 +27,7 @@ sub problem_box {
     $top->messageBox(
         -title   => $Bio::Otter::Lace::Client::PFX.'Problems With ' . $title,
         -icon    => 'warning',
-        -message => $warnings->{missing} . $warnings->{remapped} . $warnings->{unclaimed},
+        -message => $warnings->{missing} . $warnings->{remapped} . $warnings->{unclaimed} . $warnings->{accession_type},
         -type    => 'OK',
         );
     return;
