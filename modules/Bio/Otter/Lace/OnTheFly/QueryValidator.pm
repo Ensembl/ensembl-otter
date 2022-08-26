@@ -259,6 +259,12 @@ sub _fetch_sequences {
               $self->_add_missing_warning($acc => 'illegal evidence type');
               next;
           }
+
+          if($seq_type eq 'protein' && $type ne 'Protein') {
+              $self->_add_accession_type_warning($acc, " Accession evidence type is $type");
+              next;
+          }
+
           $seq->type($type);
           $seq->name($acc);
         } else {
@@ -409,6 +415,12 @@ sub _add_missing_warning {
     return;
 }
 
+sub _add_accession_type_warning {
+    my ($self, $acc, $msg) = @_;
+    $self->_add_warning( accession_type => [ $acc => $msg ] );
+    return;
+}
+
 # FIXME: remove, and related 'unclaimed' warning handling
 #
 # sub _add_unclaimed_warning {
@@ -421,7 +433,14 @@ sub _format_warnings {
     my $self = shift;
     my $warnings = $self->_warnings;
 
-    my ($missing_msg, $remapped_msg, $unclaimed_msg) = ( ('') x 3 );
+    my ($missing_msg, $remapped_msg, $unclaimed_msg, $accession_type_msg) = ( ('') x 3 );
+
+    if ($warnings->{accession_type}) {
+        my @accession_type = @{$warnings->{accession_type}};
+        $accession_type_msg = join("\n", map { sprintf("  %s %s", @{$_}) } @accession_type);
+        $accession_type_msg =
+            "The following sequences were fetched, but accession evidence type is not Protein:\n\n$accession_type_msg\n"
+    }
 
     if ($warnings->{missing}) {
         my @missing = @{$warnings->{missing}};
@@ -444,9 +463,10 @@ sub _format_warnings {
             . join('', map { "  $_\n" } @unclaimed);
     }
     return( {
-        missing   => $missing_msg,
-        remapped  => $remapped_msg,
-        unclaimed => $unclaimed_msg,
+        missing        => $missing_msg,
+        remapped       => $remapped_msg,
+        unclaimed      => $unclaimed_msg,
+        accession_type => $accession_type_msg,
             } );
 }
 
