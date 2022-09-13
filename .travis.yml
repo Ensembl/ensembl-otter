@@ -3,7 +3,7 @@ os:
 services: docker
 
 before_install:
-    - docker pull shashankbrgowda/otter-test-suite:latest
+    - docker pull ensemblorg/otter-test-suite:latest
 install:
     - cd ../
     - export ROOT_PATH=$PWD
@@ -25,7 +25,7 @@ install:
     - git clone --branch main --depth 1 https://github.com/Ensembl/PerlModules.git
 
 
-script: "docker run -i --name devtest -v $ROOT_PATH/app:/loutre shashankbrgowda/otter-test-suite:latest"
+script: "docker run -i --name devtest -v $ROOT_PATH/app:/loutre ensemblorg/otter-test-suite:latest"
 
 notifications:
   slack:
