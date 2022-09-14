@@ -3,7 +3,7 @@ os:
 services: docker
 
 before_install:
-    - docker pull smmebi/otter_test_nomerge
+    - docker pull ensemblorg/otter-test-suite:latest
 install:
     - cd ../
     - export ROOT_PATH=$PWD
@@ -14,18 +14,18 @@ install:
     - git clone --branch main --depth 1 https://github.com/Ensembl/webvm.git
     - git clone --branch main --depth 1 https://github.com/Ensembl/webvm-deps.git
     - cd webvm-deps/
-    - mkdir ensembl-branch-99/
-    - cd ensembl-branch-99/
-    - git clone --branch release/99 https://github.com/Ensembl/ensembl.git
-    - git clone --branch release/99 https://github.com/Ensembl/ensembl-variation.git
-    - git clone --branch release/99 https://github.com/Ensembl/ensembl-funcgen.git
-    - git clone --branch release/99 https://github.com/Ensembl/ensembl-compara.git
+    - mkdir ensembl-branch-108/
+    - cd ensembl-branch-108/
+    - git clone --branch release/108 https://github.com/Ensembl/ensembl.git
+    - git clone --branch release/108 https://github.com/Ensembl/ensembl-variation.git
+    - git clone --branch release/108 https://github.com/Ensembl/ensembl-funcgen.git
+    - git clone --branch release/108 https://github.com/Ensembl/ensembl-compara.git
     - cd ../../
     - git clone --branch main --depth 1 https://github.com/Ensembl/zircon.git
     - git clone --branch main --depth 1 https://github.com/Ensembl/PerlModules.git
 
 
-script: "docker run -i --name devtest -v $ROOT_PATH/app:/loutre smmebi/otter_test_nomerge:latest"
+script: "docker run -i --name devtest -v $ROOT_PATH/app:/loutre ensemblorg/otter-test-suite:latest"
 
 notifications:
   slack:
