@@ -591,7 +591,7 @@ sub launch_exonerate {
     $self->progress('Passing OTF requests to ZMap');
     my $key = "$otf";
     $SessionWindow->register_exonerate_callback($key, $self, \&Bio::Otter::UI::OnTheFlyMixin::exonerate_callback);
-    $otf->prep_and_store_request_for_each_type($SessionWindow, $key);
+    $otf->exonerate_prep_and_store_request_for_each_type($SessionWindow, $key);
 
     $self->progress('Done');
     $top->withdraw;
