@@ -226,8 +226,8 @@ sub exonerate_prep_and_store_request_for_each_type {
                 my $request = $builder->prepare_run;
                 $request_adaptor->delete_entry($request);
             }
-            my $message = "Error: zmapt load error";
-            my $details = "OTF flushed, please try again";
+            my $message = "Error: zmap load error";
+            my $details = "OTF flushed, please try again, or relaunch zmap";
             $self->logger->info($message, $details);
             $session_window->exception_message($details, $message);
         };
