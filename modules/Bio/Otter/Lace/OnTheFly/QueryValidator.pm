@@ -268,7 +268,13 @@ sub _fetch_sequences {
           $seq->type($type);
           $seq->name($acc);
         } else {
-          $self->_add_missing_warning($acc, "unknown accession or illegal evidence type");
+          if($seq_type eq 'dna') {
+            $self->_add_missing_warning($acc, "No sequence fetched from DNA database, Would you try Protein sequence type to fetch from Protein database ?");
+          } elsif($seq_type eq 'protein') {
+            $self->_add_missing_warning($acc, "No sequence fetched from Protein database, Would you try DNA sequence type to fetch from DNA database ?");
+          } else {
+            $self->_add_missing_warning($acc, "unknown accession or illegal evidence type");
+          }
         }
 
 #        my ($type, $full) = @{$self->_acc_type_full($acc)};
