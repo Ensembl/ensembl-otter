@@ -1181,9 +1181,9 @@ sub _get_DataSets_hash {
 }
 
 sub fetch_fasta_seqence {
-    my ($self, $acc) = @_;
+    my ($self, $acc, $seq_type) = @_;
     my $datasets_hash = $self->otter_response_content
-        ('GET', 'get_fasta_sequence', {'id'=>$acc, 'author' => $self->author});
+        ('GET', 'get_fasta_sequence', {'id'=>$acc, 'sequence_type' => $seq_type, 'author' => $self->author});
 
     return $datasets_hash;
 }

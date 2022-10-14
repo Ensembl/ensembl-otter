@@ -39,6 +39,8 @@ has accession_type_cache => ( is => 'ro', isa => 'Bio::Otter::Lace::AccessionTyp
 has seqs                 => ( is => 'ro', isa => 'ArrayRef[Hum::Sequence]', default => sub{ [] } );
 has accessions           => ( is => 'ro', isa => 'ArrayRef[Str]',           default => sub{ [] } );
 
+has sequence_type      => ( is => 'ro', isa => 'Str', default => 'dna');
+
 has lowercase_poly_a_t_tails => ( is => 'ro', isa => 'Bool', default => undef );
 
 has problem_report_cb    => ( is => 'ro', isa => 'CodeRef', required => 1 );
@@ -95,9 +97,10 @@ sub _build_confirmed_seqs {     ## no critic (Subroutines::ProhibitUnusedPrivate
         $cache->populate(\@accessions);
     }
 
+    my $seq_type = $self->sequence_type;
     $self->_augment_supplied_sequences;
     my @to_fetch = $self->_check_augment_supplied_accessions;
-    $self->_fetch_sequences(@to_fetch);
+    $self->_fetch_sequences($seq_type, @to_fetch);
 
     # tell the user about any missing sequences or remapped accessions
 
@@ -238,7 +241,7 @@ sub Client {
 # Adds sequences to $self->seqs
 #
 sub _fetch_sequences {
-    my ($self, @to_fetch) = @_;
+    my ($self, $seq_type, @to_fetch) = @_;
 
     my $cache = $self->accession_type_cache;
 
@@ -247,7 +250,7 @@ sub _fetch_sequences {
     my $client = Bio::Otter::Lace::Defaults::make_Client();
     foreach my $acc (@to_fetch) {
 
-        my $seq = $client->fetch_fasta_seqence($acc);
+        my $seq = $client->fetch_fasta_seqence($acc, $seq_type);
         if (substr($seq, 0, 1) eq ">") {
           $seq = $self->parse_fasta_sequence($seq);
           push(@{$self->seqs}, $seq);
@@ -256,10 +259,22 @@ sub _fetch_sequences {
               $self->_add_missing_warning($acc => 'illegal evidence type');
               next;
           }
+
+          if($seq_type eq 'protein' && $type ne 'Protein') {
+              $self->_add_accession_type_warning($acc, " Evidence $type and manual $seq_type type mismatch");
+              next;
+          }
+
           $seq->type($type);
           $seq->name($acc);
         } else {
-          $self->_add_missing_warning($acc, "unknown accession or illegal evidence type");
+          if($seq_type eq 'dna') {
+            $self->_add_missing_warning($acc, "No sequence fetched from DNA database, Would you try Protein sequence type to fetch from Protein database ?");
+          } elsif($seq_type eq 'protein') {
+            $self->_add_missing_warning($acc, "No sequence fetched from Protein database, Would you try DNA sequence type to fetch from DNA database ?");
+          } else {
+            $self->_add_missing_warning($acc, "unknown accession or illegal evidence type");
+          }
         }
 
 #        my ($type, $full) = @{$self->_acc_type_full($acc)};
@@ -406,6 +421,12 @@ sub _add_missing_warning {
     return;
 }
 
+sub _add_accession_type_warning {
+    my ($self, $acc, $msg) = @_;
+    $self->_add_warning( accession_type => [ $acc => $msg ] );
+    return;
+}
+
 # FIXME: remove, and related 'unclaimed' warning handling
 #
 # sub _add_unclaimed_warning {
@@ -418,7 +439,14 @@ sub _format_warnings {
     my $self = shift;
     my $warnings = $self->_warnings;
 
-    my ($missing_msg, $remapped_msg, $unclaimed_msg) = ( ('') x 3 );
+    my ($missing_msg, $remapped_msg, $unclaimed_msg, $accession_type_msg) = ( ('') x 3 );
+
+    if ($warnings->{accession_type}) {
+        my @accession_type = @{$warnings->{accession_type}};
+        $accession_type_msg = join("\n", map { sprintf("  %s %s", @{$_}) } @accession_type);
+        $accession_type_msg =
+            "The following sequences were fetched, type mismatch:\n\n$accession_type_msg\n"
+    }
 
     if ($warnings->{missing}) {
         my @missing = @{$warnings->{missing}};
@@ -441,9 +469,10 @@ sub _format_warnings {
             . join('', map { "  $_\n" } @unclaimed);
     }
     return( {
-        missing   => $missing_msg,
-        remapped  => $remapped_msg,
-        unclaimed => $unclaimed_msg,
+        missing        => $missing_msg,
+        remapped       => $remapped_msg,
+        unclaimed      => $unclaimed_msg,
+        accession_type => $accession_type_msg,
             } );
 }
 

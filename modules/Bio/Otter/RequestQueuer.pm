@@ -61,8 +61,7 @@ sub new {
 sub request_features {
     my ($self, @feature_list) = @_;
     $self->_queue_features(@feature_list);
-    $self->_send_queued_requests;
-    return;
+    return  $self->_send_queued_requests;
 }
 
 sub _queue_features {
@@ -111,7 +110,7 @@ sub _request_to_priority {
 
 sub _send_queued_requests {
     my ($self) = @_;
-
+    my $error;
     my $logger = $self->_logger;
 
     if (my $id = $self->_sender_timeout_id) {
@@ -161,6 +160,8 @@ sub _send_queued_requests {
       # if we didn't find an available resource, we're done here
       unless ($current) {
           $logger->debug("_send_queue_requests: no more free resources for current queue");
+          $self->flush_current_requests;
+          $error = 1;
           last SLOTS;
       }
 
@@ -206,7 +207,7 @@ sub _send_queued_requests {
                               scalar(@$queue) ? 'no slots' : 'queue empty');
     }
 
-    return;
+    return $error;
 }
 
 sub _sender_timeout_id {

@@ -25,7 +25,7 @@ use warnings;
 use Bio::Vega::Gene;
 use Bio::Vega::Transcript;
 use Bio::EnsEMBL::Attribute;
-use Bio::EnsEMBL::Utils::Exception qw(throw warning);
+use Bio::EnsEMBL::Utils::Exception qw(throw warning info);
 use Bio::Vega::Utils::Comparator qw( compare );
 use Bio::Vega::Utils::Attribute  qw( get_name_Attribute_value );
 use Bio::Vega::AnnotationBroker;
@@ -696,6 +696,20 @@ sub store {
         #         $ea->update($db_exon);
         #     }
         # }
+
+        # Some of the attributes which are added in background are getting deleted whenever we update gene
+        # So we need to add additional attributes back while storing.
+        my @db_attrs = @{ $db_gene->get_all_Attributes };
+        my @persistent_attributes = ('vega_name', 'TAGENE_transcript', 'MANE_Select', 'ccds_transcript',
+                                 'miRNA', 'ncRNA', 'Frameshift');
+
+        foreach my $db_attr (@db_attrs) {
+            foreach my $attrib (@persistent_attributes) {
+                if($db_attr->code() && $db_attr->code() eq $attrib) {
+                    $gene->add_Attributes($db_attr);
+                }
+            }
+        }
 
         # If the gene is still associated with the last fetchable version,
         # (for example, if it is being DELETED or RESTORED)

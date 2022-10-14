@@ -183,6 +183,59 @@ sub prep_and_store_request_for_each_type {
     return @method_names;
 }
 
+# THis function is done to fix multithread issue, so it's rather hard to debug and test.
+# To Make sure we don't touch anything else - method almost duplicates previous one.
+sub exonerate_prep_and_store_request_for_each_type {
+    my ($self, $session_window, $caller_key) = @_;
+
+    my $ace_db = $session_window->AceDatabase;
+    my $sql_db = $ace_db->DB;
+
+    # Clear columns if requested
+    $self->pre_launch_setup(slice => $sql_db->session_slice);
+
+    my $request_adaptor = $sql_db->OTFRequestAdaptor;
+
+    my @method_names;
+
+    foreach my $builder ( $self->builders_for_each_type ) {
+
+        $self->logger->info("Running exonerate for sequence(s) of type: ", $builder->type);
+
+        # Set up a request for the filter script
+        my $request = $builder->prepare_run;
+        $request->caller_ref($caller_key);
+        if ($request_adaptor->already_running($request)) {
+            $self->logger->warn("Already running an exonerate with this fingerprint, type: ", $builder->type);
+            next;
+        }
+
+        $request_adaptor->store($request);
+
+        my $analysis_name = $builder->analysis_name;
+        push @method_names, $analysis_name;
+
+        # Ensure new-style columns are selected if used
+        $ace_db->select_column_by_name($analysis_name);
+    }
+
+    if (@method_names) {
+        my $result = $session_window->RequestQueuer->request_features(@method_names);
+        if ($result == 1) { # If we hit run out of queue bug and flush queue and we are at exonerate
+            foreach my $builder ( $self->builders_for_each_type ) {
+                my $request = $builder->prepare_run;
+                $request_adaptor->delete_entry($request);
+            }
+            my $message = "Error: zmap load error";
+            my $details = "OTF flushed, please try again, or relaunch zmap";
+            $self->logger->info($message, $details);
+            $session_window->exception_message($details, $message);
+        };
+        $session_window->update_status_bar;
+    }
+
+    return @method_names;
+}
 1;
 
 __END__

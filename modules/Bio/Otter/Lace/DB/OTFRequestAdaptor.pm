@@ -69,7 +69,7 @@ sub SQL {
                              WHERE id = ?
                           },
     update_status =>     q{ UPDATE otter_otf_request SET status = ? WHERE id = ? },
-    delete =>            q{ DELETE FROM otter_otf_request WHERE id = ?
+    delete =>            q{ DELETE FROM otter_otf_request WHERE fingerprint = ?
                           },
     fetch_by_key =>     qq{ SELECT ${all_columns} FROM otter_otf_request WHERE id = ?
                           },
@@ -159,6 +159,15 @@ sub already_running {
 }
 
 sub _already_running_sth { return shift->_prepare_canned('already_running'); }
+
+sub delete_entry {
+    my ($self, $object) = @_;
+    my $sth = $self->_delete;
+    $sth->execute($object->fingerprint);
+    return
+}
+
+sub _delete { return shift->_prepare_canned('delete'); }
 
 sub _fetch_args {
     my ($self, $object) = @_;
