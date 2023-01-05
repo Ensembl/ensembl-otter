@@ -63,8 +63,8 @@ Readonly my %CLASS_TO_SOURCE => (
     );
 
 Readonly my %DEFAULT_OPTIONS => (
-    host => '45.88.81.151',
-    port => 3306,
+    host => 'mysql-ottermole-mushroom.ebi.ac.uk',
+    port => 4728,
     user => 'mm_readonly',
     name => 'mm_ini',
     db_categories => [ @DEFAULT_DB_CATEGORIES ],
