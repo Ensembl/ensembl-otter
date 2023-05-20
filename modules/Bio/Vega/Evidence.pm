@@ -82,12 +82,8 @@ sub toString {
     if (defined($self->dbID)) {
         $dbID = $self->dbID;
     }
-    if (defined($self->transcript_info_id)) {
-        $infoid = $self->transcript_info_id;
-    }
     $str = $str . "DbID                : " . $dbID . "\n";
     $str = $str . "Name                : " . $self->name . "\n";
-    $str = $str . "Transcript info id  : " . $infoid . "\n";
     $str = $str . "Type                : " . $self->type . "\n";
     return $str;
 
