@@ -1,6 +1,6 @@
 =head1 LICENSE
 
-Copyright [2018-2023] EMBL-European Bioinformatics Institute
+Copyright [2018-2022] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -36,10 +36,10 @@ sub species_group{
  my %final_species_groups = query_links($dbh);
  
  # Setting up 'dev','main', 'restricted' and 'mouse_strain' species groups
- $final_species_groups{'species_groups'}{'dev'} = ['human_test', 'human_training'];
+ $final_species_groups{'species_groups'}{'dev'} = ['human_test', 'human_training', 'human_t2t'];
  $final_species_groups{'species_groups'}{'main'} = ['c_elegans', 'cat', 'chicken', 'chimp', 'cow', 'dog', 'drosophila', 'gibbon', 'gorilla', 'herring', 'herring_test', 'human', 'lemur', 'marmoset', 'medicago', 'mouse', 'mus_spretus', 'opossum', 'pig', 'platypus', 'rat', 'sheep', 'sordaria', 'tas_devil', 'tomato', 'tropicalis', 'wallaby', 'wheat', 'zebrafish']; 
  $final_species_groups{'species_groups'}{'mouse_strains'} = ['mouse-SPRET-EiJ', 'mouse-PWK-PhJ', 'mouse-CAST-EiJ', 'mouse-WSB-EiJ', 'mouse-NZO-HlLtJ', 'mouse-C57BL-6NJ', 'mouse-NOD-ShiLtJ', 'mouse-FVB-NJ', 'mouse-DBA-2J', 'mouse-CBA-J', 'mouse-C3H-HeJ', 'mouse-AKR-J', 'mouse-BALB-cJ', 'mouse-A-J', 'mouse-LP-J', 'mouse-129S1-SvImJ', 'mouse-C57BL-6NJ_v1_test'];
- $final_species_groups{'species_groups'}{'restricted'} =['human_test','mouse_test', 'mouse_old', 'mouse_old_test'];
+ $final_species_groups{'species_groups'}{'restricted'} =['human_test', 'human_t2t', 'mouse_test', 'mouse_old', 'mouse_old_test'];
  
  # Disconnect from the MySQL database
  $dbh->disconnect();
