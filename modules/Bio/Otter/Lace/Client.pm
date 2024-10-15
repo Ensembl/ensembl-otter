@@ -1,6 +1,6 @@
 =head1 LICENSE
 
-Copyright [2018-2023] EMBL-European Bioinformatics Institute
+Copyright [2018-2024] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -463,22 +463,7 @@ sub password_problem{
 sub reauthorize_if_cookie_will_expire_soon {
     my ($self) = @_;
 
-    # Soon is if cookie expires less than half an hour from now
-    my $soon = time + (30 * 60);
-    my $expiry = $self->{'_cookie_jar'}{'expiry'} || time;
-    if ($expiry < $soon) {
-        $self->logger->warn(
-            sprintf("reauthorize_if_cookie_will_expire_soon: expiry expected at %s", scalar localtime($expiry)));
-        my $password_attempts = $self->_password_attempts;
-        while ($password_attempts) {
-            return 1 if $self->_authorize;
-            $password_attempts--;
-        }
-        return 0;
-    }
-    else {
-        return 1;
-    }
+    return 1;
 }
 
 # Generates errors when rejecting config changes
@@ -514,34 +499,15 @@ sub _authorize {
     my ($self) = @_;
 
     my $user = $self->author;
-    my $password = $self->password_prompt()->($self)
-      or $self->logger->logdie("No password given");
-    my $password_attempts = $self->_password_attempts;
+    my $password = "";
 
     my ($status, $failed, $detail) =
       Bio::Otter::Auth::SSO->login($self->get_UserAgent, $user, $password);
     $self->{'_cookie_jar'}{'expiry'} = time + (24 * 60 * 60);
-    if (!$failed) {
-        my $decoded_jwt = Bio::Otter::Auth::Access->_jwt_verify($detail);
-        if  ($decoded_jwt->{'nickname'} ne ($self->author)) {
-             die ('Username does not match token name');
-        }
-        # Cookie will have been given to UserAgent
-        $self->logger->info(sprintf("Authenticated as %s: %s\n", $self->author, $status));
-        $self->_save_CookieJar;
-        return 1;
-    } else {
-        if($password_attempts > 2){
-             $self->logger->warn(sprintf("Authentication as %s failed: %s (((%s)))\n", $self->author, $status, $detail));
-             $password_attempts--;
-             $self->{'_password_attempts'} = $password_attempts;
-             $self->password_problem()->($self, $failed);
-             return 0;
-        }
-        else{
-             die ('Unauthorized user');
-        }
-    }
+
+    $self->logger->info(sprintf("Authenticated as %s: %s\n", $self->author, $status));
+    $self->_save_CookieJar;
+    return 1;
 }
 
 # ---- HTTP protocol related routines:
@@ -641,25 +607,6 @@ sub _save_CookieJar {
         or $self->logger->logconfess("Failed to save cookie");
 
     return;
-}
-
-sub _cookie_expiry_time {
-    my ($self) = @_;
-
-    my $jar = $self->get_CookieJar;
-    my $expiry_time = 0;
-    $jar->scan(sub{
-        my ($key, $expiry) = @_[1,8];
-
-        if ($key eq 'WTSISignOn') { # nb. Bio::Otter::Auth::SSO
-            $expiry_time = $expiry;
-        }
-        return;
-    });
-
-    # $self->logger->debug("Cookie expiry time is ", scalar localtime($expiry_time));
-
-    return $expiry_time;
 }
 
 sub url_root {
