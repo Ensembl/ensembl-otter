@@ -49,16 +49,23 @@ my @method_biotype_status = qw{
     Transcript                      processed_transcript    -
         Ambiguous_ORF               =                       -
         IG_gene                     =                       -
-        IG_J_gene                     =                       -
-        IG_C_gene                     =                       -
-        IG_D_gene                     =                       -
-        IG_V_gene                     =                       -
+        IG_J_gene                   =                       -
+        IG_C_gene                   =                       -
+        IG_D_gene                   =                       -
+        IG_V_gene                   =                       -
         IG_pseudogene               =                       -
-        IG_J_pseudogene                     =                       -
-        IG_C_pseudogene                     =                       -
-        IG_D_pseudogene                     =                       -
+        IG_V_pseudogene             =                       -
+        IG_J_pseudogene             =                       -
+        IG_C_pseudogene             =                       -
+        IG_D_pseudogene             =                       -
         TR_gene                     =                       -
+        TR_C_gene                   =                       -
+        TR_D_gene                   =                       -
+        TR_J_gene                   =                       -
+        TR_V_gene                   =                       -
         TR_pseudogene               =                       -
+        TR_J_pseudogene             =                       -
+        TR_V_pseudogene             =                       -
         Putative                    processed_transcript    PUTATIVE
 
     Non_coding                      =                       -
