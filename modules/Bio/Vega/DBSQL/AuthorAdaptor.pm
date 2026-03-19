@@ -232,7 +232,7 @@ sub store_gene_author {
   }
   # Insert new gene author
   my $sth = $self->prepare(q{
-        INSERT INTO gene_author(gene_id, author_id) VALUES (?,?)
+        INSERT IGNORE INTO gene_author(gene_id, author_id) VALUES (?,?)
         });
   $sth->execute($gene_id,$author_id);
   return;
